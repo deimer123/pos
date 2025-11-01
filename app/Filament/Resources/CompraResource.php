@@ -1,0 +1,1829 @@
+<?php
+
+namespace App\Filament\Resources;
+
+use App\Filament\Resources\CompraResource\Pages;
+use App\Models\Actor;
+use App\Models\Compra;
+use App\Models\Product;
+use Filament\Forms;
+use Filament\Forms\Components\Grid;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
+use Filament\Forms\Components\{Card, Section, Select, DatePicker, Textarea, Placeholder, TextInput, Repeater};
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Columns\{BadgeColumn, TextColumn};
+use Illuminate\Validation\Rule;
+use Filament\Forms\Components\View;
+use Illuminate\Database\Eloquent\Builder;
+use Filament\Tables\Filters\TernaryFilter;
+use App\Filament\Resources\CompraResource\Pages\EditCompra;
+use Illuminate\Validation\Rules\Unique;
+use Illuminate\Support\Facades\DB;
+use Filament\Infolists;
+use Filament\Infolists\Components\{Section as InfoSection, Grid as InfoGrid, TextEntry, RepeatableEntry};
+use App\Filament\Resources\CompraResource\Pages\ViewCompra;
+use Filament\Tables\Actions\{Action, ActionGroup, EditAction};
+use Illuminate\Database\Eloquent\Model;
+use Filament\Notifications\Notification;
+use App\Filament\Resources\CompraResource\RelationManagers;
+
+
+
+
+class CompraResource extends Resource
+{
+    protected static ?string $model = Compra::class;
+    protected static ?string $navigationIcon = 'heroicon-o-truck';
+    protected static ?string $navigationGroup = 'Compras';
+    protected static ?string $navigationLabel = 'Compras a Proveedor';
+
+    /** FORM (Filament v3) */
+    public static function form(Forms\Form $form): Forms\Form
+    {
+        return $form
+            ->statePath('data')
+            ->schema([
+
+                Section::make('Datos de la compra')
+                    ->model(\App\Models\Compra::class)
+                    ->schema([
+                        Grid::make(12)->schema([
+
+                                                /* ================== PROVEEDOR (GUARDA id_clip_pro) ================== */
+                                                Select::make('proveedor_id')
+    ->label('Proveedor')
+    ->options(fn () => Actor::query()
+        ->where('empresa_id', auth()->id())
+        ->whereIn('clasificacion', ['proveedor', 'cliente_proveedor'])
+        ->orderBy('nombre')
+        ->pluck('nombre', 'id_clip_pro')
+    )
+    // 👇 Muestra la etiqueta incluso si el proveedor no aparece en options()
+    ->getOptionLabelUsing(fn ($value) =>
+        $value ? Actor::where('id_clip_pro', $value)->value('nombre') : null
+    )
+    ->searchable()
+    ->preload()
+    ->required()
+    ->validationMessages(['required' => 'Selecciona un proveedor.'])
+    // que siempre se hidrate y se guarde como entero
+    ->dehydrated(true)
+    ->dehydrateStateUsing(fn ($v) => filled($v) ? (int) $v : null)
+    ->live()
+    // 🔒 bloqueos:
+    // - en EDIT (detección por record en la ruta)
+    // - si hay items ya cargados en CREATE
+    // - si la compra está ANULADA
+    ->disabled(function (Get $get) {
+        $anulada   = static::compraEstaAnulada($get);
+        $esEdit    = (bool) request()->route('record');
+        $tieneRows = static::repeaterTieneItems($get); // tu helper existente
+        return $anulada || $esEdit || $tieneRows;
+    })
+    ->helperText(function (Get $get) {
+        if (static::compraEstaAnulada($get)) {
+            return 'Compra anulada: solo lectura.';
+        }
+        if ((bool) request()->route('record')) {
+            return 'No es posible cambiar el proveedor durante la edición.';
+        }
+        if (static::repeaterTieneItems($get)) {
+            return 'Para cambiar el proveedor, elimina primero los ítems del detalle.';
+        }
+        return null;
+    })
+    ->columnSpan(4),
+
+                                                // Número de factura / compra
+                                                TextInput::make('numero_factura')
+                        ->label('N° factura / compra')
+                        ->placeholder('Ej: A-12345')
+                        ->maxLength(50)                        
+                        ->nullable()
+                        ->unique(
+                            table: 'compras',
+                            column: 'numero_factura',
+                            ignorable: fn (?Compra $record) => $record, // ignora el propio registro en edición
+                            modifyRuleUsing: function (Unique $rule) {
+                                // Tomamos el proveedor elegido desde el estado de Filament (request->data.*)
+                                $prov = (int) data_get(request()->all(), 'data.proveedor_id');
+
+                                return $rule
+                                    ->where('empresa_id', auth()->id())
+                                    ->where('proveedor_id', $prov ?: 0); // único por empresa+proveedor
+                            }
+                        )
+                        ->validationAttribute('número de factura')
+                        ->required()
+                        ->columnSpan(4),
+
+                                                Select::make('tipo_pago')
+                                                    ->label('Tipo pago')
+                                                    ->options([
+                                                        'contado' => 'Contado',
+                                                        'credito' => 'Crédito',
+                                                    ])
+                                                    ->default('credito')
+                                                    ->required()
+                                                    ->live()
+                                                    ->afterStateUpdated(function ($state, Get $get, Set $set) {
+                                                        if ($state === 'contado') {
+                                                            $set('fecha_vencimiento', null);
+                                                        } else {
+                                                            $fecha = $get('fecha');
+                                                            if ($fecha) $set('fecha_vencimiento', $fecha);
+                                                        }
+                                                    })
+                                                    ->columnSpan(4),
+
+                                                DatePicker::make('fecha')
+                                                    ->label('Fecha')
+                                                    ->required()
+                                                    ->native(false)
+                                                    ->displayFormat('d/m/Y')
+                                                    ->live()
+                                                    ->afterStateUpdated(function ($state, Get $get, Set $set) {
+                                                        if ($get('tipo_pago') === 'credito' && $state) {
+                                                            $set('fecha_vencimiento', $state);
+                                                        }
+                                                    })
+                                                    ->columnSpan(4),
+
+                                                DatePicker::make('fecha_vencimiento')
+                                                    ->label('Vence')
+                                                    ->native(false)
+                                                    ->displayFormat('d/m/Y')
+                                                    ->visible(fn (Get $get) => $get('tipo_pago') === 'credito')
+                                                    ->required(fn (Get $get) => $get('tipo_pago') === 'credito')
+                                                    ->columnSpan(4),
+                        ]),
+                    ])
+
+                      ->disabled(fn (?Compra $record) => $record?->estado === 'anulada')
+
+                    ->collapsible(),
+
+                /* ======================== ÍTEMS ========================= */
+                Section::make('Ítems')
+                    ->schema([
+                 Repeater::make('detalles')
+    ->relationship()
+    // 🔒 en ANULADA: inputs deshabilitados y sin agregar/eliminar
+    ->disabled(fn (Get $get) => static::compraEstaAnulada($get))
+    ->addable(fn (Get $get) => ! static::compraEstaAnulada($get))
+    ->deletable(fn (Get $get) => ! static::compraEstaAnulada($get))
+    ->reorderable(false)                  
+    ->live()
+    ->afterStateHydrated(function (?array $state, \Filament\Forms\Set $set) {
+        if (!is_array($state)) return;
+
+        foreach ($state as $i => $row) {
+            if ($row instanceof \Illuminate\Database\Eloquent\Model) {
+                $row = $row->toArray();
+            }
+            $row = is_array($row) ? $row : [];
+
+            $row['cantidad']         = (float)($row['cantidad'] ?? 1);
+            $row['costo_unitario']   = (float)($row['costo_unitario'] ?? 0);
+            $row['desc_comercial']   = (float)($row['desc_comercial'] ?? 0);
+            $row['iva_pct']          = (float)($row['iva_pct'] ?? 0);
+            $row['precio_venta']     = (float)($row['precio_venta'] ?? 0);
+            $row['precio_venta_act'] = (float)($row['precio_venta_act'] ?? 0);
+            $row['utilidad_pct']     = array_key_exists('utilidad_pct', $row) ? (float)$row['utilidad_pct'] : null;
+
+            if ($row['utilidad_pct'] === null) {
+                $cDesc = max(0, $row['costo_unitario'] * (1 - ($row['desc_comercial'] / 100)));
+                $cIva  = $cDesc * (1 + ($row['iva_pct'] / 100));
+                $pvRef = $row['precio_venta'] > 0 ? $row['precio_venta'] : $row['precio_venta_act'];
+                $row['utilidad_pct'] = ($cIva > 0 && $pvRef > 0)
+                    ? round((($pvRef - $cIva) / $cIva) * 100, 2)
+                    : 0.0;
+            }
+
+            $calc = \App\Filament\Resources\CompraResource::serverRecalcLinea($row);
+            foreach (['subtotal','impuesto','total','costo_con_desc_input','costo_mas_iva_input','total_linea_input'] as $f) {
+                $set("detalles.$i.$f", $calc[$f] ?? null);
+            }
+
+            $set("detalles.$i.iva_pct", number_format((float)$row['iva_pct'], 2, '.', ''));
+            $set("detalles.$i.precio_venta_act", (float)$row['precio_venta_act']);
+            $set("detalles.$i.utilidad_pct", (float)$row['utilidad_pct']);
+
+            // existencias actuales
+            $pid = (int) (($row['product_id'] ?? null) ?: 0);
+            $set("detalles.$i.existencias_actuales", \App\Filament\Resources\CompraResource::stockActual($pid));
+        }
+    })
+
+    ->schema([
+
+        /* ------- Línea 1: Código + Nombre ------- */
+        Forms\Components\Grid::make(12)->schema([
+
+          TextInput::make('codigo_ingresado')
+    ->label('Código')
+    ->placeholder('Escribe el código')
+    ->required()
+    ->validationMessages([
+        'required' => 'Debe seleccionar un producto.'
+    ])
+
+    ->lazy()
+    ->live(onBlur: true)
+    ->dehydrateStateUsing(fn ($state) => trim((string) $state))
+    ->rules(['nullable', 'string', 'max:50'])
+
+    // ✅ Duplicado por PRODUCTO (principal o alterno). Solo marca la fila repetida, no la primera.
+    ->rule(fn (Get $get) => function (string $attribute, $value, $fail) use ($get) {
+        $code = trim((string) $value);
+        if ($code === '') return;
+
+        // índice de la fila actual
+        $idx = null;
+        if (preg_match('/detalles\.(\d+)\./', $attribute, $m)) {
+            $idx = (int) $m[1];
+        }
+
+        $empresaId = (int) auth()->id();
+        $provClip  = (int) (static::proveedorClip($get) ?? 0);
+        if (! $provClip) return;
+
+        // product_id resuelto del código ingresado (principal o alterno)
+        $currentPid = static::productIdByCode($empresaId, $provClip, $code);
+
+        $rows = (array) ($get('../../detalles') ?? []);
+        $dupesIdx = [];
+
+        foreach ($rows as $i => $r) {
+            $rPid  = (int) ($r['product_id'] ?? 0);
+            $rCode = trim((string) ($r['codigo_ingresado'] ?? ''));
+
+            $same = false;
+
+            // Si ambas filas tienen product_id, compara por id
+            if ($currentPid && $rPid && $rPid === $currentPid) {
+                $same = true;
+
+            // Si la otra fila no tiene product_id aún, intenta resolverlo por su código
+            } elseif ($currentPid && ! $rPid && $rCode !== '') {
+                $otherPid = static::productIdByCode($empresaId, $provClip, $rCode);
+                if ($otherPid && $otherPid === $currentPid) {
+                    $same = true;
+                }
+
+            // Fallback por texto (por si aún no resolvió pid)
+            } elseif ($rCode !== '' && strcasecmp($rCode, $code) === 0) {
+                $same = true;
+            }
+
+            if ($same) {
+                $dupesIdx[] = (int) $i;
+            }
+        }
+
+        // Si hay más de una coincidencia, solo falla en las repeticiones
+        if (count($dupesIdx) > 1) {
+            $first = $dupesIdx[0];
+            if ($idx === null || $idx !== $first) {
+                $fail('Este producto ya está en la lista.');
+            }
+        }
+    })
+    ->validationMessages([
+        'required' => 'Digite un código',
+    ])
+
+    // Autocompletar (usa productIdByCode para que coincida lo que valida)
+    ->afterStateUpdated(function ($state, Get $get, Set $set) {
+        $codigo = trim((string) $state);
+        if ($codigo === '') return;
+
+        $empresaId = (int) auth()->id();
+        $provClip  = (int) (static::proveedorClip($get) ?? 0);
+        if (! $provClip) return;
+
+        // Evita autopoblar si YA existe ese producto en otra fila
+        $pidFromCode = static::productIdByCode($empresaId, $provClip, $codigo);
+        if (! $pidFromCode) return;
+
+        $rows = (array) ($get('../../detalles') ?? []);
+        $seen = 0;
+        foreach ($rows as $r) {
+            $rPid  = (int) ($r['product_id'] ?? 0);
+            $rCode = trim((string) ($r['codigo_ingresado'] ?? ''));
+
+            $same = false;
+            if ($rPid && $rPid === $pidFromCode) {
+                $same = true;
+            } elseif ($rCode !== '') {
+                $otherPid = static::productIdByCode($empresaId, $provClip, $rCode);
+                if ($otherPid && $otherPid === $pidFromCode) $same = true;
+            }
+            if ($same) {
+                $seen++;
+                if ($seen > 1) return; // ya estaba → no autopoblar
+            }
+        }
+
+        // Carga el producto por id (consistente con la validación)
+        $p = \App\Models\Product::select([
+            'id','id_producto','descripcion_larga',
+            'precio_costo','descuento_comercial','iva_compra',
+            'precio_venta1','utilidad1'
+        ])->find($pidFromCode);
+
+        if (! $p) return;
+
+        // Relleno de la fila
+        $set('codigo_ingresado', (string) ($p->id_producto ?? $codigo)); // normaliza al principal si quieres
+        $set('product_id',       $p->id);
+        $set('nombre_producto',  $p->descripcion_larga ?? '');
+        $set('costo_unitario',   (float)($p->precio_costo ?? 0));
+        $set('desc_comercial',   (float)($p->descuento_comercial ?? 0));
+        $set('iva_pct',          number_format((float)($p->iva_compra ?? 0), 2, '.', ''));
+        $set('precio_venta_act', (float)($p->precio_venta1 ?? 0));
+
+        $util = (float)($p->utilidad1 ?? 0);
+        $set('utilidad_pct', $util);
+
+        $costo = (float)($p->precio_costo ?? 0);
+        $desc  = (float)($p->descuento_comercial ?? 0);
+        $iva   = (float)($p->iva_compra ?? 0);
+        $cDesc = max(0, $costo * (1 - $desc / 100));
+        $cIva  = $cDesc * (1 + $iva / 100);
+        $set('precio_venta', round($cIva * (1 + $util / 100), 2));
+
+        $set('existencias_actuales', \App\Filament\Resources\CompraResource::stockActual($p->id));
+        static::recalcLinea($get, $set);
+    })
+
+    // Búsqueda con modal (respeta anti-duplicado y setea existencias)
+  ->suffixAction(
+    Forms\Components\Actions\Action::make('abrir-modal-buscar')
+        ->icon('heroicon-m-magnifying-glass')
+        ->disabled(function (Get $get) {
+            $sinProveedor = ! (static::proveedorClip($get) ?? 0);
+            $anulada      = static::compraEstaAnulada($get);
+            return $sinProveedor || $anulada;
+        })
+        ->modalHeading('Buscar producto')
+        ->modalSubmitActionLabel('Agregar')
+        ->closeModalByClickingAway(false)
+        ->form(function (Get $get) {
+            $empresaId = (int) auth()->id();
+            $provClip  = (int) (static::proveedorClip($get) ?? 0);
+
+            // Foto del repeater al abrir el modal
+            $rowsSnapshot = (array) ($get('../../detalles') ?? []);
+
+            return [
+                Forms\Components\Hidden::make('empresa_ctx')->default($empresaId),
+                Forms\Components\Hidden::make('provclip_ctx')->default($provClip),
+                Forms\Components\Hidden::make('rows_snapshot')->default($rowsSnapshot),
+
+                Forms\Components\Select::make('producto_id')
+    ->label('Producto')
+    ->placeholder('Escribe 2+ letras o un código…')
+    ->searchable()
+    ->preload() // ← muestra un listado inicial
+    ->required()
+    ->reactive()
+
+    // 1) LISTADO INICIAL (se muestra al abrir, y mientras no hay búsqueda)
+    ->options(function (Get $get): array {
+        $empresaId = (int) ($get('empresa_ctx') ?? auth()->id());
+        $provClip  = (int) ($get('provclip_ctx') ?? 0);
+
+        // No sugerir los que ya están en el repeater
+        $rows = (array) ($get('rows_snapshot') ?? []);
+        $yaEstan = collect($rows)
+            ->pluck('product_id')
+            ->filter()
+            ->map(fn ($v) => (int) $v)
+            ->values()
+            ->all();
+
+        $q = \App\Models\Product::query()
+            ->select(['id','id_producto','descripcion_larga'])
+            ->where('empresa_id', $empresaId);
+
+        if ($provClip > 0) {
+            $q->where('id_proveedor', $provClip);
+        }
+
+        if (!empty($yaEstan)) {
+            $q->whereNotIn('id', $yaEstan);
+        }
+
+        // Muestra un top inicial ordenado alfabéticamente (ajusta el límite si quieres)
+        return $q->orderBy('descripcion_larga')
+                 ->limit(200)
+                 ->get()
+                 ->mapWithKeys(fn ($p) => [
+                     $p->id => ($p->id_producto ?? '') . ' · ' . ($p->descripcion_larga ?? ''),
+                 ])
+                 ->toArray();
+    })
+
+    // 2) BÚSQUEDA PRECISA (tokens AND + códigos alternos; reemplaza el listado con coincidencias)
+    ->getSearchResultsUsing(function (string $search, Get $get): array {
+        $empresaId = (int) ($get('empresa_ctx') ?? auth()->id());
+        $provClip  = (int) ($get('provclip_ctx') ?? 0);
+
+        $search = trim($search ?? '');
+        if (mb_strlen($search) < 2) {
+            return [];
+        }
+
+        $rows = (array) ($get('rows_snapshot') ?? []);
+        $yaEstan = collect($rows)
+            ->pluck('product_id')
+            ->filter()
+            ->map(fn ($v) => (int) $v)
+            ->values()
+            ->all();
+
+        // Tokens AND
+        $tokens = collect(preg_split('/\s+/', $search))
+            ->filter(fn ($t) => $t !== null && $t !== '')
+            ->values();
+
+        $q = \App\Models\Product::query()
+            ->select(['products.id','products.id_producto','products.descripcion_larga'])
+            ->where('products.empresa_id', $empresaId);
+
+        if ($provClip > 0) {
+            $q->where('products.id_proveedor', $provClip);
+        }
+
+        if (!empty($yaEstan)) {
+            $q->whereNotIn('products.id', $yaEstan);
+        }
+
+        // Cada token debe encajar en descripción, código principal o alternos
+        $q->where(function ($qb) use ($tokens) {
+            foreach ($tokens as $t) {
+                $t = str_replace(['%','_'], ['\\%','\\_'], $t);
+                $like = "%{$t}%";
+
+                $qb->where(function ($or) use ($like) {
+                    $or->where('products.descripcion_larga', 'like', $like)
+                       ->orWhere('products.id_producto', 'like', $like)
+                       ->orWhereExists(function ($sub) use ($like) {
+                           $sub->from('alternate_codes as ac')
+                               ->whereColumn('ac.product_id', 'products.id')
+                               ->where('ac.code', 'like', $like);
+                       });
+                });
+            }
+        });
+
+        return $q->orderBy('products.descripcion_larga')
+                 ->limit(50)
+                 ->get()
+                 ->mapWithKeys(fn ($p) => [
+                     $p->id => ($p->id_producto ?? '') . ' · ' . ($p->descripcion_larga ?? ''),
+                 ])
+                 ->toArray();
+    })
+
+    // Etiqueta cuando hay valor ya seleccionado
+    ->getOptionLabelUsing(function ($value) {
+        if (!$value) return null;
+        $p = \App\Models\Product::select(['id','id_producto','descripcion_larga'])->find($value);
+        return $p ? (($p->id_producto ?? '') . ' · ' . ($p->descripcion_larga ?? '')) : null;
+    })
+
+    // Validación en el modal (evita duplicados)
+    ->rule(function (Get $get) {
+        return function (string $attribute, $value, $fail) use ($get) {
+            $value = (int) $value;
+            if (! $value) return;
+
+            $rows = (array) ($get('rows_snapshot') ?? []);
+            foreach ($rows as $r) {
+                if ((int) ($r['product_id'] ?? 0) === $value) {
+                    $fail('Este producto ya está en la lista.');
+                    return;
+                }
+            }
+
+            $codigoSel = (string) \App\Models\Product::whereKey($value)->value('id_producto');
+            if ($codigoSel !== '') {
+                $codigoSel = strtoupper(trim($codigoSel));
+                foreach ($rows as $r) {
+                    $rCode = strtoupper(trim((string) ($r['codigo_ingresado'] ?? '')));
+                    if ($rCode !== '' && $rCode === $codigoSel) {
+                        $fail('Este producto ya está en la lista.');
+                        return;
+                    }
+                }
+            }
+        };
+    }),
+            ];
+        })
+        ->action(function (array $data, Get $get, Set $set, \Filament\Forms\Components\Actions\Action $action) {
+            // Guard: si cambió algo entre abrir y aceptar
+            $rows = (array) ($get('../../detalles') ?? []);
+            $productId = (int) ($data['producto_id'] ?? 0);
+            foreach ($rows as $r) {
+                if ((int) ($r['product_id'] ?? 0) === $productId) {
+                    $action->halt();
+                    \Filament\Notifications\Notification::make()
+                        ->title('Este producto ya está en la lista.')
+                        ->warning()
+                        ->send();
+                    return;
+                }
+            }
+
+            $p = \App\Models\Product::select([
+                'id','id_producto','descripcion_larga',
+                'precio_costo','descuento_comercial','iva_compra',
+                'precio_venta1','utilidad1',
+            ])->find($productId);
+
+            if (! $p) {
+                $action->halt();
+                \Filament\Notifications\Notification::make()
+                    ->title('Producto no encontrado.')
+                    ->danger()
+                    ->send();
+                return;
+            }
+
+            $code = (string) ($p->id_producto ?? '');
+            $set('codigo_ingresado', $code);
+            $set('product_id',       $p->id);
+            $set('nombre_producto',  $p->descripcion_larga ?? '');
+            $set('costo_unitario',   (float)($p->precio_costo ?? 0));
+            $set('desc_comercial',   (float)($p->descuento_comercial ?? 0));
+            $set('iva_pct',          number_format((float)($p->iva_compra ?? 0), 2, '.', ''));
+            $set('precio_venta_act', (float)($p->precio_venta1 ?? 0));
+            $set('utilidad_pct',     (float)($p->utilidad1 ?? 0));
+
+            $costo = (float)($p->precio_costo ?? 0);
+            $desc  = (float)($p->descuento_comercial ?? 0);
+            $iva   = (float)($p->iva_compra ?? 0);
+            $cDesc = max(0, $costo * (1 - $desc / 100));
+            $cIva  = $cDesc * (1 + $iva / 100);
+            $set('precio_venta', round($cIva * (1 + (float)($p->utilidad1 ?? 0) / 100), 2));
+
+            $set('existencias_actuales', \App\Filament\Resources\CompraResource::stockActual($p->id));
+            static::recalcLinea($get, $set);
+        })
+)
+
+->columnSpan(3),
+
+// SIN dehydrated(false): se guarda e hidrata
+TextInput::make('nombre_producto')
+    ->label('Nombre')
+    ->disabled()
+    ->dehydrated(true)
+    ->extraInputAttributes(['class' => 'h-9 text-sm'])
+    ->columnSpan(7),
+
+TextInput::make('existencias_actuales')
+    ->label('Existencias')
+    ->disabled()
+    ->dehydrated(false)
+    ->formatStateUsing(fn ($state) => number_format((float)$state, 2, ',', '.'))
+    ->afterStateHydrated(function ($state, Get $get, Set $set) {
+        $pid = (int) ($get('product_id') ?? 0);
+        $set('existencias_actuales', \App\Filament\Resources\CompraResource::stockActual($pid));
+    })
+    ->columnSpan(2),
+
+        ]),
+
+        
+
+        /* - Línea 2: Costo + D% + Costo c/desc + IVA + Costo+IVA - */
+        Forms\Components\Grid::make(20)->schema([
+            TextInput::make('costo_unitario')
+                ->label('Costo')
+                ->numeric()->minValue(0)->default(0)
+                ->lazy()
+                ->prefix(fn ($state) => '$ ' . number_format((float)$state, 0, ',', '.'))
+                ->extraInputAttributes(['class' => 'h-8 text-xs'])
+                ->afterStateUpdated(fn ($state, Get $get, Set $set) => static::recalcLinea($get, $set))
+                ->columnSpan(5),
+
+            TextInput::make('desc_comercial')
+                ->label('Desc.%')
+                ->numeric()->minValue(0)->maxValue(100)->default(0)
+                ->lazy()
+                ->extraInputAttributes(['class' => 'h-8 text-xs'])
+                ->afterStateUpdated(fn ($state, Get $get, Set $set) => static::recalcLinea($get, $set))
+                ->columnSpan(2),
+
+            TextInput::make('costo_con_desc_input')
+                ->label('Costo Con Desc')
+                ->disabled()
+                ->dehydrated(false)
+                ->prefix(fn ($state) => '$ ' . number_format((float)$state, 0, ',', '.'))
+                ->formatStateUsing(fn ($state) => '$ ' . number_format((float)$state, 0, ',', '.'))
+                ->extraInputAttributes(['class' => 'h-8 text-xs text-right'])
+                ->columnSpan(5),
+
+            Select::make('iva_pct')
+                ->label('IVA %')
+                ->options([
+                    '0.00'  => '0%',
+                    '5.00'  => '5%',
+                    '8.00'  => '8%',
+                    '16.00' => '16%',
+                    '19.00' => '19%',
+                ])
+                ->default('0.00')
+                ->dehydrateStateUsing(fn ($state) => (float) $state) // guarda como número
+                ->afterStateHydrated(fn ($state, Set $set) =>
+                    $set('iva_pct', number_format((float)$state, 2, '.', '')) // muestra como string
+                )
+                ->afterStateUpdated(fn ($state, Get $get, Set $set) => static::recalcLinea($get, $set))
+                ->extraAttributes(['class' => 'h-8 text-xs'])
+                ->columnSpan(3),
+
+            TextInput::make('costo_mas_iva_input')
+                ->label('Costo Total + IVA')
+                ->disabled()
+                ->dehydrated(false)
+                ->lazy()
+                ->prefix(fn ($state) => '$ ' . number_format((float)$state, 0, ',', '.'))
+                ->formatStateUsing(fn ($state) => '$ ' . number_format((float)$state, 0, ',', '.'))
+                ->extraInputAttributes(['class' => 'h-8 text-xs text-right'])
+                ->columnSpan(5),
+        ]),
+
+        /* - Línea 3: PV actual + U% + Nuevo PV + Cant + Total - */
+        Forms\Components\Grid::make(20)->schema([
+            TextInput::make('precio_venta_act')
+    ->label('P. Venta Actual')
+    ->numeric()
+    ->default(0)
+    ->disabled()
+    ->dehydrated(true)    
+    ->prefix('$ ')
+    ->afterStateHydrated(fn ($state, \Filament\Forms\Set $set) =>
+        $set('precio_venta_act', is_numeric($state) ? (float) $state : 0)
+    )
+    ->dehydrateStateUsing(fn ($state) => (float) $state)
+    ->columnSpan(5),
+
+    
+
+            TextInput::make('utilidad_pct')
+                ->label('Utili.%')
+                ->numeric()->minValue(0)->default(0)
+                ->lazy()
+                ->extraInputAttributes(['class' => 'h-8 text-xs'])
+                ->afterStateUpdated(function ($state, Get $get, Set $set) {
+                    $costo = (float) $get('costo_unitario');
+                    $desc  = (float) $get('desc_comercial');
+                    $iva   = (float) $get('iva_pct');
+                    $cDesc = max(0, $costo * (1 - $desc/100));
+                    $cIva  = $cDesc * (1 + $iva/100);
+                    $set('precio_venta', round($cIva * (1 + max(0,(float)$state)/100), 2));
+                    static::recalcLinea($get, $set);
+                })
+                ->columnSpan(3),
+                
+
+            TextInput::make('precio_venta')
+                ->label('Nuevo P. Venta')
+                ->numeric()->minValue(0)->default(0)
+                ->lazy()
+                ->prefix(fn ($state) => '$ ' . number_format((float)$state, 0, ',', '.'))
+                ->extraInputAttributes(['class' => 'h-8 text-xs'])
+                ->helperText(function (Get $get) {
+                    $pv=(float)$get('precio_venta');
+                    $c=(float)$get('costo_unitario');
+                    $d=(float)$get('desc_comercial');
+                    $v=(float)$get('iva_pct');
+                    $cDesc=max(0,$c*(1-$d/100));
+                    $cIva=$cDesc*(1+$v/100);
+                    return ($pv>0 && $pv<$cIva) ? '⚠️ PV < costo + IVA.' : null;
+                })
+                ->afterStateUpdated(function ($state, Get $get, Set $set) {
+                    $pv=max(0,(float)$state);
+                    $c=(float)$get('costo_unitario');
+                    $d=(float)$get('desc_comercial');
+                    $v=(float)$get('iva_pct');
+                    $cDesc=max(0,$c*(1-$d/100));
+                    $cIva=$cDesc*(1+$v/100);
+                    if ($cIva>0 && $pv>=$cIva) {
+                        $set('utilidad_pct', round((($pv-$cIva)/$cIva)*100,2));
+                    }
+                    static::recalcLinea($get,$set);
+                })
+                ->columnSpan(5),
+
+            TextInput::make('cantidad')
+                ->label('Cant.')
+                ->numeric()->minValue(0.01)->default(1)
+                ->lazy()
+                ->extraInputAttributes([
+                    'class' => 'h-8 text-xs text-center',
+                    'style' => 'max-width:120px',
+                ])
+                ->afterStateUpdated(fn ($state, Get $get, Set $set) => static::recalcLinea($get, $set))
+                ->columnSpan(2),
+
+            TextInput::make('total_linea_input')
+                ->label('Total')
+                ->disabled()
+                ->dehydrated(false)
+                ->lazy()
+                ->prefix(fn ($state) => '$ ' . number_format((float)$state, 0, ',', '.'))
+                ->formatStateUsing(fn ($state) => '$ ' . number_format((float)$state, 0, ',', '.'))
+                ->extraInputAttributes(['class' => 'h-8 text-xs text-right font-semibold'])
+                ->columnSpan(5),
+
+            // Persistencia (FK y totales)
+            Forms\Components\Hidden::make('id')->dehydrated(), // <-- NECESARIO para upsert
+            Forms\Components\Hidden::make('product_id')->required(),
+            Forms\Components\Hidden::make('subtotal'),
+            Forms\Components\Hidden::make('impuesto'),
+            Forms\Components\Hidden::make('total'),
+        ]),
+    ])
+    ->createItemButtonLabel('Agregar ítem'),
+
+
+                    ]),
+
+                /* ======================== TOTALES ======================== */
+                Card::make()
+    ->columns(3)
+    ->schema([
+
+        // 🔹 Ítems y cantidades
+        Placeholder::make('tot_items')
+            ->label('🧾 Ítems')
+            ->content(fn (callable $get) => count($get('detalles') ?? []))
+            ->extraAttributes(['style' => 'font-weight:600;color:#374151']),
+
+        Placeholder::make('tot_cant')
+            ->label('📦 Cant. total')
+            ->content(fn (callable $get) => number_format(
+                collect($get('detalles') ?? [])->sum(fn($i) => (float)($i['cantidad'] ?? 0)),
+                0, ',', '.'
+            ))
+            ->extraAttributes(['style' => 'font-weight:600;color:#374151']),
+
+        Placeholder::make('tot_desc')
+            ->label('💸 Descuento comercial')
+            ->content(function (callable $get) {
+                $detalles = $get('detalles') ?? [];
+                $descuento = collect($detalles)->sum(function ($i) {
+                    $cant  = (float)($i['cantidad'] ?? 0);
+                    $costo = (float)($i['costo_unitario'] ?? 0);
+                    $descP = (float)($i['desc_comercial'] ?? 0);
+                    return $cant * $costo * ($descP / 100);
+                });
+                return '$ ' . number_format($descuento, 0, ',', '.');
+            })
+            ->extraAttributes(['style' => 'color:#b91c1c;font-weight:600;']),
+
+        // 🔹 Subtotal antes de descuentos
+         Placeholder::make('tot_sub')
+            ->label('Subtotal (sin descuento)')
+            ->content(function (callable $get) {
+                $detalles = $get('detalles') ?? [];
+                $total = collect($detalles)->sum(fn($i) =>
+                    ((float)($i['cantidad'] ?? 0)) * ((float)($i['costo_unitario'] ?? 0))
+                );
+                return '$ ' . number_format($total, 0, ',', '.');
+            })
+            ->extraAttributes(['style' => 'color:#111827;font-weight:600;']),
+
+        // 🔹 Subtotal después de descuentos
+        Placeholder::make('tot_sub_desc')
+            ->label('Subtotal (con descuento)')
+            ->content(function (callable $get) {
+                $detalles = $get('detalles') ?? [];
+                $total = collect($detalles)->sum(function ($i) {
+                    $cant  = (float)($i['cantidad'] ?? 0);
+                    $costo = (float)($i['costo_unitario'] ?? 0);
+                    $descP = (float)($i['desc_comercial'] ?? 0);
+                    return $cant * $costo * (1 - $descP / 100);
+                });
+                return '$ ' . number_format($total, 0, ',', '.');
+            })
+            ->extraAttributes(['style' => 'color:#0d9488;font-weight:600;']),
+
+        // 🔹 Total impuestos
+         Placeholder::make('tot_imp')
+            ->label('IVA total')
+            ->content(function (callable $get) {
+                $detalles = $get('detalles') ?? [];
+                $iva = collect($detalles)->sum(function ($i) {
+                    $cant  = (float)($i['cantidad'] ?? 0);
+                    $costo = (float)($i['costo_unitario'] ?? 0);
+                    $descP = (float)($i['desc_comercial'] ?? 0);
+                    $ivaP  = (float)($i['iva_pct'] ?? 0);
+                    $base  = $cant * $costo * (1 - $descP / 100);
+                    return $base * ($ivaP / 100);
+                });
+                return '$ ' . number_format($iva, 0, ',', '.');
+            })
+            ->extraAttributes(['style' => 'color:#ca8a04;font-weight:600;']),
+
+        // 🔹 Total general (con descuento + IVA)
+       Placeholder::make('tot_tot')
+            ->label(' ')
+            ->content(function (callable $get) {
+                $detalles = $get('detalles') ?? [];
+                $total = collect($detalles)->sum(function ($i) {
+                    $cant  = (float)($i['cantidad'] ?? 0);
+                    $costo = (float)($i['costo_unitario'] ?? 0);
+                    $descP = (float)($i['desc_comercial'] ?? 0);
+                    $ivaP  = (float)($i['iva_pct'] ?? 0);
+                    $base  = $cant * $costo * (1 - $descP / 100);
+                    return $base * (1 + $ivaP / 100);
+                });
+                return '💰 TOTAL: $ ' . number_format($total, 0, ',', '.');
+            })
+            ->extraAttributes([
+                'style' => '
+                    background:#ecfdf5;
+                    color:#065f46;
+                    font-weight:700;
+                    font-size:1.1rem;
+                    text-align:center;
+                    border-radius:8px;
+                    padding:.6rem;
+                    margin-top:.5rem;
+                ',
+            ])
+            ->columnSpanFull()
+            ->extraAttributes(['style' => 'font-size:18px;']),
+
+        // 🔹 Observaciones
+        Section::make('📝 Observaciones')
+            ->schema([
+                Textarea::make('nota')
+                    ->label(false)
+                    ->rows(2)
+                    ->placeholder('Agregar una nota u observación...')
+                    ->extraAttributes(['style' => 'font-size:13px'])
+                    ->columnSpanFull(),
+            ])
+            ->compact()
+            ->collapsible()
+            ->collapsed(),
+
+                        View::make('filament.custom.form-cache-js')
+    ->dehydrated(false)
+    ->columnSpanFull()
+    ->extraAttributes(['style' => 'display:none'])
+    ->viewData([
+        'cacheKey' => 'compra_form_cache_u_' . auth()->id(), // ✅ calcúlala aquí
+    ]),
+
+    View::make('filament.custom.form-cache-edit-js')
+    ->dehydrated(false)
+    ->columnSpanFull()
+    ->visible(fn () => request()->routeIs('filament.admin.resources.compras.edit'))
+    ->viewData([
+        // clave directa, sin Closures, por usuario + id del record
+        'cacheKey' => 'compra_form_cache_edit_u_' . (auth()->id() ?? 'guest')
+            . '_r_' . (string) (
+                ($r = request()->route('record')) instanceof \Illuminate\Database\Eloquent\Model
+                    ? $r->getKey()
+                    : ($r ?? '0')
+            ),
+    ]),
+                    ]),
+            ]);
+    }
+
+    /* ================== Cálculo de una fila (cliente) ================== */
+    public static function serverRecalcLinea(array $row): array
+    {
+        $costo = (float)($row['costo_unitario'] ?? 0);
+        $desc  = (float)($row['desc_comercial'] ?? 0);
+        $iva   = (float)($row['iva_pct'] ?? 0);
+        $cant  = max(0, (float)($row['cantidad'] ?? 1));
+
+        $costoDesc   = max(0, $costo * (1 - $desc / 100));
+        $base        = $cant * $costoDesc;
+        $imp         = $base * ($iva / 100);
+        $total       = $base + $imp;
+
+        $row['subtotal'] = round($base, 2);
+        $row['impuesto'] = round($imp,  2);
+        $row['total']    = round($total,2);
+
+        $row['costo_con_desc_input'] = round($costoDesc, 2);
+        $row['costo_mas_iva_input']  = round($costoDesc * (1 + $iva / 100), 2);
+        $row['total_linea_input']    = $row['total'];
+
+        return $row;
+    }
+
+    /* ----------------- Cálculos de línea ----------------- */
+    protected static function recalcLinea(Get $get, Set $set): void
+    {
+        $costo = (float) ($get('costo_unitario') ?? 0);
+        $desc  = (float) ($get('desc_comercial') ?? 0);
+        $iva   = (float) ($get('iva_pct') ?? 0);
+        $cant  = max(0, (float) ($get('cantidad') ?? 1));
+
+        $costoDesc   = max(0, $costo * (1 - $desc / 100));
+        $costoMasIva = $costoDesc * (1 + $iva / 100);
+
+        $base  = $cant * $costoDesc;
+        $imp   = $base * ($iva / 100);
+        $total = $base + $imp;
+
+        $set('costo_con_desc_input', round($costoDesc, 2));
+        $set('costo_mas_iva_input',  round($costoMasIva, 2));
+        $set('total_linea_input',    round($total, 2));
+
+        $set('subtotal', round($base, 2));
+        $set('impuesto', round($imp,  2));
+        $set('total',    round($total, 2));
+    }
+
+    /* ----------------- Totales del Repeater ----------------- */
+    protected static function sumTot(callable $get, string $field): string
+    {
+        $rows = $get('detalles') ?? [];
+        $sum = 0;
+        foreach ($rows as $r) {
+            $cant  = (float)($r['cantidad'] ?? 0);
+            $costo = (float)($r['costo_unitario'] ?? 0);
+            $desc  = (float)($r['desc_comercial'] ?? 0);
+            $iva   = (float)($r['iva_pct'] ?? 0);
+
+            $costoDesc = max(0, $costo - ($costo * $desc / 100));
+            $base      = $cant * $costoDesc;
+            $imp       = $base * ($iva / 100);
+            $total     = $base + $imp;
+
+            $sum += match ($field) {
+                'subtotal' => $base,
+                'impuesto' => $imp,
+                'total'    => $total,
+                default    => 0,
+            };
+        }
+        return '$ ' . number_format($sum, 0, ',', '.');
+    }
+
+    /** ----------------- Tabla (Listado) ----------------- */
+    public static function table(Tables\Table $table): Tables\Table
+{
+    return $table
+        ->modifyQueryUsing(function (Builder $query) {
+            $user = auth()->user();
+
+            // Superadmin ve todo
+            if ($user->hasRole('super_admin')) {
+                return;
+            }
+
+            // Si tiene empresa asignada (empleado o admin)
+            if (!empty($user->empresa_id)) {
+                $query->where('empresa_id', $user->empresa_id);
+            } else {
+                // Si es usuario tipo empresa, usa su propio ID
+                $query->where('empresa_id', $user->id);
+            }
+        })
+        ->columns([
+            Tables\Columns\TextColumn::make('numero_factura')
+                ->label('N° Factura')
+                ->sortable()
+                ->searchable(),
+
+            Tables\Columns\TextColumn::make('fecha')
+                ->label('Fecha')
+                ->date('d/m/Y')
+                ->sortable(),
+
+            Tables\Columns\BadgeColumn::make('estado')
+                ->label('Estado')
+                ->getStateUsing(function ($record) {
+                    if ($record->estado === 'confirmada') {
+                        $saldo = max(0, $record->total - $record->pagos()->sum('monto'));
+                        return $saldo <= 0
+                            ? 'confirmada pagada'
+                            : 'confirmada pendiente';
+                    }
+                    return ucfirst($record->estado);
+                })
+                ->colors([
+                    'success' => fn($state) => str_contains($state, 'pagada'),
+                    'warning' => fn($state) => str_contains($state, 'pendiente'),
+                    'danger'  => fn($state) => str_contains($state, 'anulada'),
+                    'gray'    => fn($state) => str_contains($state, 'borrador'),
+                ]),
+
+            Tables\Columns\TextColumn::make('tipo_pago')
+                ->label('Pago')
+                ->badge()
+                ->colors([
+                    'success' => fn($state) => $state === 'contado',
+                    'warning' => fn($state) => $state === 'credito',
+                ]),
+
+            Tables\Columns\TextColumn::make('total')
+                ->label('Total factura')
+                ->sortable()
+                ->formatStateUsing(fn($state) => '$ ' . number_format((float)$state, 0, ',', '.')),
+
+            Tables\Columns\TextColumn::make('total_pagado')
+                ->label('Pagado')
+                ->getStateUsing(fn($record) =>
+                    '$ ' . number_format((float)$record->pagos()->sum('monto'), 0, ',', '.')
+                )
+                ->sortable(),
+
+            Tables\Columns\TextColumn::make('saldo')
+                ->label('Saldo pendiente')
+                ->getStateUsing(fn($record) =>
+                    '$ ' . number_format(max(0, $record->total - $record->pagos()->sum('monto')), 0, ',', '.')
+                )
+                ->sortable(),
+        ])
+        ->filters([
+            Tables\Filters\SelectFilter::make('proveedor_id')
+    ->label('Proveedor')
+    ->options(
+        \App\Models\Actor::where('tipo', 3)
+            ->whereNotNull('nombre')
+            ->where('nombre', '!=', '')
+            ->orderBy('nombre')
+            ->get()
+            ->pluck('nombre', 'id_clip_pro')
+            ->toArray()
+    )
+    ->searchable()
+    ->placeholder('Todos los proveedores'),
+        ])
+        ->actions([])
+        ->bulkActions([])
+        ->defaultSort('fecha', 'desc');
+}
+
+   public static function getRelations(): array
+{
+    return [
+        RelationManagers\PagosRelationManager::class,
+    ];
+}
+
+
+    public static function getPages(): array
+    {
+        return [
+            'index'  => Pages\ListCompras::route('/'),
+            'create' => Pages\CreateCompra::route('/create'),
+            'edit'   => Pages\EditCompra::route('/{record}/edit'),
+            'view'   => Pages\ViewCompra::route('/{record}'),
+        ];
+    }
+
+    /* ----------------- Helpers de búsqueda ----------------- */
+
+    /**
+     * Como proveedor_id guarda id_clip_pro, solo devolvemos ese valor.
+     */
+    protected static function proveedorClip(\Filament\Forms\Get $get): ?int
+{
+    $valor = $get('../../proveedor_id') ?? $get('proveedor_id') ?? 0;
+    $idClipPro = (int) $valor;
+    return $idClipPro > 0 ? $idClipPro : null;
+}
+
+    /**
+     * Búsqueda rápida por código/nombre/alterno
+     * Filtra SIEMPRE por empresa y por id_proveedor = id_clip_pro
+     */
+    protected static function fastFindProduct(int $empresaId, int $provClip, string $input): ?\App\Models\Product
+{
+    $code = trim($input);
+    if ($code === '') return null;
+
+    // Normaliza por si te llegan espacios o guiones en alternos (opcional)
+    $normalized = strtoupper(preg_replace('/[\s\-]+/', '', $code));
+
+    return \App\Models\Product::query()
+        ->where('empresa_id', $empresaId)
+        ->where('id_proveedor', $provClip)
+        ->where(function ($q) use ($code, $normalized, $empresaId) {
+            // Si es todo dígitos, intenta match exacto con id_producto
+            if (ctype_digit($code)) {
+                $q->orWhere('id_producto', (int) $code);
+            }
+
+            // Siempre verifica códigos alternos (match exacto; si quieres "contiene", cámbialo a like)
+            $q->orWhereExists(function ($sub) use ($normalized, $empresaId) {
+                $sub->from('alternate_codes as ac')
+                    ->whereColumn('ac.product_id', 'products.id')
+                    ->where('ac.empresa_id', $empresaId)
+                    // exacto: normaliza igual que arriba
+                    ->whereRaw("REPLACE(UPPER(ac.code), ' ', '') = ?", [$normalized]);
+                    // si prefieres 'contiene': ->where('ac.code', 'like', "%{$normalized}%")
+            });
+        })
+        // Prioriza coincidencia exacta por id_producto si el input era numérico
+        ->when(ctype_digit($code), fn ($q) =>
+            $q->orderByRaw('CASE WHEN id_producto = ? THEN 0 ELSE 1 END', [(int) $code])
+        )
+        ->first();
+}
+    /**
+     * Opciones del modal: SOLO productos de ese proveedor (id_clip_pro) y empresa actual.
+     */
+    protected static function productsOptionsForProveedor(int $empresaId, int $provClip): array
+    {
+        if (!$provClip) return [];
+
+        return Product::query()
+            ->select(['id', 'id_producto', 'descripcion_larga'])
+            ->where('empresa_id', $empresaId)
+            ->where('id_proveedor', $provClip)
+            ->orderBy('descripcion_larga')
+            ->limit(500)
+            ->get()
+            ->mapWithKeys(fn ($p) => [
+                $p->id => $p->id_producto . ' · ' . $p->descripcion_larga,
+            ])->toArray();
+    }
+
+
+    protected static function stockActual(?int $productId): float
+{
+    if (!$productId) return 0.0;
+
+    // Desde products.existencias
+    $p = \App\Models\Product::select('id','existencias')->find($productId);
+    if ($p && $p->existencias !== null) {
+        return (float) $p->existencias;
+    }
+
+    // (Opcional) Fallback al kardex, si existe
+    try {
+        $in  = (float) DB::table('kardex')->where('product_id',$productId)->sum('entrada');
+        $out = (float) DB::table('kardex')->where('product_id',$productId)->sum('salida');
+        return $in - $out;
+    } catch (\Throwable $e) {
+        return 0.0;
+    }
+
+    
+}
+
+protected static function repeaterTieneItems(\Filament\Forms\Get $get): bool
+{
+    $rows = (array) ($get('detalles') ?? []);
+    foreach ($rows as $r) {
+        $pid  = $r['product_id'] ?? null;
+        $code = trim((string) ($r['codigo_ingresado'] ?? ''));
+        if (!empty($pid) || $code !== '') return true;
+    }
+    return false;
+}
+
+protected function mutateFormDataBeforeSave(array $data): array
+{
+    // ✅ 1) Validación: si hay ítems y el usuario intenta cambiar el proveedor, lo bloqueamos
+    $rows = $data['detalles'] ?? [];
+    $tieneItems = collect($rows)->contains(function ($r) {
+        return !empty($r['product_id']) || trim((string)($r['codigo_ingresado'] ?? '')) !== '';
+    });
+
+    if ($tieneItems && $this->record && (int)$data['proveedor_id'] !== (int)$this->record->proveedor_id) {
+        throw \Illuminate\Validation\ValidationException::withMessages([
+            'data.proveedor_id' => 'Para cambiar el proveedor, elimina primero los ítems del detalle.',
+        ]);
+    }
+
+    // ✅ 2) Recalcular totales antes de guardar (teniendo en cuenta desc_comercial)
+    $detalles = $data['detalles'] ?? [];
+
+    $subtotal = 0;
+    $impuesto = 0;
+    $descuento = 0;
+    $total = 0;
+
+    foreach ($detalles as $item) {
+        $cantidad = (float)($item['cantidad'] ?? 0);
+        $costo = (float)($item['costo_unitario'] ?? 0);
+        $desc = (float)($item['desc_comercial'] ?? 0);
+        $iva  = (float)($item['iva_pct'] ?? 0);
+
+        // 💰 Subtotal sin descuento
+        $subtotalItem = $cantidad * $costo;
+
+        // 💸 Descuento del ítem
+        $descuentoItem = $subtotalItem * ($desc / 100);
+
+        // 💵 Subtotal con descuento
+        $base = $subtotalItem - $descuentoItem;
+
+        // 🧾 Impuesto del ítem
+        $imp = $base * ($iva / 100);
+
+        // 📊 Acumular totales
+        $subtotal += $subtotalItem;
+        $descuento += $descuentoItem;
+        $impuesto += $imp;
+        $total += $base + $imp;
+    }
+
+    // 🧮 Guardar en el array de datos
+    $data['subtotal'] = round($subtotal, 2);
+    $data['descuento_total'] = round($descuento, 2);
+    $data['impuesto_total'] = round($impuesto, 2);
+    $data['total'] = round($total, 2);
+
+    return $data;
+}
+
+
+
+// Dentro de App\Filament\Resources\CompraResource (puede ser al final, como los otros helpers)
+protected static function productIdByCode(int $empresaId, int $provClip, string $code): ?int
+{
+    $code = trim($code);
+    if ($code === '') return null;
+
+    // Busca por id_producto exacto o por código alterno exacto
+    $pid = \App\Models\Product::query()
+        ->where('empresa_id', $empresaId)
+        ->where('id_proveedor', $provClip)
+        ->where(function ($qq) use ($code, $empresaId) {
+            $qq->where('id_producto', $code) // MySQL castea strings a int si la columna es int
+               ->orWhereExists(function ($sub) use ($code, $empresaId) {
+                   $sub->from('alternate_codes as ac')
+                       ->whereColumn('ac.product_id', 'products.id')
+                       ->where('ac.empresa_id', $empresaId)
+                       ->where('ac.code', $code); // exacto
+               });
+        })
+        ->value('id');
+
+    return $pid ? (int) $pid : null;
+}
+
+protected static function compraEstaAnulada(Get $get): bool
+{
+    // 1) Intenta leerlo del estado del form
+    $estado = $get('../../estado') ?? $get('estado') ?? null; // desde el repeater sube dos niveles
+    if (is_string($estado)) {
+        return $estado === 'anulada';
+    }
+
+    // 2) Fallback: carga por la ruta del Edit
+    $id = request()->route('record');
+    if ($id) {
+        $c = \App\Models\Compra::query()->select('estado')->find($id);
+        return ($c?->estado === 'anulada');
+    }
+
+    return false;
+}
+
+
+
+public static function viewInfolistSchema(): array
+{
+    return [
+        InfoSection::make('Cabecera')
+            ->schema([
+                InfoGrid::make(12)->schema([
+                    TextEntry::make('numero_factura')
+                        ->label('No. factura')
+                        ->columnSpan(3),
+
+                    TextEntry::make('fecha')
+                        ->label('Fecha')
+                        ->date('d/m/Y')
+                        ->columnSpan(3),
+
+                    TextEntry::make('tipo_pago')
+                        ->label('Tipo de pago')
+                        ->badge()
+                        ->color(fn (string|null $state) => $state === 'contado' ? 'success' : 'warning')
+                        ->columnSpan(3),
+
+                    TextEntry::make('estado')
+    ->label('Estado')
+    ->state(function (Compra $record) {
+        if ($record->estado === 'confirmada') {
+            $saldo = max(0, $record->total - $record->pagos()->sum('monto'));
+            return $saldo <= 0 ? 'pagada' : 'pendiente';
+        }
+        return $record->estado;
+    })
+    ->badge()
+    ->color(fn (string $state) => match ($state) {
+        'pagada'    => 'success',
+        'pendiente' => 'warning',
+        'anulada'   => 'danger',
+        'borrador'  => 'gray',
+        default     => 'gray',
+    })
+    ->icon(fn (string $state) => match ($state) {
+        'pagada'    => 'heroicon-o-check-circle',
+        'pendiente' => 'heroicon-o-clock',
+        'anulada'   => 'heroicon-o-x-circle',
+        'borrador'  => 'heroicon-o-document',
+        default     => null,
+    })
+    ->columnSpan(3),
+
+                    // Nombre del proveedor a partir de proveedor_id (id_clip_pro)
+                    TextEntry::make('proveedor_nombre')
+                        ->label('Proveedor')
+                        ->state(function (Compra $record): string {
+                            return (string) Actor::query()
+                                ->where('empresa_id', $record->empresa_id)
+                                ->whereIn('clasificacion', ['proveedor', 'cliente_proveedor'])
+                                ->where('id_clip_pro', $record->proveedor_id)
+                                ->value('nombre') ?? '—';
+                        })
+                        ->columnSpan(6),
+
+                    TextEntry::make('nota')
+                        ->label('Nota')
+                        ->default('—')
+                        ->columnSpan(6),
+                ]),
+            ])
+            ->collapsible(),
+
+      InfoSection::make('Ítems')
+      
+    ->schema([
+        // 🔹 Cabecera
+        InfoGrid::make(12)->schema([
+            TextEntry::make('h_cod')->label('Código')->columnSpan(2),
+            TextEntry::make('h_prod')->label('Producto')->columnSpan(3),
+            TextEntry::make('h_precio')->label('Precio U.')->columnSpan(2)->extraAttributes(['class' => 'text-right']),
+            TextEntry::make('h_desc')->label('Des. %')->columnSpan(1)->extraAttributes([
+                'class' => 'text-right whitespace-nowrap' // evita salto de línea
+            ]),
+            TextEntry::make('h_iva')->label('IVA %')->columnSpan(1)->extraAttributes(['class' => 'text-right']),
+            TextEntry::make('h_cant')->label('Cant.')->columnSpan(1)->extraAttributes(['class' => 'text-right']),
+            TextEntry::make('h_total')->label('Total')->columnSpan(2)->extraAttributes(['class' => 'text-right']),
+        ])->extraAttributes(['class' => 'text-xs font-semibold text-gray-500']),
+
+        // 🔹 Filas de productos
+        RepeatableEntry::make('detalles')
+            ->label('')
+            ->state(fn ($record) => collect($record->detalles)->values())
+            ->schema([
+                // Código
+                TextEntry::make('codigo_ingresado')
+                    ->hiddenLabel()
+                    ->columnSpan(2)
+                    ->extraAttributes(['class' => 'text-[13px] tabular-nums']),
+
+                // Producto
+                TextEntry::make('nombre_producto')
+                    ->hiddenLabel()
+                    ->columnSpan(3)
+                    ->extraAttributes(['class' => 'text-[13px] leading-5']),
+
+                // Precio unitario
+                TextEntry::make('costo_unitario')
+                    ->hiddenLabel()
+                    ->formatStateUsing(fn ($state) => '$ ' . number_format((float) ($state ?? 0), 0, ',', '.'))
+                    ->columnSpan(2)
+                    ->extraAttributes(['class' => 'text-right text-[13px] tabular-nums']),
+
+                // Descuento comercial (sin decimales)
+                TextEntry::make('desc_comercial')
+                    ->hiddenLabel()
+                    ->formatStateUsing(fn ($state) => number_format((float) ($state ?? 0), 0, ',', '.') . ' %')
+                    ->columnSpan(1)
+                    ->extraAttributes([
+                        'class' => 'text-right text-[13px] tabular-nums text-gray-700 whitespace-nowrap'
+                    ]),
+
+                // IVA %
+                TextEntry::make('iva_pct')
+                    ->hiddenLabel()
+                    ->formatStateUsing(fn ($state) => number_format((float) ($state ?? 0), 0, ',', '.') . '%')
+                    ->columnSpan(1)
+                    ->extraAttributes(['class' => 'text-right text-[13px] tabular-nums']),
+
+                // Cantidad (con devoluciones)
+                TextEntry::make('cantidad')
+                    ->hiddenLabel()
+                    ->formatStateUsing(function ($state, $record) {
+                        $cantidad = number_format((float) ($state ?? 0), 0, ',', '.');
+                        $devuelto = \App\Models\DevolucionCompraDetalle::where('compra_detalle_id', $record->id)->sum('cantidad');
+
+                        if ($devuelto > 0) {
+                            $devueltoFmt = number_format($devuelto, 0, ',', '.');
+                            return "{$cantidad} <span style='color:#d32f2f;font-weight:600;'>(-{$devueltoFmt})</span>";
+                        }
+
+                        return $cantidad;
+                    })
+                    ->html()
+                    ->columnSpan(1)
+                    ->extraAttributes(['class' => 'text-right tabular-nums text-[13px]']),
+
+                // Total
+                TextEntry::make('total')
+                    ->hiddenLabel()
+                    ->formatStateUsing(fn ($state) => '$ ' . number_format((float) ($state ?? 0), 0, ',', '.'))
+                    ->columnSpan(2)
+                    ->extraAttributes(['class' => 'text-right tabular-nums font-semibold text-[13px]']),
+            ])
+            ->columns(12)
+            ->contained(false)
+            ->extraAttributes(['class' => 'divide-y divide-gray-100'])
+            ->columnSpanFull(),
+    ])
+    ->columnSpanFull()
+    ->collapsible(),
+
+
+        InfoSection::make('Totales')
+    ->schema([
+        InfoGrid::make(12)->schema([
+
+            // 🔹 Subtotal con descuento aplicado
+            TextEntry::make('subtotal')
+                ->label('Subtotal')
+                ->formatStateUsing(function ($record) {
+                    $subtotal = (float)($record->subtotal ?? 0);
+                    $descuento = (float)($record->descuento_total ?? 0);
+                    $subtotalConDescuento = $subtotal - $descuento;
+
+                    return '$ ' . number_format($subtotalConDescuento, 0, ',', '.');
+                })
+                ->columnSpan(4),
+
+            // 🔹 IVA total
+            TextEntry::make('impuesto_total')
+                ->label('IVA')
+                ->formatStateUsing(fn ($state) => '$ ' . number_format((float)($state ?? 0), 0, ',', '.'))
+                ->columnSpan(4),
+
+            // 🔹 Total general
+            TextEntry::make('total')
+                ->label('Total')
+                ->formatStateUsing(fn ($state) => '$ ' . number_format((float)($state ?? 0), 0, ',', '.'))
+                ->columnSpan(4),
+        ]),
+    ])
+    ->collapsible(),
+    InfoSection::make('Devoluciones registradas')
+    ->schema([
+        TextEntry::make('devoluciones_tabla')
+            ->hiddenLabel()
+            ->state(function ($record) {
+                $detalles = \App\Models\DevolucionCompraDetalle::query()
+                    ->whereHas('devolucion', fn($q) => $q->where('compra_id', $record->id))
+                    ->get();
+
+                if ($detalles->isEmpty()) {
+                    return '<div style="text-align:center;padding:12px 0;color:#888;font-style:italic;">No hay devoluciones registradas.</div>';
+                }
+
+                // ✅ Ahora con ancho total y diseño responsivo
+                $html = '
+                <div style="width:100%;display:block;">
+                    <table style="width:100%;font-size:13px;border-collapse:collapse;table-layout:fixed;">
+                        <thead>
+                            <tr style="border-bottom:1px solid #e5e7eb;background-color:#f9fafb;">
+                                <th align="left" style="padding:8px 10px;width:15%;color:#374151;font-weight:600;">Código</th>
+                                <th align="left" style="padding:8px 10px;width:55%;color:#374151;font-weight:600;">Producto</th>
+                                <th align="right" style="padding:8px 10px;width:15%;color:#374151;font-weight:600;">Cant.</th>
+                                <th align="right" style="padding:8px 10px;width:15%;color:#374151;font-weight:600;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                ';
+
+                foreach ($detalles as $d) {
+                    $producto = \App\Models\Product::whereRaw("REPLACE(id_producto, '.', '') = ?", [preg_replace('/[^\d]/', '', (string) $d->product_id)])->first();
+                    $detalleCompra = \App\Models\CompraDetalle::find($d->compra_detalle_id);
+
+                    $codigo = $producto?->id_producto ?? $detalleCompra?->codigo_ingresado ?? $d->product_id ?? '-';
+                    $nombre = $producto?->descripcion_larga ?? $detalleCompra?->nombre_producto ?? '-';
+                    $cantidad = number_format($d->cantidad ?? 0, 0, ',', '.');
+                    $total = '$ ' . number_format($d->subtotal_con_impuesto ?? 0, 0, ',', '.');
+
+                    $html .= "
+                        <tr style='border-bottom:1px solid #f3f4f6;'>
+                            <td style=\"padding:8px 10px;color:#111827;word-break:break-word;\">$codigo</td>
+                            <td style=\"padding:8px 10px;color:#111827;word-break:break-word;\">$nombre</td>
+                            <td align=\"right\" style=\"padding:8px 10px;color:#111827;\">$cantidad</td>
+                            <td align=\"right\" style=\"padding:8px 10px;color:#111827;font-weight:600;\">$total</td>
+                        </tr>
+                    ";
+                }
+
+                $html .= '</tbody></table></div>';
+                return $html;
+            })
+            ->html()
+            ->columnSpanFull()
+            ->extraAttributes([
+                'style' => 'width:100%;padding:0;margin:0;display:block;',
+            ]),
+
+        TextEntry::make('total_devolucion_general')
+            ->hiddenLabel()
+            ->state(function ($record) {
+                $total = \App\Models\DevolucionCompraDetalle::query()
+                    ->whereHas('devolucion', fn($q) => $q->where('compra_id', $record->id))
+                    ->sum('subtotal_con_impuesto');
+                return $total > 0 ? 'Total devuelto: $ ' . number_format($total, 0, ',', '.') : null;
+            })
+            ->visible(fn($record) =>
+                \App\Models\DevolucionCompraDetalle::whereHas('devolucion', fn($q) => $q->where('compra_id', $record->id))->exists()
+            )
+            ->columnSpanFull()
+            ->extraAttributes([
+                'class' => 'text-right text-[13px] font-semibold text-gray-800 pt-2 border-t border-gray-200',
+            ]),
+    ])
+    ->columnSpanFull()
+    ->collapsible(),
+
+
+
+    ];
+}
+
+public static function canEdit(Model $record): bool
+{
+    return $record->estado === 'borrador';
+}
+
+public static function canDelete(Model $record): bool
+{
+    return $record->estado === 'borrador';
+}
+
+public static function tableActions(): array
+{
+    return [
+        \Filament\Tables\Actions\Action::make('ver')
+                    ->label('Ver')
+                    ->icon('heroicon-o-eye')
+                    ->url(fn (Compra $record) =>
+                        \App\Filament\Resources\CompraResource\Pages\ViewCompra::getUrl(['record' => $record])
+                    )
+                    ->visible(fn (Compra $record) => $record->estado !== 'borrador'),
+
+        \Filament\Tables\Actions\EditAction::make()
+            ->visible(fn (\App\Models\Compra $r) => $r->estado === 'borrador'),
+
+        \Filament\Tables\Actions\Action::make('anular')
+            ->label('Anular')
+            ->icon('heroicon-o-x-circle')
+            ->color('danger')
+            ->visible(fn (\App\Models\Compra $r) => $r->estado === 'confirmada')
+            ->requiresConfirmation()
+            ->action(function (\App\Models\Compra $r) {
+                \Illuminate\Support\Facades\DB::transaction(fn () => $r->anular());
+                \Filament\Notifications\Notification::make()->title('Compra anulada')->success()->send();
+            }),
+
+        \Filament\Tables\Actions\ActionGroup::make([
+            \Filament\Tables\Actions\Action::make('confirmar')
+                ->label('Confirmar')
+                ->icon('heroicon-o-check')
+                ->color('success')
+                ->visible(fn (\App\Models\Compra $r) => $r->estado === 'borrador')
+                ->requiresConfirmation()
+                ->action(function (\App\Models\Compra $r) {
+                    \Illuminate\Support\Facades\DB::transaction(fn () => $r->confirmar());
+                    \Filament\Notifications\Notification::make()->title('Compra confirmada')->success()->send();
+                }),
+            \Filament\Tables\Actions\Action::make('devolver_parcial')
+    ->label('Devolución parcial')
+    ->icon('heroicon-o-arrow-uturn-left')
+    ->color('warning')
+    ->visible(fn (Compra $r) => $r->estado === 'confirmada')
+    ->form([
+        Forms\Components\Textarea::make('motivo')->label('Motivo')->required()->maxLength(255),
+
+        // ocultos con mapas de disponibilidad (llenados en mountUsing)
+        Forms\Components\Hidden::make('allowed_ids')->dehydrated(false),
+        Forms\Components\Hidden::make('remaining_by_detail')->dehydrated(false),
+        Forms\Components\Hidden::make('remaining_by_product')->dehydrated(false),
+
+        // Select buscable que muestra sólo productos con remanente en la compra (excluye ya añadidos y totalmente devueltos)
+        Forms\Components\Select::make('producto_buscar')
+            ->label('Buscar producto comprado')
+            ->placeholder('Escribe código o nombre...')
+            ->searchable()
+            ->reactive()
+            ->dehydrated(false)
+            ->options(function (Get $get): array {
+                $allowed = (array) ($get('allowed_ids') ?? []);
+                if (empty($allowed)) return [];
+
+                $added = collect($get('lineas') ?? [])->pluck('product_id')->filter()->map(fn($v) => (int)$v)->unique()->values()->all();
+
+                $q = \App\Models\Product::query()
+                    ->select(['id','id_producto','descripcion_larga'])
+                    ->whereIn('id', $allowed);
+
+                if (!empty($added)) {
+                    $q->whereNotIn('id', $added);
+                }
+
+                return $q->orderBy('descripcion_larga')
+                    ->limit(30)
+                    ->get()
+                    ->mapWithKeys(fn($p) => [$p->id => ($p->id_producto ?? '') . ' · ' . $p->descripcion_larga])
+                    ->toArray();
+            })
+            ->getSearchResultsUsing(function (?string $search, Get $get): array {
+                $allowed = (array) ($get('allowed_ids') ?? []);
+                if (empty($allowed)) return [];
+
+                $added = collect($get('lineas') ?? [])->pluck('product_id')->filter()->map(fn($v) => (int)$v)->unique()->values()->all();
+
+                $q = \App\Models\Product::query()
+                    ->select(['id','id_producto','descripcion_larga'])
+                    ->whereIn('id', $allowed);
+
+                if (!empty($added)) {
+                    $q->whereNotIn('id', $added);
+                }
+
+                $search = trim((string) ($search ?? ''));
+                if ($search !== '') {
+                    $tokens = collect(preg_split('/\s+/', $search))->filter()->values();
+                    $q->where(function ($qb) use ($tokens) {
+                        foreach ($tokens as $t) {
+                            $t = str_replace(['%','_'], ['\\%','\\_'], $t);
+                            $like = "%{$t}%";
+                            $qb->where(function ($or) use ($like) {
+                                $or->where('id_producto', 'like', $like)
+                                   ->orWhere('descripcion_larga', 'like', $like)
+                                   ->orWhereExists(function ($sub) use ($like) {
+                                       $sub->from('alternate_codes as ac')
+                                           ->whereColumn('ac.product_id', 'products.id')
+                                           ->where('ac.code', 'like', $like);
+                                   });
+                            });
+                        }
+                    });
+                } else {
+                    $q->orderBy('descripcion_larga')->limit(30);
+                }
+
+                return $q->orderBy('descripcion_larga')->limit(200)->get()
+                    ->mapWithKeys(fn ($p) => [$p->id => ($p->id_producto ?? '') . ' · ' . $p->descripcion_larga])
+                    ->toArray();
+            })
+            ->getOptionLabelUsing(function ($value) {
+                if (!$value) return null;
+                $p = \App\Models\Product::select(['id','id_producto','descripcion_larga'])->find($value);
+                return $p ? (($p->id_producto ?? '') . ' · ' . ($p->descripcion_larga ?? '')) : null;
+            })
+            ->afterStateUpdated(function ($state, Get $get, Set $set) {
+                $prodId = (int) ($state ?? 0);
+                if (! $prodId) return;
+
+                $rows = (array) ($get('lineas') ?? []);
+                foreach ($rows as $r) {
+                    if ((int) ($r['product_id'] ?? 0) === $prodId) {
+                        \Filament\Notifications\Notification::make()->title('El producto ya está en la lista')->warning()->send();
+                        $set('producto_buscar', null);
+                        return;
+                    }
+                }
+
+                $p = \App\Models\Product::select(['id','id_producto','descripcion_larga'])->find($prodId);
+                if (! $p) {
+                    \Filament\Notifications\Notification::make()->title('Producto no encontrado')->danger()->send();
+                    $set('producto_buscar', null);
+                    return;
+                }
+
+                $rows[] = [
+                    'id' => null,
+                    'product_id' => $p->id,
+                    'codigo_ingresado' => (string) ($p->id_producto ?? ''),
+                    'nombre_producto' => $p->descripcion_larga ?? '',
+                    'cantidad' => 1,
+                    'cantidad_devolver' => 0,
+                    'existencias_actuales' => \App\Filament\Resources\CompraResource::stockActual($p->id),
+                ];
+
+                $set('lineas', array_values($rows));
+                $set('producto_buscar', null);
+                \Filament\Notifications\Notification::make()->title('Producto agregado')->success()->send();
+            }),
+
+        // Repeater con validación: cantidad_devolver <= disponible (por detalle o por producto)
+        Forms\Components\Repeater::make('lineas')
+            ->schema([
+                Forms\Components\Hidden::make('id')->dehydrated(true),
+                Forms\Components\Hidden::make('product_id')->dehydrated(true),
+                Forms\Components\TextInput::make('codigo_ingresado')->label('Código')->disabled()->dehydrated(true),
+                Forms\Components\TextInput::make('nombre_producto')->label('Producto')->disabled()->dehydrated(true),
+                Forms\Components\TextInput::make('existencias_actuales')->label('Existencias')->disabled()->dehydrated(false),
+                Forms\Components\TextInput::make('cantidad')->label('Cantidad original')->numeric()->disabled()->dehydrated(true),
+                Forms\Components\TextInput::make('cantidad_devolver')
+                    ->label('Cantidad a devolver')
+                    ->numeric()
+                    ->minValue(0)
+                    ->default(0)
+                    ->dehydrated(true)
+                    ->rule(function (Get $get) {
+                        return function (string $attribute, $value, $fail) use ($get) {
+                            $val = (float) $value;
+                            if ($val <= 0) return;
+
+                            // Extraer índice de la fila: 'lineas.{i}.cantidad_devolver'
+                            $idx = null;
+                            if (preg_match('/lineas\.(\d+)\.cantidad_devolver$/', $attribute, $m)) {
+                                $idx = (int) $m[1];
+                            }
+
+                            $rows = (array) ($get('lineas') ?? []);
+                            $row = $rows[$idx] ?? null;
+                            if (! $row) return;
+
+                            // mapas precargados en mountUsing
+                            $remByDetail  = (array) ($get('remaining_by_detail') ?? []);
+                            $remByProduct = (array) ($get('remaining_by_product') ?? []);
+
+                            // si viene id de detalle, validar contra remaining_by_detail
+                            $detailId = (int) ($row['id'] ?? 0);
+                            if ($detailId > 0) {
+                                $avail = (float) ($remByDetail[$detailId] ?? 0);
+                                if ($val > $avail) {
+                                    $fail("Máx. disponible para devolver en esta línea: {$avail}.");
+                                }
+                                return;
+                            }
+
+                            // si no hay id (fila agregada desde buscador), validar contra el total disponible por product
+                            $pid = (int) ($row['product_id'] ?? 0);
+                            if ($pid > 0) {
+                                $avail = (float) ($remByProduct[$pid] ?? 0);
+                                if ($val > $avail) {
+                                    $fail("Máx. disponible para devolver para este producto: {$avail}.");
+                                }
+                            }
+                        };
+                    }),
+            ])
+            ->createItemButtonLabel('Añadir a líneas')
+            ->columnSpanFull(),
+    ])
+    ->mountUsing(function ($action, Compra $record, $form) {
+        // calculamos remanentes por detalle y por producto (solo >0)
+        $remainingByDetail = [];
+        $remainingByProduct = [];
+        foreach ($record->detalles as $d) {
+            $rem = max(0.0, (float)$d->cantidad - (float)($d->devuelto_cantidad ?? 0));
+            if ($rem > 0) {
+                $remainingByDetail[(int)$d->id] = $rem;
+                $remainingByProduct[(int)$d->product_id] = ($remainingByProduct[(int)$d->product_id] ?? 0) + $rem;
+            }
+        }
+
+        $allowed = array_keys($remainingByProduct);
+
+        $form->fill([
+            'allowed_ids' => $allowed,
+            'remaining_by_detail' => $remainingByDetail,
+            'remaining_by_product' => $remainingByProduct,
+            'lineas' => [], // empezar vacío: el usuario añade desde el buscador
+            'producto_buscar' => null,
+        ]);
+    })
+    ->requiresConfirmation()
+    ->action(function (Compra $record, array $data) {
+    \Illuminate\Support\Facades\DB::transaction(function () use ($record, $data) {
+        $record->devolverParcial($data['lineas'] ?? [], $data['motivo'] ?? null);
+    });
+
+    // recargar registro para que Filament actualice la vista / botones
+    $record->refresh();
+
+    \Filament\Notifications\Notification::make()
+        ->title('Devolución aplicada')
+        ->success()
+        ->send();
+    }),
+        ])->label('Más')->icon('heroicon-m-ellipsis-vertical'),
+    ];
+}
+
+
+}

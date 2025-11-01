@@ -9,12 +9,25 @@ use Maatwebsite\Excel\Concerns\WithHeadingRow;
 
 class FamiliaImport implements ToCollection, WithHeadingRow
 {
+    protected $empresaId;
+
+    public function __construct($empresaId)
+    {
+        $this->empresaId = $empresaId;
+    }
+
     public function collection(Collection $rows)
     {
         foreach ($rows as $row) {
             Familia::updateOrCreate(
-                ['id' => $row['idfamilia1']],
-                ['nombre' => $row['nfamilia1']]
+                [
+                    'id' => $row['idfamilia1'],
+                    'empresa_id' => $this->empresaId,
+                ],
+                [
+                    'nombre' => $row['nfamilia1'],
+                    'empresa_id' => $this->empresaId,
+                ]
             );
         }
     }

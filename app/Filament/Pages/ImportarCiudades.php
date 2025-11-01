@@ -10,6 +10,12 @@ use Filament\Notifications\Notification;
 
 class ImportarCiudades extends Page
 {
+
+    public static function canAccess(): bool
+{
+    return auth()->user()->hasRole('super_admin');
+}
+
     use WithFileUploads;
 
     public $archivo;

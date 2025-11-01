@@ -13,7 +13,7 @@ class Subfamilia extends Model
     public $incrementing = true;
     protected $keyType = 'int';
 
-    protected $fillable = ['nombre', 'id_familia1'];
+    protected $fillable = ['nombre', 'id_familia1','empresa_id'];
 
     /**
      * Cada Subfamilia pertenece a una Familia

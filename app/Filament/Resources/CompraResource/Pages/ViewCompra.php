@@ -1,0 +1,498 @@
+<?php
+
+namespace App\Filament\Resources\CompraResource\Pages;
+
+use App\Filament\Resources\CompraResource;
+use Filament\Actions;
+use Filament\Infolists\Infolist;
+use Filament\Resources\Pages\ViewRecord;
+use App\Models\Pago;
+use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Auth;
+use Filament\Forms;
+
+
+class ViewCompra extends ViewRecord
+{
+    protected static string $resource = CompraResource::class;
+
+    public function mount($record): void
+    {
+        parent::mount($record);
+
+        // Si es borrador, redirige a Create con ?draft={id}
+        if ($this->record?->estado === 'borrador') {
+            $this->redirect(
+                CompraResource::getUrl('create', [
+                    'draft' => $this->record->getKey(),
+                ])
+            );
+        }
+    }
+
+    public function infolist(Infolist $infolist): Infolist
+    {
+        // Evita N+1 en detalles
+        $this->record->load('detalles');
+
+        return $infolist->schema(
+            CompraResource::viewInfolistSchema()
+        );
+    }
+
+   public function getHeaderActions(): array
+{
+    return [
+        Actions\EditAction::make()
+            ->visible(fn(): bool => $this->record->estado !== 'anulada'),
+
+        // 💰 Registrar pago
+        // 💰 Registrar pago
+Actions\Action::make('registrarPago')
+    ->label('💰 Registrar pago')
+    ->color('success')
+    ->icon('heroicon-o-currency-dollar')
+    ->visible(fn() =>
+        $this->record->tipo_pago === 'credito' &&
+          $this->record->estado !== 'pagada'
+    )
+    ->form(function () {
+
+        // ✅ ahora el saldo es directo, sin recalcular
+        $saldoPendiente = $this->record->saldo ?? 0;
+
+        return [
+            Forms\Components\Placeholder::make('saldo')
+                ->label('💵 Saldo pendiente')
+                ->content(fn() => '$ ' . number_format($saldoPendiente, 0, ',', '.'))
+                ->columnSpanFull(),
+
+            Forms\Components\Grid::make(2)->schema([
+                Forms\Components\DatePicker::make('fecha')
+                    ->label('Fecha')
+                    ->default(now())
+                    ->required(),
+
+                Forms\Components\TextInput::make('referencia')
+                    ->label('Referencia')
+                    ->placeholder('Comprobante o nota')
+                    ->maxLength(150),
+            ]),
+
+            Forms\Components\Grid::make(2)->schema([
+                Forms\Components\TextInput::make('monto')
+                    ->label('Monto a pagar')
+                    ->numeric()
+                    ->required()
+                    ->reactive()
+                     ->prefix(fn ($state) => '$ ' . number_format((float)$state, 0, ',', '.'))
+                    ->afterStateUpdated(function ($state, callable $set) use ($saldoPendiente) {
+                        if ($state > $saldoPendiente) {
+                            Notification::make()
+                                ->title('El monto ingresado supera el saldo pendiente.')
+                                ->danger()
+                                ->send();
+
+                            $set('monto', $saldoPendiente);
+                        }
+                    }),
+
+                Forms\Components\Select::make('metodo_pago')
+                    ->label('Método')
+                    ->options([
+                        'efectivo' => 'Efectivo',
+                        'transferencia' => 'Transferencia',
+                        'tarjeta' => 'Tarjeta',
+                        'otro' => 'Otro',
+                    ])
+                    ->required(),
+            ]),
+
+            Forms\Components\Textarea::make('observaciones')
+                ->label('Observaciones')
+                ->rows(2)
+                ->columnSpanFull(),
+        ];
+    })
+    ->action(function (array $data) {
+        $compra = $this->record;
+        $user = Auth::user();
+
+        // ✅ saldo correcto
+        $saldoPendiente = $compra->total;
+
+        if ($data['monto'] > $compra->saldo) {
+            Notification::make()
+                ->title('El monto supera el saldo pendiente.')
+                ->danger()
+                ->send();
+            return;
+        }
+
+        Pago::create([
+            'empresa_id'   => $user->empresa_id ?? $user->id,
+            'compra_id'    => $compra->id,
+            'user_id'      => $user->id,
+            'fecha'        => $data['fecha'],
+            'monto'        => $data['monto'],
+            'metodo_pago'  => $data['metodo_pago'],
+            'referencia'   => $data['referencia'] ?? null,
+            'observaciones'=> $data['observaciones'] ?? null,
+        ]);
+
+        // ✅ recalcular correctamente
+        $compra->refresh();
+        $compra->recalcularTotalesConDevolucion();
+        $compra->refresh();
+
+        // ✅ Estado automático
+                    if ($compra->saldo <= 0) {
+                        $compra->update(['estado' => 'pagada']);
+                    }
+
+                    $this->dispatch('$refresh');
+
+        Notification::make()
+            ->title('Pago registrado correctamente.')
+            ->success()
+            ->send();
+
+       $this->dispatch('close-modal'); // Cierra el modal correctamente
+$this->redirect(CompraResource::getUrl('view', ['record' => $compra->id])); // Refresca la vista real
+
+    })
+    ->modalHeading('Registrar nuevo pago')
+    ->modalButton('Guardar pago'),
+
+    // ↩️ Registrar devolución
+Actions\Action::make('registrarDevolucion')
+    ->label('↩️ Registrar devolución')
+    ->color('danger')
+    ->icon('heroicon-o-arrow-uturn-left')
+    ->visible(fn() => !$this->record->devuelta_total && $this->record->estado !== 'anulada')
+    ->form(function () {
+    $compra = $this->record;
+    $detalles = $compra->detalles()->with('producto')->get();
+
+    return [
+
+        // ✅ Primero selecciona el tipo (sin seleccionar nada inicialmente)
+        \Filament\Forms\Components\Select::make('tipo')
+            ->label('Tipo de devolución')
+            ->placeholder('Seleccione el tipo de devolución')
+            ->options([
+                'total' => 'Total (devolver todo)',
+                'parcial' => 'Parcial (seleccionar items)',
+            ])
+            ->required()
+            ->reactive()
+            ->default(null), // ← IMPORTANTE
+
+        \Filament\Forms\Components\Textarea::make('motivo')
+            ->label('Motivo de la devolución')
+            ->required()
+            ->rows(2)
+            ->columnSpanFull(),
+
+        // ✅ Resumen al final y solo se muestra si hay tipo seleccionado
+        \Filament\Forms\Components\Placeholder::make('resumen_devolucion')
+    ->label('Resumen de la devolución')
+    ->visible(fn($get) => $get('tipo') !== null)
+    ->content(function (callable $get) use ($compra) {
+
+        $tipo = $get('tipo');
+
+        // ✅ Devolución TOTAL
+        if ($tipo === 'total') {
+
+           $items = $compra->detalles->sum(function($d){
+    $devueltoAntes = \App\Models\DevolucionCompraDetalle::where('compra_detalle_id', $d->id)->sum('cantidad');
+    return max(0, $d->cantidad - $devueltoAntes);
+});
+
+$total = $compra->detalles->sum(function ($d) {
+    $devueltoAntes = \App\Models\DevolucionCompraDetalle::where('compra_detalle_id', $d->id)->sum('cantidad');
+    $cant = max(0, $d->cantidad - $devueltoAntes);
+    $costo = (float)$d->costo_unitario;
+    $desc = (float)$d->desc_comercial;
+    $iva  = (float)$d->iva_pct;
+    $cDesc = $costo * (1 - $desc / 100);
+    $base = $cant * $cDesc;
+    return $base * (1 + $iva / 100);
+});
+
+            return new \Illuminate\Support\HtmlString(
+                "📦 Ítems: <b>{$items}</b> &nbsp;&nbsp;|&nbsp;&nbsp; 💰 Total devolución estimada: <b>$" . number_format($total, 0, ',', '.') . "</b>"
+            );
+        }
+
+        // ✅ Devolución PARCIAL
+        $detalles = $get('detalles') ?? [];
+
+        $items = collect($detalles)->sum(fn($i) => (float)($i['cantidad'] ?? 0));
+
+        $total = collect($detalles)->sum(function ($i) {
+            $cant = (float)($i['cantidad'] ?? 0);
+            $costo = (float)($i['costo_unitario'] ?? 0);
+            $desc = (float)($i['desc_comercial'] ?? 0);
+            $iva  = (float)($i['iva_pct'] ?? 0);
+
+            $cDesc = $costo * (1 - $desc / 100);
+            $base = $cant * $cDesc;
+            return $base * (1 + $iva / 100);
+        });
+
+        return new \Illuminate\Support\HtmlString(
+            "📦 Ítems: <b>{$items}</b> &nbsp;&nbsp;|&nbsp;&nbsp; 💰 Total devolución estimada: <b>$" . number_format($total, 0, ',', '.') . "</b>"
+        );
+    })
+    ->columnSpanFull()
+    ->reactive(),
+
+        // ✅ Repeater solo cuando se seleccione PARCIAL
+        \Filament\Forms\Components\Repeater::make('detalles')
+            ->label('Productos a devolver')
+            ->visible(fn($get) => $get('tipo') === 'parcial')
+            ->disableItemCreation()
+            ->disableItemDeletion()
+            ->reactive()
+            ->default(function () use ($detalles) {
+
+                return $detalles->map(function ($d) {
+
+                    $devueltoAntes = \App\Models\DevolucionCompraDetalle::where('compra_detalle_id', $d->id)->sum('cantidad');
+                    $restante = max(0, $d->cantidad - $devueltoAntes);
+
+                    return [
+                        'compra_detalle_id' => $d->id,
+                        'product_id' => $d->product_id,
+                        'codigo_ingresado' => $d->codigo_ingresado,
+                        'nombre_producto' => $d->nombre_producto ?? $d->producto->descripcion_larga,
+                        'cantidad_original' => $restante,
+                        'cantidad' => 0,
+                        'costo_unitario' => $d->costo_unitario,
+                        'desc_comercial' => $d->desc_comercial,
+                        'iva_pct' => $d->iva_pct,
+                    ];
+                })->filter(fn($row) => $row['cantidad_original'] > 0);
+            })
+            ->schema([
+                \Filament\Forms\Components\TextInput::make('codigo_ingresado')->label('Código')->disabled(),
+                \Filament\Forms\Components\TextInput::make('nombre_producto')->label('Producto')->disabled(),
+                \Filament\Forms\Components\TextInput::make('cantidad_original')->label('Cant. disponible')->disabled(),
+                \Filament\Forms\Components\TextInput::make('cantidad')
+                    ->label('Cant. devolver')
+                    ->numeric()
+                    ->minValue(0)
+                    ->maxValue(fn($get) => $get('cantidad_original'))
+                    ->required(),
+            ])
+            ->columns(4),
+    ];
+})
+    ->action(function (array $data) {
+        $compra = $this->record;
+        $user = auth()->user();
+
+        if (($data['tipo'] === 'parcial') && collect($data['detalles'])->sum('cantidad') <= 0) {
+            \Filament\Notifications\Notification::make()
+                ->title('No se seleccionaron cantidades válidas')
+                ->danger()
+                ->send();
+            return;
+        }
+
+        $devolucion = \App\Models\DevolucionCompra::create([
+            'compra_id' => $compra->id,
+            'empresa_id' => $compra->empresa_id,
+            'user_id' => $user->id,
+            'tipo' => $data['tipo'],
+            'motivo' => $data['motivo'],
+        ]);
+
+        $totalDevolucion = 0;
+
+        // 🧮 FUNCIÓN para calcular totales con descuento comercial y IVA
+        $calcularTotales = function ($detalle, $cantidad) {
+            $costoBase = $detalle->costo_unitario ?? 0;
+            $descCom = $detalle->desc_comercial ?? 0;
+            $iva = $detalle->iva_pct ?? 0;
+
+            // Aplicar descuento comercial directamente sobre el costo unitario
+            $costoConDesc = $costoBase - ($costoBase * ($descCom / 100));
+
+            $base = $cantidad * $costoConDesc;
+            $valorImpuesto = $base * ($iva / 100);
+            $subtotalConIva = $base + $valorImpuesto;
+
+            return [
+                'costo_unitario' => $costoConDesc,
+                'base' => $base,
+                'valorImpuesto' => $valorImpuesto,
+                'subtotalConIva' => $subtotalConIva,
+                'iva' => $iva,
+            ];
+        };
+
+        // 🧾 Devolución total
+        if ($data['tipo'] === 'total') {
+
+            
+foreach ($compra->detalles as $detalle) {
+
+    // ✅ Cantidad ya devuelta previamente
+    $devueltoAntes = \App\Models\DevolucionCompraDetalle::where('compra_detalle_id', $detalle->id)
+        ->sum('cantidad');
+
+    // ✅ Cantidad restante disponible para devolver
+    $cantidadRestante = max(0, $detalle->cantidad - $devueltoAntes);
+
+    // ❌ Si no queda nada para devolver, pasar al siguiente
+    if ($cantidadRestante <= 0) {
+        continue;
+    }
+
+    $totales = $calcularTotales($detalle, $cantidadRestante);
+
+    \App\Models\DevolucionCompraDetalle::create([
+        'devolucion_compra_id' => $devolucion->id,
+        'compra_detalle_id' => $detalle->id,
+        'product_id' => (string) $detalle->product_id,
+        'cantidad' => $cantidadRestante,
+        'costo_unitario' => $totales['costo_unitario'],
+        'porcentaje_impuesto' => $totales['iva'],
+        'valor_impuesto' => $totales['valorImpuesto'],
+        'subtotal_sin_impuesto' => $totales['base'],
+        'subtotal_con_impuesto' => $totales['subtotalConIva'],
+    ]);
+
+    $totalDevolucion += $totales['subtotalConIva'];
+
+    // 🔻 Actualizar existencias
+    if ($detalle->product_id) {
+        $producto = \App\Models\Product::where('id_producto', $detalle->product_id)
+            ->where('empresa_id', $compra->empresa_id)
+            ->first();
+
+        if ($producto) {
+            $producto->existencias -= $cantidadRestante;
+            $producto->save();
+        }
+    }
+}
+
+            $compra->update([
+    'estado' => 'anulada',            // ✅ La compra queda anulada
+    'devuelta_total' => true,
+    'devuelta_at' => now(),
+    'motivo_devol' => $data['motivo'],
+    'saldo' => 0,                     // ✅ Si era crédito o contado → cancela saldo
+    'total' => 0,                     // ✅ El total pasa a 0
+    'subtotal' => 0,
+    'descuento_total' => 0,
+    'impuesto_total' => 0,
+]);
+        }
+        // 🧾 Devolución parcial
+        else {
+            foreach ($data['detalles'] ?? [] as $item) {
+                $cantidad = (float) ($item['cantidad'] ?? 0);
+                if ($cantidad <= 0) continue;
+
+                $detalle = \App\Models\CompraDetalle::find($item['compra_detalle_id']);
+                if (!$detalle) continue;
+
+                $totales = $calcularTotales($detalle, $cantidad);
+
+                \App\Models\DevolucionCompraDetalle::create([
+                    'devolucion_compra_id' => $devolucion->id,
+                    'compra_detalle_id' => $detalle->id,
+                    'product_id' => (string) $detalle->product_id,
+                    'cantidad' => $cantidad,
+                    'costo_unitario' => $totales['costo_unitario'],
+                    'porcentaje_impuesto' => $totales['iva'],
+                    'valor_impuesto' => $totales['valorImpuesto'],
+                    'subtotal_sin_impuesto' => $totales['base'],
+                    'subtotal_con_impuesto' => $totales['subtotalConIva'],
+                ]);
+
+                $totalDevolucion += $totales['subtotalConIva'];
+
+                // 🔻 Actualizar existencias
+                if ($detalle->product_id) {
+                    $producto = \App\Models\Product::where('id_producto', $detalle->product_id)
+                        ->where('empresa_id', $compra->empresa_id)
+                        ->first();
+                    if ($producto) {
+                        $producto->existencias -= $cantidad;
+                        $producto->save();
+                    }
+                }
+            }
+        }
+
+        // ✅ Guardar total final de la devolución
+        $devolucion->update(['total' => $totalDevolucion]);
+
+        $compra->refresh();
+$compra->recalcularTotalesConDevolucion();
+$compra->refresh();
+
+// ✅ Forzar que Filament actualice los datos en pantalla
+$this->dispatch('$refresh');
+
+        // ✅ Actualizar totales de la compra
+        try {
+            $compra->refresh();
+            if (method_exists($compra, 'recalcularTotalesConDevolucion')) {
+                $compra->recalcularTotalesConDevolucion();
+            }
+            $compra->refresh();
+
+            
+        } catch (\Throwable $e) {
+            Notification::make()
+                ->title('Error al recalcular totales')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
+
+        // ✅ Ajustar saldo o nota crédito
+        if ($compra->tipo_pago === 'contado' && $compra->saldo <= 0) {
+            \App\Models\NotaCredito::create([
+                'empresa_id' => $compra->empresa_id,
+                'compra_id' => $compra->id,
+                'devolucion_id' => $devolucion->id,
+                'monto' => $totalDevolucion,
+                'motivo' => $data['motivo'],
+                'fecha' => now(),
+            ]);
+        } elseif ($compra->tipo_pago === 'credito') {
+            $nuevoSaldo = max(0, $compra->saldo - $totalDevolucion);
+            $compra->update(['saldo' => $nuevoSaldo]);
+        }
+
+        // ✅ Notificación principal
+        Notification::make()
+            ->title('Devolución registrada correctamente.')
+            ->body('Total devuelto: $' . number_format($totalDevolucion, 0, ',', '.'))
+            ->success()
+            ->send();
+    })
+    ->modalHeading('Registrar devolución de compra')
+    ->modalButton('Guardar devolución'),
+
+    ];
+}
+
+
+
+public static function getRelations(): array
+{
+    return [
+        RelationManagers\PagosRelationManager::class,
+    ];
+}
+    
+}

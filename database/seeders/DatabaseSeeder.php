@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use App\Models\User;
 
 class DatabaseSeeder extends Seeder
 {
@@ -12,20 +12,21 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Llamar al seeder de TiposDocumento
-        $this->call(TiposDocumentoSeeder::class);
-
-        \App\Models\User::factory()->create([
-         'name' => 'Test User',
-           'email' => 'test@example.com',
-              'password' => bcrypt('1234'),
+        // Llamar a los seeders necesarios
+        $this->call([
+            TiposDocumentoSeeder::class,
+            RolesSeeder::class,
+            DepartamentosSeeder::class,
+            CiudadesSeeder::class,
         ]);
+
+        // Crear usuario Super Admin y asignar rol
+        $user = User::factory()->create([
+            'name' => 'Deimer Villamizar',
+            'email' => 'admin@example.com',
+            'password' => bcrypt('1234'),
+        ]);
+
+        $user->assignRole('super_admin');
     }
-
-    
-
-
-    
 }
-
-

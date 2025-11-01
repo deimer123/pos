@@ -10,9 +10,8 @@ class Venta extends Model
     use HasFactory;
 
 
-    public function cliente()
-{
-    return $this->belongsTo(Actor::class, 'cliente_id');
+    public function cliente() {
+    return $this->belongsTo(Actor::class, 'cliente_clip_id', 'id_clip_pro');
 }
 
 public function detalles()

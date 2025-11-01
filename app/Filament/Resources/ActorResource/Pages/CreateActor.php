@@ -9,4 +9,16 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateActor extends CreateRecord
 {
     protected static string $resource = ActorResource::class;
+
+    public function getTitle(): string
+{
+    $clasificacion = $this->data['clasificacion'] ?? null;
+
+    return match ($clasificacion) {
+        'cliente' => 'Crear Cliente',
+        'proveedor' => 'Crear Proveedor',
+        'cliente_proveedor' => 'Crear Cliente - Proveedor',
+        default => 'Crear ',
+    };
+}
 }

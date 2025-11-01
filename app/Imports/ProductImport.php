@@ -9,6 +9,14 @@ use Maatwebsite\Excel\Concerns\WithHeadingRow;
 
 class ProductImport implements ToCollection, WithHeadingRow
 {
+
+    protected $empresaId;
+
+    public function __construct($empresaId)
+    {
+        $this->empresaId = $empresaId;
+    }
+
     public function collection(Collection $rows)
     {
         foreach ($rows as $row) {
@@ -34,7 +42,10 @@ class ProductImport implements ToCollection, WithHeadingRow
             $utilidad1     = str_replace(',', '.', $row['utilidad1'] ?? 0);
 
             Product::updateOrCreate(
-                ['id_producto' => (int) $row['idproducto']],
+                [
+                    'empresa_id'  => $this->empresaId,
+                    'id_producto' => (int) $row['idproducto'],
+                ],
                 [
                     'id_familia1'         => $row['idfamilia1'] ?? 1,
                     'id_familia2'         => $row['idfamilia2'] ?? 1,

@@ -30,14 +30,16 @@ class Product extends Model
 }
 
     protected $table = 'products';
-    protected $primaryKey = 'id_producto';
-    public $incrementing = false;
+    protected $primaryKey = 'id'; // Clave primaria técnica autoincremental
+    public $incrementing = true;   // Autoincremental
     protected $keyType = 'int';
 
     protected $fillable = [
         'id_producto',
+        
         'id_familia1',
         'id_familia2',
+        'empresa_id',
         'descripcion_larga',
         'id_proveedor', // ✅ CAMPO CORRECTO
         'iva_compra',
@@ -55,6 +57,10 @@ class Product extends Model
         'precio_venta_anterior',
     ];
 
+    protected $casts = [
+  'foto' => 'string', // o simplemente quítalo
+];
+
     public function proveedor()
     {
         return $this->belongsTo(Actor::class, 'id_proveedor', 'id_clip_pro');
@@ -66,7 +72,7 @@ class Product extends Model
 
  public function alternateCodes()
     {
-        return $this->hasMany(AlternateCode::class, 'product_id', 'id_producto');
+        return $this->hasMany(AlternateCode::class, 'product_id', 'id'); // Usa 'id' técnico
     }
     
 
@@ -87,7 +93,10 @@ class Product extends Model
             'id_familia2'    // PK en subfamilias
         );
     }
-
+public function empresa()
+{
+    return $this->belongsTo(User::class, 'empresa_id');
+}
     
 
 }

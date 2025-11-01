@@ -2,13 +2,16 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\Permission\Traits\HasRoles; // ← Agregar este trait
 
 class User extends Authenticatable
 {
@@ -17,23 +20,19 @@ class User extends Authenticatable
     use HasProfilePhoto;
     use Notifiable;
     use TwoFactorAuthenticatable;
+    use HasRoles; // ← Agregar este trait
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'name',
         'email',
         'password',
+        'tipo_usuario',
+        'empresa_id',
+        'activo',
+        'telefono',
+        'direccion',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
@@ -41,21 +40,154 @@ class User extends Authenticatable
         'two_factor_secret',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'activo' => 'boolean',
     ];
 
-    /**
-     * The accessors to append to the model's array form.
-     *
-     * @var array<int, string>
-     */
     protected $appends = [
         'profile_photo_url',
     ];
+
+    // Boot method para auto-asignar empresa_id cuando es empleado
+    protected static function boot()
+    {
+        parent::boot();
+        
+        static::creating(function ($user) {
+            // Si es empleado y no tiene empresa_id, usar el usuario logueado como empresa
+            if ($user->tipo_usuario === 'empleado' && !$user->empresa_id) {
+                $user->empresa_id = auth()->id();
+            }
+        });
+    }
+
+    // Relaciones
+    public function empresa(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'empresa_id');
+    }
+
+    public function empleados(): HasMany
+    {
+        return $this->hasMany(User::class, 'empresa_id')->where('tipo_usuario', 'empleado');
+    }
+
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class, 'empresa_id');
+    }
+
+    public function familias(): HasMany
+    {
+        return $this->hasMany(Familia::class, 'empresa_id');
+    }
+
+    // Métodos de conveniencia para tipos de usuario
+    public function esEmpresa(): bool
+    {
+        return $this->tipo_usuario === 'empresa';
+    }
+
+    public function esEmpleado(): bool
+    {
+        return $this->tipo_usuario === 'empleado';
+    }
+
+    // Métodos de conveniencia para roles usando Spatie
+    public function esAdminEmpresa(): bool
+    {
+        return $this->hasRole('admin_empresa');
+    }
+
+    public function esVendedor(): bool
+    {
+        return $this->hasRole('vendedor');
+    }
+
+    public function esDigitador(): bool
+    {
+        return $this->hasRole('digitador');
+    }
+
+    public function esSuperAdmin(): bool
+    {
+        return $this->hasRole('super_admin');
+    }
+
+    // Método para verificar si tiene cualquiera de los roles especificados
+    public function tieneAlgunRol(array $roles): bool
+    {
+        return $this->hasAnyRole($roles);
+    }
+
+    // Scope para filtrar solo empleados
+    public function scopeEmpleados($query)
+    {
+        return $query->where('tipo_usuario', 'empleado');
+    }
+
+    // Scope para filtrar solo empresas
+    public function scopeEmpresas($query)
+    {
+        return $query->where('tipo_usuario', 'empresa');
+    }
+
+    // Scope para empleados de la empresa logueada
+    public function scopeDeEmpresa($query, $empresaId = null)
+    {
+        $empresaId = $empresaId ?? auth()->id();
+        return $query->where('empresa_id', $empresaId);
+    }
+
+    // Scope para usuarios con roles específicos
+    public function scopeConRol($query, $rol)
+    {
+        return $query->role($rol);
+    }
+    public function puedeCrearUsuarios(): bool
+{
+    return $this->hasRole(['super_admin', 'admin_empresa']);
+}
+
+public function puedeCrearAdminEmpresa(): bool
+{
+    return $this->hasRole('super_admin');
+}
+
+public function puedeCrearEmpleados(): bool
+{
+    return $this->hasRole('admin_empresa');
+}
+
+public function getEmpleadosQueManeja()
+{
+    if ($this->hasRole('super_admin')) {
+        return User::role('admin_empresa')->get();
+    }
+    
+    if ($this->hasRole('admin_empresa')) {
+        return User::where('empresa_id', $this->id)
+                  ->role(['vendedor', 'digitador'])
+                  ->get();
+    }
+    
+    return collect();
+}
+
+public function configuracion()
+{
+    return $this->hasOne(\App\Models\ConfiguracionEmpresa::class, 'empresa_id', 'id');
+}
+
+
+public function getEmpresaActualId(): ?int
+{
+    if ($this->tipo_usuario === 'empresa') {
+        // Si es una empresa, su empresa actual es ella misma
+        return $this->id;
+    }
+
+    return $this->empresa_id;
+}
 }

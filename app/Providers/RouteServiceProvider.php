@@ -11,13 +11,9 @@ use Illuminate\Support\Facades\Route;
 class RouteServiceProvider extends ServiceProvider
 {
     /**
-     * The path to your application's "home" route.
-     *
-     * Typically, users are redirected here after authentication.
-     *
-     * @var string
+     * The default path users are redirected to after login.
      */
-    public const HOME = '/dashboard';
+    public const HOME = '/redirect-after-login';// NO lo usaremos directamente, pero lo puedes dejar.
 
     /**
      * Define your route model bindings, pattern filters, and other route configuration.
@@ -34,7 +30,27 @@ class RouteServiceProvider extends ServiceProvider
                 ->group(base_path('routes/api.php'));
 
             Route::middleware('web')
-                ->group(base_path('routes/web.php'));
+                ->group(function () {
+                    Route::get('/', function () {
+                        return redirect('/admin'); // Puedes dejar esta si deseas.
+                    });
+
+                    require base_path('routes/web.php');
+                });
         });
+    }
+
+    /**
+     * Define a custom redirect path after login based on role.
+     */
+    public function redirectTo(): string
+    {
+        $user = auth()->user();
+
+        if ($user && $user->hasRole('vendedor')) {
+            return '/pos';
+        }
+
+        return '/admin'; // Otros roles (admin, superadmin, etc)
     }
 }

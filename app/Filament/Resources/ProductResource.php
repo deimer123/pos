@@ -31,6 +31,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 use App\Filament\Resources\ProductResource;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 
 
@@ -42,6 +43,7 @@ class ProductResource extends Resource
     protected static ?string $model = Product::class;
     protected static ?string $navigationIcon = 'heroicon-o-cube';
     protected static ?int $navigationSort = 3;
+    protected static ?string $pluralLabel = 'Productos';
 
     public static function form(Form $form): Form
     {
@@ -53,6 +55,10 @@ class ProductResource extends Resource
         
         
  ->schema([
+
+    Hidden::make('empresa_id')
+    ->default(auth()->id())
+    ->dehydrated(),
     Section::make('Información del producto')
         ->schema([
             // Fila 1
@@ -61,31 +67,35 @@ class ProductResource extends Resource
                 'sm' => 12,
             ])->schema([
                 TextInput::make('id_producto')
-                    ->label('Código.')
-                    ->numeric()
-                    ->default(fn () => Product::max('id_producto') + 1)
-                    ->disabled(true)
-                    ->dehydrated()
-                    ->columnSpan(2),
+    ->label('Código.')
+    ->numeric()
+    ->default(fn () => 
+    (Product::where('empresa_id', auth()->id())->max('id_producto') ?? 10001) + 1 
+)
+    ->disabled(true)
+    ->dehydrated()
+    ->columnSpan(2),
 
                 TextInput::make('descripcion_larga')
-                    ->label('Nombre del producto')
-                    ->required()
-                    ->maxLength(255)
-                    ->lazy()
-                    ->rule(function (callable $get) {
-                        return function ($attribute, $value, $fail) use ($get) {
-                            $idProducto = $get('id_producto');
-                            $query = \App\Models\Product::where('descripcion_larga', $value);
-                            if ($idProducto) {
-                                $query->where('id_producto', '<>', $idProducto);
-                            }
-                            if ($query->exists()) {
-                                $fail('❌ Ese nombre ya está registrado, por favor escoge otro.');
-                            }
-                        };
-                    })
-                    ->columnSpan(9),
+    ->label('Nombre del producto')
+    ->required()
+    ->maxLength(255)
+    ->lazy()
+    ->rule(function (callable $get) {
+        return function ($attribute, $value, $fail) use ($get) {
+            $idProducto = $get('id_producto');
+            $empresaId = auth()->id();
+            $query = \App\Models\Product::where('descripcion_larga', $value)
+                ->where('empresa_id', $empresaId);
+            if ($idProducto) {
+                $query->where('id_producto', '<>', $idProducto);
+            }
+            if ($query->exists()) {
+                $fail('❌ Ese nombre ya está registrado en tu empresa, por favor escoge otro.');
+            }
+        };
+    })
+    ->columnSpan(9),
 
                 TextInput::make('existencias') // ✅ Solo lectura
         ->label('Existencias')
@@ -100,23 +110,21 @@ class ProductResource extends Resource
                     ->label('Proveedor')
                     ->searchable()
                     ->required()
-                    ->options(
-                        Actor::where('tipo', 3)->pluck('nombre', 'id_clip_pro')
-                    )
+                    ->options(function () {
+        $empresaId = auth()->id();
+
+        return \App\Models\Actor::where('tipo', 3) // solo proveedores
+            ->where('empresa_id', $empresaId)
+            ->pluck('nombre', 'id_clip_pro');
+    })
                     ->native(false)
                     ->placeholder('Selecciona un proveedor')
                     ->columnSpan(2),
 
                 FileUpload::make('foto')
-                    ->label('Foto')
-                    ->image()
-                    ->directory('productos')
-                    ->visibility('public')
-                    ->imagePreviewHeight('150')
-                    ->enableDownload()
-                    ->enableOpen()
-                    ->preserveFilenames()
-                    ->nullable()
+    
+    ->directory('form-foto')
+    ->visibility('public')              
                     ->columnSpan(1),
             ]),
 
@@ -124,25 +132,36 @@ class ProductResource extends Resource
             Grid::make(3)->schema([
                 Select::make('id_familia1')
                     ->label('Departamento')
-                    ->options(Familia::pluck('nombre', 'id'))
+                   ->options(function () {
+        $userId = auth()->id();
+        
+        return Familia::where('empresa_id', $userId)->pluck('nombre', 'id');
+    })
                     ->searchable()
                     ->reactive()
                     ->required()
                     ->afterStateUpdated(function (callable $set, $state) {
                         $set('departamento_id_temp', $state);
                     })
-                    ->createOptionForm([
-                        TextInput::make('nombre')->required()->label('Nombre del departamento')
-                            ->rule(function () {
-                                return function ($attribute, $value, $fail) {
-                                    if (\App\Models\Familia::where('nombre', $value)->exists()) {
-                                        $fail('❌ Este nombre de departamento ya está registrado.');
-                                    }
-                                };
-                            }),
-                    ])
+                   ->createOptionForm([
+    TextInput::make('nombre')
+        ->required()
+        ->label('Nombre del departamento')
+        
+->rule(function () {
+    return function ($attribute, $value, $fail) {
+        $empresaId = auth()->id(); // ← Aquí defines la variable correctamente
+        if (\App\Models\Familia::where('nombre', $value)
+                ->where('empresa_id', $empresaId)
+                ->exists()) {
+            $fail('❌ Este nombre de departamento ya está registrado en tu empresa.');
+        }
+    };
+}),
+])
                     ->createOptionUsing(function (array $data) {
-                        return \App\Models\Familia::create($data)->id;
+    $data['empresa_id'] = auth()->id();
+return \App\Models\Familia::create($data)->id;
                     })
                     ->createOptionModalHeading('Crear Departamento'),
 
@@ -162,25 +181,29 @@ class ProductResource extends Resource
                     ->placeholder('Selecciona una Subfamilia')
                     ->createOptionAction(fn (Action $action) => $action->disabled(fn (callable $get) => empty($get('id_familia1'))))
                     ->createOptionForm([
-                        TextInput::make('nombre')
-                            ->label('Nombre de la subfamilia')
-                            ->required()
-                            ->unique(ignoreRecord: true, table: \App\Models\Subfamilia::class, column: 'nombre')
-                            ->validationMessages([
-                                'unique' => '❌ Ese nombre de subfamilia ya está registrado.',
-                            ]),
-                    ])
+    TextInput::make('nombre')
+        ->label('Nombre de la subfamilia')
+        ->required()
+        ->rule(function () {
+    return function ($attribute, $value, $fail) {
+        $empresaId = auth()->id(); // ← Aquí defines la variable correctamente
+        if (\App\Models\Subfamilia::where('nombre', $value)
+                ->where('empresa_id', $empresaId)
+                ->exists()) {
+            $fail('❌ Ese nombre de subfamilia ya está registrado en tu empresa.');
+        }
+    };
+}),
+])
                     ->createOptionUsing(function (array $data, callable $get) {
-                        $idFamilia1 = $get('id_familia1');
-                        if (!$idFamilia1) {
-                            throw new \Exception('Selecciona un departamento antes de agregar una subfamilia.');
-                        }
-
-                        return \App\Models\Subfamilia::create([
-                            'id_familia1' => $idFamilia1,
-                            'nombre' => $data['nombre'],
-                        ])->id_familia2;
-                    })
+    $idFamilia1 = $get('id_familia1');
+    if (!$idFamilia1) {
+        throw new \Exception('Selecciona un departamento antes de agregar una subfamilia.');
+    }
+    $data['id_familia1'] = $idFamilia1;
+    $data['empresa_id'] = auth()->id();
+    return \App\Models\Subfamilia::create($data)->id_familia2;
+})
                     ->createOptionModalHeading('Crear Subfamilia'),
 
                     Select::make('id_unidad_de_medida')
@@ -366,26 +389,52 @@ class ProductResource extends Resource
 
   Section::make('Códigos Alternos')
     ->schema([
-        
+ Repeater::make('alternateCodes')
+    ->relationship('alternateCodes')
+    ->label('Códigos Alternos')
+    ->defaultItems(0)
+    ->createItemButtonLabel('Agregar código alterno')
+    ->schema([
+        Hidden::make('id'), // ✅ capturamos el id del registro existente (null si es nuevo)
 
-        // Repeater para códigos adicionales
-        Repeater::make('alternateCodes')
-           ->relationship('alternateCodes')
-            ->label('Códigos Alternos')
-            ->defaultItems(0)
-            ->createItemButtonLabel('Agregar código alterno')
-            ->schema([
-                TextInput::make('code')
-                    ->label('Código alterno')
-                    ->required()
-                    ->unique(ignoreRecord: true) // 👈 esta es la clave
-                    ->validationMessages([
-                      'unique' => 'Este código alterno ya está registrado.',
+        TextInput::make('code')
+            ->label('Código alterno')
+            ->required()
+            ->rule(function (callable $get) {   // ✅ regla que ignora el propio registro al editar
+                return function ($attribute, $value, $fail) use ($get) {
+                    $empresaId = auth()->id();
+                    $currentId = $get('id'); // id del código alterno (null si es nuevo)
+
+                    $existe = \App\Models\AlternateCode::where('empresa_id', $empresaId)
+                        ->where('code', $value)
+                        ->when($currentId, fn($q) => $q->where('id', '<>', $currentId))
+                        ->exists();
+
+                    if ($existe) {
+                        $fail('❌ Este código alterno ya está registrado en tu empresa.');
+                    }
+                };
+            })
+            ->dehydrated(),
+        
+        Hidden::make('empresa_id')
+            ->default(auth()->id())
+            ->dehydrated(),
     ])
-                    ->live(false)
-            ]),
+    ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
+        $data['empresa_id'] = auth()->id();
+        return $data;
+    })
+    ->mutateRelationshipDataBeforeSaveUsing(function (array $data): array {
+        $data['empresa_id'] = auth()->id();
+        return $data;
+    }),
+
+        
     ])
         ->columnSpan(1), // ⚠️ igual aquí
+
+       
 ])
             ]);
          
@@ -435,6 +484,29 @@ class ProductResource extends Resource
             'edit' => Pages\EditProduct::route('/{record}/editar'),
         ];
     }
+public static function getEloquentQuery(): Builder
+{
+    return parent::getEloquentQuery()
+       ->where('empresa_id', auth()->id());
+}
+
+public static function mutateFormDataBeforeCreate(array $data): array
+{
+    $data['empresa_id'] = auth()->id();
+    return $data;
+}
+
+public static function shouldRegisterNavigation(): bool
+{
+    // Solo mostrar si NO es vendedor
+    return !auth()->user()->hasRole('vendedor');
+}
+
+public static function canAccess(): bool
+{
+    return !auth()->user()->hasRole('vendedor');
+}
+    
 }
 
 
