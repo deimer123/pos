@@ -16,7 +16,7 @@ return [
     |
     */
 
-    'name'            => env('APP_NAME', 'Laravel'),
+    'name'            => env('APP_NAME', 'Sistema POS'),
 
     /*
     |--------------------------------------------------------------------------
@@ -187,6 +187,9 @@ return [
 
     'aliases'         => Facade::defaultAliases()->merge([
         // 'Example' => App\Facades\Example::class,
+
+         'PDF' => Barryvdh\DomPDF\Facade::class,
+    'QrCode' => SimpleSoftwareIO\QrCode\Facades\QrCode::class,
     ])->toArray(),
 
 ];

@@ -2,6 +2,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 class Caja extends Model
@@ -25,5 +26,10 @@ class Caja extends Model
     {
         if (! $this->isOpen() || ! $this->opened_at) return false;
         return $this->opened_at->toDateString() === now()->toDateString();
+    }
+
+    public function usuario(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

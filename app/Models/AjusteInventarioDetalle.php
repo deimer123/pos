@@ -1,0 +1,34 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class AjusteInventarioDetalle extends Model
+{
+    protected $table = 'ajuste_inventario_detalles';
+
+    protected $fillable = [
+        'ajuste_inventario_id', // 👈 OBLIGATORIO
+        'producto_id',
+        'cantidad_anterior',
+        'cantidad_nueva',
+        'diferencia',
+    ];
+
+    public function ajuste()
+    {
+        return $this->belongsTo(AjusteInventario::class, 'ajuste_inventario_id');
+    }
+
+    public function producto()
+{
+    return $this->belongsTo(
+        Product::class,
+        'producto_id',
+        'id_producto'
+    );
+}
+
+}
+

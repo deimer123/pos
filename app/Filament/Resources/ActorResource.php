@@ -3,6 +3,8 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ActorResource\Pages;
 use App\Models\Actor;
+use App\Models\Ciudad;
+use App\Models\Departamento;
 use App\Models\TipoDocumento;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -15,13 +17,19 @@ class ActorResource extends Resource
 {
     protected static ?string $model          = Actor::class;
     protected static ?string $navigationIcon = 'heroicon-o-users';
-    protected static ?int $navigationSort    = 1;
+    protected static ?int $navigationSort = 4;
     protected static ?string $label          = 'Actor';
     protected static ?string $pluralLabel    = 'Clientes y Proveedores';
+    protected static ?string $navigationGroup = '👥 Terceros';
 
     public static function form(Form $form): Form
     {
         return $form->schema([
+
+            Forms\Components\Hidden::make('empresa_id')
+    ->default(auth()->user()->getEmpresaActualId())
+    ->dehydrated(),
+
             Forms\Components\Grid::make(1)->schema([
                 Forms\Components\Hidden::make('id_clip_pro')
                     ->default(fn () => (Actor::max('id_clip_pro') ?? 10000) + 1)
@@ -41,8 +49,8 @@ class ActorResource extends Resource
                             ->reactive()
                             ->afterStateUpdated(function ($state, callable $set) {
                                 $set('tipo', match ($state) {
-                                    'cliente'           => 3,
-                                    'proveedor'         => 1,
+                                    'cliente'           => 1,
+                                    'proveedor'         => 3,
                                     'cliente_proveedor' => 2,
                                     default             => null,
                                 });
@@ -58,8 +66,16 @@ class ActorResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('tipo_documento_id')
                             ->label('Tipo de documento')
-                            ->options(fn () => TipoDocumento::query()->pluck('nombre', 'id'))
+                            ->options(fn (): array => TipoDocumento::query()
+                                ->whereNotNull('nombre')
+                                ->orderBy('nombre')
+                                ->get()
+                                ->mapWithKeys(fn (TipoDocumento $tipo) => [
+                                    $tipo->getKey() => (string) $tipo->nombre,
+                                ])
+                                ->all())
                             ->searchable()
+                            ->preload()
                             ->required(),
 
                         Forms\Components\TextInput::make('identificacion')
@@ -91,20 +107,33 @@ class ActorResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('departamento_id')
                             ->label('Departamento')
-                            ->options(\App\Models\Departamento::pluck('nombre', 'id')->toArray())
+                            ->options(fn (): array => Departamento::query()
+                                ->whereNotNull('nombre')
+                                ->orderBy('nombre')
+                                ->get()
+                                ->mapWithKeys(fn (Departamento $departamento) => [
+                                    $departamento->getKey() => (string) $departamento->nombre,
+                                ])
+                                ->all())
                             ->searchable()
-                            ->reactive()
+                            ->preload()
+                            ->live()
                             ->required()
                             ->afterStateUpdated(fn (callable $set) => $set('ciudad_id', null)),
 
                         Forms\Components\Select::make('ciudad_id')
                             ->label('Ciudad')
-                            ->options(fn (callable $get) =>
-                                $get('departamento_id')
-                                    ? \App\Models\Ciudad::where('departamento_id', $get('departamento_id'))->pluck('nombre', 'id')->toArray()
-                                    : []
-                            )
+                            ->options(fn (callable $get): array => Ciudad::query()
+                                ->where('departamento_id', $get('departamento_id'))
+                                ->whereNotNull('nombre')
+                                ->orderBy('nombre')
+                                ->get()
+                                ->mapWithKeys(fn (Ciudad $ciudad) => [
+                                    $ciudad->getKey() => (string) $ciudad->nombre,
+                                ])
+                                ->all())
                             ->searchable()
+                            ->live()
                             ->required()
                             ->disabled(fn (callable $get) => empty($get('departamento_id')))
                             ->placeholder('Selecciona primero un departamento'),
@@ -118,7 +147,8 @@ class ActorResource extends Resource
                             ->options([
                                 'natural'  => 'Natural',
                                 'juridica' => 'Jurídica',
-                            ]),
+                            ])
+                            ->default('natural'),
 
                         Forms\Components\Select::make('regimen_tributario')
                             ->label('Régimen')
@@ -132,17 +162,14 @@ class ActorResource extends Resource
 
                         Forms\Components\Select::make('responsable_iva')
                             ->label('¿Responsable de IVA?')
-                            ->options([
-                                true  => 'Sí',
-                                false => 'No',
-                            ])
+                            ->boolean()
                             ->required(),
                     ]),
 
                 // ======================
                 //   CRÉDITO (solo admin_empresa y clientes)
                 // ======================
-                Forms\Components\Section::make('Crédito (solo admin empresa)')
+                Forms\Components\Section::make('Crédito')
                     ->columns(3)
                     ->visible(function (callable $get) {
                         $esCliente = in_array($get('clasificacion'), ['cliente', 'cliente_proveedor']);
@@ -169,7 +196,8 @@ class ActorResource extends Resource
                             ->numeric()
                             ->minValue(0)
                             ->default(0)
-                            ->prefix('$')
+                            ->lazy()
+                            ->prefix(fn ($state) => '$ ' . number_format((float) $state, 0, ',', '.'))
                             ->disabled(fn (callable $get) => ! $get('permite_credito'))
                             ->required(fn (callable $get) => (bool) $get('permite_credito')),
                     ]),
@@ -181,8 +209,24 @@ class ActorResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('nombre')->label('Nombre')->searchable(),
-                Tables\Columns\TextColumn::make('identificacion')->label('Identificación')->searchable(),
+                Tables\Columns\TextColumn::make('nombre')
+                    ->label('Nombre')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('identificacion')
+                    ->label('Identificación')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('tipoDocumento.nombre')
+                    ->label('Tipo documento')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('departamento.nombre')
+                    ->label('Departamento')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('ciudad.nombre')
+                    ->label('Ciudad')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('razon_social')
+                    ->label('Razon social')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('clasificacion')
                     ->label('Clasificación')
                     ->formatStateUsing(fn ($state) => match ($state) {
@@ -233,19 +277,23 @@ class ActorResource extends Resource
         ];
     }
 
-    public static function getEloquentQuery(): Builder
-    {
-        return parent::getEloquentQuery()
-            ->whereIn('clasificacion', ['cliente', 'proveedor', 'cliente_proveedor'])
-            ->where('empresa_id', auth()->id());
-    }
+   public static function getEloquentQuery(): Builder
+{
+    $user = auth()->user();
+
+    return parent::getEloquentQuery()
+        ->whereIn('clasificacion', ['cliente', 'proveedor', 'cliente_proveedor'])
+        ->where('empresa_id', $user->getEmpresaActualId());
+}
+
 
     public static function mutateFormDataBeforeCreate(array $data): array
     {
-        $data['empresa_id'] = auth()->id();
+        $data['empresa_id'] = auth()->user()->getEmpresaActualId();
+
         $data['tipo'] = match ($data['clasificacion']) {
-            'cliente' => 3,
-            'proveedor' => 1,
+            'cliente' => 1,
+            'proveedor' => 3,
             'cliente_proveedor' => 2,
             default => 0,
         };
@@ -271,8 +319,8 @@ class ActorResource extends Resource
     public static function mutateFormDataBeforeSave(array $data): array
     {
         $data['tipo'] = match ($data['clasificacion']) {
-            'cliente' => 3,
-            'proveedor' => 1,
+            'cliente' => 1,
+            'proveedor' => 3,
             'cliente_proveedor' => 2,
             default => 0,
         };
@@ -297,11 +345,11 @@ class ActorResource extends Resource
     public static function shouldRegisterNavigation(): bool
     {
         // Ya ocultas el recurso a vendedores; mantenemos igual.
-        return ! auth()->user()->hasRole('vendedor');
+        return ! auth()->user()->hasRole('vendedor') && ! auth()->user()->hasRole('super_admin');
     }
 
     public static function canAccess(): bool
     {
-        return ! auth()->user()->hasRole('vendedor');
+        return ! auth()->user()->hasRole('vendedor') && ! auth()->user()->hasRole('super_admin');
     }
 }

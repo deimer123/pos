@@ -36,20 +36,69 @@ class CreateCompra extends CreateRecord
         }
 
         return [
-          Actions\Action::make('guardarBorrador')
+         Actions\Action::make('guardarBorrador')
     ->label('💾 Guardar borrador')
     ->color('gray')
     ->button()
-    ->action(function () {
+    ->action(function ($livewire) {
 
-        // Llamamos a guardarCompra, si devuelve false → no hacemos nada
+        // 🔥 Validación manual (solo español, sin mensajes en inglés)
+       $tipoPago = data_get($this->form->getRawState(), 'tipo_pago');
+
+// 🔹 Validación base (siempre obligatoria)
+$livewire->validate([
+
+    // CAMPOS CABECERA
+    'data.numero_factura' => 'required',
+    'data.tipo_pago'      => 'required',
+    'data.fecha'          => 'required',
+
+    // SI ES CRÉDITO → validar vencimiento
+    'data.fecha_vencimiento' => 'required_if:data.tipo_pago,credito',
+
+    // CAMPOS DEL DETALLE
+    'data.detalles.*.costo_unitario' => 'required|numeric|min:1',
+    'data.detalles.*.desc_comercial' => 'required|numeric|min:0',
+    'data.detalles.*.iva_pct'        => 'required',
+    'data.detalles.*.cantidad'       => 'required|numeric|min:1',
+
+], [
+
+    // MENSAJES CABECERA
+    'data.numero_factura.required' => 'Debe ingresar el número de factura.',
+    'data.tipo_pago.required'      => 'Debe seleccionar el tipo de pago.',
+    'data.fecha.required'          => 'Debe ingresar la fecha de compra.',
+    'data.fecha_vencimiento.required_if' => 'Debe ingresar la fecha de vencimiento si la compra es a crédito.',
+
+    // MENSAJES DETALLES
+    'data.detalles.*.costo_unitario.required' => 'El costo es obligatorio.',
+    'data.detalles.*.costo_unitario.min'      => 'El costo debe ser mayor a 0.',
+
+    'data.detalles.*.desc_comercial.required' => 'El descuento es obligatorio.',
+    
+    'data.detalles.*.iva_pct.required'        => 'Debe seleccionar el IVA.',
+
+    'data.detalles.*.cantidad.required'       => 'Debe ingresar la cantidad.',
+    'data.detalles.*.cantidad.min'            => 'La cantidad debe ser mayor que 0.',
+
+]);
+
+// 🔹 Validación adicional SOLO SI ES CRÉDITO
+if ($tipoPago === 'credito') {
+    $livewire->validate([
+        'data.fecha_vencimiento' => 'required',
+    ], [
+        'data.fecha_vencimiento.required' => 'Debe ingresar la fecha de vencimiento.',
+    ]);
+}
+
+        // Si falla validar → NO pasa de aquí
         if ($this->guardarCompra('borrador') === false) {
-            return false; // ⛔ NO REDIRIGIR, NO LIMPIAR, NO ENVIAR ÉXITO
+            return false;
         }
 
-        // ✅ Si llegó aquí significa que se guardó correctamente
+        // ✓ Guardado correcto
         $this->dispatch('clear-form-cache');
-
 
         $this->redirect(CompraResource::getUrl('index'));
     }),
@@ -58,24 +107,184 @@ Actions\Action::make('confirmar')
     ->color('primary')
     ->button()
     ->requiresConfirmation()
-    ->action(function () {
+    ->action(function ($livewire) {
 
-        // ⛔ Si falla una validación → NO continuar
-        if ($this->guardarCompra('confirmada') === false) {
+        // ========================
+        // 🔥 VALIDACIÓN
+        // ========================
+        $tipoPago = data_get($this->form->getRawState(), 'tipo_pago');
+
+        $livewire->validate([
+            'data.numero_factura'        => 'required',
+            'data.tipo_pago'             => 'required',
+            'data.fecha'                 => 'required',
+            'data.fecha_vencimiento'     => 'required_if:data.tipo_pago,credito',
+            'data.detalles.*.costo_unitario' => 'required|numeric|min:1',
+            'data.detalles.*.desc_comercial' => 'required|numeric|min:0',
+            'data.detalles.*.iva_pct'        => 'required',
+            'data.detalles.*.cantidad'       => 'required|numeric|min:1',
+        ]);
+
+        if ($tipoPago === 'credito') {
+            $livewire->validate([
+                'data.fecha_vencimiento' => 'required',
+            ]);
+        }
+
+        // ========================
+        // 🔥 OBTENER DATA ACTUAL DEL FORMULARIO
+        // ========================
+        $data = $this->form->getState();
+
+        // Validar que existan productos
+        if (empty($data['detalles']) || count($data['detalles']) === 0) {
+            Notification::make()
+                ->title('No hay productos en la compra')
+                ->danger()
+                ->send();
             return;
         }
 
-        $compra = Compra::latest('id')
-            ->where('user_id', auth()->id())
-            ->first();
+        // ========================
+        // 🔥 APLICAR LA MISMA LÓGICA DEL EDIT
+        // ========================
+        $subtotal = 0;
+        $descuentoTotal = 0;
+        $impuestoTotal = 0;
+        $total = 0;
 
-        if ($compra) {
-            $compra->confirmar();
+      foreach ($data['detalles'] as $index => $detalle)  {
+
+    // 1️⃣ Si el usuario ingresó un código manual → usar ese SIEMPRE
+    if (!empty($detalle['codigo_ingresado'])) {
+        $detalle['product_id'] = (string) $detalle['codigo_ingresado'];
+    }
+
+    // 2️⃣ Si viene desde el buscador, el campo product_id todavía es el ID interno
+    elseif (!empty($detalle['product_id'])) {
+        $codigoReal = Product::where('empresa_id', $data['empresa_id'])
+            ->where('id', $detalle['product_id']) // ID interno
+            ->value('id_producto');
+
+        if ($codigoReal) {
+            $detalle['product_id'] = (string)$codigoReal;
+        } else {
+            // fallback
+            $detalle['product_id'] = (string)$detalle['product_id'];
         }
+    }
 
-        $this->dispatch('clear-form-cache');
+    // 3️⃣ Cálculo de totales del ítem
+    $cantidad = (float)($detalle['cantidad'] ?? 0);
+    $costo = (float)($detalle['costo_unitario'] ?? 0);
+    $desc = (float)($detalle['desc_comercial'] ?? 0);
+    $iva = (float)($detalle['iva_pct'] ?? 0);
 
-       
+    $lineaBruta = $cantidad * $costo;
+    $lineaDescuento = $lineaBruta * ($desc / 100);
+    $lineaBase = $lineaBruta - $lineaDescuento;
+    $lineaImpuesto = $lineaBase * ($iva / 100);
+    $lineaTotal = $lineaBase + $lineaImpuesto;
+
+    $detalle['subtotal'] = $lineaBruta;
+    $detalle['impuesto'] = $lineaImpuesto;
+    $detalle['total'] = $lineaTotal;
+    $data['detalles'][$index] = $detalle;
+    // Sumar a totales
+    $subtotal += $lineaBruta;
+    $descuentoTotal += $lineaDescuento;
+    $impuestoTotal += $lineaImpuesto;
+    $total += $lineaTotal;
+}
+
+        // Guardar cifras totales
+        $data['subtotal']        = $subtotal;
+        $data['descuento_total'] = $descuentoTotal;
+        $data['impuesto_total']  = $impuestoTotal;
+        $data['total']           = $total;
+        $data['saldo']           = ($data['tipo_pago'] === 'credito') ? $total : 0;
+
+
+        // ===================================
+// 🔹 ASIGNAR EMPRESA Y USUARIO LOGUEADO
+// ===================================
+$user = auth()->user();
+
+// ID del usuario que crea la compra
+$data['user_id'] = $user->id;
+
+// ID de la empresa (misma lógica que usas en otras partes)
+$data['empresa_id'] = $user->tipo_usuario === 'empresa'
+    ? $user->id
+    : ($user->empresa_id ?? null);
+
+        // ========================
+// 🔧 OBLIGATORIO: RESOLVER proveedor_id
+// ========================
+if (empty($data['proveedor_id'])) {
+
+    // Buscar proveedor desde el estado real del formulario
+    $raw = $this->form->getRawState();
+
+    if (!empty($raw['proveedor_id'])) {
+        $data['proveedor_id'] = $raw['proveedor_id'];
+    }
+}
+
+// Validar proveedor
+if (empty($data['proveedor_id'])) {
+    Notification::make()
+        ->title('Debe seleccionar un proveedor.')
+        ->danger()
+        ->send();
+    return;
+}
+
+$data['proveedor_id'] = $this->resolverProveedorId((int) $data['proveedor_id'], (int) $data['empresa_id']);
+
+if (empty($data['proveedor_id'])) {
+    Notification::make()
+        ->title('Proveedor no valido para esta empresa.')
+        ->danger()
+        ->send();
+    return;
+}
+
+// ========================
+// 🔥 GUARDAR CABECERA
+// ========================
+$data['subtotal'] = $subtotal;
+$data['descuento_total'] = $descuentoTotal;
+$data['impuesto_total'] = $impuestoTotal;
+$data['total'] = $total;
+$data['saldo'] = ($data['tipo_pago'] === 'credito') ? $total : 0;
+
+$compra = Compra::create($data);
+
+// ========================
+// 🔥 GUARDAR DETALLES
+// ========================
+foreach ($data['detalles'] as $detalle) {
+    $detalle['compra_id'] = $compra->id;
+    CompraDetalle::create($detalle);
+}
+
+// ========================
+// 🔥 CONFIRMAR SI ES CONFIRMADA
+// ========================
+ $compra->confirmar();
+
+// ========================
+// 🔥 LIMPIAR FORM & CACHE
+// ========================
+$this->dispatch('clear-form-cache');
+$this->form->fill([]);
+$this->reset('record');
+
+        Notification::make()
+            ->title('Compra confirmada correctamente.')
+            ->success()
+            ->send();
 
         $this->redirect(CompraResource::getUrl('index'));
     }),
@@ -175,6 +384,16 @@ Actions\Action::make('confirmar')
         }
 
         // ✅ Validar fechas
+        $data['proveedor_id'] = $this->resolverProveedorId((int) $data['proveedor_id'], (int) $data['empresa_id']);
+
+        if (empty($data['proveedor_id'])) {
+            Notification::make()
+                ->title('Proveedor no valido para esta empresa.')
+                ->danger()
+                ->send();
+            return false;
+        }
+
         if (($data['tipo_pago'] ?? 'contado') === 'credito') {
 
     if (empty($data['fecha_vencimiento']) || $data['fecha_vencimiento'] <= $data['fecha']) {
@@ -241,10 +460,25 @@ Actions\Action::make('confirmar')
         $impuestoTotal += $lineaImpuesto;
         $total += $lineaTotal;
 
-        // 🧩 Forzar código del producto como identificador real
-        if (isset($detalle['codigo_ingresado']) && !empty($detalle['codigo_ingresado'])) {
-            $detalle['product_id'] = $detalle['codigo_ingresado'];
+       if (!empty($detalle['product_id'])) {
+
+    // Si viene como id interno numérico → convertir a id_producto
+    if (is_numeric($detalle['product_id'])) {
+
+        $codigo = \App\Models\Product::where('id', (int)$detalle['product_id'])
+            ->where('empresa_id', $data['empresa_id'])
+            ->value('id_producto');
+
+        if ($codigo) {
+            $detalle['product_id'] = $codigo;
         }
+    }
+}
+
+// Si se ingresó manualmente un código → respetarlo
+if (!empty($detalle['codigo_ingresado'])) {
+    $detalle['product_id'] = $detalle['codigo_ingresado'];
+}
     }
 
     // Asignar a los campos reales de la tabla
@@ -277,13 +511,65 @@ Actions\Action::make('confirmar')
 foreach ($data['detalles'] ?? [] as $detalle) {
     $detalle['compra_id'] = $compra->id;
 
+    // 🔹 Normalizar el identificador del producto
     if (!empty($detalle['codigo_ingresado'])) {
+        // Si vino con código manual
         $detalle['product_id'] = $detalle['codigo_ingresado'];
+    } else {
+        // Si vino con id interno, convertirlo a id_producto
+        $codigo = \App\Models\Product::where('id', (int)$detalle['product_id'])
+            ->where('empresa_id', $data['empresa_id'])
+            ->value('id_producto');
+
+        if ($codigo) {
+            $detalle['product_id'] = $codigo;
+        }
     }
 
-    CompraDetalle::create($detalle);
-        
+    // ✅ Crear detalle con product_id ya normalizado
+    $nuevoDetalle = CompraDetalle::create($detalle);
+
+    // ✅ Si está confirmada, actualizar existencias
+    if ($estado === 'confirmada' && !empty($detalle['product_id'])) {
+        $producto = Product::where('empresa_id', $data['empresa_id'])
+            ->where('id_producto', $detalle['product_id'])
+            ->first();
+
+        if ($producto) {
+            // Aumentar existencias
+            $producto->existencias += $detalle['cantidad'] ?? 0;
+
+            // 🔹 Actualizar precios igual que en confirmar()
+            $producto->precio_costo_anterior = $producto->precio_costo;
+            $producto->precio_venta_anterior = $producto->precio_venta1;
+
+            $costo = (float)($detalle['costo_unitario'] ?? 0);
+            $desc  = (float)($detalle['desc_comercial'] ?? 0);
+            $iva   = (float)($detalle['iva_pct'] ?? 0);
+            $util  = (float)($detalle['utilidad_pct'] ?? 0);
+            $pv    = (float)($detalle['precio_venta'] ?? 0);
+
+            $costoConDesc = round($costo * (1 - $desc / 100), 2);
+            $costoConIva  = round($costoConDesc * (1 + $iva / 100), 2);
+
+            if ($pv <= 0) {
+                $pv = round($costoConIva * (1 + $util / 100), 2);
+            }
+
+            $producto->precio_costo = $costo;
+            $producto->descuento_comercial = $desc;
+            $producto->precio_con_descuento = $costoConDesc;
+            $producto->costo_iva = $costoConIva;
+            $producto->iva_compra = $iva;
+            $producto->iva_venta = $iva;
+            $producto->utilidad1 = $util;
+            $producto->precio_venta1 = $pv;
+
+            $producto->save();
+        }
     }
+}
+
 });
 
         // 🟢 Notificación final
@@ -363,9 +649,12 @@ foreach ($data['detalles'] ?? [] as $detalle) {
 
         // 🔹 Asegurar que proveedor_id venga como entero o nulo
         if (isset($data['proveedor_id']) && filled($data['proveedor_id'])) {
-            $proveedor = \App\Models\Actor::where('id_clip_pro', $data['proveedor_id'])->first();
+            $proveedor = \App\Models\Actor::query()
+                ->where('empresa_id', $data['empresa_id'])
+                ->whereKey((int) $data['proveedor_id'])
+                ->first();
             if ($proveedor) {
-                $data['proveedor_id'] = $proveedor->id_clip_pro;
+                $data['proveedor_id'] = $proveedor->id;
             } else {
                 $data['proveedor_id'] = null;
             }
@@ -375,4 +664,40 @@ foreach ($data['detalles'] ?? [] as $detalle) {
 
         return $data;
     }
+
+    public static function canCreateAnother(): bool
+    {
+        return false;
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
+
+    private function resolverProveedorId(int $valor, int $empresaId): ?int
+    {
+        if ($valor <= 0) {
+            return null;
+        }
+
+        $proveedor = \App\Models\Actor::query()
+            ->where('empresa_id', $empresaId)
+            ->whereIn('clasificacion', ['proveedor', 'cliente_proveedor'])
+            ->whereKey($valor)
+            ->first();
+
+        if ($proveedor) {
+            return (int) $proveedor->id;
+        }
+
+        $proveedor = \App\Models\Actor::query()
+            ->where('empresa_id', $empresaId)
+            ->whereIn('clasificacion', ['proveedor', 'cliente_proveedor'])
+            ->where('id_clip_pro', $valor)
+            ->first();
+
+        return $proveedor ? (int) $proveedor->id : null;
+    }
+
 }

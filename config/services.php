@@ -31,4 +31,13 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'factus' => [
+        'base_url' => env('FACTUS_BASE_URL', 'https://api-sandbox.factus.com.co'),
+        'username' => env('FACTUS_USERNAME'),
+        'password' => env('FACTUS_PASSWORD'),
+        'client_id' => env('FACTUS_CLIENT_ID'),
+        'client_secret' => env('FACTUS_CLIENT_SECRET'),
+        'numbering_range_id' => env('FACTUS_NUMBERING_RANGE_ID'),
+    ],
+
 ];

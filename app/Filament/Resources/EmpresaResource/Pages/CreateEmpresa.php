@@ -18,6 +18,14 @@ class CreateEmpresa extends CreateRecord
     {
         $data['tipo_usuario'] = 'empresa';
         $data['empresa_id'] = null; // Las empresas no tienen empresa_id
+        $data['activo'] = $data['activo'] ?? true;
+        $data['plan_meses'] = (int) ($data['plan_meses'] ?? 3);
+        $data['plan_started_at'] = $data['plan_started_at'] ?? today()->toDateString();
+        $data['plan_ends_at'] = $data['plan_ends_at']
+            ?? EmpresaResource::calculatePlanEndDate($data['plan_started_at'], $data['plan_meses']);
+        $data['max_vendedores'] = (int) ($data['max_vendedores'] ?? 1);
+        $data['max_cajeros'] = (int) ($data['max_cajeros'] ?? 1);
+        $data['max_digitadores'] = (int) ($data['max_digitadores'] ?? 0);
         
         return $data;
     }
@@ -34,4 +42,10 @@ class CreateEmpresa extends CreateRecord
             ->success()
             ->send();
     }
+
+    public static function canCreateAnother(): bool
+    {
+        return false;
+    }
+
 }

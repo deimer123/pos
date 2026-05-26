@@ -4,13 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Prefactura extends Model
 {
     
     use HasFactory;
 
-     protected $fillable = ['empresa_id','cliente_id', 'observaciones', 'estado'];
+     protected $fillable = ['empresa_id', 'vendedor_id', 'cajero_id', 'cliente_id', 'observaciones', 'estado'];
 
     public function productos()
     {
@@ -22,6 +23,16 @@ class Prefactura extends Model
 {
     return $this->belongsTo(Actor::class, 'cliente_id', 'id');
 }
+
+    public function vendedor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'vendedor_id');
+    }
+
+    public function cajero(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cajero_id');
+    }
 
 public function configuracionEmpresa()
 {

@@ -58,8 +58,9 @@ class Product extends Model
     ];
 
     protected $casts = [
-  'foto' => 'string', // o simplemente quítalo
-];
+        'foto' => 'string',
+        'existencias' => 'decimal:2',
+    ];
 
     public function proveedor()
     {
@@ -98,5 +99,11 @@ public function empresa()
     return $this->belongsTo(User::class, 'empresa_id');
 }
     
+public static function stock(int $pid): float
+{
+    return cache()->remember("stock_$pid", 4, function () use ($pid) {
+        return (float) (\App\Models\Product::where('id', $pid)->value('existencias') ?? 0);
+    });
+}
 
 }

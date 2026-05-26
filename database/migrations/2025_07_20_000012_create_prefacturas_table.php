@@ -13,6 +13,11 @@ return new class extends Migration
 
             $table->foreignId('empresa_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('cliente_id')->nullable()->constrained('actors')->nullOnDelete();
+             // VENDEDOR
+            $table->foreignId('vendedor_id')->nullable()->constrained('users')->nullOnDelete();
+
+            // CAJERO
+            $table->foreignId('cajero_id')->nullable()->constrained('users')->nullOnDelete();
 
             $table->text('observaciones')->nullable();
             $table->string('estado')->default('borrador'); // 'borrador', 'vendida'

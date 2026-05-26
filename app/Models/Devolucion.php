@@ -41,4 +41,8 @@ class Devolucion extends Model
     {
         return $this->belongsTo(User::class);
     }
+    public function getNumeroVisualAttribute(): string
+    {
+        return 'DEV-' . str_pad((string) $this->id, 6, '0', STR_PAD_LEFT);
+    }
 }

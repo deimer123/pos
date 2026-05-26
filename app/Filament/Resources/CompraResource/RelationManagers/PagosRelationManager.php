@@ -17,10 +17,41 @@ class PagosRelationManager extends RelationManager
     protected static ?string $title = 'Pagos de la compra';
 
     // 👇 Asegura que se muestre si la compra es crédito confirmada
-    public static function canViewForRecord(Model $ownerRecord, string $pageClass): bool
+   public static function canViewForRecord(Model $ownerRecord, string $pageClass): bool
 {
-    return ($ownerRecord->tipo_pago ?? '') === 'credito';
+    // ✅ Mostrar solo para compras a crédito (no contado)
+    if (($ownerRecord->tipo_pago ?? '') !== 'credito') {
+        return false;
+    }
+
+    // ✅ No mostrar si está anulada o borrador
+    if (in_array($ownerRecord->estado, ['borrador', 'anulada'])) {
+        return false;
+    }
+
+    // ✅ Mostrar siempre si tiene pagos registrados
+    if ($ownerRecord->relationLoaded('pagos')) {
+        $hasPagos = $ownerRecord->pagos->isNotEmpty();
+    } else {
+        $hasPagos = $ownerRecord->pagos()->exists();
+    }
+    if ($hasPagos) {
+        return true;
+    }
+
+    // ✅ Mostrar también si puede seguir recibiendo pagos (saldo > 0)
+    if ((float)($ownerRecord->saldo ?? 0) > 0) {
+        return true;
+    }
+
+    // ✅ Mostrar si ya está pagada y saldo = 0, para ver el historial
+    if (($ownerRecord->estado ?? '') === 'pagada' && (float)($ownerRecord->saldo ?? 0) === 0) {
+        return true;
+    }
+
+    return false;
 }
+
 
     public function form(Forms\Form $form): Forms\Form
     {
@@ -89,20 +120,21 @@ class PagosRelationManager extends RelationManager
             ])
             ->headerActions([
                 Tables\Actions\CreateAction::make()
-                    ->label('Registrar pago')
-                    ->after(function (Pago $record) {
-                        $compra = $record->compra;
-                        if ($compra) {
-                            $pagado = $compra->pagos()->sum('monto');
-                            $saldo = max(0, $compra->total - $pagado);
-                            $compra->update(['saldo' => $saldo]);
-                        }
+        ->label('Registrar pago')
+        ->visible(fn () => $this->ownerRecord->saldo > 0)
+        ->after(function (Pago $record) {
+            $compra = $record->compra;
+            if ($compra) {
+                $pagado = $compra->pagos()->sum('monto');
+                $saldo = max(0, $compra->total - $pagado);
+                $compra->update(['saldo' => $saldo]);
+            }
 
-                        Notification::make()
-                            ->title('Pago registrado correctamente.')
-                            ->success()
-                            ->send();
-                    }),
+            Notification::make()
+                ->title('Pago registrado correctamente.')
+                ->success()
+                ->send();
+        }),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

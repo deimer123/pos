@@ -11,9 +11,7 @@ class DevolucionController extends Controller
         $user = auth()->user();
 
         // Ajusta esta lógica a tu app si es diferente
-        $empresaId = ($user->hasRole('vendedor') && $user->empresa_id)
-            ? (int) $user->empresa_id
-            : (int) $user->id;
+        $empresaId = (int) $user->getEmpresaActualId();
 
         $dev = Devolucion::with(['factura.cliente', 'detalles'])
             ->where('empresa_id', $empresaId)

@@ -23,6 +23,7 @@ class FilamentServiceProvider extends ServiceProvider
     public function boot()
 {
     Filament::serving(function () {
+        config(['app.asset_url' => null]);
         app()->bind(LoginResponseContract::class, LoginResponse::class);
     });
 }

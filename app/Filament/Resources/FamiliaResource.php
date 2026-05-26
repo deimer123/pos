@@ -19,15 +19,15 @@ class FamiliaResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-group';
     protected static ?string $label = 'Familia';
     protected static ?string $pluralLabel = 'Familias';
-    protected static ?string $navigationGroup = 'Categorías';
-    protected static ?int $navigationSort = 10; // Más bajo = aparece más arriba
+    protected static ?string $navigationGroup = '🏷 Categorías';
+    protected static ?int $navigationSort = 5;
 
     public static function form(Form $form): Form
     {
         return $form->schema([
 
              Hidden::make('empresa_id')
-    ->default(auth()->id())
+    ->default(fn () => auth()->user()->getEmpresaActualId())
     ->dehydrated(),
             Forms\Components\TextInput::make('nombre')
                 ->label('Nombre de la familia')
@@ -44,18 +44,19 @@ class FamiliaResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->where('empresa_id', auth()->id());
+        return parent::getEloquentQuery()
+            ->where('empresa_id', auth()->user()->getEmpresaActualId());
     }
 
     public static function mutateFormDataBeforeCreate(array $data): array
     {
-        $data['empresa_id'] = auth()->id();
+        $data['empresa_id'] =auth()->user()->getEmpresaActualId();
         return $data;
     }
 
     public static function mutateFormDataBeforeSave(array $data): array
     {
-        $data['empresa_id'] = auth()->id();
+        $data['empresa_id'] = auth()->user()->getEmpresaActualId();
         return $data;
     }
 
@@ -77,4 +78,24 @@ public static function shouldRegisterNavigation(): bool
 {
     return auth()->user()?->hasRole('admin_empresa');
 }
+
+public static function canCreate(): bool
+{
+   return auth()->check() &&
+    auth()->user()->hasAnyRole([
+        'admin_empresa',
+        'digitador'
+    ]);
+}
+
+public static function canEdit($record): bool
+{
+    return auth()->user()->hasRole('admin_empresa');
+}
+
+public static function canDelete($record): bool
+{
+    return auth()->user()->hasRole('admin_empresa');
+}
+
 }

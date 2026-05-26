@@ -8,6 +8,24 @@ use Livewire\Component;
 
 class PosProductos extends Component
 {
+    private function textoUtf8($valor): string
+    {
+        $texto = (string) ($valor ?? '');
+
+        if ($texto === '') {
+            return '';
+        }
+
+        if (function_exists('mb_check_encoding') && mb_check_encoding($texto, 'UTF-8')) {
+            return $texto;
+        }
+
+        if (function_exists('mb_convert_encoding')) {
+            return mb_convert_encoding($texto, 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
+        }
+
+        return iconv('Windows-1252', 'UTF-8//IGNORE', $texto) ?: '';
+    }
     public $search = '';
     public $mostrarModal = false;
     public $mostrarModalProductoManual = false;
@@ -57,8 +75,14 @@ class PosProductos extends Component
             ->orderByRaw('existencias > 0 DESC') // 🟢 primero los que tienen stock
             ->orderByDesc('existencias')         // 🔽 luego por mayor cantidad
             ->with('alternateCodes')
-            ->take(40)
-            ->get();
+                        ->take(40)
+            ->get()
+            ->map(function ($product) {
+                $product->descripcion_larga = $this->textoUtf8($product->descripcion_larga);
+                $product->foto = $this->textoUtf8($product->foto);
+
+                return $product;
+            });
 
         return view('livewire.pos-productos', [
             'products' => $query,
@@ -69,17 +93,17 @@ class PosProductos extends Component
 {
     $user = auth()->user();
     $empresaId = $this->getEmpresaId($user);
-    
+
     $producto = Product::where('id_producto', $idProducto)
         ->where('empresa_id', $empresaId)
         ->first();
 
-    if ($producto) {
-        // ✅ ENVIAR SOLO EL id_producto como parámetro directo
-        $this->dispatch('productoAgregado', $producto->id_producto);
-    } else {
+    if (!$producto) {
         session()->flash('error', 'Producto no encontrado o no autorizado.');
+        return;
     }
+
+    $this->dispatch('productoAgregado', $producto->id_producto);
 }
 
 public function updatedSearch($value)
@@ -105,7 +129,7 @@ public function updatedSearch($value)
 
     if ($producto) {
         // ✅ ENVIAR SOLO EL id_producto como parámetro directo
-        $this->dispatch('agregarProductoAlCarrito', $producto->id_producto);
+       $this->dispatch('productoAgregado', $producto->id_producto);
         $this->dispatch('limpiar-input-busqueda');
         $this->search = '';
     }
@@ -148,17 +172,17 @@ public function updatedSearch($value)
     // ✅ MÉTODO HELPER PARA OBTENER EL empresa_id CORRECTO
     private function getEmpresaId($user)
     {
-        // Si es admin de empresa (tiene productos), usar su ID
+        // Si es admin de empresa, usar su propio ID
         if ($user->hasRole('admin_empresa')) {
             return $user->id;
         }
-        
-        // Si es vendedor, usar el empresa_id del campo
-        if ($user->hasRole('vendedor') && !empty($user->empresa_id)) {
+
+        // Para cajero, vendedor u otro empleado, usar el empresa_id asignado
+        if (!empty($user->empresa_id)) {
             return $user->empresa_id;
         }
-        
-        // Fallback: usar el ID del usuario
+
+        // Fallback: usar el ID del usuario si no hay empresa_id
         return $user->id;
     }
 }

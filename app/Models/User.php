@@ -12,6 +12,7 @@ use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Spatie\Permission\Traits\HasRoles; // ← Agregar este trait
+use Spatie\Permission\Models\Role;
 
 class User extends Authenticatable
 {
@@ -29,6 +30,12 @@ class User extends Authenticatable
         'tipo_usuario',
         'empresa_id',
         'activo',
+        'plan_meses',
+        'plan_started_at',
+        'plan_ends_at',
+        'max_vendedores',
+        'max_cajeros',
+        'max_digitadores',
         'telefono',
         'direccion',
     ];
@@ -43,6 +50,8 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'activo' => 'boolean',
+        'plan_started_at' => 'date',
+        'plan_ends_at' => 'date',
     ];
 
     protected $appends = [
@@ -57,7 +66,7 @@ class User extends Authenticatable
         static::creating(function ($user) {
             // Si es empleado y no tiene empresa_id, usar el usuario logueado como empresa
             if ($user->tipo_usuario === 'empleado' && !$user->empresa_id) {
-                $user->empresa_id = auth()->id();
+                $user->empresa_id = auth()->user()?->getEmpresaActualId();
             }
         });
     }
@@ -104,6 +113,7 @@ class User extends Authenticatable
     {
         return $this->hasRole('vendedor');
     }
+    
 
     public function esDigitador(): bool
     {
@@ -136,7 +146,7 @@ class User extends Authenticatable
     // Scope para empleados de la empresa logueada
     public function scopeDeEmpresa($query, $empresaId = null)
     {
-        $empresaId = $empresaId ?? auth()->id();
+        $empresaId = $empresaId ?? auth()->user()?->getEmpresaActualId();
         return $query->where('empresa_id', $empresaId);
     }
 
@@ -180,6 +190,11 @@ public function configuracion()
     return $this->hasOne(\App\Models\ConfiguracionEmpresa::class, 'empresa_id', 'id');
 }
 
+public function esCajero(): bool
+{
+    return $this->hasRole('cajero');
+}
+
 
 public function getEmpresaActualId(): ?int
 {
@@ -190,4 +205,56 @@ public function getEmpresaActualId(): ?int
 
     return $this->empresa_id;
 }
+
+public function empresaPrincipal(): self
+{
+    if ($this->tipo_usuario === 'empresa') {
+        return $this;
+    }
+
+    return $this->empresa ?: $this;
+}
+
+public function planVencido(): bool
+{
+    $empresa = $this->empresaPrincipal();
+
+    return filled($empresa->plan_ends_at) && $empresa->plan_ends_at->lt(today());
+}
+
+public function puedeIngresarPorPlan(): bool
+{
+    if ($this->hasRole('super_admin')) {
+        return true;
+    }
+
+    $empresa = $this->empresaPrincipal();
+
+    return (bool) $empresa->activo && ! $empresa->planVencido();
+}
+
+public function puedeFacturar(): bool
+{
+    return $this->hasAnyRole([
+        'admin_empresa',
+        'cajero'
+    ]);
+}
+
+public function puedeAbrirCaja(): bool
+{
+    return $this->hasAnyRole([
+        'admin_empresa',
+        'cajero'
+    ]);
+}
+
+public function puedeVerAdmin(): bool
+{
+    return $this->hasAnyRole([
+        'admin_empresa',
+        'digitador'
+    ]);
+}
+
 }

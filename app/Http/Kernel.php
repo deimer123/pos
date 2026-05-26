@@ -36,6 +36,7 @@ class Kernel extends HttpKernel
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \App\Http\Middleware\EnsureEmpresaActiva::class,
            
         ],
 
@@ -72,5 +73,6 @@ class Kernel extends HttpKernel
     'solo.digitador' => \App\Http\Middleware\SoloDigitador::class,
     'no_digitadores_en_pos' => \App\Http\Middleware\RestrictDigitadorFromPos::class,
 'no_vendedores_en_panel' => \App\Http\Middleware\RestrictVendedorFromPanel::class,
+        'empresa.activa' => \App\Http\Middleware\EnsureEmpresaActiva::class,
     ];
 }

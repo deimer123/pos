@@ -1,0 +1,1763 @@
+/* ======================================================
+   FONDO GENERAL
+====================================================== */
+
+body,
+.fi-body {
+    background: #eef2f7 !important;
+}
+
+
+/* ======================================================
+   SIDEBAR
+====================================================== */
+
+
+
+
+/* MINI SIDEBAR */
+
+.fi-sidebar:not(:hover) {
+
+    width: 88px !important;
+}
+
+
+
+
+
+/* ======================================================
+   LOGO EMPRESA
+====================================================== */
+
+.sidebar-logo {
+
+    position: fixed;
+
+    top: 12px;
+
+    left: 12px;
+
+    width: 255px;
+
+    z-index: 9999;
+
+    background: white;
+
+    border-radius: 18px;
+
+    padding: 12px 14px;
+
+    box-shadow:
+        0 4px 12px rgba(0,0,0,.05);
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+}
+
+
+/* Nombre empresa */
+
+.sidebar-logo h1,
+.sidebar-logo h2,
+.sidebar-logo strong {
+
+    font-size: 22px !important;
+
+    line-height: 1.1 !important;
+
+    margin-bottom: 4px !important;
+
+    color: #1e293b !important;
+}
+
+
+/* lema */
+
+.sidebar-logo p,
+.sidebar-logo span {
+
+    font-size: 12px !important;
+
+    line-height: 1.2 !important;
+
+    color: #64748b !important;
+}
+
+
+/* ======================================================
+   OCULTAR SOLO TEXTOS MENU
+====================================================== */
+
+.fi-sidebar:not(:hover) .fi-sidebar-item-label,
+.fi-sidebar:not(:hover) .fi-sidebar-group-label,
+.fi-sidebar:not(:hover) .fi-sidebar-item-badge {
+
+    display: none !important;
+}
+
+
+/* ======================================================
+   CENTRAR ICONOS
+====================================================== */
+
+.fi-sidebar:not(:hover) .fi-sidebar-item-button {
+
+    justify-content: center !important;
+
+    padding-left: 0 !important;
+
+    padding-right: 0 !important;
+}
+
+
+/* ======================================================
+   ICONOS
+====================================================== */
+
+.fi-sidebar-item-icon svg {
+
+    width: 22px !important;
+
+    height: 22px !important;
+}
+
+
+/* ======================================================
+   ITEMS MENU
+====================================================== */
+
+.fi-sidebar-item-button {
+
+    border-radius: 16px !important;
+
+    margin: 6px 10px !important;
+
+    transition: all .2s ease;
+}
+
+
+/* Hover */
+
+
+
+
+/* Item activo */
+
+.fi-sidebar-item-active a {
+
+    background:
+        linear-gradient(
+            135deg,
+            #5b5cf0,
+            #4338ca
+        ) !important;
+
+    color: white !important;
+
+    box-shadow:
+        0 10px 20px rgba(79,70,229,.35);
+}
+
+
+/* Icono activo */
+
+.fi-sidebar-item-active svg {
+
+    color: white !important;
+}
+
+
+/* ======================================================
+   TITULOS SECCIONES MENU
+====================================================== */
+
+
+
+
+/* ======================================================
+   TOPBAR
+====================================================== */
+
+.fi-topbar {
+
+    background: rgba(255,255,255,.85) !important;
+
+    backdrop-filter: blur(10px);
+
+    border-bottom: 1px solid #e5e7eb;
+
+    box-shadow:
+        0 2px 10px rgba(0,0,0,.03);
+}
+
+
+/* ======================================================
+   TARJETAS
+====================================================== */
+
+.fi-section,
+.fi-widget,
+.fi-ta-ctn,
+.fi-in-entry-container,
+.fi-card {
+
+    background: white !important;
+
+    border-radius: 22px !important;
+
+    border: 1px solid #dbe3f0 !important;
+
+    box-shadow:
+        0 6px 18px rgba(15,23,42,.05);
+
+    overflow: hidden;
+}
+
+
+/* ======================================================
+   TABLAS
+====================================================== */
+
+.fi-ta-table {
+
+    border-radius: 18px !important;
+
+    overflow: hidden;
+}
+
+
+/* Header tablas */
+
+.fi-ta-header {
+
+    background: #f8fafc !important;
+}
+
+
+/* Hover filas */
+
+.fi-ta-row:hover {
+
+    background: #f8fbff !important;
+}
+
+
+/* ======================================================
+   BOTONES
+====================================================== */
+
+.fi-btn {
+
+    border-radius: 14px !important;
+
+    transition: .2s;
+}
+
+
+
+
+
+/* ======================================================
+   INPUTS
+====================================================== */
+
+.fi-input,
+.fi-select-input,
+.fi-textarea {
+
+    border-radius: 14px !important;
+
+    border-color: #dbe3f0 !important;
+}
+
+
+/* ======================================================
+   MODALES
+====================================================== */
+
+.fi-modal-window {
+
+    border-radius: 24px !important;
+
+    overflow: hidden;
+}
+
+
+/* ======================================================
+   PAGINACION
+====================================================== */
+
+.fi-pagination button {
+
+    border-radius: 12px !important;
+}
+
+
+/* ======================================================
+   DASHBOARD
+====================================================== */
+
+.fi-page {
+
+    gap: 20px;
+}
+
+
+/* ======================================================
+   SCROLL SIDEBAR
+====================================================== */
+
+.fi-sidebar::-webkit-scrollbar {
+
+    width: 6px;
+}
+
+
+.fi-sidebar::-webkit-scrollbar-thumb {
+
+    background: #cbd5e1;
+
+    border-radius: 10px;
+}
+
+
+/* logo */
+
+.sidebar-logo img {
+
+    width: 54px;
+
+    height: 54px;
+
+    object-fit: cover;
+
+    border-radius: 14px;
+
+    flex-shrink: 0;
+}
+
+
+/* nombre empresa */
+
+.sidebar-logo h1 {
+
+    margin: 0;
+
+    font-size: 13px;
+
+    line-height: 1.1;
+
+    font-weight: 800;
+
+    color: #1e293b;
+
+    word-break: break-word;
+}
+
+
+/* lema */
+
+.sidebar-logo p {
+
+    margin-top: 4px;
+
+    font-size: 11px;
+
+    line-height: 1.2;
+
+    color: #64748b;
+
+    font-style: italic;
+
+    word-break: break-word;
+}
+
+/* contenedor texto */
+
+.sidebar-logo .empresa-info {
+
+    width: 150px;
+
+    overflow: hidden;
+}
+
+/* ======================================================
+   HOVER MENUS
+====================================================== */
+
+.fi-sidebar-item-button:hover {
+
+    background: linear-gradient(
+    135deg,
+    #818cf8,
+    #6366f1
+) !important;
+
+    color: white !important;
+
+    transform: translateX(4px);
+
+    box-shadow:
+        0 8px 18px rgba(79,70,229,.25);
+}
+
+
+/* TEXTO hover */
+
+.fi-sidebar-item-button:hover .fi-sidebar-item-label {
+
+    color: white !important;
+}
+
+
+/* ICONOS hover */
+
+.fi-sidebar-item-button:hover svg {
+
+    color: white !important;
+}
+
+/* Los dropdowns de Select en formularios necesitan salir del alto de la seccion. */
+.fi-section,
+.fi-section-content,
+.fi-fo-component-ctn,
+.fi-fo-field-wrp,
+.fi-input-wrp {
+    overflow: visible !important;
+}
+
+.fi-ta-ctn,
+.fi-ta-table {
+    overflow: hidden !important;
+}
+
+.fi-dropdown-panel,
+.fi-select-input + div,
+[x-float] {
+    z-index: 99999 !important;
+}
+
+/* Permite que los resultados de selects dentro de modales no queden recortados. */
+.fi-modal-window,
+.fi-modal-content,
+.fi-modal-body,
+.fi-modal .fi-fo-component-ctn,
+.fi-modal .fi-fo-field-wrp,
+.fi-modal .fi-input-wrp {
+    overflow: visible !important;
+}
+
+.fi-modal .choices__list--dropdown,
+.fi-modal .choices__list[aria-expanded],
+.fi-modal [role="listbox"],
+.fi-modal [x-float] {
+    max-height: min(380px, 56vh) !important;
+    overflow-y: auto !important;
+    z-index: 100000 !important;
+}
+
+.fi-modal .choices__list--dropdown .choices__list {
+    max-height: min(340px, 50vh) !important;
+    overflow-y: auto !important;
+}
+
+/* ======================================================
+   REFRESCO VISUAL PANEL POS
+====================================================== */
+
+:root {
+    --pos-primary: #4f46e5;
+    --pos-primary-dark: #3730a3;
+    --pos-accent: #f59e0b;
+    --pos-green: #16a34a;
+    --pos-ink: #0f172a;
+    --pos-muted: #64748b;
+    --pos-soft: #eef6ff;
+}
+
+body,
+.fi-body {
+    background:
+        radial-gradient(circle at top left, rgba(79, 70, 229, .10), transparent 34rem),
+        linear-gradient(135deg, #eef6ff 0%, #f8fbff 52%, #fff7ed 100%) !important;
+}
+
+.fi-topbar {
+    min-height: 64px !important;
+    background:
+        linear-gradient(90deg, rgba(255,255,255,.96), rgba(248,250,252,.90)),
+        linear-gradient(90deg, rgba(79,70,229,.10), rgba(245,158,11,.10)) !important;
+    border-bottom: 1px solid rgba(148, 163, 184, .28) !important;
+    box-shadow: 0 10px 26px rgba(15, 23, 42, .07) !important;
+}
+
+.topbar-company-pill {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: 10px;
+    padding: 7px 12px 7px 8px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #ffffff 0%, #eef2ff 100%);
+    border: 1px solid rgba(79, 70, 229, .14);
+    box-shadow: 0 8px 20px rgba(79, 70, 229, .10);
+}
+
+.topbar-company-logo {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    object-fit: cover;
+    background: #ffffff;
+    border: 2px solid rgba(255, 255, 255, .85);
+    box-shadow: 0 6px 14px rgba(15, 23, 42, .12);
+}
+
+.topbar-company-logo-text {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--pos-primary), var(--pos-primary-dark));
+    color: #ffffff;
+    font-weight: 900;
+    font-size: 13px;
+}
+
+.topbar-company-copy {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.05;
+}
+
+.topbar-company-copy strong {
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--pos-ink);
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.topbar-company-copy span {
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--pos-muted);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.fi-sidebar {
+    width: 18rem !important;
+    background:
+        linear-gradient(180deg, #ffffff 0%, #f8fbff 48%, #eef6ff 100%) !important;
+    border-right: 1px solid rgba(148, 163, 184, .30) !important;
+    box-shadow: 12px 0 30px rgba(15, 23, 42, .05) !important;
+}
+
+.fi-sidebar:not(:hover) {
+    width: 18rem !important;
+}
+
+.fi-sidebar:not(:hover) .fi-sidebar-item-label,
+.fi-sidebar:not(:hover) .fi-sidebar-group-label,
+.fi-sidebar:not(:hover) .fi-sidebar-item-badge {
+    display: inline-flex !important;
+}
+
+.fi-sidebar:not(:hover) .fi-sidebar-item-button {
+    justify-content: flex-start !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+}
+
+.fi-sidebar-header {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 30 !important;
+    min-height: 76px !important;
+    padding: 10px 12px !important;
+    background:
+        linear-gradient(135deg, #ffffff 0%, #eef2ff 100%) !important;
+    border-bottom: 1px solid rgba(148, 163, 184, .24) !important;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, .07) !important;
+}
+
+.brand-mark {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    width: 100%;
+}
+
+.brand-logo-image,
+.brand-logo-fallback {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    flex: 0 0 auto;
+    object-fit: cover;
+    background: #ffffff;
+    border: 2px solid rgba(255, 255, 255, .92);
+    box-shadow: 0 8px 18px rgba(79, 70, 229, .16);
+}
+
+.brand-logo-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--pos-primary), var(--pos-primary-dark));
+}
+
+.brand-copy {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.05;
+}
+
+.brand-title {
+    max-width: 180px;
+    overflow: hidden;
+    color: var(--pos-ink);
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0;
+    text-overflow: ellipsis;
+}
+
+.brand-subtitle {
+    max-width: 180px;
+    margin-top: 4px;
+    overflow: hidden;
+    color: var(--pos-muted);
+    font-size: 10px;
+    font-weight: 700;
+    font-style: italic;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fi-sidebar-nav {
+    gap: 6px !important;
+    padding: 10px 8px 16px !important;
+}
+
+.fi-sidebar-group {
+    margin: 4px 0 8px !important;
+    padding: 6px 4px 8px !important;
+    border-radius: 18px !important;
+    background: rgba(255, 255, 255, .62) !important;
+    box-shadow: inset 0 0 0 1px rgba(148, 163, 184, .16);
+}
+
+.fi-sidebar-group-label {
+    margin: 0 10px 4px !important;
+    color: #475569 !important;
+    font-size: 11px !important;
+    font-weight: 900 !important;
+    letter-spacing: .01em !important;
+}
+
+.fi-sidebar-item-button {
+    min-height: 38px !important;
+    margin: 2px 6px !important;
+    padding: 8px 10px !important;
+    border-radius: 13px !important;
+    color: #334155 !important;
+}
+
+.fi-sidebar-item-label {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+}
+
+.fi-sidebar-item-icon svg {
+    width: 19px !important;
+    height: 19px !important;
+}
+
+.fi-sidebar-item-active a {
+    background:
+        linear-gradient(135deg, var(--pos-primary), #7c3aed) !important;
+    color: #ffffff !important;
+    box-shadow: 0 10px 22px rgba(79, 70, 229, .30) !important;
+}
+
+.fi-sidebar-item-button:hover {
+    background:
+        linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+    transform: translateX(2px) !important;
+}
+
+.fi-main {
+    background: transparent !important;
+}
+
+.fi-section,
+.fi-widget,
+.fi-ta-ctn,
+.fi-card {
+    border-radius: 18px !important;
+    border: 1px solid rgba(148, 163, 184, .24) !important;
+    box-shadow: 0 12px 26px rgba(15, 23, 42, .06) !important;
+}
+
+.fi-btn-color-primary {
+    background: linear-gradient(135deg, var(--pos-primary), #7c3aed) !important;
+    color: #ffffff !important;
+    box-shadow: 0 8px 18px rgba(79, 70, 229, .22) !important;
+}
+
+.fi-simple-layout {
+    background:
+        radial-gradient(circle at 18% 18%, rgba(79,70,229,.26), transparent 28rem),
+        radial-gradient(circle at 84% 24%, rgba(245,158,11,.24), transparent 24rem),
+        linear-gradient(135deg, #eef6ff 0%, #f8fafc 46%, #fff7ed 100%) !important;
+}
+
+.fi-simple-main {
+    position: relative;
+    overflow: hidden;
+    max-width: 520px !important;
+    border-radius: 28px !important;
+    border: 1px solid rgba(148, 163, 184, .25) !important;
+    box-shadow: 0 28px 70px rgba(15, 23, 42, .16) !important;
+}
+
+.fi-simple-main::before {
+    content: "POS Multiempresa";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 18px 24px;
+    color: #ffffff;
+    background: linear-gradient(135deg, var(--pos-primary), #7c3aed 60%, var(--pos-accent));
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: .02em;
+}
+
+.fi-simple-main .fi-simple-header {
+    padding-top: 34px !important;
+}
+
+.fi-simple-header-heading {
+    color: var(--pos-ink) !important;
+}
+
+.fi-simple-main form {
+    margin-top: 6px !important;
+}
+
+@media (max-width: 1024px) {
+    .topbar-company-copy span {
+        display: none;
+    }
+
+    .topbar-company-copy strong {
+        max-width: 170px;
+    }
+}
+
+@media (max-width: 640px) {
+    .topbar-company-pill {
+        display: none;
+    }
+}
+
+/* ======================================================
+   AJUSTE FINAL: LOGO LATERAL + MENU DESPLEGABLE
+====================================================== */
+
+.fi-sidebar {
+    width: 88px !important;
+    transition: width .22s ease, box-shadow .22s ease !important;
+}
+
+.fi-sidebar:hover {
+    width: 18rem !important;
+}
+
+.fi-sidebar-header {
+    min-height: 82px !important;
+    justify-content: center !important;
+}
+
+.fi-sidebar .brand-mark {
+    justify-content: center;
+}
+
+.fi-sidebar .brand-copy {
+    display: none !important;
+}
+
+.fi-sidebar .brand-logo-image,
+.fi-sidebar .brand-logo-fallback {
+    width: 50px;
+    height: 50px;
+}
+
+.fi-sidebar .fi-sidebar-nav {
+    overflow-x: hidden !important;
+}
+
+.fi-sidebar:not(:hover) .fi-sidebar-item-label,
+.fi-sidebar:not(:hover) .fi-sidebar-group-label,
+.fi-sidebar:not(:hover) .fi-sidebar-item-badge,
+.fi-sidebar:not(:hover) .fi-sidebar-group-collapse-button {
+    display: none !important;
+}
+
+.fi-sidebar:not(:hover) .fi-sidebar-group {
+    margin: 4px 6px 8px !important;
+    padding: 6px 2px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.fi-sidebar:not(:hover) .fi-sidebar-item-button {
+    justify-content: center !important;
+    min-height: 42px !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+.fi-sidebar:hover .fi-sidebar-item-label,
+.fi-sidebar:hover .fi-sidebar-group-label,
+.fi-sidebar:hover .fi-sidebar-item-badge {
+    display: inline-flex !important;
+}
+
+.fi-sidebar:hover .fi-sidebar-item-button {
+    justify-content: flex-start !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+}
+
+.topbar-company-pill {
+    padding: 9px 16px;
+    background:
+        linear-gradient(135deg, #ffffff 0%, #f8fbff 50%, #eef2ff 100%);
+}
+
+.topbar-company-copy strong {
+    max-width: 420px;
+    font-size: 14px;
+}
+
+.topbar-company-copy span {
+    max-width: 420px;
+    color: #4f46e5;
+}
+
+.fi-simple-layout {
+    align-items: stretch !important;
+    background:
+        linear-gradient(115deg, rgba(79,70,229,.95) 0%, rgba(124,58,237,.92) 36%, rgba(255,255,255,0) 36.2%),
+        radial-gradient(circle at 84% 20%, rgba(245,158,11,.28), transparent 20rem),
+        linear-gradient(135deg, #eef6ff 0%, #ffffff 46%, #fff7ed 100%) !important;
+}
+
+.fi-simple-main-ctn {
+    justify-content: flex-end !important;
+    padding: 32px 9vw !important;
+}
+
+.fi-simple-main {
+    max-width: 500px !important;
+    border-radius: 30px !important;
+    background: rgba(255, 255, 255, .96) !important;
+    backdrop-filter: blur(16px);
+}
+
+.fi-simple-main::before {
+    content: "Sistema POS";
+    background:
+        linear-gradient(135deg, #4f46e5 0%, #7c3aed 58%, #f59e0b 100%);
+}
+
+.fi-simple-main::after {
+    content: "Punto de venta y panel administrativo";
+    position: absolute;
+    top: 42px;
+    left: 24px;
+    color: rgba(255, 255, 255, .86);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.fi-simple-header .brand-mark {
+    justify-content: center;
+    margin-top: 8px;
+}
+
+.fi-simple-header .brand-logo-image,
+.fi-simple-header .brand-logo-fallback {
+    width: 52px;
+    height: 52px;
+}
+
+.fi-simple-header .brand-copy {
+    align-items: flex-start;
+}
+
+.fi-simple-header .brand-title {
+    font-size: 14px;
+}
+
+.fi-simple-header .brand-subtitle {
+    color: #64748b;
+}
+
+.fi-simple-header .login-brand-mark {
+    gap: 14px !important;
+}
+
+.fi-simple-header .login-brand-logo-image {
+    width: 62px !important;
+    height: 62px !important;
+    padding: 4px !important;
+    object-fit: contain !important;
+    border-radius: 18px !important;
+    background: linear-gradient(135deg, #eef2ff, #ffffff) !important;
+    border: 1px solid rgba(79, 70, 229, .18) !important;
+    box-shadow: 0 12px 28px rgba(79, 70, 229, .18) !important;
+}
+
+.fi-simple-header .login-brand-copy {
+    justify-content: center !important;
+}
+
+.fi-simple-header .login-brand-copy .brand-title {
+    max-width: none !important;
+    color: #111827 !important;
+    font-size: 15px !important;
+    font-weight: 900 !important;
+}
+
+.fi-simple-header-heading {
+    margin-top: 10px !important;
+    font-size: 25px !important;
+}
+
+.fi-simple-main .fi-input-wrp {
+    border-radius: 16px !important;
+}
+
+.fi-simple-main .fi-btn {
+    min-height: 42px !important;
+    border-radius: 16px !important;
+}
+
+@media (max-width: 1024px) {
+    .fi-simple-layout {
+        align-items: center !important;
+        background:
+            radial-gradient(circle at top left, rgba(79,70,229,.22), transparent 22rem),
+            radial-gradient(circle at bottom right, rgba(245,158,11,.24), transparent 22rem),
+            linear-gradient(135deg, #eef6ff 0%, #ffffff 52%, #fff7ed 100%) !important;
+    }
+
+    .fi-simple-main-ctn {
+        justify-content: center !important;
+        padding: 24px !important;
+    }
+}
+
+/* ======================================================
+   AJUSTES DE INTERACCION Y LOGIN POS
+====================================================== */
+
+.fi-sidebar:not(:hover) .fi-sidebar-nav {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+.fi-sidebar:hover .fi-sidebar-nav {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+}
+
+.fi-sidebar {
+    overflow: visible !important;
+}
+
+.fi-sidebar-nav {
+    transition: opacity .16s ease, visibility .16s ease !important;
+}
+
+.fi-topbar .fi-dropdown-panel {
+    position: fixed !important;
+    top: 68px !important;
+    right: 18px !important;
+    bottom: auto !important;
+    z-index: 9999 !important;
+    transform: none !important;
+    max-height: calc(100vh - 88px) !important;
+    overflow-y: auto !important;
+}
+
+html:has(.fi-simple-layout),
+body:has(.fi-simple-layout) {
+    height: 100vh !important;
+    overflow: hidden !important;
+}
+
+.fi-simple-layout {
+    position: relative !important;
+    min-height: 100vh !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+    background:
+        radial-gradient(circle at 82% 18%, rgba(245,158,11,.22), transparent 22rem),
+        linear-gradient(135deg, #eef6ff 0%, #ffffff 54%, #fff7ed 100%) !important;
+}
+
+.fi-simple-layout::before {
+    content: "";
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(46vw, 620px);
+    background:
+        linear-gradient(135deg, rgba(79,70,229,.94), rgba(124,58,237,.84)),
+        url("data:image/svg+xml,%3Csvg width='720' height='720' viewBox='0 0 720 720' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='720' height='720' fill='none'/%3E%3Cg fill='none' stroke='white' stroke-width='18' stroke-linecap='round' stroke-linejoin='round' opacity='.88'%3E%3Crect x='155' y='150' width='350' height='220' rx='34'/%3E%3Cpath d='M220 435h315l55 115H130l55-115h35z'/%3E%3Cpath d='M250 230h160M250 290h95M255 505h210' opacity='.7'/%3E%3Ccircle cx='510' cy='250' r='36' opacity='.75'/%3E%3Cpath d='M520 130h95v255M560 170h85M560 220h85M560 270h85' opacity='.55'/%3E%3Cpath d='M115 160h-45v330h45' opacity='.45'/%3E%3C/g%3E%3C/svg%3E");
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover, min(38vw, 500px);
+    box-shadow: 26px 0 70px rgba(79, 70, 229, .18);
+}
+
+.fi-simple-layout::after {
+    content: "Sistema POS";
+    position: fixed;
+    left: clamp(28px, 5vw, 74px);
+    bottom: clamp(28px, 8vh, 80px);
+    color: rgba(255, 255, 255, .92);
+    font-size: clamp(34px, 4.2vw, 58px);
+    font-weight: 950;
+    letter-spacing: 0;
+    text-shadow: 0 12px 34px rgba(15, 23, 42, .22);
+}
+
+.fi-simple-main-ctn {
+    min-height: 100vh !important;
+    height: 100vh !important;
+    padding-top: 18px !important;
+    padding-bottom: 18px !important;
+    overflow: hidden !important;
+}
+
+.fi-simple-main {
+    max-height: calc(100vh - 36px) !important;
+    overflow: hidden !important;
+}
+
+.fi-simple-main::before {
+    content: "Sistema POS";
+}
+
+.fi-simple-main::after {
+    content: none !important;
+}
+
+.fi-simple-header .brand-subtitle {
+    display: none !important;
+}
+
+.fi-simple-header .brand-copy {
+    justify-content: center;
+}
+
+@media (max-width: 1024px) {
+    .fi-simple-layout::before {
+        width: 100%;
+        height: 190px;
+        bottom: auto;
+        background-size: cover, 240px;
+    }
+
+    .fi-simple-layout::after {
+        top: 56px;
+        bottom: auto;
+        font-size: 34px;
+    }
+
+    .fi-simple-main-ctn {
+        padding-top: 160px !important;
+    }
+}
+
+/* ======================================================
+   SIDEBAR COMPACTO REAL + LOGIN CON IMAGEN POS
+====================================================== */
+
+.fi-layout {
+    align-items: stretch !important;
+}
+
+.fi-main-sidebar.fi-sidebar,
+.fi-sidebar {
+    flex: 0 0 74px !important;
+    width: 74px !important;
+    min-width: 74px !important;
+    max-width: 74px !important;
+    background: transparent !important;
+    border-right: 0 !important;
+    box-shadow: none !important;
+    transition:
+        width .22s ease,
+        min-width .22s ease,
+        max-width .22s ease,
+        flex-basis .22s ease !important;
+}
+
+.fi-main-sidebar.fi-sidebar:hover,
+.fi-sidebar:hover {
+    flex-basis: 248px !important;
+    width: 248px !important;
+    min-width: 248px !important;
+    max-width: 248px !important;
+    background:
+        linear-gradient(180deg, #ffffff 0%, #f8fbff 52%, #eef6ff 100%) !important;
+    border-right: 1px solid rgba(148, 163, 184, .28) !important;
+    box-shadow: 14px 0 32px rgba(15, 23, 42, .08) !important;
+}
+
+.fi-sidebar-header {
+    width: 74px !important;
+    min-width: 74px !important;
+    padding: 10px 8px !important;
+    background: transparent !important;
+    border-bottom: 0 !important;
+    box-shadow: none !important;
+}
+
+.fi-sidebar:hover .fi-sidebar-header {
+    width: 248px !important;
+    min-width: 248px !important;
+    background: linear-gradient(135deg, #ffffff 0%, #eef2ff 100%) !important;
+    border-bottom: 1px solid rgba(148, 163, 184, .20) !important;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, .07) !important;
+}
+
+.fi-sidebar .brand-logo-image,
+.fi-sidebar .brand-logo-fallback {
+    width: 44px !important;
+    height: 44px !important;
+}
+
+.fi-sidebar:hover .brand-logo-image,
+.fi-sidebar:hover .brand-logo-fallback {
+    width: 42px !important;
+    height: 42px !important;
+}
+
+.fi-sidebar:hover .brand-copy {
+    display: flex !important;
+}
+
+.fi-sidebar:hover .brand-title {
+    max-width: 160px;
+    font-size: 12px;
+}
+
+.fi-sidebar:hover .brand-subtitle {
+    max-width: 160px;
+    font-size: 9px;
+}
+
+.fi-sidebar:hover .fi-sidebar-nav {
+    padding: 8px 6px 12px !important;
+}
+
+.fi-sidebar:hover .fi-sidebar-nav-groups {
+    gap: 8px !important;
+}
+
+.fi-sidebar:hover .fi-sidebar-group {
+    margin: 2px 0 6px !important;
+    padding: 5px 3px !important;
+    border-radius: 14px !important;
+}
+
+.fi-sidebar:hover .fi-sidebar-group-label {
+    margin: 0 8px 3px !important;
+    font-size: 10px !important;
+}
+
+.fi-sidebar:hover .fi-sidebar-item-button {
+    min-height: 31px !important;
+    margin: 1px 4px !important;
+    padding: 6px 8px !important;
+    border-radius: 10px !important;
+}
+
+.fi-sidebar:hover .fi-sidebar-item-label {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+}
+
+.fi-sidebar:hover .fi-sidebar-item-icon svg {
+    width: 17px !important;
+    height: 17px !important;
+}
+
+.fi-main {
+    max-width: none !important;
+}
+
+.fi-main-ctn {
+    min-width: 0 !important;
+}
+
+.fi-simple-layout::before {
+    width: min(48vw, 640px) !important;
+    background:
+        linear-gradient(135deg, rgba(79,70,229,.86), rgba(124,58,237,.64)),
+        url('/images/pos-login.svg') !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    background-size: cover, min(38vw, 520px) !important;
+}
+
+.fi-simple-layout::after {
+    content: none !important;
+}
+
+.fi-simple-main::before {
+    content: "Sistema POS" !important;
+}
+
+.fi-simple-main .brand-title {
+    font-size: 15px !important;
+}
+
+.fi-simple-main-ctn {
+    align-items: center !important;
+}
+
+@media (max-width: 1024px) {
+    .fi-simple-layout::before {
+        width: 100% !important;
+        height: 160px !important;
+        background-size: cover, 250px !important;
+    }
+}
+
+/* ======================================================
+   MARCA SIN DUPLICADOS + GRAFICO CON FILTRO
+====================================================== */
+
+.fi-sidebar:hover .brand-copy,
+.fi-sidebar .brand-copy {
+    display: none !important;
+}
+
+.fi-sidebar-header,
+.fi-sidebar:hover .fi-sidebar-header {
+    width: 74px !important;
+    min-width: 74px !important;
+    max-width: 74px !important;
+    padding: 10px 8px !important;
+    justify-content: center !important;
+    background: linear-gradient(180deg, #ffffff 0%, #eef2ff 100%) !important;
+    border-right: 1px solid rgba(148, 163, 184, .18) !important;
+    border-bottom: 1px solid rgba(148, 163, 184, .18) !important;
+    box-shadow: 0 10px 20px rgba(79, 70, 229, .08) !important;
+}
+
+.fi-sidebar:hover .brand-mark,
+.fi-sidebar .brand-mark {
+    justify-content: center !important;
+    width: auto !important;
+}
+
+.fi-sidebar:hover .brand-logo-image,
+.fi-sidebar:hover .brand-logo-fallback,
+.fi-sidebar .brand-logo-image,
+.fi-sidebar .brand-logo-fallback {
+    width: 46px !important;
+    height: 46px !important;
+}
+
+.topbar-company-pill {
+    min-width: 300px;
+    justify-content: center;
+    margin-left: 16px;
+    padding: 10px 22px;
+    border-radius: 20px;
+}
+
+.topbar-company-copy {
+    align-items: center;
+    text-align: center;
+}
+
+.topbar-company-copy strong {
+    max-width: 520px;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.topbar-company-copy span {
+    max-width: 520px;
+    margin-top: 3px;
+    font-size: 12px;
+    line-height: 1;
+}
+
+.fi-wi-chart select,
+.fi-wi-chart .fi-select-input {
+    min-height: 34px !important;
+    border-radius: 12px !important;
+    font-size: 12px !important;
+}
+
+/* ======================================================
+   ALINEACION FINAL LOGO / MARCA SUPERIOR
+====================================================== */
+
+.fi-topbar {
+    position: sticky !important;
+    top: 0 !important;
+    min-height: 64px !important;
+    height: 64px !important;
+    overflow: visible !important;
+}
+
+.fi-sidebar-header,
+.fi-sidebar:hover .fi-sidebar-header {
+    height: 64px !important;
+    min-height: 64px !important;
+    max-height: 64px !important;
+    width: 74px !important;
+    min-width: 74px !important;
+    max-width: 74px !important;
+    padding: 8px !important;
+    align-items: center !important;
+}
+
+.fi-sidebar .brand-logo-image,
+.fi-sidebar .brand-logo-fallback,
+.fi-sidebar:hover .brand-logo-image,
+.fi-sidebar:hover .brand-logo-fallback {
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 12px !important;
+}
+
+.topbar-company-pill {
+    position: absolute !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    min-width: 360px !important;
+    max-width: min(520px, calc(100vw - 420px)) !important;
+    height: 50px !important;
+    margin: 0 !important;
+    padding: 8px 26px !important;
+}
+
+.topbar-company-copy strong {
+    font-size: 17px !important;
+}
+
+.topbar-company-copy span {
+    font-size: 12px !important;
+}
+
+.fi-main {
+    padding-top: 1.75rem !important;
+}
+
+@media (max-width: 900px) {
+    .topbar-company-pill {
+        left: 16px !important;
+        transform: translateY(-50%) !important;
+        min-width: 250px !important;
+        max-width: calc(100vw - 180px) !important;
+    }
+}
+
+/* ======================================================
+   LOGO CENTRADO + TEXTO ACTIVO LEGIBLE
+====================================================== */
+
+.fi-sidebar-header,
+.fi-sidebar:hover .fi-sidebar-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.fi-sidebar-header > div,
+.fi-sidebar-header a,
+.fi-sidebar-header .brand-mark {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.fi-sidebar-item-active .fi-sidebar-item-button,
+.fi-sidebar-item-active a,
+.fi-sidebar-item.fi-active .fi-sidebar-item-button,
+.fi-sidebar-item.fi-active a {
+    color: #ffffff !important;
+}
+
+.fi-sidebar-item-active .fi-sidebar-item-label,
+.fi-sidebar-item-active a .fi-sidebar-item-label,
+.fi-sidebar-item.fi-active .fi-sidebar-item-label,
+.fi-sidebar-item.fi-active a .fi-sidebar-item-label {
+    color: #ffffff !important;
+    font-weight: 800 !important;
+}
+
+.fi-sidebar-item-active svg,
+.fi-sidebar-item.fi-active svg {
+    color: #ffffff !important;
+}
+
+/* ======================================================
+   CENTRADO EXACTO LOGO SIDEBAR + FOTO LOGIN
+====================================================== */
+
+.fi-sidebar > .overflow-x-clip {
+    width: 74px !important;
+    min-width: 74px !important;
+    max-width: 74px !important;
+    height: 64px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: visible !important;
+}
+
+.fi-sidebar:hover > .overflow-x-clip {
+    width: 248px !important;
+    min-width: 248px !important;
+    max-width: 248px !important;
+}
+
+.fi-sidebar-header,
+.fi-sidebar:hover .fi-sidebar-header {
+    margin: 0 !important;
+    inset: auto !important;
+}
+
+.fi-sidebar-header > div,
+.fi-sidebar-header a,
+.fi-sidebar-header .brand-mark,
+.fi-sidebar-header .brand-mark > a {
+    margin: 0 auto !important;
+    padding: 0 !important;
+    max-width: 74px !important;
+}
+
+.fi-sidebar:hover .fi-sidebar-header,
+.fi-sidebar:hover .fi-sidebar-header > div,
+.fi-sidebar:hover .fi-sidebar-header a,
+.fi-sidebar:hover .fi-sidebar-header .brand-mark,
+.fi-sidebar:hover .fi-sidebar-header .brand-mark > a {
+    width: 248px !important;
+    min-width: 248px !important;
+    max-width: 248px !important;
+}
+
+.fi-sidebar:hover .fi-sidebar-header {
+    justify-content: center !important;
+}
+
+.fi-sidebar-header img.brand-logo-image,
+.fi-sidebar-header .brand-logo-fallback {
+    display: block !important;
+    margin: 0 auto !important;
+}
+
+.fi-simple-layout::before {
+    width: min(50vw, 680px) !important;
+    background:
+        linear-gradient(135deg, rgba(238, 242, 255, .42), rgba(255, 247, 237, .58)),
+        linear-gradient(135deg, rgba(15, 23, 42, .22), rgba(79, 70, 229, .20)),
+        url('/images/login-pos.png') !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    background-size: cover, cover, 82% auto !important;
+    background-color: #eef2ff !important;
+}
+
+@media (max-width: 1024px) {
+    .fi-simple-layout::before {
+        background:
+            linear-gradient(135deg, rgba(238, 242, 255, .48), rgba(255, 247, 237, .62)),
+            linear-gradient(135deg, rgba(15, 23, 42, .18), rgba(79, 70, 229, .14)),
+            url('/images/login-pos.png') !important;
+        background-position: center !important;
+        background-size: cover, cover, 250px auto !important;
+    }
+}
+
+/* ======================================================
+   RESPONSIVE MOVIL SIN TOCAR ESCRITORIO
+====================================================== */
+
+@media (max-width: 768px) {
+    html,
+    body,
+    .fi-body {
+        max-width: 100vw !important;
+        overflow-x: hidden !important;
+    }
+
+    html:has(.fi-simple-layout),
+    body:has(.fi-simple-layout) {
+        height: auto !important;
+        min-height: 100dvh !important;
+        overflow: auto !important;
+    }
+
+    .fi-simple-layout {
+        min-height: 100dvh !important;
+        height: auto !important;
+        padding: 14px !important;
+        overflow-y: auto !important;
+        background:
+            radial-gradient(circle at 50% 0%, rgba(79, 70, 229, .18), transparent 16rem),
+            linear-gradient(180deg, #eef2ff 0%, #ffffff 48%, #fff7ed 100%) !important;
+    }
+
+    .fi-simple-layout::before {
+        position: relative !important;
+        inset: auto !important;
+        display: block !important;
+        width: min(100%, 360px) !important;
+        height: 150px !important;
+        margin: 0 auto 14px !important;
+        border-radius: 24px !important;
+        background:
+            linear-gradient(135deg, rgba(238, 242, 255, .58), rgba(255, 247, 237, .70)),
+            linear-gradient(135deg, rgba(15, 23, 42, .10), rgba(79, 70, 229, .12)),
+            url('/images/login-pos.png') !important;
+        background-position: center !important;
+        background-repeat: no-repeat !important;
+        background-size: cover, cover, 250px auto !important;
+        box-shadow: 0 18px 44px rgba(15, 23, 42, .10) !important;
+    }
+
+    .fi-simple-layout::after {
+        content: none !important;
+    }
+
+    .fi-simple-main-ctn {
+        width: 100% !important;
+        min-height: auto !important;
+        height: auto !important;
+        padding: 0 !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        overflow: visible !important;
+    }
+
+    .fi-simple-main {
+        width: min(100%, 420px) !important;
+        max-width: 420px !important;
+        max-height: none !important;
+        overflow: visible !important;
+        border-radius: 24px !important;
+    }
+
+    .fi-simple-main::before {
+        padding: 14px 20px !important;
+        font-size: 12px !important;
+    }
+
+    .fi-simple-main .fi-simple-header {
+        padding-top: 28px !important;
+    }
+
+    .fi-simple-header .login-brand-mark {
+        gap: 10px !important;
+    }
+
+    .fi-simple-header .login-brand-logo-image {
+        width: 54px !important;
+        height: 54px !important;
+    }
+
+    .fi-simple-header-heading {
+        font-size: 24px !important;
+        line-height: 1.15 !important;
+    }
+
+    .fi-simple-main form {
+        margin-top: 0 !important;
+    }
+
+    .fi-simple-main .fi-input-wrp {
+        min-height: 44px !important;
+        border-radius: 14px !important;
+    }
+
+    .fi-simple-main .fi-btn {
+        min-height: 44px !important;
+        border-radius: 14px !important;
+    }
+
+    .fi-topbar {
+        min-height: 58px !important;
+        height: 58px !important;
+    }
+
+    .topbar-company-pill {
+        left: 50% !important;
+        min-width: 0 !important;
+        width: min(68vw, 320px) !important;
+        max-width: calc(100vw - 112px) !important;
+        height: 42px !important;
+        padding: 6px 12px !important;
+        transform: translate(-50%, -50%) !important;
+        border-radius: 16px !important;
+    }
+
+    .topbar-company-copy strong {
+        max-width: 100% !important;
+        font-size: 12px !important;
+        line-height: 1.05 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    .topbar-company-copy span {
+        display: none !important;
+    }
+
+    .fi-main {
+        padding: 1rem .75rem 1.5rem !important;
+    }
+
+    .fi-header-heading,
+    .fi-page > .fi-header h1 {
+        font-size: 26px !important;
+        line-height: 1.1 !important;
+    }
+
+    .fi-section,
+    .fi-ta-ctn,
+    .fi-wi-stats-overview-stat,
+    .fi-wi-chart {
+        border-radius: 18px !important;
+    }
+
+    .fi-ta-header,
+    .fi-ta-content,
+    .fi-section-content {
+        overflow-x: auto !important;
+    }
+
+    .fi-ta-table {
+        min-width: 760px !important;
+    }
+
+    .fi-fo-component-ctn,
+    .fi-fo-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+.ventas-report-big-stat .fi-wi-stats-overview-stat-value {
+    font-size: 2rem !important;
+    line-height: 1.05 !important;
+    font-weight: 800 !important;
+}
+
+.ventas-report-compact-stat {
+    min-height: 112px !important;
+}
+
+.ventas-report-compact-stat .fi-wi-stats-overview-stat-value {
+    font-size: 1.75rem !important;
+    line-height: 1 !important;
+    font-weight: 800 !important;
+}
+
+.ventas-report-wide-stat {
+    min-height: 150px !important;
+}
+
+.ventas-report-wide-stat .fi-wi-stats-overview-stat-value {
+    font-size: 2.15rem !important;
+    line-height: 1.05 !important;
+    font-weight: 800 !important;
+}
+
+.fi-wi-stats-overview-stats-ctn:has(.ventas-report-wide-stat) {
+    grid-template-columns: minmax(150px, .75fr) minmax(360px, 1.65fr) minmax(230px, 1fr) minmax(230px, 1fr) !important;
+}
+
+.ventas-report-wide-stat .fi-wi-stats-overview-stat-description {
+    display: block !important;
+    overflow: visible !important;
+}
+
+body:has([href*="ventas-reports"]) .fi-ta-table,
+body:has([action*="ventas-reports"]) .fi-ta-table {
+    min-width: 0 !important;
+}
+
+body:has([href*="ventas-reports"]) .fi-ta-content,
+body:has([action*="ventas-reports"]) .fi-ta-content {
+    overflow-x: hidden !important;
+}
+
+@media (max-width: 480px) {
+    .fi-simple-layout {
+        padding: 10px !important;
+    }
+
+    .fi-simple-layout::before {
+        height: 118px !important;
+        margin-bottom: 10px !important;
+        background-size: cover, cover, 210px auto !important;
+    }
+
+    .fi-simple-main {
+        border-radius: 20px !important;
+    }
+
+    .fi-simple-header-heading {
+        font-size: 22px !important;
+    }
+
+    .topbar-company-pill {
+        width: min(62vw, 240px) !important;
+        max-width: calc(100vw - 104px) !important;
+    }
+
+    .topbar-company-copy strong {
+        font-size: 11px !important;
+    }
+
+    .fi-main {
+        padding-inline: .6rem !important;
+    }
+}
+
+

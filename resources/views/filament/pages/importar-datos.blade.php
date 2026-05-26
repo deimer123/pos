@@ -5,7 +5,7 @@
         <label for="empresa_id" class="block font-medium text-sm text-gray-700">Empresa</label>
         <select wire:model="empresa_id" id="empresa_id" class="form-select w-full rounded-md shadow-sm border-gray-300">
             <option value="">Seleccione una empresa</option>
-            @foreach(\App\Models\User::all() as $empresa)
+            @foreach(\App\Models\User::where('tipo_usuario', 'empresa')->role('admin_empresa')->orderBy('name')->get() as $empresa)
                 <option value="{{ $empresa->id }}">{{ $empresa->name }}</option>
             @endforeach
         </select>

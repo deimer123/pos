@@ -21,4 +21,16 @@ class EditEmpresa extends EditRecord
     {
         return $this->getResource()::getUrl('index');
     }
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        if (! empty($data['plan_meses']) && ! empty($data['plan_started_at']) && empty($data['plan_ends_at'])) {
+            $data['plan_ends_at'] = EmpresaResource::calculatePlanEndDate(
+                $data['plan_started_at'],
+                (int) $data['plan_meses'],
+            );
+        }
+
+        return $data;
+    }
 }

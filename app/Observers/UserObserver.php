@@ -36,7 +36,7 @@ class UserObserver
             'regimen_tributario' => 'simplificado',
             'responsable_iva'    => 0,
             'clasificacion'      => 'cliente',
-            'tipo'               => 3,
+            'tipo'               => 1,
         ]);
 
         // 🧾 Proveedor: PROVEEDOR DE PRUEBA
@@ -56,7 +56,7 @@ class UserObserver
             'regimen_tributario' => 'simplificado',
             'responsable_iva'    => 0,
             'clasificacion'      => 'proveedor',
-            'tipo'               => 1,
+            'tipo'               => 3,
         ]);
 
         // 📦 Familia: FAMILIA DE PRUEBA

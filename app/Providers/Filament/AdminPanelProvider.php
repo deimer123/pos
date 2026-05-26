@@ -10,6 +10,7 @@ use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
 use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -30,18 +31,25 @@ class AdminPanelProvider extends PanelProvider
         ->id('admin')
         ->path('admin')
         ->login() // ✅ Solo esto, sin auth()
+        ->brandName('Sistema POS')
+        ->sidebarWidth('18rem')
+        ->brandLogo(fn () => view('filament.logo'))
         ->colors([
-            'primary' => Color::Amber,
+            'primary' => Color::Indigo,
         ])
         ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
         ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
         ->pages([
-            Pages\Dashboard::class,
+            \App\Filament\Pages\Dashboard::class,
         ])
         ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
         ->widgets([
-            Widgets\AccountWidget::class,
-            Widgets\FilamentInfoWidget::class,
+            \App\Filament\Widgets\SuperAdminEmpresasOverview::class,
+            \App\Filament\Widgets\StatsOverview::class,           
+            \App\Filament\Widgets\ProductosMasVendidos::class,
+            \App\Filament\Widgets\VentasPorVendedor::class,
+             \App\Filament\Widgets\VentasUltimos7Dias::class,
+            
         ])
         ->middleware([
             EncryptCookies::class,
@@ -65,10 +73,28 @@ class AdminPanelProvider extends PanelProvider
                 ->url(fn () => route('filament.admin.resources.configuracion-empresas.create', auth()->user()))
                 ->visible(fn () =>
                     auth()->check() &&
-                    (auth()->user()->hasRole('admin_empresa') || auth()->user()->roles->contains('id', 2))
+                    auth()->user()->hasRole('admin_empresa')
                 ),
         ])
-        ->profile(EditProfile::class);
+        ->profile(EditProfile::class)
+        ->renderHook(
+            PanelsRenderHook::TOPBAR_START,
+            fn () => view('filament.topbar-brand')
+        )
+        ->renderHook(
+    'panels::head.end',
+    fn () => '
+        <link rel="stylesheet" href="/css/admin.css">
+    '
+)
+       
+
+        ->renderHook(
+    'panels::body.end',
+    fn () => view('filament.session-check')
+);
+
+
 }
 
 public function configurePanel(Panel $panel): void
@@ -77,28 +103,30 @@ public function configurePanel(Panel $panel): void
         $user = Auth::user();
 
         if ($user->hasRole('super_admin')) {
-            return route('filament.admin.pages.dashboard');
-        }
+    return route('filament.admin.pages.dashboard');
+}
 
-        if ($user->hasRole('admin_empresa')) {
-            return route('redirect-after-login');
-        }
+ $esVendedor = $user->hasRole('vendedor');
 
-        $esVendedor = $user->hasRole('vendedor');
-        $esDigitador = $user->hasRole('digitador');
+    $esDigitador = $user->hasRole('digitador');
 
-        if ($esVendedor && $esDigitador) {
-            return route('redirect-after-login');
-        }
+    $esCajero = $user->hasRole('cajero');
 
-        if ($esVendedor && ! $esDigitador) {
-            return route('pos');
-        }
 
-        if ($esDigitador && ! $esVendedor) {
-            return route('filament.admin.pages.dashboard');
-        }
+// ADMIN EMPRESA
+if ($user->hasRole('admin_empresa')) {
+    return route('eleccion');
+}
 
+// SI TIENE DIGITADOR
+if ($esDigitador) {
+    return route('filament.admin.pages.dashboard');
+}
+
+// SI TIENE CAJERO O VENDEDOR
+if ($esCajero || $esVendedor) {
+    return redirect()->route('pos');
+}
         abort(403, 'Acceso no autorizado');
     });
 }

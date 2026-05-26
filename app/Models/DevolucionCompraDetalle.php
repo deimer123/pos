@@ -39,7 +39,7 @@ class DevolucionCompraDetalle extends Model
     public function producto()
     {
         return $this->belongsTo(Product::class, 'product_id', 'id_producto')
-            ->where('empresa_id', auth()->user()->empresa_id ?? auth()->id());
+            ->where('empresa_id', auth()->user()->getEmpresaActualId());
     }
 
     /**

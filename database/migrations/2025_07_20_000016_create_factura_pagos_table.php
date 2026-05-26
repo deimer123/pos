@@ -21,6 +21,11 @@ return new class extends Migration {
             $table->dateTime('fecha'); // se asigna con now() en el modelo/método
             $table->foreignId('user_id')->nullable()
                 ->constrained('users')->nullOnDelete();
+                // VENDEDOR
+                   $table->foreignId('vendedor_id')->nullable()->constrained('users')->nullOnDelete();
+
+            // CAJERO
+            $table->foreignId('cajero_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('nota', 150)->nullable();
 
             // 👇 NUEVO: observación específica para transferencias

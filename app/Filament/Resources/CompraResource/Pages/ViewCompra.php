@@ -10,6 +10,9 @@ use App\Models\Pago;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Auth;
 use Filament\Forms;
+use App\Models\NotaCredito;
+use App\Models\NotaCreditoItem;
+
 
 
 class ViewCompra extends ViewRecord
@@ -53,13 +56,13 @@ Actions\Action::make('registrarPago')
     ->color('success')
     ->icon('heroicon-o-currency-dollar')
     ->visible(fn() =>
-        $this->record->tipo_pago === 'credito' &&
-          $this->record->estado !== 'pagada'
-    )
+    $this->record->tipo_pago === 'credito' &&
+    !in_array($this->record->estado, ['pagada', 'anulada'])
+)
     ->form(function () {
 
         // ✅ ahora el saldo es directo, sin recalcular
-        $saldoPendiente = $this->record->saldo ?? 0;
+        $saldoPendiente = $this->record->total ?? 0;
 
         return [
             Forms\Components\Placeholder::make('saldo')
@@ -276,18 +279,30 @@ $total = $compra->detalles->sum(function ($d) {
                     ];
                 })->filter(fn($row) => $row['cantidad_original'] > 0);
             })
-            ->schema([
-                \Filament\Forms\Components\TextInput::make('codigo_ingresado')->label('Código')->disabled(),
-                \Filament\Forms\Components\TextInput::make('nombre_producto')->label('Producto')->disabled(),
-                \Filament\Forms\Components\TextInput::make('cantidad_original')->label('Cant. disponible')->disabled(),
-                \Filament\Forms\Components\TextInput::make('cantidad')
-                    ->label('Cant. devolver')
-                    ->numeric()
-                    ->minValue(0)
-                    ->maxValue(fn($get) => $get('cantidad_original'))
-                    ->required(),
-            ])
-            ->columns(4),
+             ->schema([
+        \Filament\Forms\Components\TextInput::make('codigo_ingresado')
+            ->label('Código')
+            ->disabled()
+            ->columnSpan(2),
+
+        \Filament\Forms\Components\TextInput::make('nombre_producto')
+            ->label('Producto')
+            ->disabled()
+            ->columnSpan(9), // 👈 más ancho para que se vea completo el nombre
+
+        \Filament\Forms\Components\TextInput::make('cantidad_original')
+            ->label('Cant. Dispo.')
+            ->disabled()
+            ->columnSpan(2),
+
+        \Filament\Forms\Components\TextInput::make('cantidad')
+            ->label('Cant. Devol.')
+            ->numeric()
+            ->minValue(0)
+            ->required()
+            ->columnSpan(2),
+    ])
+    ->columns(15),
     ];
 })
     ->action(function (array $data) {
@@ -374,10 +389,24 @@ foreach ($compra->detalles as $detalle) {
             ->where('empresa_id', $compra->empresa_id)
             ->first();
 
-        if ($producto) {
-            $producto->existencias -= $cantidadRestante;
-            $producto->save();
-        }
+       if ($producto) {
+
+    $stockAnterior = (float)$producto->existencias;
+
+    // 🔥 KARDEX
+    guardarKardex(
+        $detalle->product_id,
+        'devolucion_compra',
+        $cantidadRestante,
+        $compra->empresa_id,
+        $devolucion->id,
+        $stockAnterior
+    );
+
+    // 🔻 ACTUALIZAR INVENTARIO
+    $producto->existencias = $stockAnterior - $cantidadRestante;
+    $producto->save();
+}
     }
 }
 
@@ -424,9 +453,23 @@ foreach ($compra->detalles as $detalle) {
                         ->where('empresa_id', $compra->empresa_id)
                         ->first();
                     if ($producto) {
-                        $producto->existencias -= $cantidad;
-                        $producto->save();
-                    }
+
+    $stockAnterior = (float)$producto->existencias;
+
+    // 🔥 KARDEX
+    guardarKardex(
+        $detalle->product_id,
+        'devolucion_compra',
+        $cantidad,
+        $compra->empresa_id,
+        $devolucion->id,
+        $stockAnterior
+    );
+
+    // 🔻 ACTUALIZAR INVENTARIO
+    $producto->existencias = $stockAnterior - $cantidad;
+    $producto->save();
+}
                 }
             }
         }
@@ -458,27 +501,60 @@ $this->dispatch('$refresh');
                 ->send();
         }
 
-        // ✅ Ajustar saldo o nota crédito
-        if ($compra->tipo_pago === 'contado' && $compra->saldo <= 0) {
-            \App\Models\NotaCredito::create([
-                'empresa_id' => $compra->empresa_id,
-                'compra_id' => $compra->id,
-                'devolucion_id' => $devolucion->id,
-                'monto' => $totalDevolucion,
-                'motivo' => $data['motivo'],
-                'fecha' => now(),
-            ]);
-        } elseif ($compra->tipo_pago === 'credito') {
-            $nuevoSaldo = max(0, $compra->saldo - $totalDevolucion);
-            $compra->update(['saldo' => $nuevoSaldo]);
-        }
+        
+      $saldoPendiente = $this->record->fresh()->saldo ?? 0;
 
-        // ✅ Notificación principal
-        Notification::make()
-            ->title('Devolución registrada correctamente.')
-            ->body('Total devuelto: $' . number_format($totalDevolucion, 0, ',', '.'))
-            ->success()
-            ->send();
+
+
+// 2️⃣ Crear Nota Crédito SOLO si deseas para 'contado'
+//    (si quieres también para crédito, quita la condición)
+ 
+
+    // Generar número correlativo sencillo
+    $ultimoId = \App\Models\NotaCredito::where('empresa_id', $compra->empresa_id)->max('id') ?? 0;
+    $numeroNC = 'NC-' . str_pad($ultimoId + 1, 6, '0', STR_PAD_LEFT);
+
+    // Crear Nota Crédito
+    $proveedor = $compra->proveedor->nombre ?? null;
+
+$notaCredito = NotaCredito::create([
+    'empresa_id'       => $compra->empresa_id,
+    'compra_id'        => $compra->id,
+    'user_id'          => $user->id,
+    'numero'           => $numeroNC,
+    'total'            => $totalDevolucion,
+    'motivo'           => $data['motivo'],
+    'empresa_deudora'  => $proveedor,
+]);
+
+    // Amarrar la NC a la devolución
+    $devolucion->update([
+        'nota_credito_id' => $notaCredito->id,
+    ]);
+
+    // 3️⃣ Crear los items de la Nota Crédito a partir de devolucion_compra_detalles
+    $itemsDevolucion = \App\Models\DevolucionCompraDetalle::where('devolucion_compra_id', $devolucion->id)->get();
+
+    foreach ($itemsDevolucion as $itemDev) {
+        \App\Models\NotaCreditoItem::create([
+            'nota_credito_id'        => $notaCredito->id,
+            'devolucion_detalle_id'  => $itemDev->id,
+            'product_id'             => $itemDev->product_id,
+            'cantidad'               => $itemDev->cantidad,
+            'costo_unitario'         => $itemDev->costo_unitario,
+            'valor_impuesto'         => $itemDev->valor_impuesto,
+            'subtotal_sin_impuesto'  => $itemDev->subtotal_sin_impuesto,
+            'subtotal_con_impuesto'  => $itemDev->subtotal_con_impuesto,
+        ]);
+    }
+
+
+// ✅ Notificación principal
+Notification::make()
+    ->title('Devolución registrada correctamente.')
+    ->body('Total devuelto: $' . number_format($totalDevolucion, 0, ',', '.'))
+    ->success()
+    ->send();
     })
     ->modalHeading('Registrar devolución de compra')
     ->modalButton('Guardar devolución'),

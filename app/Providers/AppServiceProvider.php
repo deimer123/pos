@@ -2,13 +2,13 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\View;
-use Laravel\Fortify\Contracts\LoginResponse;
 use App\Http\Responses\LoginResponse as CustomLoginResponse;
+use App\Models\ConfiguracionEmpresa;
 use App\Models\User;
 use App\Observers\UserObserver;
-use App\Models\ConfiguracionEmpresa;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\ServiceProvider;
+use Laravel\Fortify\Contracts\LoginResponse;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,33 +24,21 @@ class AppServiceProvider extends ServiceProvider
      * Bootstrap any application services.
      */
     public function boot(): void
-{
-    // 👁️ Observar cambios del modelo User
-    User::observe(UserObserver::class);
+    {
+        User::observe(UserObserver::class);
 
-    // 📦 Compartir nombre de la empresa con la vista del POS
-    View::composer('layouts.pos', function ($view) {
-        if (!auth()->check()) {
-            return $view->with('nombreEmpresa', 'Empresa no configurada');
-        }
+        View::composer('layouts.pos', function ($view) {
+            if (! auth()->check()) {
+                return $view->with('nombreEmpresa', 'Empresa no configurada');
+            }
 
-        $user = auth()->user();
+            $user = auth()->user();
+            $empresaId = $user->hasRole('super_admin') ? null : $user->getEmpresaActualId();
+            $config = $empresaId
+                ? ConfiguracionEmpresa::where('empresa_id', $empresaId)->first()
+                : null;
 
-        // Lógica para obtener empresa_id dependiendo del rol
-        $empresaId = null;
-
-        if ($user->hasRole('admin_empresa')) {
-            $empresaId = $user->id;
-        } elseif ($user->hasRole('vendedor') && !empty($user->empresa_id)) {
-            $empresaId = $user->empresa_id;
-        }
-
-        // Consultar la configuración
-        $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();
-
-        $nombreEmpresa = $config->nombre_empresa ?? 'Empresa no configurada';
-
-        $view->with('nombreEmpresa', $nombreEmpresa);
-    });
-}
+            $view->with('nombreEmpresa', $config?->nombre_empresa ?? 'Empresa no configurada');
+        });
+    }
 }

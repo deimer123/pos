@@ -23,7 +23,12 @@ class ConfiguracionEmpresaResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        return auth()->check() && auth()->user()->hasRole('super_admin');
+        return false;
+    }
+
+    public static function canAccess(): bool
+    {
+        return auth()->check() && auth()->user()->hasRole('admin_empresa');
     }
 
     public static function form(Form $form): Form

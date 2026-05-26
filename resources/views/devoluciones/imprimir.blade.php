@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <title>Devolución #{{ $dev->id }}</title>
+  <title>{{ $dev->numero_visual }}</title>
   <style>
     body { font-family: sans-serif; font-size: 12px; }
     table { width:100%; border-collapse: collapse; }
@@ -11,10 +11,10 @@
   </style>
 </head>
 <body onload="window.print()">
-  <h2>Devolución #{{ $dev->id }}</h2>
+  <h2>{{ $dev->numero_visual }}</h2>
   <div>Fecha: {{ $dev->fecha?->format('Y-m-d H:i') }}</div>
   <div>Cliente: {{ $dev->factura?->cliente?->nombre ?? 'N/A' }}</div>
-  <div>Factura origen: #{{ $dev->factura_id }}</div>
+  <div>Factura origen: {{ 'SAL-' . str_pad((string) $dev->factura_id, 6, '0', STR_PAD_LEFT) }}</div>
   <hr>
   <table>
     <thead>

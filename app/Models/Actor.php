@@ -7,9 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class Actor extends Model
 {
-    protected $primaryKey = 'id_clip_pro';
-public $incrementing = false;
-protected $keyType = 'int';
 public bool $omitEmpresaAutoAssign = false;
     use HasFactory;
     protected $fillable = [
@@ -56,7 +53,7 @@ protected static function booted()
             !$actor->omitEmpresaAutoAssign
         ) {
             if (auth()->check() && empty($actor->empresa_id)) {
-                $actor->empresa_id = auth()->id();
+                $actor->empresa_id = auth()->user()->getEmpresaActualId();
             }
         }
     });
@@ -99,4 +96,3 @@ public function getRolesAttribute()
 
 
 }
-

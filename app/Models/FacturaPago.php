@@ -12,6 +12,8 @@ class FacturaPago extends Model
     protected $fillable = [
         'factura_id',
         'medio_pago',
+        'vendedor_id',
+        'cajero_id',
         'monto',
         'fecha',
         'nota',
@@ -32,5 +34,15 @@ class FacturaPago extends Model
     public function usuario(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function vendedor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'vendedor_id');
+    }
+
+    public function cajero(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cajero_id');
     }
 }

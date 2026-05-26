@@ -65,7 +65,7 @@
         <p>La URL que has solicitado no existe o fue eliminada.</p>
 
         @auth
-            <a href="{{ route('redirect-after-login') }}">Volver al inicio</a>
+            <a href="{{ route('eleccion') }}">Volver al inicio</a>
         @else
             <a href="{{ route('login') }}">Iniciar sesión</a>
         @endauth

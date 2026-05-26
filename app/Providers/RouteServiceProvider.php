@@ -13,7 +13,7 @@ class RouteServiceProvider extends ServiceProvider
     /**
      * The default path users are redirected to after login.
      */
-    public const HOME = '/redirect-after-login';// NO lo usaremos directamente, pero lo puedes dejar.
+    public const HOME = '/eleccion';// NO lo usaremos directamente, pero lo puedes dejar.
 
     /**
      * Define your route model bindings, pattern filters, and other route configuration.

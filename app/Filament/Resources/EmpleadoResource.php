@@ -19,8 +19,8 @@ class EmpleadoResource extends Resource
     protected static ?string $navigationLabel = 'Empleados';
     protected static ?string $modelLabel = 'Empleado';
     protected static ?string $pluralModelLabel = 'Empleados';
-    protected static ?string $navigationGroup = 'Administración';
-    protected static ?int $navigationSort = 30; // Más bajo = aparece más arriba
+    protected static ?string $navigationGroup = '👨‍💼 Administración';
+    protected static ?int $navigationSort = 5; // Más bajo = aparece más arriba
 
     // Solo visible para ADMIN_EMPRESA
     public static function shouldRegisterNavigation(): bool
@@ -56,6 +56,7 @@ class EmpleadoResource extends Resource
                         Forms\Components\Textarea::make('direccion')
                             ->label('Dirección')
                             ->maxLength(500),
+                            
                     ])
                     ->columns(2),
 
@@ -82,10 +83,12 @@ class EmpleadoResource extends Resource
                             ->options([
                                 'vendedor' => 'Vendedor',
                                 'digitador' => 'Digitador',
+                                'cajero' => 'Cajero',
                             ])
                             ->descriptions([
                                 'vendedor' => 'Puede realizar ventas y consultar productos',
                                 'digitador' => 'Puede crear y editar productos, familias, etc.',
+                                'cajero' => 'Puede realizar ventas y gestionar el caja',
                             ])
                             ->required()
                             ->columns(1)
@@ -103,7 +106,7 @@ class EmpleadoResource extends Resource
                             ->default('empleado'),
 
                         Forms\Components\Hidden::make('empresa_id')
-                            ->default(auth()->id()),
+                            ->default(fn () => auth()->user()->getEmpresaActualId()),
                     ])
                     ->columns(2),
             ]);
@@ -133,6 +136,7 @@ class EmpleadoResource extends Resource
                         $roleLabels = [
                             'vendedor' => 'Vendedor',
                             'digitador' => 'Digitador',
+                            'cajero' => 'Cajero',
                         ];
                         
                         return $record->roles
@@ -143,6 +147,7 @@ class EmpleadoResource extends Resource
                     ->colors([
                         'success' => fn ($record) => $record->hasRole('vendedor'),
                         'warning' => fn ($record) => $record->hasRole('digitador'),
+                        'info' => fn ($record) => $record->hasRole('cajero'),
                     ]),
 
                 Tables\Columns\IconColumn::make('activo')
@@ -171,6 +176,7 @@ class EmpleadoResource extends Resource
                     ->options([
                         'vendedor' => 'Vendedor',
                         'digitador' => 'Digitador',
+                        'cajero' => 'Cajero',
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         if (filled($data['value'])) {
@@ -207,8 +213,8 @@ class EmpleadoResource extends Resource
     {
         return parent::getEloquentQuery()
             ->where('tipo_usuario', 'empleado')
-            ->where('empresa_id', auth()->id())
-            ->role(['vendedor', 'digitador']);
+            ->where('empresa_id', auth()->user()->getEmpresaActualId())
+            ->role(['vendedor', 'digitador', 'cajero']);
     }
 
     // Solo ADMIN_EMPRESA puede acceder

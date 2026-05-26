@@ -15,6 +15,11 @@ return new class extends Migration {
             $table->foreignId('empresa_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('cliente_id')->nullable()->constrained('actors')->nullOnDelete();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete(); // quien creó la factura
+             // VENDEDOR
+            $table->foreignId('vendedor_id')->nullable()->constrained('users')->nullOnDelete();
+
+            // CAJERO
+            $table->foreignId('cajero_id')->nullable()->constrained('users')->nullOnDelete();
 
             // Datos principales
             $table->enum('tipo_factura', ['salida', 'electronica'])->default('salida');

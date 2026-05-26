@@ -1,7 +1,7 @@
 <div
-    style="width: 45vw; height: 100vh; display: flex; flex-direction: column; border-right: 1px solid #ccc; background: white;">
+    style="width: 100%; height: 100%; display: flex; flex-direction: column; background: white;">
 
-    {{-- 🔍 Buscador superior --}}
+    {{-- Ã°Å¸â€Â Buscador superior --}}
     <div style="padding: 1rem; border-bottom: 1px solid #ddd; text-align: center; font-weight: bold; font-size: 1.5rem;">
 
         <input type="text" wire:model.live="search" placeholder="Buscar producto..."
@@ -20,7 +20,7 @@
                         bubbles: true
                     }));
 
-                    // Opcional: vuelve a enfocar el input para escribir más rápido
+                    // Opcional: vuelve a enfocar el input para escribir mÃƒÂ¡s rÃƒÂ¡pido
                     input.focus();
                 }
             });
@@ -28,8 +28,8 @@
 
     </div>
 
-    {{-- 🧱 Cuadrícula de productos --}}
-    <div style="flex: 1; overflow-y: auto; padding: 1rem;">
+    {{-- Ã°Å¸Â§Â± CuadrÃƒÂ­cula de productos --}}
+    <div style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 1rem;">
         @forelse ($products as $product)
             @php
                 $tieneImagen = !empty($product->foto) && $product->foto !== 'NULL' && $product->foto !== null;
@@ -38,10 +38,10 @@
             <div wire:key="producto-{{ $product->id_producto }}">
 
                 <div
-                    class="bg-white rounded-lg shadow p-2 border flex items-center justify-between gap-4
+                    class="pos-product-card-desktop bg-white rounded-lg shadow p-2 border flex items-center justify-between gap-4
                 {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }}
                 {{ $product->existencias <= 0 ? 'opacity-60' : '' }}">
-                    {{-- Código --}}
+                    {{-- Codigo --}}
                     <div class="w-20 text-xs text-gray-600 text-center">
                         <strong>{{ $product->id_producto }}</strong>
                     </div>
@@ -54,7 +54,7 @@
                             alt="Foto del producto" />
                     </div>
 
-                    {{-- Descripción --}}
+                    {{-- Descripcion --}}
                     <div class="flex-1 text-sm text-gray-800">
                         {{ $product->descripcion_larga }}
                     </div>
@@ -69,10 +69,44 @@
                         ${{ number_format($product->precio_venta1, 0, ',', '.') }}
                     </div>
 
-                    {{-- Botón --}}
+                    {{-- Boton --}}
                     <div class="w-24 text-center">
                         <button wire:click="agregarAlCarrito({{ $product->id_producto }})"
                             class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 text-xs rounded-full shadow">
+                            Agregar
+                        </button>
+                    </div>
+                </div>
+
+                <div
+                    class="pos-product-card-mobile bg-white rounded-lg shadow border
+                {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }}
+                {{ $product->existencias <= 0 ? 'opacity-60' : '' }}">
+                    <div class="pos-mobile-product-code">
+                        <strong>{{ $product->id_producto }}</strong>
+                    </div>
+
+                    <div class="pos-mobile-product-image">
+                        <img wire:click="$dispatch('ver-imagen', { url: @js($urlImagen) })"
+                            src="{{ $urlImagen }}"
+                            alt="Foto del producto" />
+                    </div>
+
+                    <div class="pos-mobile-product-info">
+                        <div class="pos-mobile-product-name">
+                            {{ $product->descripcion_larga }}
+                        </div>
+                        <div class="pos-mobile-product-meta">
+                            <span class="{{ $product->existencias > 0 ? 'text-green-600' : 'text-red-600' }}">
+                                Stock: {{ $product->existencias }}
+                            </span>
+                            <strong>${{ number_format($product->precio_venta1, 0, ',', '.') }}</strong>
+                        </div>
+                    </div>
+
+                    <div class="pos-mobile-product-action">
+                        <button wire:click="agregarAlCarrito({{ $product->id_producto }})"
+                            class="bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow">
                             Agregar
                         </button>
                     </div>
@@ -86,7 +120,7 @@
         @endforelse
     </div>
 
-    {{-- 🖼️ Modal para ampliar imagen --}}
+    {{-- Ã°Å¸â€“Â¼Ã¯Â¸Â Modal para ampliar imagen --}}
     <div x-data="{ imagenUrl: null }" @ver-imagen.window="imagenUrl = $event.detail.url">
         <div x-show="imagenUrl" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50" x-transition>
             <div @click.outside="imagenUrl = null"

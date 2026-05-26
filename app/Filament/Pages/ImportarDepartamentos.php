@@ -13,7 +13,12 @@ class ImportarDepartamentos extends Page
 
     public static function canAccess(): bool
 {
-    return auth()->user()->hasRole('super_admin');
+    return false;
+}
+
+public static function shouldRegisterNavigation(): bool
+{
+    return false;
 }
 
     use WithFileUploads;

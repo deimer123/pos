@@ -51,7 +51,7 @@
 
   <div class="sep">------------------------</div>
 
-  <strong>SALIDA #{{ $factura->id }}</strong><br>
+  <strong>{{ $factura->numero_visual }}</strong><br>
   Cliente: {{ optional($factura->cliente)->nombre ?? 'Sin cliente' }}<br>
   Fecha: {{ $fechaDoc->format('Y-m-d H:i') }}<br>
   Pago: {{ $esCredito ? 'Crédito' : 'Contado' }}<br>
@@ -86,6 +86,28 @@
 <div class="footer">
   <div class="sep">------------------------</div>
   ¡Gracias!
+
+  @if($factura->vendedor || $factura->cajero)
+
+    <div style="margin-top:10px; font-size:11px; text-align:left;">
+
+        @if($factura->vendedor)
+            <div>
+                Vendedor:
+                {{ optional($factura->vendedor)->name }}
+            </div>
+        @endif
+
+        @if($factura->cajero)
+            <div>
+                Cajero:
+                {{ optional($factura->cajero)->name }}
+            </div>
+        @endif
+
+    </div>
+
+@endif
 </div>
 
 <div class="advertencia">Documento no fiscal — salida de mercancía</div>

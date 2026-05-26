@@ -8,18 +8,50 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (! Schema::hasTable('nota_creditos')) {
-            Schema::create('nota_creditos', function (Blueprint $table) {
-                $table->id();
-                $table->unsignedBigInteger('empresa_id')->nullable()->index();
-                $table->foreignId('compra_id')->nullable()->constrained('compras')->nullOnDelete();
-                $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
-                $table->string('numero', 100)->nullable()->index();
-                $table->decimal('total', 15, 2)->default(0);
-                $table->text('motivo')->nullable();
-                $table->timestamps();
-            });
-        }
+        Schema::create('nota_creditos', function (Blueprint $table) {
+            $table->id();
+
+            // 🔹 Multiempresa
+            $table->unsignedBigInteger('empresa_id')->nullable()->index();
+
+            // 🔹 Relación con compra original
+            $table->foreignId('compra_id')
+                ->nullable()
+                ->constrained('compras')
+                ->nullOnDelete();
+
+            // 🔹 Usuario que generó la NC
+            $table->foreignId('user_id')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete();
+
+            // 🔹 Número de la nota crédito (NC-000001)
+            $table->string('numero', 100)
+                ->nullable()
+                ->index();
+
+            // 🔹 Total devuelto
+            $table->decimal('total', 15, 2)
+                ->default(0);
+
+            // 🔹 Motivo
+            $table->text('motivo')->nullable();
+
+            // 🔹 Estado de la nota crédito
+            $table->enum('estado', ['pendiente', 'cobrada', 'anulada'])
+                ->default('pendiente')
+                ->index();
+
+            // 🔹 Proveedor / empresa que debe la NC
+            $table->string('empresa_deudora')->nullable();
+
+            // 🔹 Fecha en que se cobró
+            $table->dateTime('fecha_cobro')->nullable();
+
+            // 🔹 Fechas de creación / actualización
+            $table->timestamps();
+        });
     }
 
     public function down(): void

@@ -11,14 +11,16 @@ use Filament\Pages\Page;
 use Livewire\WithFileUploads;
 use Maatwebsite\Excel\Facades\Excel;
 use Filament\Notifications\Notification;
+use Illuminate\Validation\Rule;
 
 class ImportarDatos extends Page
 {
     use WithFileUploads;
 
     protected static ?string $navigationIcon = 'heroicon-o-arrow-up-tray';
+    protected static ?string $navigationLabel = 'Importar datos';
     protected static string $view = 'filament.pages.importar-datos';
-    protected static ?string $navigationGroup = 'Configuraciones';
+    protected static ?string $navigationGroup = 'Administracion';
 
     public $archivo_productos;
     public $archivo_actores;
@@ -32,10 +34,18 @@ class ImportarDatos extends Page
         return auth()->user()->hasRole('super_admin');
     }
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return auth()->user()?->hasRole('super_admin') === true;
+    }
+
     public function importar()
     {
         $this->validate([
-            'empresa_id'               => 'required|exists:users,id',
+            'empresa_id'               => [
+                'required',
+                Rule::exists('users', 'id')->where('tipo_usuario', 'empresa'),
+            ],
             'archivo_familias'        => 'nullable|file|mimes:xlsx,xls,csv',
         'archivo_subfamilias'     => 'nullable|file|mimes:xlsx,xls,csv',
         'archivo_actores'         => 'nullable|file|mimes:xlsx,xls,csv',

@@ -38,7 +38,7 @@
     <div class="sep"></div>
 
     {{-- Datos principales --}}
-    <div class="center bold">SALIDA #{{ $factura->id }}</div>
+    <div class="center bold">{{ $factura->numero_visual }}</div>
     <div>Cliente: {{ optional($factura->cliente)->nombre ?? 'CONSUMIDOR FINAL' }}</div>
     @if(optional($factura->cliente)->identificacion)
       <div>ID: {{ optional($factura->cliente)->identificacion }}</div>

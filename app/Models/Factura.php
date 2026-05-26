@@ -12,7 +12,16 @@ class Factura extends Model
         'empresa_id',
         'cliente_id',
         'user_id',              // ← vendedor / admin que creó la factura
+        'vendedor_id',          // ← vendedor asignado a la factura
+        'cajero_id',            // ← cajero que registró el pago (si es diferente al vendedor)      
         'tipo_factura',         // 'salida' | 'electronica'
+        'factus_reference_code',
+        'factus_bill_id',
+        'factus_number',
+        'factus_cufe',
+        'factus_status',
+        'factus_response',
+        'factus_validated_at',
         'tipo_pago',            // 'contado' | 'credito'
         'medio_pago',           // 'efectivo' | 'transferencia' | 'otro'
         'fecha',
@@ -35,6 +44,8 @@ class Factura extends Model
         'total'             => 'decimal:2',
         'saldo'             => 'decimal:2',
         'devuelta_total'    => 'bool',
+        'factus_response'   => 'array',
+        'factus_validated_at' => 'datetime',
     ];
 
     #-------------------------------------------------
@@ -59,6 +70,16 @@ public function configuracionEmpresa()
     {
         // Usuario (vendedor/admin) que creó la factura
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function vendedorAsignado(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'vendedor_id');
+    }
+
+    public function cajero(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cajero_id');
     }
 
     public function detalles(): HasMany
@@ -115,8 +136,9 @@ public function configuracionEmpresa()
             $this->estado_pago = 'pagada';
             $this->fecha_pago  = now();
         } elseif ($this->devuelta_total || $totalDevuelto >= $totalOriginal) {
-            // Totalmente devuelta
-            $this->estado_pago = 'devuelta';
+            // Totalmente devuelta: el detalle queda marcado con devuelta_total.
+            // estado_pago se conserva dentro de los valores permitidos por la BD.
+            $this->estado_pago = 'pagada';
             $this->fecha_pago  = null;
         } else {
             // Parcial (caso raro)
@@ -154,6 +176,8 @@ public function registrarAbono(
 ): \App\Models\FacturaPago {
     $pago = $this->pagos()->create([
         'medio_pago'        => $medio,
+        'vendedor_id'       => $this->vendedor_id,
+        'cajero_id'         => $userId,
         'monto'             => round($monto, 2),
         'fecha'             => now(),
         'user_id'           => $userId,
@@ -178,7 +202,10 @@ public function registrarAbono(
     {
         return $query->where('empresa_id', $empresaId);
     }
+    public function getNumeroVisualAttribute(): string
+    {
+        $numero = str_pad((string) $this->id, 6, '0', STR_PAD_LEFT);
 
-
-
+        return ($this->tipo_factura === 'salida' ? 'SAL-' : 'FAC-') . $numero;
+    }
 }

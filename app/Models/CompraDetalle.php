@@ -28,6 +28,8 @@ class CompraDetalle extends Model
         'total',
     ];
 
+    
+
     public function compra()
     {
         return $this->belongsTo(Compra::class, 'compra_id');

@@ -1,19 +1,39 @@
 @extends('layouts.pos')
 
 @section('content')
-<div style="width:100%;height:100%;display:flex;flex-direction:row;margin:0;padding:0;overflow:hidden;">
-  {{-- Columna izquierda --}}
-  <div style="width:45%;height:100%;display:flex;flex-direction:column;border-right:1px solid #ccc;background:#fff;overflow:hidden;">
-    @livewire('pos-productos')
+
+<link rel="stylesheet" href="{{ asset('css/pos-pro.css') }}?v={{ filemtime(public_path('css/pos-pro.css')) }}">
+
+<div class="pos-shell" x-data="{ posTab: 'productos' }">
+  <div class="pos-mobile-tabs">
+    <button type="button"
+      class="pos-mobile-tab"
+      :class="{ 'is-active': posTab === 'productos' }"
+      @click="posTab = 'productos'">
+      Productos
+    </button>
+
+    <button type="button"
+      class="pos-mobile-tab"
+      :class="{ 'is-active': posTab === 'carrito' }"
+      @click="posTab = 'carrito'">
+      Carrito
+    </button>
   </div>
 
-  {{-- Columna derecha --}}
-  <div style="width:55%;height:100%;display:flex;flex-direction:column;background:#f8f9fa;overflow:hidden;">
-    <!-- 👉 Wrapper que da altura al componente -->
-    <div class="flex flex-col h-full min-h-0 overflow-hidden">
-      @livewire('carrito-venta')
+  <div class="pos-layout">
+    {{-- Columna izquierda --}}
+    <div class="pos-pane pos-products-pane" :class="{ 'pos-mobile-hidden': posTab !== 'productos' }">
+      @livewire('pos-productos', [], key('pos-productos-main'))
+    </div>
+
+    {{-- Columna derecha --}}
+    <div class="pos-pane pos-cart-pane" :class="{ 'pos-mobile-hidden': posTab !== 'carrito' }">
+      <div class="flex flex-col h-full min-h-0 overflow-hidden">
+        @livewire('carrito-venta', [], key('carrito-venta-main'))
+      </div>
     </div>
   </div>
 </div>
-@endsection
 
+@endsection

@@ -19,7 +19,7 @@
         <div class="center bold">COMPROBANTE DE ABONO</div>
         <hr>
         <div><span class="bold">Cliente:</span> {{ $abono->factura->cliente->nombre ?? 'Consumidor final' }}</div>
-        <div><span class="bold">Factura #:</span> {{ $abono->factura->id }}</div>
+        <div><span class="bold">Factura:</span> {{ $abono->factura->numero_visual }}</div>
         <div><span class="bold">Fecha abono:</span> {{ \Carbon\Carbon::parse($abono->fecha)->format('Y-m-d H:i') }}</div>
         <div><span class="bold">Medio:</span> {{ ucfirst($abono->medio_pago) }}</div>
         @if($abono->transferencia_obs)

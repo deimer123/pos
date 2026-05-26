@@ -11,16 +11,21 @@ return new class extends Migration
         Schema::create('compras', function (Blueprint $table) {
             $table->id();
 
-            $table->unsignedBigInteger('empresa_id')->nullable()->index();
-            $table->unsignedBigInteger('proveedor_id');
-            $table->foreign('proveedor_id')->references('id_clip_pro')->on('actors')->cascadeOnDelete();
+            $table->unsignedBigInteger('empresa_id')->index();
+
+            // ✅ FK correcta
+            $table->foreignId('proveedor_id')
+                ->constrained('actors')
+                ->cascadeOnDelete();
 
             $table->unsignedBigInteger('user_id')->nullable()->index();
 
             $table->string('estado', 50)->default('borrador')->index();
             $table->string('tipo_pago', 50)->nullable();
+
             $table->date('fecha')->nullable();
             $table->date('fecha_vencimiento')->nullable();
+
             $table->string('numero_factura', 100)->nullable()->index();
 
             $table->decimal('subtotal', 15, 2)->default(0);
@@ -40,6 +45,8 @@ return new class extends Migration
             $table->string('motivo_devol', 255)->nullable();
 
             $table->timestamps();
+
+            $table->index(['empresa_id', 'proveedor_id']);
         });
     }
 

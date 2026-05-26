@@ -39,20 +39,6 @@ class CreateConfiguracionEmpresa extends CreateRecord
 
     protected function getRedirectUrl(): string
     {
-        // Verificar que el record existe
-        if ($this->record && $this->record->id) {
-            return $this->getResource()::getUrl('edit', ['record' => $this->record->id]);
-        }
-        
-        // Fallback: buscar la configuración recién creada
-        $user = auth()->user();
-        $configuracion = \App\Models\ConfiguracionEmpresa::where('empresa_id', $user->id)->first();
-        
-        if ($configuracion) {
-            return $this->getResource()::getUrl('edit', ['record' => $configuracion->id]);
-        }
-        
-        // Último fallback
         return $this->getResource()::getUrl('index');
     }
 
@@ -60,4 +46,10 @@ class CreateConfiguracionEmpresa extends CreateRecord
     {
         return 'Configuración de empresa creada exitosamente';
     }
+
+    public static function canCreateAnother(): bool
+    {
+        return false;
+    }
+
 }

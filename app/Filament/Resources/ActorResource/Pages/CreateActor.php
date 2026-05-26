@@ -21,4 +21,15 @@ class CreateActor extends CreateRecord
         default => 'Crear ',
     };
 }
+
+    public static function canCreateAnother(): bool
+    {
+        return false;
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
+
 }

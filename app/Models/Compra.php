@@ -49,7 +49,7 @@ class Compra extends Model
 
     public function proveedor(): BelongsTo
     {
-        return $this->belongsTo(Actor::class, 'proveedor_id', 'id_clip_pro');
+        return $this->belongsTo(Actor::class, 'proveedor_id', 'id');
     }
 
     public function usuario(): BelongsTo
@@ -116,8 +116,7 @@ class Compra extends Model
 
 
     /* ─────────────── Confirmar Compra (Aplicar Inventario) ─────────────── */
-
-  public function confirmar(): void
+public function confirmar(): void
 {
     DB::transaction(function () {
 
@@ -130,73 +129,102 @@ class Compra extends Model
 
         foreach ($this->detalles as $detalle) {
 
-            $cantidad = (float) $detalle->cantidad;
-            $costo = (float) $detalle->costo_unitario;
-            $desc = (float) $detalle->desc_comercial;
-            $iva  = (float) $detalle->iva_pct;
-            $util = (float) $detalle->utilidad_pct;
-            $pv   = (float) $detalle->precio_venta;
+            $cantidad = (float)$detalle->cantidad;
+            $costo    = (float)$detalle->costo_unitario;
+            $desc     = (float)$detalle->desc_comercial;
+            $iva      = (float)$detalle->iva_pct;
+            $util     = (float)$detalle->utilidad_pct;
+            $pv       = (float)$detalle->precio_venta;
 
-            // Cálculos base
+            // ✔ ESTE ES EL CÓDIGO REAL YA GUARDADO
+            $codigo = (string)$detalle->product_id;
+
+            // ✔ Buscar producto por empresa + código real
+            $producto = Product::where('empresa_id', $this->empresa_id)
+                ->where('id_producto', $codigo)
+                ->first();
+
+            // Calcular costos
             $costoConDesc = round($costo * (1 - $desc / 100), 2);
             $costoConIva  = round($costoConDesc * (1 + $iva / 100), 2);
 
-            // Si no enviaron precio de venta, recalcular
             if ($pv <= 0) {
                 $pv = round($costoConIva * (1 + $util / 100), 2);
             }
 
-            // Totales de línea
-            $lineaBruta = $cantidad * $costo;
-            $lineaDescuento = $lineaBruta * ($desc / 100);
-            $lineaBase = $lineaBruta - $lineaDescuento;
-            $lineaImpuesto = $lineaBase * ($iva / 100);
-            $lineaTotal = $lineaBase + $lineaImpuesto;
+            // Totales línea
+            $lineaBruta      = $cantidad * $costo;
+            $lineaDescuento  = $lineaBruta * ($desc / 100);
+            $lineaBase       = $lineaBruta - $lineaDescuento;
+            $lineaImpuesto   = $lineaBase * ($iva / 100);
+            $lineaTotal      = $lineaBase + $lineaImpuesto;
 
-            $subtotal += $lineaBruta;
-            $descuentoTotal += $lineaDescuento;
-            $impuestoTotal += $lineaImpuesto;
-            $total += $lineaTotal;
+            $subtotal        += $lineaBruta;
+            $descuentoTotal  += $lineaDescuento;
+            $impuestoTotal   += $lineaImpuesto;
+            $total           += $lineaTotal;
 
-            // ✅ Actualizar producto
-            if ($detalle->product_id) {
+            // Actualizar inventario y precios
+           if ($producto) {
 
-                $producto = Product::where('id_producto', $detalle->product_id)
-                    ->where('empresa_id', $this->empresa_id)
-                    ->first();
+                // 🔥 1. STOCK ANTES
+                $stockAnterior = (float)$producto->existencias;
 
-                if ($producto) {
+                // 🔥 2. GUARDAR KARDEX (ANTES DE TODO)
+                guardarKardex(
+                    $codigo,
+                    'compra',
+                    $cantidad,
+                    $this->empresa_id,
+                    $this->id,
+                    $stockAnterior
+                );
 
-                    // Guardar precios anteriores
-                    $producto->precio_costo_anterior = $producto->precio_costo;
-                    $producto->precio_venta_anterior = $producto->precio_venta1;
+                // 🔥 3. ACTUALIZAR INVENTARIO
+                $producto->existencias = $stockAnterior + $cantidad;
 
-                    // Actualizar existencias
-                    $producto->existencias += $cantidad;
+                // 🔥 4. ACTUALIZAR PRECIOS
+                $producto->precio_costo_anterior = $producto->precio_costo;
+                $producto->precio_venta_anterior = $producto->precio_venta1;
 
-                    // Actualizar precios nuevos
-                    $producto->precio_costo = $costo;
-                    $producto->descuento_comercial = $desc;
-                    $producto->precio_con_descuento = $costoConDesc;
-                    $producto->costo_iva = $costoConIva;
-                    $producto->iva_compra = $iva;
-                    $producto->iva_venta = $iva;
-                    $producto->utilidad1 = $util;
-                    $producto->precio_venta1 = $pv;
+                $producto->precio_costo           = $costo;
+                $producto->descuento_comercial    = $desc;
+                $producto->precio_con_descuento   = $costoConDesc;
+                $producto->costo_iva             = $costoConIva;
+                $producto->iva_compra            = $iva;
+                $producto->iva_venta             = $iva;
+                $producto->utilidad1             = $util;
+                $producto->precio_venta1         = $pv;
 
-                    $producto->save();
-                }
+                // 🔥 5. GUARDAR
+                $producto->save();
             }
         }
 
+        // Totales finales
         $this->update([
-            'subtotal' => $subtotal,
+            'subtotal'        => $subtotal,
             'descuento_total' => $descuentoTotal,
-            'impuesto_total' => $impuestoTotal,
-            'total' => $total,
-            'saldo' => $this->tipo_pago === 'credito' ? $total : 0,
-            'estado' => 'confirmada',
+            'impuesto_total'  => $impuestoTotal,
+            'total'           => $total,
+            'saldo'           => $this->tipo_pago === 'credito' ? $total : 0,
+            'estado'          => 'confirmada',
         ]);
     });
 }
+
+
+
+public function notasCredito()
+{
+    return $this->hasMany(\App\Models\NotaCredito::class);
+}
+
+
+public function productos()
+{
+    return $this->hasMany(CompraDetalle::class, 'compra_id');
+}
+
+
 }

@@ -11,6 +11,7 @@ class PrefacturaController extends Controller
 {
     $prefactura = Prefactura::with(['cliente', 'productos', 'configuracionEmpresa']) // o 'empresa'
         ->where('id', $id)
+        ->where('empresa_id', auth()->user()->getEmpresaActualId())
         ->firstOrFail();
 
     return view('prefactura.imprimir', compact('prefactura'));
