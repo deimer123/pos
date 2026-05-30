@@ -46,3 +46,14 @@
     width: 72px !important;
     max-width: 72px !important;
 }
+
+.pos-cart-qty-input {
+    width: 44px !important;
+    max-width: 44px !important;
+    min-width: 0 !important;
+    height: 22px !important;
+    padding: 0 2px !important;
+    box-sizing: border-box !important;
+    font-size: 11px !important;
+    line-height: 1 !important;
+}
