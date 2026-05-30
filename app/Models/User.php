@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -11,8 +10,7 @@ use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Spatie\Permission\Traits\HasRoles; // ← Agregar este trait
-use Spatie\Permission\Models\Role;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
@@ -21,7 +19,7 @@ class User extends Authenticatable
     use HasProfilePhoto;
     use Notifiable;
     use TwoFactorAuthenticatable;
-    use HasRoles; // ← Agregar este trait
+    use HasRoles;
 
     protected $fillable = [
         'name',
@@ -58,20 +56,17 @@ class User extends Authenticatable
         'profile_photo_url',
     ];
 
-    // Boot method para auto-asignar empresa_id cuando es empleado
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($user) {
-            // Si es empleado y no tiene empresa_id, usar el usuario logueado como empresa
             if ($user->tipo_usuario === 'empleado' && !$user->empresa_id) {
                 $user->empresa_id = auth()->user()?->getEmpresaActualId();
             }
         });
     }
 
-    // Relaciones
     public function empresa(): BelongsTo
     {
         return $this->belongsTo(User::class, 'empresa_id');
@@ -92,7 +87,6 @@ class User extends Authenticatable
         return $this->hasMany(Familia::class, 'empresa_id');
     }
 
-    // Métodos de conveniencia para tipos de usuario
     public function esEmpresa(): bool
     {
         return $this->tipo_usuario === 'empresa';
@@ -103,7 +97,6 @@ class User extends Authenticatable
         return $this->tipo_usuario === 'empleado';
     }
 
-    // Métodos de conveniencia para roles usando Spatie
     public function esAdminEmpresa(): bool
     {
         return $this->hasRole('admin_empresa');
@@ -113,7 +106,6 @@ class User extends Authenticatable
     {
         return $this->hasRole('vendedor');
     }
-    
 
     public function esDigitador(): bool
     {
@@ -125,136 +117,130 @@ class User extends Authenticatable
         return $this->hasRole('super_admin');
     }
 
-    // Método para verificar si tiene cualquiera de los roles especificados
     public function tieneAlgunRol(array $roles): bool
     {
         return $this->hasAnyRole($roles);
     }
 
-    // Scope para filtrar solo empleados
     public function scopeEmpleados($query)
     {
         return $query->where('tipo_usuario', 'empleado');
     }
 
-    // Scope para filtrar solo empresas
     public function scopeEmpresas($query)
     {
         return $query->where('tipo_usuario', 'empresa');
     }
 
-    // Scope para empleados de la empresa logueada
     public function scopeDeEmpresa($query, $empresaId = null)
     {
         $empresaId = $empresaId ?? auth()->user()?->getEmpresaActualId();
         return $query->where('empresa_id', $empresaId);
     }
 
-    // Scope para usuarios con roles específicos
     public function scopeConRol($query, $rol)
     {
         return $query->role($rol);
     }
+
     public function puedeCrearUsuarios(): bool
-{
-    return $this->hasRole(['super_admin', 'admin_empresa']);
-}
-
-public function puedeCrearAdminEmpresa(): bool
-{
-    return $this->hasRole('super_admin');
-}
-
-public function puedeCrearEmpleados(): bool
-{
-    return $this->hasRole('admin_empresa');
-}
-
-public function getEmpleadosQueManeja()
-{
-    if ($this->hasRole('super_admin')) {
-        return User::role('admin_empresa')->get();
-    }
-    
-    if ($this->hasRole('admin_empresa')) {
-        return User::where('empresa_id', $this->id)
-                  ->role(['vendedor', 'digitador'])
-                  ->get();
-    }
-    
-    return collect();
-}
-
-public function configuracion()
-{
-    return $this->hasOne(\App\Models\ConfiguracionEmpresa::class, 'empresa_id', 'id');
-}
-
-public function esCajero(): bool
-{
-    return $this->hasRole('cajero');
-}
-
-
-public function getEmpresaActualId(): ?int
-{
-    if ($this->tipo_usuario === 'empresa') {
-        // Si es una empresa, su empresa actual es ella misma
-        return $this->id;
+    {
+        return $this->hasRole(['super_admin', 'admin_empresa']);
     }
 
-    return $this->empresa_id;
-}
-
-public function empresaPrincipal(): self
-{
-    if ($this->tipo_usuario === 'empresa') {
-        return $this;
+    public function puedeCrearAdminEmpresa(): bool
+    {
+        return $this->hasRole('super_admin');
     }
 
-    return $this->empresa ?: $this;
-}
-
-public function planVencido(): bool
-{
-    $empresa = $this->empresaPrincipal();
-
-    return filled($empresa->plan_ends_at) && $empresa->plan_ends_at->lt(today());
-}
-
-public function puedeIngresarPorPlan(): bool
-{
-    if ($this->hasRole('super_admin')) {
-        return true;
+    public function puedeCrearEmpleados(): bool
+    {
+        return $this->hasRole('admin_empresa');
     }
 
-    $empresa = $this->empresaPrincipal();
+    public function getEmpleadosQueManeja()
+    {
+        if ($this->hasRole('super_admin')) {
+            return User::role('admin_empresa')->get();
+        }
 
-    return (bool) $empresa->activo && ! $empresa->planVencido();
-}
+        if ($this->hasRole('admin_empresa')) {
+            return User::where('empresa_id', $this->id)
+                ->role(['vendedor', 'digitador'])
+                ->get();
+        }
 
-public function puedeFacturar(): bool
-{
-    return $this->hasAnyRole([
-        'admin_empresa',
-        'cajero'
-    ]);
-}
+        return collect();
+    }
 
-public function puedeAbrirCaja(): bool
-{
-    return $this->hasAnyRole([
-        'admin_empresa',
-        'cajero'
-    ]);
-}
+    public function configuracion()
+    {
+        return $this->hasOne(\App\Models\ConfiguracionEmpresa::class, 'empresa_id', 'id');
+    }
 
-public function puedeVerAdmin(): bool
-{
-    return $this->hasAnyRole([
-        'admin_empresa',
-        'digitador'
-    ]);
-}
+    public function esCajero(): bool
+    {
+        return $this->hasRole('cajero');
+    }
 
+    public function getEmpresaActualId(): ?int
+    {
+        if ($this->tipo_usuario === 'empresa') {
+            return $this->id;
+        }
+
+        return $this->empresa_id;
+    }
+
+    public function empresaPrincipal(): self
+    {
+        if ($this->tipo_usuario === 'empresa') {
+            return $this;
+        }
+
+        return $this->empresa ?: $this;
+    }
+
+    public function planVencido(): bool
+    {
+        $empresa = $this->empresaPrincipal();
+
+        return filled($empresa->plan_ends_at) && $empresa->plan_ends_at->lt(today());
+    }
+
+    public function puedeIngresarPorPlan(): bool
+    {
+        if ($this->hasRole('super_admin')) {
+            return true;
+        }
+
+        $empresa = $this->empresaPrincipal();
+
+        return (bool) $empresa->activo && ! $empresa->planVencido();
+    }
+
+    public function puedeFacturar(): bool
+    {
+        return $this->hasAnyRole([
+            'admin_empresa',
+            'cajero',
+        ]);
+    }
+
+    public function puedeAbrirCaja(): bool
+    {
+        return $this->hasAnyRole([
+            'admin_empresa',
+            'cajero',
+        ]);
+    }
+
+    public function puedeVerAdmin(): bool
+    {
+        return $this->hasAnyRole([
+            'super_admin',
+            'admin_empresa',
+            'digitador',
+        ]);
+    }
 }
