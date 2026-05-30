@@ -21,10 +21,23 @@ class FactusInvoiceService
     public function validate(Factura $factura): array
     {
         if (! config('services.factus.enabled', false)) {
-            return [
+            $response = [
                 'skipped' => true,
-                'message' => 'Factus validation is disabled.',
+                'message' => 'Factus validation is disabled. The bill was saved as salida.',
             ];
+
+            $factura->update([
+                'tipo_factura' => 'salida',
+                'factus_reference_code' => null,
+                'factus_bill_id' => null,
+                'factus_number' => 'NO_APLICA',
+                'factus_cufe' => 'NO_APLICA',
+                'factus_status' => 'validada',
+                'factus_response' => $response,
+                'factus_validated_at' => now(),
+            ]);
+
+            return $response;
         }
 
         $payload = $this->payload($factura);
