@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -12,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser
 {
     use HasApiTokens;
     use HasFactory;
@@ -65,6 +67,11 @@ class User extends Authenticatable
                 $user->empresa_id = auth()->user()?->getEmpresaActualId();
             }
         });
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $this->puedeVerAdmin();
     }
 
     public function empresa(): BelongsTo
