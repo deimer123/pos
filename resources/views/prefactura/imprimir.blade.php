@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Impresión Prefactura</title>
+    <title>Impresion Prefactura</title>
     <style>
         body {
             font-family: monospace;
@@ -51,7 +51,7 @@
     {{ $config->direccion ?? '' }}<br>
     Tel: {{ $config->telefono ?? '' }}<br>
     ------------------------<br>
-    <strong>Prefactura #{{ $prefactura->id }}</strong><br>
+    <strong>Prefactura {{ $prefactura->numero_visual }}</strong><br>
     Cliente: {{ $prefactura->cliente->nombre ?? 'Sin cliente' }}<br>
     Fecha: {{ $prefactura->created_at->format('Y-m-d H:i') }}
     <br>------------------------
@@ -80,7 +80,7 @@
 </div>
 
 <div class="advertencia">
-    **ESTO NO ES UN DOCUMENTO VÁLIDO**
+    **ESTO NO ES UN DOCUMENTO VALIDO**
 </div>
 
 <script>
@@ -88,7 +88,7 @@
         window.print();
 
         setTimeout(() => {
-            window.close(); // Cierra automáticamente después de imprimir
+            window.close();
         }, 1500);
     };
 </script>
