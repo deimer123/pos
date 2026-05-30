@@ -7,6 +7,7 @@ use App\Imports\ProductImport;
 use App\Imports\AlternateCodesImport;
 use App\Imports\FamiliaImport;
 use App\Imports\SubfamiliaImport;
+use App\Models\User;
 use Filament\Pages\Page;
 use Livewire\WithFileUploads;
 use Maatwebsite\Excel\Facades\Excel;
@@ -28,6 +29,20 @@ class ImportarDatos extends Page
     public $archivo_familias;
     public $archivo_subfamilias;
     public $empresa_id;
+    public array $empresas = [];
+
+    public function mount(): void
+    {
+        $this->empresas = User::query()
+            ->where('tipo_usuario', 'empresa')
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn (User $empresa) => [
+                'id' => $empresa->id,
+                'name' => $empresa->name,
+            ])
+            ->all();
+    }
 
     public static function canAccess(): bool
     {
@@ -46,37 +61,37 @@ class ImportarDatos extends Page
         @ini_set('memory_limit', '512M');
 
         $this->validate([
-            'empresa_id'               => [
+            'empresa_id' => [
                 'required',
                 Rule::exists('users', 'id')->where('tipo_usuario', 'empresa'),
             ],
-            'archivo_familias'        => 'nullable|file|mimes:xlsx,xls,csv',
-        'archivo_subfamilias'     => 'nullable|file|mimes:xlsx,xls,csv',
-        'archivo_actores'         => 'nullable|file|mimes:xlsx,xls,csv',
-        'archivo_productos'       => 'nullable|file|mimes:xlsx,xls,csv',
-        'archivo_codigos_alternos'=> 'nullable|file|mimes:xlsx,xls,csv',
+            'archivo_familias' => 'nullable|file|mimes:xlsx,xls,csv',
+            'archivo_subfamilias' => 'nullable|file|mimes:xlsx,xls,csv',
+            'archivo_actores' => 'nullable|file|mimes:xlsx,xls,csv',
+            'archivo_productos' => 'nullable|file|mimes:xlsx,xls,csv',
+            'archivo_codigos_alternos' => 'nullable|file|mimes:xlsx,xls,csv',
         ]);
 
         try {
-        if ($this->archivo_familias) {
-            Excel::import(new FamiliaImport($this->empresa_id), $this->archivo_familias);
-        }
+            if ($this->archivo_familias) {
+                Excel::import(new FamiliaImport($this->empresa_id), $this->archivo_familias);
+            }
 
-        if ($this->archivo_subfamilias) {
-            Excel::import(new SubfamiliaImport($this->empresa_id), $this->archivo_subfamilias);
-        }
+            if ($this->archivo_subfamilias) {
+                Excel::import(new SubfamiliaImport($this->empresa_id), $this->archivo_subfamilias);
+            }
 
-        if ($this->archivo_actores) {
-            Excel::import(new ActorImport($this->empresa_id), $this->archivo_actores);
-        }
+            if ($this->archivo_actores) {
+                Excel::import(new ActorImport($this->empresa_id), $this->archivo_actores);
+            }
 
-        if ($this->archivo_productos) {
-            Excel::import(new ProductImport($this->empresa_id), $this->archivo_productos);
-        }
+            if ($this->archivo_productos) {
+                Excel::import(new ProductImport($this->empresa_id), $this->archivo_productos);
+            }
 
-        if ($this->archivo_codigos_alternos) {
-            Excel::import(new AlternateCodesImport($this->empresa_id), $this->archivo_codigos_alternos);
-        }
+            if ($this->archivo_codigos_alternos) {
+                Excel::import(new AlternateCodesImport($this->empresa_id), $this->archivo_codigos_alternos);
+            }
 
             Notification::make()
                 ->title('Importación completa')
