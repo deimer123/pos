@@ -20,6 +20,13 @@ class FactusInvoiceService
 
     public function validate(Factura $factura): array
     {
+        if (! config('services.factus.enabled', false)) {
+            return [
+                'skipped' => true,
+                'message' => 'Factus validation is disabled.',
+            ];
+        }
+
         $payload = $this->payload($factura);
         $response = $this->client->validateBill($payload);
         $data = $response['data'] ?? [];
