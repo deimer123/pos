@@ -38,6 +38,7 @@ return [
         'client_id' => env('FACTUS_CLIENT_ID'),
         'client_secret' => env('FACTUS_CLIENT_SECRET'),
         'numbering_range_id' => env('FACTUS_NUMBERING_RANGE_ID'),
+        'send_email' => env('FACTUS_SEND_EMAIL', false),
     ],
 
 ];

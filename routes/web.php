@@ -12,6 +12,7 @@ use App\Http\Controllers\KardexController;
 
 
 
+
 /*
 |--------------------------------------------------------------------------
 | Rutas públicas o de inicio

@@ -33,7 +33,7 @@ class FactusInvoicePayloadBuilder
             'reference_code' => $referenceCode,
             'document' => '01',
             'numbering_range_id' => $this->numberingRangeId(),
-            'send_email' => false,
+            'send_email' => $this->shouldSendEmail(),
             'observation' => Str::limit((string) ($factura->observaciones ?? ''), 250, ''),
             'payment_details' => [$this->paymentDetail($factura)],
             'customer' => $this->customer($factura->cliente),
@@ -60,6 +60,10 @@ class FactusInvoicePayloadBuilder
     {
         $isJuridica = $cliente->tipo_persona === 'juridica' || (int) $cliente->tipo_documento_id === 6;
         $identification = $this->splitNit((string) $cliente->identificacion);
+
+        if ($this->shouldSendEmail() && ! filter_var((string) $cliente->email, FILTER_VALIDATE_EMAIL)) {
+            throw new \InvalidArgumentException('El cliente no tiene un correo valido para enviar la factura electronica.');
+        }
 
         return array_filter([
             'identification_document_id' => $this->identificationDocumentId((int) $cliente->tipo_documento_id),
@@ -106,6 +110,10 @@ class FactusInvoicePayloadBuilder
         })->values()->all();
     }
 
+    private function shouldSendEmail(): bool
+    {
+        return filter_var(config('services.factus.send_email'), FILTER_VALIDATE_BOOL);
+    }
     private function numberingRangeId(): ?int
     {
         $id = config('services.factus.numbering_range_id');

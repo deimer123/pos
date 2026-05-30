@@ -23,16 +23,20 @@ class FactusInvoiceService
         $payload = $this->payload($factura);
         $response = $this->client->validateBill($payload);
         $data = $response['data'] ?? [];
+        $bill = $data['bill'] ?? $data;
+        $validated = (bool) ($bill['is_validated'] ?? false)
+            || (int) ($bill['status'] ?? 0) === 1
+            || filled($bill['validated'] ?? null);
 
         $factura->update([
-            'factus_reference_code' => $payload['reference_code'],
-            'factus_bill_id' => $data['id'] ?? $data['bill_id'] ?? null,
-            'factus_number' => $data['number'] ?? null,
-            'factus_cufe' => $data['cufe'] ?? null,
-            'factus_status' => ($data['is_validated'] ?? false) ? 'validada' : 'pendiente',
+            'factus_reference_code' => $bill['reference_code'] ?? $payload['reference_code'],
+            'factus_bill_id' => $bill['id'] ?? $bill['bill_id'] ?? null,
+            'factus_number' => $bill['number'] ?? null,
+            'factus_cufe' => $bill['cufe'] ?? null,
+            'factus_status' => $validated ? 'validada' : 'pendiente',
             'factus_response' => $response,
-            'factus_validated_at' => isset($data['validated_at'])
-                ? $this->parseFactusDate($data['validated_at'])
+            'factus_validated_at' => isset($bill['validated_at']) || isset($bill['validated'])
+                ? $this->parseFactusDate($bill['validated_at'] ?? $bill['validated'])
                 : now(),
         ]);
 

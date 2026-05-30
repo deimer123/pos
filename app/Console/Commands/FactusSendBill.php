@@ -55,9 +55,10 @@ class FactusSendBill extends Command
         }
 
         $data = $response['data'] ?? [];
+        $bill = $data['bill'] ?? $data;
         $this->info($response['message'] ?? 'Factura enviada a Factus.');
-        $this->line('Numero Factus: '.($data['number'] ?? 'N/A'));
-        $this->line('CUFE: '.($data['cufe'] ?? 'N/A'));
+        $this->line('Numero Factus: '.($bill['number'] ?? 'N/A'));
+        $this->line('CUFE: '.($bill['cufe'] ?? 'N/A'));
 
         return self::SUCCESS;
     }

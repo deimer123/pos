@@ -75,11 +75,12 @@ class FactusTestBill extends Command
         }
 
         $data = $response['data'] ?? [];
+        $bill = $data['bill'] ?? $data;
         $this->info($response['message'] ?? 'Factura de prueba enviada.');
         $this->line('Referencia: '.$payload['reference_code']);
-        $this->line('Numero Factus: '.($data['number'] ?? 'N/A'));
-        $this->line('Validada: '.(($data['is_validated'] ?? false) ? 'si' : 'no'));
-        $this->line('CUFE: '.($data['cufe'] ?? 'N/A'));
+        $this->line('Numero Factus: '.($bill['number'] ?? 'N/A'));
+        $this->line('Validada: '.(((bool) ($bill['is_validated'] ?? false) || (int) ($bill['status'] ?? 0) === 1 || filled($bill['validated'] ?? null)) ? 'si' : 'no'));
+        $this->line('CUFE: '.($bill['cufe'] ?? 'N/A'));
 
         return self::SUCCESS;
     }

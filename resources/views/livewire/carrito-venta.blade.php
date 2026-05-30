@@ -2181,7 +2181,7 @@
                                 <label style="display:block;font-size:11px;font-weight:800;color:#4b5563;margin-bottom:4px;">Tipo de venta</label>
                                 <select id="swal_tipo_factura" style="width:100%;height:36px;border:1px solid #cbd5e1;border-radius:9px;padding:4px 9px;background:white;">
                                     <option value="salida">Salida</option>
-                                    <option value="electronica" disabled>Electronica</option>
+                                    <option value="electronica">Electronica</option>
                                 </select>
                             </div>
                             <div>

@@ -204,6 +204,10 @@ public function registrarAbono(
     }
     public function getNumeroVisualAttribute(): string
     {
+        if ($this->tipo_factura === 'electronica' && filled($this->factus_number)) {
+            return (string) $this->factus_number;
+        }
+
         $numero = str_pad((string) $this->id, 6, '0', STR_PAD_LEFT);
 
         return ($this->tipo_factura === 'salida' ? 'SAL-' : 'FAC-') . $numero;

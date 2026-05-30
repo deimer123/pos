@@ -1626,6 +1626,8 @@ if ($producto) {
             // $factura->update(['fecha_pago' => now()]);
         }
 
+        $this->validarFacturaElectronicaConFactus($factura);
+
         DB::commit();
 
         $this->eliminarPrefacturaCargada();
@@ -1659,6 +1661,23 @@ if ($producto) {
 
 
 
+
+private function validarFacturaElectronicaConFactus(Factura $factura): void
+{
+    if ($factura->tipo_factura !== 'electronica') {
+        return;
+    }
+
+    $factura->load(['cliente.ciudad', 'detalles']);
+
+    app(\App\Services\Factus\FactusInvoiceService::class)->validate($factura);
+
+    $factura->refresh();
+
+    if (blank($factura->factus_number) || blank($factura->factus_cufe) || $factura->factus_status !== 'validada') {
+        throw new \RuntimeException('Factus no valido la factura electronica. No se guardo la venta.');
+    }
+}
 public function setTab(string $t)
 {
     $this->tab = $t;
@@ -2035,6 +2054,8 @@ if ($producto) {
                 transferenciaObs: $transferObs
             );
         }
+
+        $this->validarFacturaElectronicaConFactus($factura);
 
         DB::commit();
 

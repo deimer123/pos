@@ -2,16 +2,20 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Salida de mercancía</title>
+  <title>{{ $factura->tipo_factura === 'electronica' ? 'Factura electronica' : 'Salida de mercancia' }}</title>
   <style>
-    body { font-family: monospace; font-size:12px; width:250px; margin:auto; }
+    body { font-family: monospace; font-size:12px; width:250px; margin:auto; color:#111; }
     .header,.footer { text-align:center; }
-    .items td { padding:2px 0; }
+    .items td { padding:2px 0; vertical-align:top; }
     .advertencia { text-align:center; font-weight:bold; font-size:13px; margin-top:12px; text-transform:uppercase; }
     .logo { display:block; margin:0 auto 6px auto; max-width:120px; height:auto; }
     .empresa { font-weight:700; }
     .lema { font-size:11px; margin-top:2px; }
     .sep { margin:6px 0; }
+    .factus-box { border-top:1px dashed #111; border-bottom:1px dashed #111; padding:6px 0; margin-top:8px; text-align:left; }
+    .small { font-size:10px; line-height:1.25; }
+    .break { overflow-wrap:anywhere; word-break:break-word; }
+    .qr { display:block; width:145px; height:145px; margin:7px auto 2px auto; }
     @media print { @page { size:auto; margin:0; } body { margin:0; } }
   </style>
 </head>
@@ -21,42 +25,51 @@
   use Illuminate\Support\Facades\Storage;
   use Carbon\Carbon;
 
-  // Configuración de empresa vinculada a la factura
-  $config   = $factura->configuracionEmpresa ?? null;
-  $logoUrl  = $config?->logo ? Storage::disk('public')->url($config->logo) : null;
-
-  // Fechas robustas (soporta string o Carbon)
+  $config = $factura->configuracionEmpresa ?? null;
+  $logoUrl = $config?->logo ? Storage::disk('public')->url($config->logo) : null;
   $fechaDoc = $factura->fecha ? Carbon::parse($factura->fecha) : $factura->created_at;
-
-  // Pago: contado / crédito y vencimiento (si aplica)
-  $tipoPago   = strtolower($factura->tipo_pago ?? 'contado');
-  $esCredito  = $tipoPago === 'credito';
-  $vencCarbon = $esCredito && $factura->fecha_vencimiento
-                  ? Carbon::parse($factura->fecha_vencimiento)
-                  : null;
+  $tipoPago = strtolower($factura->tipo_pago ?? 'contado');
+  $esCredito = $tipoPago === 'credito';
+  $vencCarbon = $esCredito && $factura->fecha_vencimiento ? Carbon::parse($factura->fecha_vencimiento) : null;
+  $esElectronica = $factura->tipo_factura === 'electronica';
+  $factusBill = data_get($factura->factus_response, 'data.bill', []);
+  $factusNumber = $factura->factus_number ?: data_get($factusBill, 'number');
+  $factusCufe = $factura->factus_cufe ?: data_get($factusBill, 'cufe');
+  $factusQr = data_get($factusBill, 'qr');
+  $factusQrImage = data_get($factusBill, 'qr_image');
+  $factusPublicUrl = data_get($factusBill, 'public_url');
+  $factusValidated = $factura->factus_validated_at ?: data_get($factusBill, 'validated');
+  $fmtCant = function ($cantidad) {
+      $value = (float) $cantidad;
+      return rtrim(rtrim(number_format($value, 2, ',', '.'), '0'), ',');
+  };
 @endphp
 
 <div class="header">
-  {{-- Logo (opcional) --}}
   @if ($logoUrl)
     <img src="{{ $logoUrl }}" alt="Logo" class="logo">
   @endif
 
-  {{-- Datos de empresa --}}
   <div class="empresa">{{ $config->nombre_empresa ?? 'EMPRESA' }}</div>
   <div>NIT {{ $config->nit ?? 'N/A' }}</div>
-  @if($config?->lema)       <div class="lema">{{ $config->lema }}</div> @endif
-  @if($config?->direccion)  <div>{{ $config->direccion }}</div> @endif
-  @if($config?->telefono)   <div>Tel: {{ $config->telefono }}</div> @endif
+  @if($config?->lema) <div class="lema">{{ $config->lema }}</div> @endif
+  @if($config?->direccion) <div>{{ $config->direccion }}</div> @endif
+  @if($config?->telefono) <div>Tel: {{ $config->telefono }}</div> @endif
 
   <div class="sep">------------------------</div>
 
   <strong>{{ $factura->numero_visual }}</strong><br>
+  @if($esElectronica)
+    <strong>FACTURA ELECTRONICA</strong><br>
+  @endif
   Cliente: {{ optional($factura->cliente)->nombre ?? 'Sin cliente' }}<br>
+  @if(optional($factura->cliente)->identificacion)
+    ID: {{ optional($factura->cliente)->identificacion }}<br>
+  @endif
   Fecha: {{ $fechaDoc->format('Y-m-d H:i') }}<br>
-  Pago: {{ $esCredito ? 'Crédito' : 'Contado' }}<br>
+  Pago: {{ $esCredito ? 'Credito' : 'Contado' }}<br>
   @if($esCredito)
-    Vence: {{ $vencCarbon ? $vencCarbon->format('Y-m-d') : '—' }}<br>
+    Vence: {{ $vencCarbon ? $vencCarbon->format('Y-m-d') : '-' }}<br>
   @endif
 
   <div class="sep">------------------------</div>
@@ -66,7 +79,7 @@
   @foreach ($factura->detalles as $d)
     <tr><td colspan="2">{{ $d->descripcion_larga }}</td></tr>
     <tr>
-      <td>{{ (int)$d->cantidad }} x ${{ number_format($d->precio, 0, ',', '.') }}</td>
+      <td>{{ $fmtCant($d->cantidad) }} x ${{ number_format($d->precio, 0, ',', '.') }}</td>
       <td style="text-align:right;">${{ number_format($d->subtotal, 0, ',', '.') }}</td>
     </tr>
   @endforeach
@@ -83,34 +96,52 @@
   </div>
 @endif
 
+@if($esElectronica)
+  <div class="factus-box small">
+    <div><strong>Numero Factus:</strong> {{ $factusNumber ?: 'Pendiente' }}</div>
+    <div><strong>Estado:</strong> {{ strtoupper($factura->factus_status ?? 'pendiente') }}</div>
+    @if($factusValidated)
+      <div><strong>Validada:</strong> {{ is_string($factusValidated) ? $factusValidated : \Carbon\Carbon::parse($factusValidated)->format('Y-m-d H:i') }}</div>
+    @endif
+    @if($factusCufe)
+      <div><strong>CUFE:</strong></div>
+      <div class="break">{{ $factusCufe }}</div>
+    @endif
+    @if($factusQrImage)
+      <div class="center" style="margin-top:6px;"><strong>QR DIAN</strong></div>
+      <img class="qr" src="{{ trim($factusQrImage) }}" alt="QR DIAN">
+    @endif
+    @if($factusQr)
+      <div style="margin-top:5px;"><strong>Consulta DIAN:</strong></div>
+      <div class="break">{{ $factusQr }}</div>
+    @elseif($factusPublicUrl)
+      <div style="margin-top:5px;"><strong>Documento:</strong></div>
+      <div class="break">{{ $factusPublicUrl }}</div>
+    @endif
+  </div>
+@endif
+
 <div class="footer">
   <div class="sep">------------------------</div>
-  ¡Gracias!
+  Gracias!
 
   @if($factura->vendedor || $factura->cajero)
-
     <div style="margin-top:10px; font-size:11px; text-align:left;">
-
         @if($factura->vendedor)
-            <div>
-                Vendedor:
-                {{ optional($factura->vendedor)->name }}
-            </div>
+            <div>Vendedor: {{ optional($factura->vendedor)->name }}</div>
         @endif
-
         @if($factura->cajero)
-            <div>
-                Cajero:
-                {{ optional($factura->cajero)->name }}
-            </div>
+            <div>Cajero: {{ optional($factura->cajero)->name }}</div>
         @endif
-
     </div>
-
-@endif
+  @endif
 </div>
 
-<div class="advertencia">Documento no fiscal — salida de mercancía</div>
+@if($esElectronica)
+  <div class="advertencia">Factura electronica validada por Factus</div>
+@else
+  <div class="advertencia">Documento no fiscal - salida de mercancia</div>
+@endif
 
 <script>
   window.onload = () => {
