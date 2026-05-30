@@ -10,7 +10,6 @@ class RestrictVendedorFromPanel
 {
     public function handle(Request $request, Closure $next)
     {
-        // ✅ permitir rutas login/logout
         if (
             $request->is('admin/login') ||
             $request->is('logout')
@@ -20,22 +19,15 @@ class RestrictVendedorFromPanel
 
         $user = Auth::user();
 
-        // ✅ si no hay usuario, permitir continuar
         if (! $user) {
             return $next($request);
         }
 
-        $esVendedor = $user->hasRole('vendedor');
+        if ($user->hasAnyRole(['super_admin', 'admin_empresa', 'digitador'])) {
+            return $next($request);
+        }
 
-        $esCajero = $user->hasRole('cajero');
-
-        $esDigitador = $user->hasRole('digitador');
-
-        // ❌ bloquear SOLO vendedor/cajero puros
-        if (
-            ($esVendedor || $esCajero) &&
-            ! $esDigitador
-        ) {
+        if ($user->hasAnyRole(['vendedor', 'cajero'])) {
             abort(403, 'Acceso no autorizado al panel.');
         }
 
