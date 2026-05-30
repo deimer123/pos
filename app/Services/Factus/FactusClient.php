@@ -25,16 +25,12 @@ class FactusClient
         }
 
         return Cache::remember($cacheKey, now()->addMinutes(50), function () {
+            $credentials = $this->oauthCredentials();
+
             $response = Http::asForm()
                 ->acceptJson()
                 ->timeout(30)
-                ->post($this->url('/oauth/token'), [
-                    'grant_type' => 'password',
-                    'client_id' => config('services.factus.client_id'),
-                    'client_secret' => config('services.factus.client_secret'),
-                    'username' => config('services.factus.username'),
-                    'password' => config('services.factus.password'),
-                ])
+                ->post($this->url('/oauth/token'), $credentials)
                 ->throw();
 
             $data = $response->json();
@@ -107,6 +103,31 @@ class FactusClient
         return $this->get('/v1/municipalities', array_filter([
             'name' => $name,
         ], fn ($value) => $value !== null && $value !== ''));
+    }
+
+    private function oauthCredentials(): array
+    {
+        $credentials = [
+            'grant_type' => 'password',
+            'client_id' => config('services.factus.client_id'),
+            'client_secret' => config('services.factus.client_secret'),
+            'username' => config('services.factus.username'),
+            'password' => config('services.factus.password'),
+        ];
+
+        $missing = collect($credentials)
+            ->except('grant_type')
+            ->filter(fn ($value) => blank($value))
+            ->keys()
+            ->map(fn ($key) => 'FACTUS_'.strtoupper($key))
+            ->values()
+            ->all();
+
+        if ($missing !== []) {
+            throw new \RuntimeException('Faltan credenciales de Factus en .env: '.implode(', ', $missing).'.');
+        }
+
+        return $credentials;
     }
 
     private function url(string $path): string
