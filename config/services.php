@@ -32,7 +32,6 @@ return [
     ],
 
     'factus' => [
-        'enabled' => env('FACTUS_ENABLED', false),
         'base_url' => env('FACTUS_BASE_URL', 'https://api-sandbox.factus.com.co'),
         'username' => env('FACTUS_USERNAME'),
         'password' => env('FACTUS_PASSWORD'),
