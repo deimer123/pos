@@ -2,12 +2,13 @@
 
 namespace App\Imports;
 
-use App\Models\Subfamilia;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\ToCollection;
+use Maatwebsite\Excel\Concerns\WithChunkReading;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 
-class SubfamiliaImport implements ToCollection, WithHeadingRow
+class SubfamiliaImport implements ToCollection, WithHeadingRow, WithChunkReading
 {
     protected $empresaId;
 
@@ -18,18 +19,37 @@ class SubfamiliaImport implements ToCollection, WithHeadingRow
 
     public function collection(Collection $rows)
     {
+        $now = now();
+        $subfamilias = [];
+
         foreach ($rows as $row) {
-            Subfamilia::updateOrCreate(
-                [
-                    'id_familia2' => $row['idfamilia2'],
-                    'empresa_id'  => $this->empresaId,
-                ],
-                [
-                    'id_familia1' => $row['idfamilia1'],
-                    'nombre'      => $row['nfamilia2'],
-                    'empresa_id'  => $this->empresaId,
-                ]
-            );
+            if (empty($row['idfamilia2']) || empty($row['nfamilia2'])) {
+                continue;
+            }
+
+            $subfamilias[] = [
+                'id_familia2' => $row['idfamilia2'],
+                'id_familia1' => $row['idfamilia1'] ?? 0,
+                'empresa_id' => $this->empresaId,
+                'nombre' => $row['nfamilia2'],
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
         }
+
+        if (empty($subfamilias)) {
+            return;
+        }
+
+        DB::table('subfamilias')->upsert(
+            $subfamilias,
+            ['id_familia2'],
+            ['id_familia1', 'empresa_id', 'nombre', 'updated_at']
+        );
+    }
+
+    public function chunkSize(): int
+    {
+        return 1000;
     }
 }

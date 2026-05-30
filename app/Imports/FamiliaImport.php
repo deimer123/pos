@@ -2,12 +2,13 @@
 
 namespace App\Imports;
 
-use App\Models\Familia;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\ToCollection;
+use Maatwebsite\Excel\Concerns\WithChunkReading;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 
-class FamiliaImport implements ToCollection, WithHeadingRow
+class FamiliaImport implements ToCollection, WithHeadingRow, WithChunkReading
 {
     protected $empresaId;
 
@@ -18,17 +19,36 @@ class FamiliaImport implements ToCollection, WithHeadingRow
 
     public function collection(Collection $rows)
     {
+        $now = now();
+        $familias = [];
+
         foreach ($rows as $row) {
-            Familia::updateOrCreate(
-                [
-                    'id' => $row['idfamilia1'],
-                    'empresa_id' => $this->empresaId,
-                ],
-                [
-                    'nombre' => $row['nfamilia1'],
-                    'empresa_id' => $this->empresaId,
-                ]
-            );
+            if (empty($row['idfamilia1']) || empty($row['nfamilia1'])) {
+                continue;
+            }
+
+            $familias[] = [
+                'id' => $row['idfamilia1'],
+                'empresa_id' => $this->empresaId,
+                'nombre' => $row['nfamilia1'],
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
         }
+
+        if (empty($familias)) {
+            return;
+        }
+
+        DB::table('familias')->upsert(
+            $familias,
+            ['id'],
+            ['empresa_id', 'nombre', 'updated_at']
+        );
+    }
+
+    public function chunkSize(): int
+    {
+        return 1000;
     }
 }

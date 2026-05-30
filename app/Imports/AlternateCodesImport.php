@@ -2,12 +2,14 @@
 
 namespace App\Imports;
 
-use App\Models\AlternateCode;
 use App\Models\Product;
-use Maatwebsite\Excel\Concerns\ToModel;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Concerns\ToCollection;
+use Maatwebsite\Excel\Concerns\WithChunkReading;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 
-class AlternateCodesImport implements ToModel, WithHeadingRow
+class AlternateCodesImport implements ToCollection, WithHeadingRow, WithChunkReading
 {
     protected $empresaId;
 
@@ -16,23 +18,54 @@ class AlternateCodesImport implements ToModel, WithHeadingRow
         $this->empresaId = $empresaId;
     }
 
-    public function model(array $row)
+    public function collection(Collection $rows)
     {
-        // Buscar el producto por su campo 'id_producto'
-        $producto = Product::where('id_producto', $row['idproducto'])
-            ->where('empresa_id', $this->empresaId)
-            ->first();
+        $rows = $rows
+            ->map(fn($row) => collect($row)->mapWithKeys(fn($value, $key) => [strtolower(trim($key)) => $value]))
+            ->filter(fn($row) => !empty($row['idproducto']) && !empty($row['codigoalterno']))
+            ->values();
 
-        // Si no se encuentra, ignorar la fila
-        if (!$producto) {
-            
-            return null;
+        if ($rows->isEmpty()) {
+            return;
         }
 
-        return new AlternateCode([
-            'product_id' => $producto->id, // el ID real (clave primaria)
-            'code'       => $row['codigoalterno'],
-            'empresa_id' => $this->empresaId,
-        ]);
+        $products = Product::query()
+            ->where('empresa_id', $this->empresaId)
+            ->whereIn('id_producto', $rows->pluck('idproducto')->map(fn($id) => (int) $id)->unique())
+            ->pluck('id', 'id_producto');
+
+        $now = now();
+        $codes = [];
+
+        foreach ($rows as $row) {
+            $productId = $products->get((int) $row['idproducto']);
+
+            if (!$productId) {
+                continue;
+            }
+
+            $codes[] = [
+                'product_id' => $productId,
+                'code' => trim((string) $row['codigoalterno']),
+                'empresa_id' => $this->empresaId,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        if (empty($codes)) {
+            return;
+        }
+
+        DB::table('alternate_codes')->upsert(
+            $codes,
+            ['product_id', 'code', 'empresa_id'],
+            ['updated_at']
+        );
+    }
+
+    public function chunkSize(): int
+    {
+        return 1000;
     }
 }
