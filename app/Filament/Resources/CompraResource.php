@@ -1248,6 +1248,48 @@ public static function table(Tables\Table $table): Tables\Table
         echo $pdf->output();
     }, 'etiquetas_compra_' . $record->id . '.pdf');
 })
+                ->openUrlInNewTab(),
+
+                Action::make('exportar_bartender')
+                    ->label('Exportar BarTender')
+                    ->color('success')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->action(function (Compra $record) {
+                        $empresaId = auth()->user()->getEmpresaActualId();
+
+                        if ((int) $record->empresa_id !== (int) $empresaId) {
+                            abort(403);
+                        }
+
+                        $detalles = $record->detalles()
+                            ->whereHas('compra', fn ($query) => $query->where('empresa_id', $empresaId))
+                            ->orderBy('nombre_producto')
+                            ->get(['product_id', 'nombre_producto', 'cantidad', 'precio_venta']);
+
+                        return response()->streamDownload(function () use ($detalles) {
+                            $handle = fopen('php://output', 'w');
+
+                            fwrite($handle, "\xEF\xBB\xBF");
+                            fputcsv($handle, ['product_id', 'nombre_producto', 'cantidad', 'precio_venta']);
+
+                            foreach ($detalles as $detalle) {
+                                $cantidad = max(1, (int) ceil((float) $detalle->cantidad));
+
+                                for ($i = 0; $i < $cantidad; $i++) {
+                                    fputcsv($handle, [
+                                        (string) $detalle->product_id,
+                                        (string) $detalle->nombre_producto,
+                                        (string) $detalle->cantidad,
+                                        number_format((float) $detalle->precio_venta, 2, '.', ''),
+                                    ]);
+                                }
+                            }
+
+                            fclose($handle);
+                        }, 'bartender_compra_' . $record->id . '.csv', [
+                            'Content-Type' => 'text/csv; charset=UTF-8',
+                        ]);
+                    })
             ])
         /* ============================================================
          *                    FILTROS
