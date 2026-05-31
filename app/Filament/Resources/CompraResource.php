@@ -1254,7 +1254,17 @@ public static function table(Tables\Table $table): Tables\Table
                     ->label('Exportar BarTender')
                     ->color('success')
                     ->icon('heroicon-o-command-line')
-                    ->action(function (Compra $record) {
+                    ->form([
+                        Forms\Components\Select::make('tamano_bartender')
+                            ->label('Tamaño de etiqueta')
+                            ->options([
+                                '2x50x25' => '2 columnas - 50 x 25 mm',
+                                '3x32x25' => '3 columnas - 32 x 25 mm',
+                            ])
+                            ->default('2x50x25')
+                            ->required(),
+                    ])
+                    ->action(function (Compra $record, array $data) {
                         $empresaId = auth()->user()->getEmpresaActualId();
 
                         if ((int) $record->empresa_id !== (int) $empresaId) {
@@ -1287,12 +1297,18 @@ public static function table(Tables\Table $table): Tables\Table
                         $csvBase64 = base64_encode(stream_get_contents($csv));
                         fclose($csv);
 
+                        $tamano = $data['tamano_bartender'] ?? '2x50x25';
+                        $plantilla = match ($tamano) {
+                            '3x32x25' => 'C:\\POS\\BarTender\\etiquetas_3x32x25.btw',
+                            default => 'C:\\POS\\BarTender\\etiquetas_2x50x25.btw',
+                        };
+
                         $bat = implode("\r\n", [
                             '@echo off',
                             'setlocal',
                             'title POS - Imprimir etiquetas BarTender',
                             '',
-                            'set "BTW_FILE=C:\\POS\\BarTender\\etiquetas_productos.btw"',
+                            'set "BTW_FILE=' . $plantilla . '"',
                             'set "CSV_FILE=%TEMP%\\bartender_compra_' . $record->id . '.csv"',
                             'set "BARTENDER_EXE="',
                             '',
@@ -1303,7 +1319,9 @@ public static function table(Tables\Table $table): Tables\Table
                             '  echo %BTW_FILE%',
                             '  echo.',
                             '  echo Copia tu archivo .btw en esa ruta o edita esta linea del .bat:',
-                            '  echo set "BTW_FILE=C:\\POS\\BarTender\\etiquetas_productos.btw"',
+                            '  echo Plantillas esperadas:',
+                            '  echo C:\\POS\\BarTender\\etiquetas_2x50x25.btw',
+                            '  echo C:\\POS\\BarTender\\etiquetas_3x32x25.btw',
                             '  pause',
                             '  exit /b 1',
                             ')',
