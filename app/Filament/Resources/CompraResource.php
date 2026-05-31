@@ -1253,7 +1253,7 @@ public static function table(Tables\Table $table): Tables\Table
                 Action::make('exportar_bartender')
                     ->label('Exportar BarTender')
                     ->color('success')
-                    ->icon('heroicon-o-arrow-down-tray')
+                    ->icon('heroicon-o-command-line')
                     ->action(function (Compra $record) {
                         $empresaId = auth()->user()->getEmpresaActualId();
 
@@ -1266,28 +1266,69 @@ public static function table(Tables\Table $table): Tables\Table
                             ->orderBy('nombre_producto')
                             ->get(['product_id', 'nombre_producto', 'cantidad', 'precio_venta']);
 
-                        return response()->streamDownload(function () use ($detalles) {
-                            $handle = fopen('php://output', 'w');
+                        $csv = fopen('php://temp', 'r+');
+                        fwrite($csv, "\xEF\xBB\xBF");
+                        fputcsv($csv, ['product_id', 'nombre_producto', 'precio_venta']);
 
-                            fwrite($handle, "\xEF\xBB\xBF");
-                            fputcsv($handle, ['product_id', 'nombre_producto', 'cantidad', 'precio_venta']);
+                        foreach ($detalles as $detalle) {
+                            $cantidad = max(1, (int) ceil((float) $detalle->cantidad));
 
-                            foreach ($detalles as $detalle) {
-                                $cantidad = max(1, (int) ceil((float) $detalle->cantidad));
-
-                                for ($i = 0; $i < $cantidad; $i++) {
-                                    fputcsv($handle, [
-                                        (string) $detalle->product_id,
-                                        (string) $detalle->nombre_producto,
-                                        (string) $detalle->cantidad,
-                                        number_format((float) $detalle->precio_venta, 2, '.', ''),
-                                    ]);
-                                }
+                            for ($i = 0; $i < $cantidad; $i++) {
+                                fputcsv($csv, [
+                                    (string) $detalle->product_id,
+                                    (string) $detalle->nombre_producto,
+                                    number_format((float) $detalle->precio_venta, 2, '.', ''),
+                                ]);
                             }
+                        }
 
-                            fclose($handle);
-                        }, 'bartender_compra_' . $record->id . '.csv', [
-                            'Content-Type' => 'text/csv; charset=UTF-8',
+                        rewind($csv);
+                        $csvBase64 = base64_encode(stream_get_contents($csv));
+                        fclose($csv);
+
+                        $bat = implode("\r\n", [
+                            '@echo off',
+                            'setlocal',
+                            'title POS - Imprimir etiquetas BarTender',
+                            '',
+                            'set "BTW_FILE=C:\\POS\\BarTender\\etiquetas_productos.btw"',
+                            'set "CSV_FILE=%TEMP%\\bartender_compra_' . $record->id . '.csv"',
+                            'set "BARTENDER_EXE="',
+                            '',
+                            'for %%P in ("C:\\Program Files\\Seagull\\BarTender 2022\\bartend.exe" "C:\\Program Files\\Seagull\\BarTender 2021\\bartend.exe" "C:\\Program Files\\Seagull\\BarTender 2020\\bartend.exe" "C:\\Program Files (x86)\\Seagull\\BarTender Suite\\bartend.exe") do if exist %%~P set "BARTENDER_EXE=%%~P"',
+                            '',
+                            'if not exist "%BTW_FILE%" (',
+                            '  echo No se encontro la plantilla:',
+                            '  echo %BTW_FILE%',
+                            '  echo.',
+                            '  echo Copia tu archivo .btw en esa ruta o edita esta linea del .bat:',
+                            '  echo set "BTW_FILE=C:\\POS\\BarTender\\etiquetas_productos.btw"',
+                            '  pause',
+                            '  exit /b 1',
+                            ')',
+                            '',
+                            'if "%BARTENDER_EXE%"=="" (',
+                            '  echo No se encontro bartend.exe.',
+                            '  echo Edita este .bat y coloca la ruta correcta de BarTender.',
+                            '  pause',
+                            '  exit /b 1',
+                            ')',
+                            '',
+                            'powershell -NoProfile -ExecutionPolicy Bypass -Command "[IO.File]::WriteAllBytes($env:CSV_FILE, [Convert]::FromBase64String(' . "'" . $csvBase64 . "'" . '))"',
+                            '',
+                            'echo Archivo de datos creado:',
+                            'echo %CSV_FILE%',
+                            'echo.',
+                            'echo Abriendo BarTender...',
+                            'start "" "%BARTENDER_EXE%" /F="%BTW_FILE%" /D="%CSV_FILE%"',
+                            'exit /b 0',
+                            '',
+                        ]);
+
+                        return response()->streamDownload(function () use ($bat) {
+                            echo $bat;
+                        }, 'imprimir_bartender_compra_' . $record->id . '.bat', [
+                            'Content-Type' => 'application/x-bat',
                         ]);
                     })
             ])
