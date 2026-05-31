@@ -1277,7 +1277,7 @@ public static function table(Tables\Table $table): Tables\Table
                                 fputcsv($csv, [
                                     (string) $detalle->product_id,
                                     (string) $detalle->nombre_producto,
-                                    (string) $detalle->cantidad,
+                                    '1',
                                     number_format((float) $detalle->precio_venta, 2, '.', ''),
                                 ]);
                             }
