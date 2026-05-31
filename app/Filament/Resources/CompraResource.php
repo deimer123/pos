@@ -1268,7 +1268,7 @@ public static function table(Tables\Table $table): Tables\Table
 
                         $csv = fopen('php://temp', 'r+');
                         fwrite($csv, "\xEF\xBB\xBF");
-                        fputcsv($csv, ['product_id', 'nombre_producto', 'precio_venta']);
+                        fputcsv($csv, ['product_id', 'nombre_producto', 'cantidad', 'precio_venta']);
 
                         foreach ($detalles as $detalle) {
                             $cantidad = max(1, (int) ceil((float) $detalle->cantidad));
@@ -1277,6 +1277,7 @@ public static function table(Tables\Table $table): Tables\Table
                                 fputcsv($csv, [
                                     (string) $detalle->product_id,
                                     (string) $detalle->nombre_producto,
+                                    (string) $detalle->cantidad,
                                     number_format((float) $detalle->precio_venta, 2, '.', ''),
                                 ]);
                             }
