@@ -1148,12 +1148,20 @@ public static function table(Tables\Table $table): Tables\Table
                     ->icon('heroicon-o-command-line')
                     ->form([
                         Forms\Components\Select::make('tamano_bartender')
-                            ->label('Tamaño de etiqueta')
+                            ->label('Tamano de etiqueta')
                             ->options([
                                 '2x50x25' => '2 columnas - 50 x 25 mm',
                                 '3x32x25' => '3 columnas - 32 x 25 mm',
                             ])
                             ->default('2x50x25')
+                            ->required(),
+                        Forms\Components\Select::make('mostrar_precio_bartender')
+                            ->label('Precio')
+                            ->options([
+                                'con_precio' => 'Con precio',
+                                'sin_precio' => 'Sin precio',
+                            ])
+                            ->default('con_precio')
                             ->required(),
                     ])
                     ->action(function (Compra $record, array $data) {
@@ -1190,9 +1198,12 @@ public static function table(Tables\Table $table): Tables\Table
                         fclose($csv);
 
                         $tamano = $data['tamano_bartender'] ?? '2x50x25';
-                        $plantilla = match ($tamano) {
-                            '3x32x25' => 'C:\\POS\\BarTender\\etiquetas_3x32x25.btw',
-                            default => 'C:\\POS\\BarTender\\etiquetas_2x50x25.btw',
+                        $precio = $data['mostrar_precio_bartender'] ?? 'con_precio';
+                        $plantilla = match ($tamano . '_' . $precio) {
+                            '2x50x25_sin_precio' => 'C:\POS\BarTender\etiquetas_2x50x25_sin_precio.btw',
+                            '3x32x25_con_precio' => 'C:\POS\BarTender\etiquetas_3x32x25_con_precio.btw',
+                            '3x32x25_sin_precio' => 'C:\POS\BarTender\etiquetas_3x32x25_sin_precio.btw',
+                            default => 'C:\POS\BarTender\etiquetas_2x50x25_con_precio.btw',
                         };
 
                         $bat = implode("\r\n", [
@@ -1212,8 +1223,10 @@ public static function table(Tables\Table $table): Tables\Table
                             '  echo.',
                             '  echo Copia tu archivo .btw en esa ruta o edita esta linea del .bat:',
                             '  echo Plantillas esperadas:',
-                            '  echo C:\\POS\\BarTender\\etiquetas_2x50x25.btw',
-                            '  echo C:\\POS\\BarTender\\etiquetas_3x32x25.btw',
+                            '  echo C:\\POS\\BarTender\\etiquetas_2x50x25_con_precio.btw',
+                            '  echo C:\\POS\\BarTender\\etiquetas_2x50x25_sin_precio.btw',
+                            '  echo C:\\POS\\BarTender\\etiquetas_3x32x25_con_precio.btw',
+                            '  echo C:\\POS\\BarTender\\etiquetas_3x32x25_sin_precio.btw',
                             '  pause',
                             '  exit /b 1',
                             ')',
