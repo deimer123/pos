@@ -1188,7 +1188,7 @@ public static function table(Tables\Table $table): Tables\Table
                                     (string) $detalle->product_id,
                                     (string) $detalle->nombre_producto,
                                     '1',
-                                    number_format((float) $detalle->precio_venta, 2, '.', ''),
+                                    (string) (int) round((float) $detalle->precio_venta),
                                 ]);
                             }
                         }
