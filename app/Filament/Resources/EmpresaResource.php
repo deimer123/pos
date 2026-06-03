@@ -365,7 +365,11 @@ class EmpresaResource extends Resource
             static::deleteWhere('model_has_permissions', fn ($query) => $query->where('model_type', User::class)->whereIn('model_id', $userIds));
 
             static::deleteWhereIn('prefactura_productos', 'prefactura_id', $prefacturaIds);
+            static::deleteWhereIn('prefactura_productos', 'producto_id', $productIds);
             static::deleteByEmpresa('prefactura_productos', $empresaId);
+            static::deleteWhereIn('prefactura_producto', 'prefactura_id', $prefacturaIds);
+            static::deleteWhereIn('prefactura_producto', 'producto_id', $productIds);
+            static::deleteByEmpresa('prefactura_producto', $empresaId);
             static::deleteByEmpresa('prefacturas', $empresaId);
 
             static::deleteWhereIn('devolucion_detalles', 'devolucion_id', $devolucionIds);
