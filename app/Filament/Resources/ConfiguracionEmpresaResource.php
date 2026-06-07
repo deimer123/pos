@@ -28,7 +28,7 @@ class ConfiguracionEmpresaResource extends Resource
 
     public static function canAccess(): bool
     {
-        return auth()->check() && auth()->user()->hasRole('admin_empresa');
+        return auth()->check() && auth()->user()->hasAnyRole(['super_admin', 'admin_empresa']);
     }
 
     public static function form(Form $form): Form
@@ -185,6 +185,10 @@ class ConfiguracionEmpresaResource extends Resource
     public static function getUrl(string $name = 'index', array $parameters = [], bool $isAbsolute = true, ?string $panel = null, ?\Illuminate\Database\Eloquent\Model $tenant = null): string
     {
         $user = auth()->user();
+
+        if ($user && $user->hasRole('super_admin')) {
+            return parent::getUrl($name, $parameters, $isAbsolute, $panel, $tenant);
+        }
         
         // Solo aplicar la lógica si el usuario está autenticado
         if ($user) {

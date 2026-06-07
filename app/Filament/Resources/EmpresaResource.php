@@ -175,6 +175,111 @@ class EmpresaResource extends Resource
                             ->required(),
                     ])
                     ->columns(3),
+
+                Forms\Components\Section::make('Facturacion electronica')
+                    ->description('Activacion y credenciales Factus administradas por el super admin.')
+                    ->statePath('factus')
+                    ->schema([
+                        Forms\Components\Toggle::make('factus_enabled')
+                            ->label('Activar facturacion electronica')
+                            ->helperText('Cuando este activo, esta empresa podra emitir facturas electronicas usando Factus.')
+                            ->live()
+                            ->default(false),
+
+                        Forms\Components\TextInput::make('nit')
+                            ->label('NIT de la empresa')
+                            ->maxLength(20)
+                            ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled'))
+                            ->helperText('Obligatorio para activar facturacion electronica y mostrarlo en la factura impresa.'),
+
+                        Forms\Components\Select::make('factus_environment')
+                            ->label('Ambiente Factus')
+                            ->options([
+                                'sandbox' => 'Pruebas / Sandbox',
+                                'production' => 'Produccion',
+                            ])
+                            ->default('sandbox')
+                            ->required(),
+
+                        Forms\Components\TextInput::make('factus_base_url')
+                            ->label('URL API Factus')
+                            ->placeholder('Dejar vacio para usar la URL del ambiente seleccionado')
+                            ->maxLength(255),
+
+                        Forms\Components\TextInput::make('factus_username')
+                            ->label('Usuario Factus')
+                            ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled'))
+                            ->maxLength(255),
+
+                        Forms\Components\TextInput::make('factus_password')
+                            ->label('Password Factus')
+                            ->password()
+                            ->required(fn (Forms\Get $get, ?string $operation): bool => (bool) $get('factus_enabled') && $operation === 'create')
+                            ->dehydrated(fn ($state) => filled($state))
+                            ->helperText('En edicion puedes dejarlo vacio para conservar el password guardado.'),
+
+                        Forms\Components\TextInput::make('factus_client_id')
+                            ->label('Client ID Factus')
+                            ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled'))
+                            ->maxLength(255),
+
+                        Forms\Components\TextInput::make('factus_client_secret')
+                            ->label('Client Secret Factus')
+                            ->password()
+                            ->required(fn (Forms\Get $get, ?string $operation): bool => (bool) $get('factus_enabled') && $operation === 'create')
+                            ->dehydrated(fn ($state) => filled($state))
+                            ->helperText('En edicion puedes dejarlo vacio para conservar el secreto guardado.'),
+
+                        Forms\Components\TextInput::make('factus_numbering_range_id')
+                            ->label('ID Rango Factus')
+                            ->numeric()
+                            ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled'))
+                            ->helperText('Se llena con el boton Sincronizar rangos, o puedes escribirlo si Factus te lo entrega.'),
+
+                        Forms\Components\TextInput::make('factus_credit_note_numbering_range_id')
+                            ->label('ID Rango Nota Credito Factus')
+                            ->numeric()
+                            ->helperText('Rango para notas credito electronicas. En Factus corresponde al documento 22; si solo existe un rango activo, Factus puede tomarlo automaticamente.'),
+
+                        Forms\Components\Toggle::make('factus_send_email')
+                            ->label('Enviar correo desde Factus')
+                            ->default(false),
+
+                        Forms\Components\TextInput::make('prefijo')
+                            ->label('Prefijo')
+                            ->maxLength(10)
+                            ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled')),
+
+                        Forms\Components\TextInput::make('rango_desde')
+                            ->label('Rango desde')
+                            ->numeric()
+                            ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled')),
+
+                        Forms\Components\TextInput::make('rango_hasta')
+                            ->label('Rango hasta')
+                            ->numeric()
+                            ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled')),
+
+                        Forms\Components\TextInput::make('rango_actual')
+                            ->label('Rango actual')
+                            ->numeric()
+                            ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled')),
+
+                        Forms\Components\TextInput::make('numero_resolucion')
+                            ->label('Numero de resolucion DIAN')
+                            ->maxLength(50)
+                            ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled'))
+                            ->helperText('Numero de la autorizacion de numeracion de facturacion. Debe verse en la representacion impresa.'),
+
+                        Forms\Components\DatePicker::make('fecha_inicio')
+                            ->label('Fecha inicio')
+                            ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled')),
+
+                        Forms\Components\DatePicker::make('fecha_fin')
+                            ->label('Fecha fin')
+                            ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled')),
+                    ])
+                    ->columns(2),
             ]);
     }
 
@@ -414,6 +519,82 @@ class EmpresaResource extends Resource
     public static function calculatePlanEndDate(mixed $startDate, int $months): string
     {
         return Carbon::parse($startDate ?: today())->addMonths($months ?: 3)->toDateString();
+    }
+
+    public static function saveFactusConfig(User $empresa, array $factus): void
+    {
+        $allowed = collect($factus)->only([
+            'factus_enabled',
+            'factus_environment',
+            'factus_base_url',
+            'factus_username',
+            'factus_password',
+            'factus_client_id',
+            'factus_client_secret',
+            'factus_numbering_range_id',
+            'factus_credit_note_numbering_range_id',
+            'factus_send_email',
+            'nit',
+            'prefijo',
+            'rango_desde',
+            'rango_hasta',
+            'rango_actual',
+            'numero_resolucion',
+            'fecha_inicio',
+            'fecha_fin',
+            'llave',
+            'expirado',
+        ])->filter(fn ($value, string $key) => ! in_array($key, ['factus_password', 'factus_client_secret'], true) || filled($value))->all();
+
+        foreach (['factus_numbering_range_id', 'factus_credit_note_numbering_range_id', 'rango_desde', 'rango_hasta', 'rango_actual'] as $integerKey) {
+            if (array_key_exists($integerKey, $allowed) && blank($allowed[$integerKey])) {
+                $allowed[$integerKey] = null;
+            }
+        }
+
+        foreach (['fecha_inicio', 'fecha_fin'] as $dateKey) {
+            if (array_key_exists($dateKey, $allowed) && blank($allowed[$dateKey])) {
+                $allowed[$dateKey] = null;
+            }
+        }
+
+        $empresa->configuracion()->updateOrCreate(
+            ['empresa_id' => $empresa->id],
+            array_merge([
+                'nombre_empresa' => $empresa->name,
+                'representante_legal' => $empresa->name,
+                'nit' => $factus['nit'] ?? null,
+                'telefono' => $empresa->telefono,
+                'direccion' => $empresa->direccion,
+                'activo' => true,
+            ], $allowed),
+        );
+    }
+
+    public static function factusFormState(User $empresa): array
+    {
+        $config = $empresa->configuracion;
+
+        return [
+            'factus_enabled' => (bool) ($config?->factus_enabled ?? false),
+            'factus_environment' => $config?->factus_environment ?? 'sandbox',
+            'factus_base_url' => $config?->factus_base_url,
+            'factus_username' => $config?->factus_username,
+            'factus_password' => null,
+            'factus_client_id' => $config?->factus_client_id,
+            'factus_client_secret' => null,
+            'factus_numbering_range_id' => $config?->factus_numbering_range_id,
+            'factus_credit_note_numbering_range_id' => $config?->factus_credit_note_numbering_range_id,
+            'factus_send_email' => (bool) ($config?->factus_send_email ?? false),
+            'nit' => $config?->nit,
+            'prefijo' => $config?->prefijo,
+            'rango_desde' => $config?->rango_desde,
+            'rango_hasta' => $config?->rango_hasta,
+            'rango_actual' => $config?->rango_actual,
+            'numero_resolucion' => $config?->numero_resolucion,
+            'fecha_inicio' => $config?->fecha_inicio?->toDateString(),
+            'fecha_fin' => $config?->fecha_fin?->toDateString(),
+        ];
     }
 
     protected static function idsBy(string $table, string $column, mixed $value)

@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\ConfiguracionEmpresaResource\Pages;
 
 use App\Filament\Resources\ConfiguracionEmpresaResource;
-use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 
 class EditConfiguracionEmpresa extends EditRecord
@@ -12,8 +11,6 @@ class EditConfiguracionEmpresa extends EditRecord
 
     protected function getHeaderActions(): array
     {
-        return [
-          //  Actions\DeleteAction::make(),
-        ];
+        return [];
     }
 }

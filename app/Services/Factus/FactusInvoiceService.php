@@ -21,7 +21,11 @@ class FactusInvoiceService
     public function validate(Factura $factura): array
     {
         $payload = $this->payload($factura);
-        $response = $this->client->validateBill($payload);
+        $factura->loadMissing('configuracionEmpresa');
+        $client = $factura->configuracionEmpresa?->factus_enabled
+            ? FactusClient::forEmpresa($factura->configuracionEmpresa)
+            : $this->client;
+        $response = $client->validateBill($payload);
         $data = $response['data'] ?? [];
         $bill = $data['bill'] ?? $data;
         $validated = (bool) ($bill['is_validated'] ?? false)

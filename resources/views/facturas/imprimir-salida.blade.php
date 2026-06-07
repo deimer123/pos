@@ -100,6 +100,26 @@
   <div class="factus-box small">
     <div><strong>Numero Factus:</strong> {{ $factusNumber ?: 'Pendiente' }}</div>
     <div><strong>Estado:</strong> {{ strtoupper($factura->factus_status ?? 'pendiente') }}</div>
+    @if($config?->numero_resolucion)
+      <div><strong>Resolucion DIAN:</strong> {{ $config->numero_resolucion }}</div>
+    @endif
+    @if($config?->prefijo || $config?->rango_desde || $config?->rango_hasta)
+      <div>
+        <strong>Numeracion:</strong>
+        {{ $config?->prefijo ? 'Prefijo '.$config->prefijo : '' }}
+        @if($config?->rango_desde || $config?->rango_hasta)
+          Rango {{ $config->rango_desde ?? '-' }} al {{ $config->rango_hasta ?? '-' }}
+        @endif
+      </div>
+    @endif
+    @if($config?->fecha_inicio || $config?->fecha_fin)
+      <div>
+        <strong>Vigencia:</strong>
+        {{ $config?->fecha_inicio ? \Carbon\Carbon::parse($config->fecha_inicio)->format('Y-m-d') : '-' }}
+        a
+        {{ $config?->fecha_fin ? \Carbon\Carbon::parse($config->fecha_fin)->format('Y-m-d') : '-' }}
+      </div>
+    @endif
     @if($factusValidated)
       <div><strong>Validada:</strong> {{ is_string($factusValidated) ? $factusValidated : \Carbon\Carbon::parse($factusValidated)->format('Y-m-d H:i') }}</div>
     @endif

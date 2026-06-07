@@ -2,15 +2,37 @@
 
 namespace App\Services\Factus;
 
+use App\Models\ConfiguracionEmpresa;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class FactusClient
 {
     public function __construct(
         private readonly ?string $baseUrl = null,
+        private readonly ?array $credentials = null,
+        private readonly ?string $cacheKeySuffix = null,
     ) {
+    }
+
+    public static function forEmpresa(ConfiguracionEmpresa $configuracion): self
+    {
+        $environmentUrl = $configuracion->factus_environment === 'production'
+            ? 'https://api.factus.com.co'
+            : 'https://api-sandbox.factus.com.co';
+
+        return new self(
+            $configuracion->factus_base_url ?: $environmentUrl,
+            [
+                'username' => $configuracion->factus_username,
+                'password' => $configuracion->factus_password,
+                'client_id' => $configuracion->factus_client_id,
+                'client_secret' => $configuracion->factus_client_secret,
+            ],
+            'empresa_'.$configuracion->getKey(),
+        );
     }
 
     /**
@@ -18,7 +40,7 @@ class FactusClient
      */
     public function token(bool $forceRefresh = false): string
     {
-        $cacheKey = 'factus.oauth_token';
+        $cacheKey = 'factus.oauth_token.'.$this->credentialSignature();
 
         if ($forceRefresh) {
             Cache::forget($cacheKey);
@@ -62,13 +84,22 @@ class FactusClient
      */
     public function post(string $path, array $payload = []): array
     {
-        return Http::withToken($this->token())
+        $response = Http::withToken($this->token())
             ->acceptJson()
             ->asJson()
             ->timeout(45)
-            ->post($this->url($path), $payload)
-            ->throw()
-            ->json();
+            ->post($this->url($path), $payload);
+
+        if ($response->failed()) {
+            Log::warning('Factus rechazo una peticion POST', [
+                'path' => $path,
+                'status' => $response->status(),
+                'response' => $response->json() ?? $response->body(),
+                'payload' => $payload,
+            ]);
+        }
+
+        return $response->throw()->json();
     }
 
     /**
@@ -77,6 +108,14 @@ class FactusClient
     public function validateBill(array $payload): array
     {
         return $this->post('/v1/bills/validate', $payload);
+    }
+
+    /**
+     * @throws RequestException
+     */
+    public function validateCreditNote(array $payload): array
+    {
+        return $this->post('/v1/credit-notes/validate', $payload);
     }
 
     /**
@@ -98,6 +137,14 @@ class FactusClient
     /**
      * @throws RequestException
      */
+    public function dianNumberingRanges(): array
+    {
+        return $this->get('/v2/numbering-ranges/dian');
+    }
+
+    /**
+     * @throws RequestException
+     */
     public function municipalities(?string $name = null): array
     {
         return $this->get('/v1/municipalities', array_filter([
@@ -107,12 +154,14 @@ class FactusClient
 
     private function oauthCredentials(): array
     {
+        $credentials = $this->credentials;
+
         $credentials = [
             'grant_type' => 'password',
-            'client_id' => config('services.factus.client_id'),
-            'client_secret' => config('services.factus.client_secret'),
-            'username' => config('services.factus.username'),
-            'password' => config('services.factus.password'),
+            'client_id' => $credentials !== null ? ($credentials['client_id'] ?? null) : config('services.factus.client_id'),
+            'client_secret' => $credentials !== null ? ($credentials['client_secret'] ?? null) : config('services.factus.client_secret'),
+            'username' => $credentials !== null ? ($credentials['username'] ?? null) : config('services.factus.username'),
+            'password' => $credentials !== null ? ($credentials['password'] ?? null) : config('services.factus.password'),
         ];
 
         $missing = collect($credentials)
@@ -124,7 +173,9 @@ class FactusClient
             ->all();
 
         if ($missing !== []) {
-            throw new \RuntimeException('Faltan credenciales de Factus en .env: '.implode(', ', $missing).'.');
+            $source = $this->credentials === null ? '.env' : 'la configuracion de esta empresa';
+
+            throw new \RuntimeException('Faltan credenciales de Factus en '.$source.': '.implode(', ', $missing).'.');
         }
 
         return $credentials;
@@ -135,5 +186,15 @@ class FactusClient
         $baseUrl = rtrim($this->baseUrl ?: config('services.factus.base_url'), '/');
 
         return $baseUrl.'/'.ltrim($path, '/');
+    }
+
+    private function credentialSignature(): string
+    {
+        return md5(json_encode([
+            'base_url' => $this->baseUrl ?: config('services.factus.base_url'),
+            'username' => $this->credentials['username'] ?? config('services.factus.username'),
+            'client_id' => $this->credentials['client_id'] ?? config('services.factus.client_id'),
+            'suffix' => $this->cacheKeySuffix,
+        ]));
     }
 }

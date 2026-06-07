@@ -15,11 +15,20 @@ class Devolucion extends Model
         'fecha',
         'total',
         'observaciones',
+        'factus_credit_note_reference_code',
+        'factus_credit_note_id',
+        'factus_credit_note_number',
+        'factus_credit_note_cude',
+        'factus_credit_note_status',
+        'factus_credit_note_response',
+        'factus_credit_note_validated_at',
     ];
 
     protected $casts = [
         'fecha' => 'datetime',
         'total' => 'decimal:2',
+        'factus_credit_note_response' => 'array',
+        'factus_credit_note_validated_at' => 'datetime',
     ];
 
     public function detalles()

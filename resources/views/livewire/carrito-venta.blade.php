@@ -2116,6 +2116,7 @@
             const totalNumero = Number(dataEvento.totalVenta ?? @js((int) ($totalGeneral ?? 0)) ?? 0);
             const clienteVenta = dataEvento.clienteNombre || @js($clienteSeleccionadoNombre ?? 'CONSUMIDOR FINAL');
             const credito = dataEvento.creditoInfo || @js($creditoInfo ?? ['permite' => false, 'cupo_disponible' => 0, 'limite' => 0, 'deuda' => 0, 'dias' => 0]);
+            const factusHabilitado = !!dataEvento.factusHabilitado;
             const cupoDisponible = Number(credito.cupo_disponible || 0);
             const deudaCliente = Number(credito.deuda || 0);
             const diasCredito = Number(credito.dias || 0);
@@ -2181,7 +2182,7 @@
                                 <label style="display:block;font-size:11px;font-weight:800;color:#4b5563;margin-bottom:4px;">Tipo de venta</label>
                                 <select id="swal_tipo_factura" style="width:100%;height:36px;border:1px solid #cbd5e1;border-radius:9px;padding:4px 9px;background:white;">
                                     <option value="salida">Salida</option>
-                                    <option value="electronica">Electronica</option>
+                                    ${factusHabilitado ? '<option value="electronica">Electronica</option>' : ''}
                                 </select>
                             </div>
                             <div>

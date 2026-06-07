@@ -16,6 +16,8 @@ class CreateEmpresa extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
+        unset($data['factus']);
+
         $data['tipo_usuario'] = 'empresa';
         $data['empresa_id'] = null; // Las empresas no tienen empresa_id
         $data['activo'] = $data['activo'] ?? true;
@@ -36,6 +38,7 @@ class CreateEmpresa extends CreateRecord
         
         // Asignar rol de admin_empresa
         $record->assignRole('admin_empresa');
+        EmpresaResource::saveFactusConfig($record, $this->form->getRawState()['factus'] ?? []);
         
         Notification::make()
             ->title('Empresa creada exitosamente')

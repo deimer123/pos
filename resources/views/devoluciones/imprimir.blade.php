@@ -8,13 +8,32 @@
     table { width:100%; border-collapse: collapse; }
     th, td { padding:6px; border-bottom:1px solid #eee; }
     .tot { font-weight: 800; font-size: 14px; text-align:right; }
+    .factus-box { border-top:1px dashed #111; border-bottom:1px dashed #111; padding:6px 0; margin:8px 0; }
+    .small { font-size: 10px; }
+    .break { word-break: break-all; }
   </style>
 </head>
 <body onload="window.print()">
+  @php
+    $esNotaCreditoElectronica = filled($dev->factus_credit_note_number) || filled($dev->factus_credit_note_cude);
+  @endphp
   <h2>{{ $dev->numero_visual }}</h2>
   <div>Fecha: {{ $dev->fecha?->format('Y-m-d H:i') }}</div>
   <div>Cliente: {{ $dev->factura?->cliente?->nombre ?? 'N/A' }}</div>
-  <div>Factura origen: {{ 'SAL-' . str_pad((string) $dev->factura_id, 6, '0', STR_PAD_LEFT) }}</div>
+  <div>Factura origen: {{ $dev->factura?->numero_visual ?? ('SAL-' . str_pad((string) $dev->factura_id, 6, '0', STR_PAD_LEFT)) }}</div>
+  @if($esNotaCreditoElectronica)
+    <div class="factus-box small">
+      <div><strong>Nota credito electronica:</strong> {{ $dev->factus_credit_note_number ?: 'Pendiente' }}</div>
+      <div><strong>Estado:</strong> {{ strtoupper($dev->factus_credit_note_status ?? 'pendiente') }}</div>
+      @if($dev->factus_credit_note_validated_at)
+        <div><strong>Validada:</strong> {{ $dev->factus_credit_note_validated_at->format('Y-m-d H:i') }}</div>
+      @endif
+      @if($dev->factus_credit_note_cude)
+        <div><strong>CUDE:</strong></div>
+        <div class="break">{{ $dev->factus_credit_note_cude }}</div>
+      @endif
+    </div>
+  @endif
   <hr>
   <table>
     <thead>

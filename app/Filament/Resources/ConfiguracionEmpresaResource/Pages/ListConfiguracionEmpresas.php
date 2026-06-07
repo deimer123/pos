@@ -1,11 +1,11 @@
 <?php
-// filepath: c:\laragon\www\posapp\app\Filament\Resources\ConfiguracionEmpresaResource\Pages\ListConfiguracionEmpresas.php
 
 namespace App\Filament\Resources\ConfiguracionEmpresaResource\Pages;
 
 use App\Filament\Resources\ConfiguracionEmpresaResource;
-use Filament\Resources\Pages\ListRecords;
 use App\Models\ConfiguracionEmpresa;
+use Filament\Actions;
+use Filament\Resources\Pages\ListRecords;
 
 class ListConfiguracionEmpresas extends ListRecords
 {
@@ -14,24 +14,30 @@ class ListConfiguracionEmpresas extends ListRecords
     public function mount(): void
     {
         $user = auth()->user();
-        
-        // Verificar si ya tiene configuración
-        $configuracion = ConfiguracionEmpresa::where('empresa_id', $user->id)->first();
-        
-        if ($configuracion) {
-            // ✅ Usar $this->redirect() en lugar de redirect()
-            $this->redirect($this->getResource()::getUrl('edit', ['record' => $configuracion->id]));
-            return;
-        } else {
-            // Si no tiene configuración, redirigir al create
-            $this->redirect($this->getResource()::getUrl('create'));
+
+        if ($user && $user->hasRole('super_admin')) {
+            parent::mount();
             return;
         }
+
+        $configuracion = ConfiguracionEmpresa::where('empresa_id', $user->id)->first();
+
+        if ($configuracion) {
+            $this->redirect($this->getResource()::getUrl('edit', ['record' => $configuracion->id]));
+            return;
+        }
+
+        $this->redirect($this->getResource()::getUrl('create'));
     }
 
     protected function getHeaderActions(): array
     {
-        // No mostrar acciones porque siempre redirige
+        if (auth()->user()?->hasRole('super_admin')) {
+            return [
+                Actions\CreateAction::make(),
+            ];
+        }
+
         return [];
     }
 }

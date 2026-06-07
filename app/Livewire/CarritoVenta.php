@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use App\Models\Caja;
+use App\Models\ConfiguracionEmpresa;
 class CarritoVenta extends Component
 {
     public $preciosBase               = [];
@@ -1438,7 +1439,8 @@ public function confirmarFacturar()
             'confirmar-facturar',
             clienteNombre: $this->textoUtf8($nombreCliente),
             creditoInfo: $this->clienteCreditoInfo,
-            totalVenta: $totalActual
+            totalVenta: $totalActual,
+            factusHabilitado: $this->facturacionElectronicaDisponible($this->getEmpresaId())
         );
     }
 
@@ -1497,6 +1499,10 @@ public function facturarConfirmada(array $data = [])
         $tipoPago    = $data['tipo_pago']    ?? 'contado';
         $medioPago   = $tipoPago === 'contado' ? ($data['medio_pago'] ?? 'efectivo') : null;
         $vencRaw     = $data['fecha_vencimiento'] ?? null;
+
+        if ($tipoFactura === 'electronica' && ! $this->facturacionElectronicaDisponible($empresaId)) {
+            throw new \Exception('La facturacion electronica no esta activa o no tiene rango Factus configurado para esta empresa.');
+        }
 
         // NUEVO: observaciÃ³n exclusiva para transferencia
         $transferObs = ($tipoPago === 'contado' && $medioPago === 'transferencia')
@@ -1677,6 +1683,26 @@ private function validarFacturaElectronicaConFactus(Factura $factura): void
     if (blank($factura->factus_number) || blank($factura->factus_cufe) || $factura->factus_status !== 'validada') {
         throw new \RuntimeException('Factus no valido la factura electronica. No se guardo la venta.');
     }
+}
+
+private function facturacionElectronicaDisponible(int $empresaId): bool
+{
+    return ConfiguracionEmpresa::query()
+        ->where('empresa_id', $empresaId)
+        ->where('factus_enabled', true)
+        ->whereNotNull('factus_numbering_range_id')
+        ->whereNotNull('nit')
+        ->where('nit', '!=', '')
+        ->whereNotNull('prefijo')
+        ->where('prefijo', '!=', '')
+        ->whereNotNull('rango_desde')
+        ->whereNotNull('rango_hasta')
+        ->whereNotNull('rango_actual')
+        ->whereNotNull('numero_resolucion')
+        ->where('numero_resolucion', '!=', '')
+        ->whereNotNull('fecha_inicio')
+        ->whereNotNull('fecha_fin')
+        ->exists();
 }
 public function setTab(string $t)
 {
@@ -1931,6 +1957,10 @@ public function facturarEImprimir(array $data = [])
         $tipoPago    = $data['tipo_pago']    ?? 'contado';
         $medioPago   = $tipoPago === 'contado' ? ($data['medio_pago'] ?? 'efectivo') : null;
         $vencRaw     = $data['fecha_vencimiento'] ?? null;
+
+        if ($tipoFactura === 'electronica' && ! $this->facturacionElectronicaDisponible($empresaId)) {
+            throw new \Exception('La facturacion electronica no esta activa o no tiene rango Factus configurado para esta empresa.');
+        }
 
         // ðŸ‘‡ ObservaciÃ³n especÃ­fica si es transferencia en contado
         $transferObs = ($tipoPago === 'contado' && $medioPago === 'transferencia')
@@ -2284,8 +2314,9 @@ public function confirmarDevolucion()
     $items = array_filter($this->carritoDevolucion, fn($r) => $r['seleccion'] && $r['cantidad'] > 0);
     if (empty($items)) { $this->dispatch('error','No hay Ã­tems seleccionados.'); return; }
 
-    DB::transaction(function() use ($items) {
-        $f = $this->facturaSeleccionada->fresh(['detalles']);
+    try {
+        DB::transaction(function() use ($items) {
+        $f = $this->facturaSeleccionada->fresh(['detalles', 'configuracionEmpresa']);
         $empresaId = $f->empresa_id;
 
         // Crear cabecera devoluciÃ³n
@@ -2359,15 +2390,29 @@ if ($producto) {
         $dev->total = $total;
         $dev->save();
 
+        if ($total <= 0) {
+            throw new \RuntimeException('No hay cantidades pendientes para devolver en esta factura.');
+        }
+
         // Si todos los Ã­tems quedaron devueltos, marcar la factura como total
         $f->recalcularTotales();
 
-        $f2 = $f->fresh(['detalles']);
+        $f2 = $f->fresh(['detalles', 'configuracionEmpresa']);
         $todosDev = $f2->detalles->every(fn($d) => (float)$d->devuelto_cantidad >= (float)$d->cantidad);
         if ($todosDev && !$f2->devuelta_total) {
             $f2->devuelta_total = true;
             $f2->observaciones = trim(($f2->observaciones ?? '').' | DEVUELTA TOTAL '.now()->toDateTimeString());
             $f2->save();
+        }
+
+        if ($f2->tipo_factura === 'electronica') {
+            app(\App\Services\Factus\FactusCreditNoteService::class)->validate($dev);
+
+            $dev->refresh();
+
+            if ($dev->factus_credit_note_status !== 'validada') {
+                throw new \RuntimeException('Factus no valido la nota credito electronica.');
+            }
         }
 
         // Cerrar modal y abrir impresiÃ³n
@@ -2381,8 +2426,18 @@ if ($producto) {
         // Imprimir
         $url = route('devolucion.imprimir', $dev->id);
         $this->dispatch('open-print', url: $url);
-        $this->dispatch('success','DevoluciÃ³n registrada.');
-    });
+        $this->dispatch('success', $f2->tipo_factura === 'electronica'
+            ? 'Devolucion registrada y nota credito enviada a la DIAN.'
+            : 'Devolucion registrada.');
+        });
+    } catch (\Throwable $e) {
+        Log::warning('No se pudo registrar la devolucion', [
+            'factura_id' => $this->facturaSeleccionada?->id,
+            'error' => $e->getMessage(),
+        ]);
+
+        $this->dispatch('error', 'No se pudo registrar la devolucion: '.$e->getMessage());
+    }
 }
 
 private function resolveClienteActorId(): ?int

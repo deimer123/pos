@@ -33,6 +33,17 @@ class ConfiguracionEmpresa extends Model
         'llave',
         'expirado',
         'activo',
+        'factus_enabled',
+        'factus_environment',
+        'factus_base_url',
+        'factus_username',
+        'factus_password',
+        'factus_client_id',
+        'factus_client_secret',
+        'factus_numbering_range_id',
+        'factus_credit_note_numbering_range_id',
+        'factus_send_email',
+        'factus_synced_at',
     ];
 
     protected $casts = [
@@ -43,6 +54,13 @@ class ConfiguracionEmpresa extends Model
         'rango_desde' => 'integer',
         'rango_hasta' => 'integer',
         'rango_actual' => 'integer',
+        'factus_enabled' => 'boolean',
+        'factus_send_email' => 'boolean',
+        'factus_numbering_range_id' => 'integer',
+        'factus_credit_note_numbering_range_id' => 'integer',
+        'factus_password' => 'encrypted',
+        'factus_client_secret' => 'encrypted',
+        'factus_synced_at' => 'datetime',
     ];
 
     public function empresa()

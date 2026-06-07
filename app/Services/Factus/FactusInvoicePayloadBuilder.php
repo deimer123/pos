@@ -3,6 +3,7 @@
 namespace App\Services\Factus;
 
 use App\Models\Actor;
+use App\Models\ConfiguracionEmpresa;
 use App\Models\Factura;
 use App\Models\Product;
 use Illuminate\Support\Facades\Cache;
@@ -17,7 +18,9 @@ class FactusInvoicePayloadBuilder
 
     public function build(Factura $factura): array
     {
-        $factura->loadMissing(['cliente.ciudad', 'detalles']);
+        $factura->loadMissing(['cliente.ciudad', 'detalles', 'configuracionEmpresa']);
+        $configuracion = $factura->configuracionEmpresa;
+        $factus = $this->clientFor($configuracion);
 
         if (! $factura->cliente) {
             throw new \InvalidArgumentException('La factura no tiene cliente asociado.');
@@ -32,11 +35,11 @@ class FactusInvoicePayloadBuilder
         return array_filter([
             'reference_code' => $referenceCode,
             'document' => '01',
-            'numbering_range_id' => $this->numberingRangeId(),
-            'send_email' => $this->shouldSendEmail(),
+            'numbering_range_id' => $this->numberingRangeId($configuracion),
+            'send_email' => $this->shouldSendEmail($configuracion),
             'observation' => Str::limit((string) ($factura->observaciones ?? ''), 250, ''),
             'payment_details' => [$this->paymentDetail($factura)],
-            'customer' => $this->customer($factura->cliente),
+            'customer' => $this->customer($factura->cliente, $factus, $this->shouldSendEmail($configuracion)),
             'items' => $this->items($factura),
         ], fn ($value) => $value !== null && $value !== '');
     }
@@ -56,12 +59,12 @@ class FactusInvoicePayloadBuilder
         ], fn ($value) => $value !== null && $value !== '');
     }
 
-    private function customer(Actor $cliente): array
+    private function customer(Actor $cliente, FactusClient $factus, bool $sendEmail): array
     {
         $isJuridica = $cliente->tipo_persona === 'juridica' || (int) $cliente->tipo_documento_id === 6;
         $identification = $this->splitNit((string) $cliente->identificacion);
 
-        if ($this->shouldSendEmail() && ! filter_var((string) $cliente->email, FILTER_VALIDATE_EMAIL)) {
+        if ($sendEmail && ! filter_var((string) $cliente->email, FILTER_VALIDATE_EMAIL)) {
             throw new \InvalidArgumentException('El cliente no tiene un correo valido para enviar la factura electronica.');
         }
 
@@ -77,7 +80,7 @@ class FactusInvoicePayloadBuilder
             'phone' => $cliente->telefono ?: '3000000000',
             'legal_organization_id' => $isJuridica ? 1 : 2,
             'tribute_id' => $cliente->responsable_iva ? 1 : 21,
-            'municipality_id' => $this->municipalityId($cliente),
+            'municipality_id' => $this->municipalityId($cliente, $factus),
         ], fn ($value) => $value !== null && $value !== '');
     }
 
@@ -110,12 +113,25 @@ class FactusInvoicePayloadBuilder
         })->values()->all();
     }
 
-    private function shouldSendEmail(): bool
+    private function shouldSendEmail(?ConfiguracionEmpresa $configuracion): bool
     {
+        if ($configuracion && $configuracion->factus_enabled) {
+            return (bool) $configuracion->factus_send_email;
+        }
+
         return filter_var(config('services.factus.send_email'), FILTER_VALIDATE_BOOL);
     }
-    private function numberingRangeId(): ?int
+
+    private function numberingRangeId(?ConfiguracionEmpresa $configuracion): ?int
     {
+        if ($configuracion && $configuracion->factus_enabled) {
+            if (! $configuracion->factus_numbering_range_id) {
+                throw new \InvalidArgumentException('La empresa no tiene un rango Factus configurado. Sincroniza o selecciona un ID de rango antes de facturar.');
+            }
+
+            return (int) $configuracion->factus_numbering_range_id;
+        }
+
         $id = config('services.factus.numbering_range_id');
 
         return $id ? (int) $id : null;
@@ -137,7 +153,7 @@ class FactusInvoicePayloadBuilder
         };
     }
 
-    private function municipalityId(Actor $cliente): int
+    private function municipalityId(Actor $cliente, FactusClient $factus): int
     {
         if (! $cliente->ciudad) {
             return 980;
@@ -146,8 +162,8 @@ class FactusInvoicePayloadBuilder
         $name = (string) $cliente->ciudad->nombre;
         $dianCode = str_pad((string) $cliente->ciudad->codigo_dian, 5, '0', STR_PAD_LEFT);
 
-        return Cache::remember("factus.municipality.{$dianCode}", now()->addDays(30), function () use ($name, $dianCode) {
-            $response = $this->factus->municipalities($name);
+        return Cache::remember("factus.municipality.{$dianCode}", now()->addDays(30), function () use ($name, $dianCode, $factus) {
+            $response = $factus->municipalities($name);
             $municipalities = $response['data'] ?? $response;
 
             if (isset($municipalities['data']) && is_array($municipalities['data'])) {
@@ -160,6 +176,15 @@ class FactusInvoicePayloadBuilder
 
             return (int) ($matched['id'] ?? 980);
         });
+    }
+
+    private function clientFor(?ConfiguracionEmpresa $configuracion): FactusClient
+    {
+        if ($configuracion && $configuracion->factus_enabled) {
+            return FactusClient::forEmpresa($configuracion);
+        }
+
+        return $this->factus;
     }
 
     private function splitNit(string $identification): array
