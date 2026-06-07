@@ -121,6 +121,15 @@ class EmpresaResource extends Resource
                             ->label('Fecha de activacion')
                             ->default(fn () => today()->toDateString())
                             ->required()
+                            ->afterStateHydrated(function ($state, Set $set, ?\App\Models\User $record): void {
+                                if (filled($state)) {
+                                    return;
+                                }
+
+                                $set('plan_started_at', $record?->plan_started_at?->toDateString()
+                                    ?? $record?->created_at?->toDateString()
+                                    ?? today()->toDateString());
+                            })
                             ->afterStateHydrated(function ($state, Set $set, Get $get): void {
                                 if (blank($get('plan_ends_at'))) {
                                     $set('plan_ends_at', static::calculatePlanEndDate(
