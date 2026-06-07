@@ -157,6 +157,16 @@ class EditEmpresa extends EditRecord
 
     protected function mutateFormDataBeforeFill(array $data): array
     {
+        $data['plan_meses'] = (int) ($data['plan_meses'] ?? 3);
+        $data['plan_started_at'] = $data['plan_started_at']
+            ?? $this->record->plan_started_at?->toDateString()
+            ?? $this->record->created_at?->toDateString()
+            ?? today()->toDateString();
+        $data['plan_ends_at'] = $data['plan_ends_at']
+            ?? EmpresaResource::calculatePlanEndDate(
+                $data['plan_started_at'],
+                $data['plan_meses'],
+            );
         $data['factus'] = EmpresaResource::factusFormState($this->record);
 
         return $data;
