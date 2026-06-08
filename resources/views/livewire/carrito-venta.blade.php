@@ -1559,9 +1559,9 @@
 
 
     @if ($mostrarModalDevolucion)
-        <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-            <div class="bg-white rounded-2xl shadow-xl w-[920px] max-h-[85vh] overflow-hidden">
-                <div class="px-5 py-3 border-b flex items-center justify-between">
+        <div class="fixed inset-0 z-[2147483200] flex items-center justify-center bg-black/60 p-3 sm:p-4">
+            <div class="relative flex h-full w-full max-w-[920px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:h-auto sm:max-h-[85vh] sm:rounded-2xl">
+                <div class="px-4 py-3 border-b flex items-center justify-between sm:px-5">
                     <div class="font-bold text-lg">
                         Devolucion
                         @if ($tipoDevolucion === 'completa')
@@ -1574,8 +1574,8 @@
                         wire:click="$set('mostrarModalDevolucion', false)">x</button>
                 </div>
 
-                <div class="p-4">
-                    <div class="flex items-center gap-2 mb-3">
+                <div class="flex-1 overflow-y-auto p-4 sm:p-4">
+                    <div class="mb-3 flex flex-wrap items-center gap-2">
                         <button wire:click="seleccionarTodosDevolucion"
                             class="px-3 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-sm">Seleccionar
                             todos</button>
@@ -1587,8 +1587,8 @@
                         </div>
                     </div>
 
-                    <div class="border rounded-xl overflow-hidden">
-                        <table class="w-full text-sm bg-white rounded-lg overflow-hidden shadow-sm border" style="border-color:#dbeafe;">
+                    <div class="overflow-x-auto border rounded-xl">
+                        <table class="min-w-[760px] w-full text-sm bg-white rounded-lg overflow-hidden shadow-sm border" style="border-color:#dbeafe;">
                             <thead class="bg-gray-50">
                                 <tr>
                                     <th class="px-3 py-2 text-left">#</th>
@@ -1645,14 +1645,13 @@
                     </div>
                 </div>
 
-                <div class="px-5 py-3 border-t flex items-center justify-end gap-3">
+                <div class="flex flex-col-reverse gap-2 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-5">
                     <button class="h-9 px-4 rounded-full bg-gray-200 hover:bg-gray-300"
                         wire:click="$set('mostrarModalDevolucion', false)">Cancelar</button>
                     <button class="h-9 px-4 rounded-full bg-red-600 hover:bg-red-700 text-white"
                         wire:click="confirmarDevolucion" @disabled(count(array_filter($carritoDevolucion, fn($r) => $r['seleccion'] && $r['cantidad'] > 0)) === 0)>
                         Devolver
                     </button>
-                </div>
                 </div>
             </div>
         </div>
