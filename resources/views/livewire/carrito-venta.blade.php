@@ -1,4 +1,4 @@
-<div class="pos-cart-component" style="display: flex; flex-direction: column; height: 100%; min-height: 0;">
+﻿<div class="pos-cart-component" style="display: flex; flex-direction: column; height: 100%; min-height: 0;">
     
 
     <div class="pos-cart-header" style="padding: 1rem; border-bottom: 1px solid #ddd;">
@@ -1558,8 +1558,10 @@
     @endif
 
     @if ($mostrarModalDevolucion)
-        <div class="fixed inset-0 z-[2147485000] flex items-stretch justify-center bg-black/70 p-2 sm:items-center sm:p-4">
-            <div class="relative flex h-[calc(100dvh-16px)] w-full max-w-[920px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:h-[calc(100dvh-32px)] sm:max-h-[calc(100dvh-32px)] sm:rounded-2xl">
+        <div class="fixed inset-0 flex items-stretch justify-center"
+            style="z-index:2147485000; left:0; top:0; right:0; bottom:0; background:rgba(15,23,42,.78); padding:8px; overflow:auto;">
+            <div class="relative flex h-[calc(100dvh-16px)] w-full max-w-[920px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:h-[calc(100dvh-32px)] sm:max-h-[calc(100dvh-32px)] sm:rounded-2xl"
+                style="z-index:2147485001; pointer-events:auto;">
                 <div class="px-4 py-3 border-b flex items-center justify-between sm:px-5">
                     <div class="font-bold text-lg">
                         Devolucion
