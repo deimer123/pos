@@ -2,12 +2,12 @@
     
 
     <div class="pos-cart-header" style="padding: 1rem; border-bottom: 1px solid #ddd;">
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2" x-data>
             <input type="text"
                 class="flex-1 text-base bg-gray-100 border border-gray-300 rounded-full px-4 py-2 text-gray-700 font-medium cursor-not-allowed"
                 value="{{ $clienteSeleccionadoNombre ?? 'Nombre Cliente' }}" disabled />
 
-            <button wire:click="abrirModalBuscarCliente"
+            <button type="button" @click.prevent="$wire.abrirModalBuscarCliente()"
                 class="inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-full shadow-sm transition">
 
                 Buscar Cliente
@@ -19,11 +19,11 @@
                     <div class="flex items-center gap-3">
                         @if ($cajaEstado === 'abierta')
                             <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">Caja abierta</span>
-                            <button type="button" wire:click="cerrarCajaModal"
+                            <button type="button" @click.prevent="$wire.cerrarCajaModal()"
                                 class="h-8 px-3 bg-red-600 text-white rounded text-sm">Cerrar caja</button>
                         @else
                             <span class="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm">Caja cerrada</span>
-                            <button wire:click="abrirCajaModal"
+                            <button type="button" @click.prevent="$wire.abrirCajaModal()"
                                 class="h-8 px-3 bg-indigo-600 text-white rounded text-sm">Abrir caja</button>
                         @endif
                     </div>
@@ -585,63 +585,78 @@
 
 
     
-    <div class="pos-desktop-cart-actions flex items-center justify-between">
-        <button
-            x-on:click="
-                        if (($wire.get('carrito') ?? []).length === 0) {
-                          Swal.fire({icon:'warning', title:'Carrito vacio', text:'Debe agregar productos antes de editar.'});
-                        } else { $wire.abrirModalEditar(); }
-                      "
+    <div class="pos-desktop-cart-actions flex items-center justify-between" x-data>
+        <button type="button"
+            @click.prevent="
+                if (($wire.get('carrito') ?? []).length === 0) {
+                    Swal.fire({icon:'warning', title:'Carrito vacio', text:'Debe agregar productos antes de editar.'});
+                } else {
+                    $wire.abrirModalEditar();
+                }
+            "
             class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
             Editar
         </button>
 
         <div class="flex gap-2">
 
-            <button wire:click="abrirModalCrearCliente"
+            <button type="button"
+                @click.prevent="$wire.abrirModalCrearCliente()"
                 class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
                 + Crear Cliente
             </button>
             @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
                 @if ($cajaEstado === 'abierta')
                     <button type="button"
+                        @click.prevent="$wire.abrirMovimientoCajaModal('salida')"
                         class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow"
-                        wire:click="abrirMovimientoCajaModal('salida')">
+                        >
                         Entrada / salida
                     </button>
                 @endif
 
                 <button type="button"
+                    @click.prevent="$wire.abrirModalCartera()"
                     class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow"
-                    wire:click="abrirModalCartera">
+                    >
                     Cartera
                 </button>
             @endif
-            <button
-                x-on:click="Swal.fire({
-                          title:'Vaciar carrito?', text:'Se eliminaran todos los productos.',
-                          icon:'warning', showCancelButton:true, confirmButtonText:'Si, vaciar', cancelButtonText:'Cancelar'
-                        }).then(r=>{ if(r.isConfirmed){ $wire.limpiarCarrito(); }})"
+            <button type="button"
+                @click.prevent="
+                    Swal.fire({
+                        title: 'Vaciar carrito?',
+                        text: 'Se eliminaran todos los productos.',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Si, vaciar',
+                        cancelButtonText: 'Cancelar'
+                    }).then((r) => { if (r.isConfirmed) { $wire.limpiarCarrito(); } });
+                "
                 class="pos-cart-main-action bg-red-600 hover:bg-red-700 text-white text-xs px-3 h-8 rounded-full">
                 Limpiar
             </button>
 
-            <button
-                x-on:click="
-                          if (($wire.get('carrito') ?? []).length === 0) {
-                            Swal.fire({icon:'warning', title:'Carrito vacio', text:'Debe agregar productos antes de guardar.'});
-                          } else {
-                            Swal.fire({
-                              title:'Guardar prefactura?', icon:'question', showCancelButton:true,
-                              confirmButtonText:'Si, guardar', cancelButtonText:'Cancelar'
-                            }).then(r=>{ if(r.isConfirmed){ $wire.guardarPrefacturaConfirmada(); }});
-                          }
-                        "
+            <button type="button"
+                @click.prevent="
+                    if (($wire.get('carrito') ?? []).length === 0) {
+                        Swal.fire({icon:'warning', title:'Carrito vacio', text:'Debe agregar productos antes de guardar.'});
+                    } else {
+                        Swal.fire({
+                            title: 'Guardar prefactura?',
+                            icon: 'question',
+                            showCancelButton: true,
+                            confirmButtonText: 'Si, guardar',
+                            cancelButtonText: 'Cancelar'
+                        }).then((r) => { if (r.isConfirmed) { $wire.guardarPrefacturaConfirmada(); } });
+                    }
+                "
                 class="pos-cart-main-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
                 Guardar
             </button>
 
-            <button wire:click="verPrefacturas"
+            <button type="button"
+                @click.prevent="$wire.verPrefacturas()"
                 class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
                 Ver
             </button>
@@ -1559,9 +1574,9 @@
 
     @if ($mostrarModalDevolucion)
         <div class="fixed inset-0 flex items-stretch justify-center"
-            style="z-index:2147485000; left:0; top:0; right:0; bottom:0; background:rgba(15,23,42,.78); padding:8px; overflow:auto;">
+            style="z-index:2147487000 !important; left:0; top:0; right:0; bottom:0; background:rgba(15,23,42,.92); padding:8px; overflow:auto; pointer-events:auto;">
             <div class="relative flex h-[calc(100dvh-16px)] w-full max-w-[920px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:h-[calc(100dvh-32px)] sm:max-h-[calc(100dvh-32px)] sm:rounded-2xl"
-                style="z-index:2147485001; pointer-events:auto;">
+                style="z-index:2147487001 !important; pointer-events:auto;">
                 <div class="px-4 py-3 border-b flex items-center justify-between sm:px-5">
                     <div class="font-bold text-lg">
                         Devolucion

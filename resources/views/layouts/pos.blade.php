@@ -92,6 +92,78 @@
             });
         });
 
+        window.posCallCartAction = function (button, method, ...args) {
+            const root = button?.closest?.('[wire\\:id]');
+            const componentId = root ? root.getAttribute('wire:id') : null;
+
+            if (!window.Livewire || !componentId) {
+                console.warn('POS action ignored: Livewire component not ready', method);
+                return;
+            }
+
+            const component = Livewire.find(componentId);
+            if (!component || typeof component.call !== 'function') {
+                console.warn('POS action ignored: Livewire component not found', method);
+                return;
+            }
+
+            component.call(method, ...args);
+        };
+
+        window.posLimpiarCarrito = function (button) {
+            if (!window.Swal) return;
+            Swal.fire({
+                title: 'Vaciar carrito?',
+                text: 'Se eliminaran todos los productos.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Si, vaciar',
+                cancelButtonText: 'Cancelar'
+            }).then((r) => {
+                if (!r.isConfirmed) return;
+                window.posCallCartAction(button, 'limpiarCarrito');
+            });
+        };
+
+        window.posGuardarPrefactura = function (button) {
+            if (!window.Swal) return;
+            const root = button?.closest?.('[wire\\:id]');
+            const componentId = root ? root.getAttribute('wire:id') : null;
+            const component = window.Livewire && componentId ? Livewire.find(componentId) : null;
+            const carrito = component ? (component.get('carrito') ?? []) : [];
+
+            if (carrito.length === 0) {
+                Swal.fire({ icon: 'warning', title: 'Carrito vacio', text: 'Debe agregar productos antes de guardar.' });
+                return;
+            }
+
+            Swal.fire({
+                title: 'Guardar prefactura?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Si, guardar',
+                cancelButtonText: 'Cancelar'
+            }).then((r) => {
+                if (!r.isConfirmed) return;
+                window.posCallCartAction(button, 'guardarPrefacturaConfirmada');
+            });
+        };
+
+        window.posAbrirEditar = function (button) {
+            if (!window.Swal) return;
+            const root = button?.closest?.('[wire\\:id]');
+            const componentId = root ? root.getAttribute('wire:id') : null;
+            const component = window.Livewire && componentId ? Livewire.find(componentId) : null;
+            const carrito = component ? (component.get('carrito') ?? []) : [];
+
+            if (carrito.length === 0) {
+                Swal.fire({ icon: 'warning', title: 'Carrito vacio', text: 'Debe agregar productos antes de editar.' });
+                return;
+            }
+
+            window.posCallCartAction(button, 'abrirModalEditar');
+        };
+
         let tiempoInactividad = 30 * 60 * 1000;
         let temporizador;
         let sesionCerradaPorInactividad = false;
