@@ -1,4 +1,4 @@
-<div class="pos-cart-component" style="display: flex; flex-direction: column; height: 100%; min-height: 0;">
+﻿<div class="pos-cart-component" style="display: flex; flex-direction: column; height: 100%; min-height: 0;">
     
 
     <div class="pos-cart-header" style="padding: 1rem; border-bottom: 1px solid #ddd;">
@@ -7,7 +7,7 @@
                 class="flex-1 text-base bg-gray-100 border border-gray-300 rounded-full px-4 py-2 text-gray-700 font-medium cursor-not-allowed"
                 value="{{ $clienteSeleccionadoNombre ?? 'Nombre Cliente' }}" disabled />
 
-            <button wire:click="abrirModalBuscarCliente"
+            <button type="button" x-on:click.prevent="$wire.abrirModalBuscarCliente()"
                 class="inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-full shadow-sm transition">
 
                 Buscar Cliente
@@ -19,11 +19,11 @@
                     <div class="flex items-center gap-3">
                         @if ($cajaEstado === 'abierta')
                             <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">Caja abierta</span>
-                            <button type="button" wire:click="cerrarCajaModal"
+                            <button type="button" x-on:click.prevent="$wire.cerrarCajaModal()"
                                 class="h-8 px-3 bg-red-600 text-white rounded text-sm">Cerrar caja</button>
                         @else
                             <span class="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm">Caja cerrada</span>
-                            <button wire:click="abrirCajaModal"
+                            <button type="button" x-on:click.prevent="$wire.abrirCajaModal()"
                                 class="h-8 px-3 bg-indigo-600 text-white rounded text-sm">Abrir caja</button>
                         @endif
                     </div>
@@ -598,22 +598,25 @@
 
         <div class="flex gap-2">
 
-            <button wire:click="abrirModalCrearCliente"
+            <button type="button"
+                x-on:click.prevent="$wire.abrirModalCrearCliente()"
                 class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
                 + Crear Cliente
             </button>
             @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
                 @if ($cajaEstado === 'abierta')
                     <button type="button"
+                        x-on:click.prevent="$wire.abrirMovimientoCajaModal('salida')"
                         class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow"
-                        wire:click="abrirMovimientoCajaModal('salida')">
+                        >
                         Entrada / salida
                     </button>
                 @endif
 
                 <button type="button"
+                    x-on:click.prevent="$wire.abrirModalCartera()"
                     class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow"
-                    wire:click="abrirModalCartera">
+                    >
                     Cartera
                 </button>
             @endif
@@ -641,7 +644,8 @@
                 Guardar
             </button>
 
-            <button wire:click="verPrefacturas"
+            <button type="button"
+                x-on:click.prevent="$wire.verPrefacturas()"
                 class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
                 Ver
             </button>
@@ -1557,11 +1561,12 @@
 
     @endif
 
-
     @if ($mostrarModalDevolucion)
-        <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-            <div class="bg-white rounded-2xl shadow-xl w-[920px] max-h-[85vh] overflow-hidden">
-                <div class="px-5 py-3 border-b flex items-center justify-between">
+        <div class="fixed inset-0 flex items-stretch justify-center"
+            style="z-index:2147487000 !important; left:0; top:0; right:0; bottom:0; background:rgba(15,23,42,.92); padding:8px; overflow:auto; pointer-events:auto;">
+            <div class="relative flex h-[calc(100dvh-16px)] w-full max-w-[920px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:h-[calc(100dvh-32px)] sm:max-h-[calc(100dvh-32px)] sm:rounded-2xl"
+                style="z-index:2147487001 !important; pointer-events:auto;">
+                <div class="px-4 py-3 border-b flex items-center justify-between sm:px-5">
                     <div class="font-bold text-lg">
                         Devolucion
                         @if ($tipoDevolucion === 'completa')
@@ -1574,8 +1579,8 @@
                         wire:click="$set('mostrarModalDevolucion', false)">x</button>
                 </div>
 
-                <div class="p-4">
-                    <div class="flex items-center gap-2 mb-3">
+                <div class="flex-1 overflow-y-auto p-4 sm:p-4">
+                    <div class="mb-3 flex flex-wrap items-center gap-2">
                         <button wire:click="seleccionarTodosDevolucion"
                             class="px-3 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-sm">Seleccionar
                             todos</button>
@@ -1587,17 +1592,13 @@
                         </div>
                     </div>
 
-                    <div class="border rounded-xl overflow-hidden">
-                        <table class="w-full text-sm bg-white rounded-lg overflow-hidden shadow-sm border" style="border-color:#dbeafe;">
+                    <div class="overflow-x-auto border rounded-xl">
+                        <table class="min-w-[760px] w-full text-sm bg-white rounded-lg overflow-hidden shadow-sm border" style="border-color:#dbeafe;">
                             <thead class="bg-gray-50">
                                 <tr>
                                     <th class="px-3 py-2 text-left">#</th>
-                                    <th class="px-3 py-2 text-left">
-                                        Codigo
-                                    </th>
-                                    <th class="px-3 py-2 text-left">
-                                        Descripcion
-                                    </th>
+                                    <th class="px-3 py-2 text-left">Codigo</th>
+                                    <th class="px-3 py-2 text-left">Descripcion</th>
                                     <th class="px-3 py-2 text-right">Pendiente</th>
                                     <th class="px-3 py-2 text-right">Precio</th>
                                     <th class="px-3 py-2 text-right">Cantidad</th>
@@ -1614,8 +1615,7 @@
                                         </td>
                                         <td class="px-3 py-2">{{ $row['producto_id'] }}</td>
                                         <td class="px-3 py-2">{{ $row['descripcion'] }}</td>
-                                        <td class="px-3 py-2 text-right">{{ number_format($row['pendiente'], 2) }}
-                                        </td>
+                                        <td class="px-3 py-2 text-right">{{ number_format($row['pendiente'], 2) }}</td>
                                         <td class="px-3 py-2 text-right">{{ number_format($row['precio'], 2) }}</td>
                                         <td class="px-3 py-2 text-right">
                                             <input type="number" min="0" max="{{ $row['pendiente'] }}"
@@ -1628,9 +1628,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="7" class="px-3 py-6 text-center text-gray-500">No hay
-                                            productos
-                                            pendientes para devolver.</td>
+                                        <td colspan="7" class="px-3 py-6 text-center text-gray-500">No hay productos pendientes para devolver.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -1638,21 +1636,18 @@
                     </div>
 
                     <div class="mt-4 flex items-center justify-end gap-4">
-                        <div class="text-sm text-gray-600">Total
-                            devolucion:
-                        </div>
+                        <div class="text-sm text-gray-600">Total devolucion:</div>
                         <div class="text-xl font-extrabold">${{ number_format($totalDevolucion, 2) }}</div>
                     </div>
                 </div>
 
-                <div class="px-5 py-3 border-t flex items-center justify-end gap-3">
+                <div class="flex flex-col-reverse gap-2 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-5">
                     <button class="h-9 px-4 rounded-full bg-gray-200 hover:bg-gray-300"
                         wire:click="$set('mostrarModalDevolucion', false)">Cancelar</button>
                     <button class="h-9 px-4 rounded-full bg-red-600 hover:bg-red-700 text-white"
                         wire:click="confirmarDevolucion" @disabled(count(array_filter($carritoDevolucion, fn($r) => $r['seleccion'] && $r['cantidad'] > 0)) === 0)>
                         Devolver
                     </button>
-                </div>
                 </div>
             </div>
         </div>
@@ -2383,3 +2378,4 @@
 
     });
 </script>
+
