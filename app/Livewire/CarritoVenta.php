@@ -2212,6 +2212,7 @@ public function prepararDevolucion(string $tipo = 'completa')
     $this->tipoDevolucion = $tipo;
     $this->carritoDevolucion = [];
     $this->totalDevolucion = 0;
+    $this->mostrarModalPrefacturas = false;
 
     foreach ($this->detalleFacturaSeleccionada as $d) {
         $pend = max(0, (float)$d['pendiente']);

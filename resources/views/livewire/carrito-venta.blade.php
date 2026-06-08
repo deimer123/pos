@@ -1559,7 +1559,7 @@
 
 
     @if ($mostrarModalDevolucion)
-        <div class="fixed inset-0 z-[2147483200] flex items-center justify-center bg-black/60 p-3 sm:p-4">
+        <div class="fixed inset-0 z-[2147483600] flex items-center justify-center bg-black/60 p-3 sm:p-4">
             <div class="relative flex h-full w-full max-w-[920px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:h-auto sm:max-h-[85vh] sm:rounded-2xl">
                 <div class="px-4 py-3 border-b flex items-center justify-between sm:px-5">
                     <div class="font-bold text-lg">
