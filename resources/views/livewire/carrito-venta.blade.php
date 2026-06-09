@@ -7,7 +7,7 @@
                 class="flex-1 text-base bg-gray-100 border border-gray-300 rounded-full px-4 py-2 text-gray-700 font-medium cursor-not-allowed"
                 value="{{ $clienteSeleccionadoNombre ?? 'Nombre Cliente' }}" disabled />
 
-            <button type="button" x-on:click.prevent="$wire.abrirModalBuscarCliente()"
+            <button wire:click="abrirModalBuscarCliente"
                 class="inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-full shadow-sm transition">
 
                 Buscar Cliente
@@ -19,11 +19,11 @@
                     <div class="flex items-center gap-3">
                         @if ($cajaEstado === 'abierta')
                             <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">Caja abierta</span>
-                            <button type="button" x-on:click.prevent="$wire.cerrarCajaModal()"
+                            <button type="button" wire:click="cerrarCajaModal"
                                 class="h-8 px-3 bg-red-600 text-white rounded text-sm">Cerrar caja</button>
                         @else
                             <span class="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm">Caja cerrada</span>
-                            <button type="button" x-on:click.prevent="$wire.abrirCajaModal()"
+                            <button wire:click="abrirCajaModal"
                                 class="h-8 px-3 bg-indigo-600 text-white rounded text-sm">Abrir caja</button>
                         @endif
                     </div>
@@ -598,25 +598,22 @@
 
         <div class="flex gap-2">
 
-            <button type="button"
-                x-on:click.prevent="$wire.abrirModalCrearCliente()"
+            <button wire:click="abrirModalCrearCliente"
                 class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
                 + Crear Cliente
             </button>
             @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
                 @if ($cajaEstado === 'abierta')
                     <button type="button"
-                        x-on:click.prevent="$wire.abrirMovimientoCajaModal('salida')"
                         class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow"
-                        >
+                        wire:click="abrirMovimientoCajaModal('salida')">
                         Entrada / salida
                     </button>
                 @endif
 
                 <button type="button"
-                    x-on:click.prevent="$wire.abrirModalCartera()"
                     class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow"
-                    >
+                    wire:click="abrirModalCartera">
                     Cartera
                 </button>
             @endif
@@ -644,8 +641,7 @@
                 Guardar
             </button>
 
-            <button type="button"
-                x-on:click.prevent="$wire.verPrefacturas()"
+            <button wire:click="verPrefacturas"
                 class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
                 Ver
             </button>
