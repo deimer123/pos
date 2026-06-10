@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Clusters\Contabilidad;
 use App\Filament\Resources\VentasReportResource\Pages;
 use App\Models\Factura;
 use Filament\Forms\Components\DatePicker;
@@ -18,7 +17,6 @@ use Illuminate\Contracts\View\View;
 class VentasReportResource extends Resource
 {
     protected static ?string $model = Factura::class;
-    protected static ?string $cluster = Contabilidad::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-chart-bar-square';
 

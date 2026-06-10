@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Clusters\Contabilidad;
 use App\Filament\Resources\VentasPorVendedorReportResource\Pages;
 use App\Models\Factura;
 use App\Models\User;
@@ -18,7 +17,6 @@ use Illuminate\Support\Facades\DB;
 class VentasPorVendedorReportResource extends Resource
 {
     protected static ?string $model = Factura::class;
-    protected static ?string $cluster = Contabilidad::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-user-group';
 
@@ -27,6 +25,8 @@ class VentasPorVendedorReportResource extends Resource
     protected static ?string $modelLabel = 'Ventas por Vendedor';
 
     protected static ?string $pluralModelLabel = 'Ventas por Vendedor';
+
+    protected static ?string $navigationGroup = 'Reportes';
 
     protected static ?int $navigationSort = 3;
 

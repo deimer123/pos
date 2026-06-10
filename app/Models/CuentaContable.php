@@ -10,6 +10,8 @@ class CuentaContable extends Model
 {
     use HasFactory;
 
+    protected $table = 'cuentas_contables';
+
     protected $fillable = [
         'empresa_id',
         'codigo',

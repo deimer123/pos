@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Clusters\Contabilidad;
 use App\Filament\Resources\DevolucionesReportResource\Pages;
 use App\Models\Devolucion;
 use App\Models\User;
@@ -19,7 +18,6 @@ use Illuminate\Contracts\View\View;
 class DevolucionesReportResource extends Resource
 {
     protected static ?string $model = Devolucion::class;
-    protected static ?string $cluster = Contabilidad::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-arrow-uturn-left';
 

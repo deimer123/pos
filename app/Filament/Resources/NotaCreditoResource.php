@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Clusters\Contabilidad;
 use App\Filament\Resources\NotaCreditoResource\Pages;
 use App\Models\NotaCredito;
 use Filament\Forms;
@@ -15,10 +14,10 @@ use Illuminate\Database\Eloquent\Builder;
 class NotaCreditoResource extends Resource
 {
     protected static ?string $model = NotaCredito::class;
-    protected static ?string $cluster = Contabilidad::class;
 
     protected static ?string $navigationIcon  = 'heroicon-o-receipt-refund';
     protected static ?string $navigationLabel = 'Notas Crédito';
+    protected static ?string $navigationGroup = '⚙️ Operaciones';
     protected static ?int $navigationSort = 3;
 
     public static function getEloquentQuery(): Builder

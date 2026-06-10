@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Clusters\Contabilidad;
 use App\Filament\Resources\CierresCajaReportResource\Pages;
 use App\Models\Caja;
 use App\Models\User;
@@ -20,7 +19,6 @@ use Illuminate\Support\Carbon;
 class CierresCajaReportResource extends Resource
 {
     protected static ?string $model = Caja::class;
-    protected static ?string $cluster = Contabilidad::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-banknotes';
 

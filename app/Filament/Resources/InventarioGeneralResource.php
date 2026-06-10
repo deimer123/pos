@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Clusters\Contabilidad;
 use App\Filament\Resources\InventarioGeneralResource\Pages;
 use App\Exports\InventarioGeneralExport;
 use App\Models\Actor;
@@ -21,7 +20,6 @@ use Maatwebsite\Excel\Facades\Excel;
 class InventarioGeneralResource extends Resource
 {
     protected static ?string $model = Product::class;
-    protected static ?string $cluster = Contabilidad::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-archive-box';
 
