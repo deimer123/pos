@@ -1561,39 +1561,50 @@
     @if ($mostrarModalDevolucion)
         <div x-data>
             <template x-teleport="body">
-                <div class="fixed inset-0 flex items-stretch justify-center"
-                    style="z-index:2147483647 !important; left:0; top:0; right:0; bottom:0; background:rgba(15,23,42,.92); padding:8px; overflow:auto; pointer-events:auto;">
-                    <div class="relative flex h-[calc(100dvh-16px)] w-full max-w-[920px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:h-[calc(100dvh-32px)] sm:max-h-[calc(100dvh-32px)] sm:rounded-2xl"
-                        style="z-index:2147483647 !important; pointer-events:auto;">
-                        <div class="px-4 py-3 border-b flex items-center justify-between sm:px-5">
-                            <div class="font-bold text-lg">
-                                Devolucion
-                                @if ($tipoDevolucion === 'completa')
-                                    (Completa)
-                                @else
-                                    (Parcial)
-                                @endif
+                <div class="fixed inset-0 flex items-center justify-center"
+                    style="z-index:2147483647 !important; left:0; top:0; right:0; bottom:0; background:rgba(15,23,42,.62); padding:16px; overflow:auto; pointer-events:auto;">
+                    <div class="pos-devolucion-dialog relative bg-white rounded-xl shadow-xl border flex flex-col overflow-hidden"
+                        style="z-index:2147483647 !important; pointer-events:auto;width:min(1120px, calc(100vw - 32px));height:min(720px, calc(100dvh - 32px));max-height:calc(100dvh - 32px);border-color:#bfdbfe;background:#f8fbff;">
+                        <div class="px-6 py-3 border-b flex items-center justify-between shrink-0"
+                            style="background:linear-gradient(180deg,#2563eb 0%,#4f46e5 100%);color:#fff;border-bottom:0;">
+                            <div class="flex items-center gap-4 flex-wrap">
+                                <span class="text-lg font-bold" style="color:#fff;">
+                                    Devolucion
+                                    @if ($tipoDevolucion === 'completa')
+                                        (Completa)
+                                    @else
+                                        (Parcial)
+                                    @endif
+                                </span>
                             </div>
-                            <button class="text-gray-500 hover:text-gray-800"
+
+                            <button class="text-white/90 hover:text-white text-xl leading-none font-semibold"
                                 wire:click="$set('mostrarModalDevolucion', false)">x</button>
                         </div>
 
-                        <div class="flex-1 overflow-y-auto p-4 sm:p-4">
-                            <div class="mb-3 flex flex-wrap items-center gap-2">
+                        <div class="px-6 py-2 border-b text-sm flex items-end gap-3 flex-wrap"
+                            style="background:#f8fbff;">
+                            <div class="flex flex-wrap items-center gap-2">
                                 <button wire:click="seleccionarTodosDevolucion"
-                                    class="px-3 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-sm">Seleccionar
-                                    todos</button>
+                                    class="inline-flex items-center justify-center h-[38px] px-4 rounded-md bg-gray-800 text-white hover:bg-gray-900 leading-none">
+                                    Seleccionar todos
+                                </button>
                                 <button wire:click="limpiarSeleccionDevolucion"
-                                    class="px-3 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-sm">Limpiar</button>
-                                <div class="ml-auto text-sm text-gray-600">
-                                    Cliente: <span
-                                        class="font-semibold">{{ $facturaSeleccionada?->cliente?->nombre ?? 'N/A' }}</span>
-                                </div>
+                                    class="inline-flex items-center justify-center h-[38px] px-4 rounded-md bg-gray-200 text-gray-800 hover:bg-gray-300 leading-none">Limpiar</button>
                             </div>
 
-                            <div class="overflow-x-auto border rounded-xl">
-                                <table class="min-w-[760px] w-full text-sm bg-white rounded-lg overflow-hidden shadow-sm border" style="border-color:#dbeafe;">
-                                    <thead class="bg-gray-50">
+                            <div class="ml-auto text-sm text-gray-600">
+                                Cliente: <span
+                                    class="font-semibold">{{ $facturaSeleccionada?->cliente?->nombre ?? 'N/A' }}</span>
+                            </div>
+                        </div>
+
+                        <div class="flex-1 overflow-hidden p-0 bg-[#f8fbff]">
+                            <div class="h-full overflow-y-auto overflow-x-auto p-3">
+                                <table class="min-w-[760px] w-full text-sm bg-white rounded-xl overflow-hidden shadow-sm border"
+                                    style="border-color:#bfdbfe;">
+                                    <thead class="bg-gray-100 sticky top-0 z-10 border-b border-gray-300"
+                                        style="position:sticky;top:0;z-index:20;background:#63a0d7;">
                                         <tr>
                                             <th class="px-3 py-2 text-left">#</th>
                                             <th class="px-3 py-2 text-left">Codigo</th>
@@ -1606,7 +1617,7 @@
                                     </thead>
                                     <tbody>
                                         @forelse($carritoDevolucion as $detId => $row)
-                                            <tr class="border-t">
+                                            <tr class="border-t even:bg-gray-50 hover:bg-indigo-50 transition">
                                                 <td class="px-3 py-2">
                                                     <input type="checkbox"
                                                         wire:click="toggleSeleccionDevolucion({{ $detId }})"
@@ -1634,13 +1645,13 @@
                                 </table>
                             </div>
 
-                            <div class="mt-4 flex items-center justify-end gap-4">
+                            <div class="px-4 py-3 flex items-center justify-end gap-4 border-t bg-white">
                                 <div class="text-sm text-gray-600">Total devolucion:</div>
                                 <div class="text-xl font-extrabold">${{ number_format($totalDevolucion, 2) }}</div>
                             </div>
                         </div>
 
-                        <div class="flex flex-col-reverse gap-2 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-5">
+                        <div class="flex flex-col-reverse gap-2 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-5 bg-white">
                             <button class="h-9 px-4 rounded-full bg-gray-200 hover:bg-gray-300"
                                 wire:click="$set('mostrarModalDevolucion', false)">Cancelar</button>
                             <button class="h-9 px-4 rounded-full bg-red-600 hover:bg-red-700 text-white"
