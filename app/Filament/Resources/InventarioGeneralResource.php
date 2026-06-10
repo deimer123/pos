@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Clusters\Contabilidad;
 use App\Filament\Resources\InventarioGeneralResource\Pages;
 use App\Exports\InventarioGeneralExport;
 use App\Models\Actor;
@@ -20,6 +21,7 @@ use Maatwebsite\Excel\Facades\Excel;
 class InventarioGeneralResource extends Resource
 {
     protected static ?string $model = Product::class;
+    protected static ?string $cluster = Contabilidad::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-archive-box';
 
@@ -60,13 +62,36 @@ class InventarioGeneralResource extends Resource
         $nombreAlmacen = ConfiguracionEmpresa::query()
             ->where('empresa_id', $empresaId)
             ->value('nombre_empresa') ?? auth()->user()->name ?? 'Almacen';
-        $unitCostWithTax = function (Product $record): float {
-            $cost = (float) $record->precio_costo;
-            $discount = (float) ($record->descuento_comercial ?? 0);
-            $tax = (float) ($record->iva_venta ?? 0);
-            $discountedCost = $cost * (1 - ($discount / 100));
+        $financials = function (Product $record): array {
+            $stock = (float) $record->existencias;
+            $positive = max($stock, 0);
+            $negative = abs(min($stock, 0));
+            $costUnit = (float) $record->precio_costo;
+            $ivaCompraPct = (float) ($record->iva_compra ?? 0);
+            $ivaVentaPct = (float) ($record->iva_venta ?? 0);
+            $ventaUnit = (float) $record->precio_venta1;
 
-            return round($discountedCost * (1 + ($tax / 100)), 2);
+            $valorCosto = round($stock * $costUnit, 2);
+            $valorIvaCompra = round($valorCosto * ($ivaCompraPct / 100), 2);
+            $totalCosto = round($valorCosto + $valorIvaCompra, 2);
+            $valorIvaVentaUnit = round($ventaUnit * ($ivaVentaPct / 100), 2);
+            $totalVentas = round($stock * $ventaUnit, 2);
+            $valorVentasConIva = round($totalVentas + ($stock * $valorIvaVentaUnit), 2);
+
+            return compact(
+                'stock',
+                'positive',
+                'negative',
+                'costUnit',
+                'ivaCompraPct',
+                'valorCosto',
+                'valorIvaCompra',
+                'totalCosto',
+                'ivaVentaPct',
+                'ventaUnit',
+                'totalVentas',
+                'valorVentasConIva',
+            );
         };
         $cellClass = 'border-r border-gray-200 dark:border-gray-700 px-2 py-1 text-xs';
         $nowrapCellClass = $cellClass . ' whitespace-nowrap';
@@ -74,6 +99,7 @@ class InventarioGeneralResource extends Resource
         return $table
             ->query(
                 Product::query()
+                    ->with(['cuentaContable'])
                     ->where('empresa_id', $empresaId)
             )
             ->striped()
@@ -159,67 +185,88 @@ class InventarioGeneralResource extends Resource
                     ->size('xs')
                     ->extraCellAttributes(['class' => $cellClass . ' leading-tight']),
 
-                Tables\Columns\TextColumn::make('existencias')
-                    ->label('Stock')
-                    ->badge()
-                    ->sortable()
-                    ->color(fn ($state) => match (true) {
-                        $state < 0 => 'danger',
-                        $state == 0 => 'warning',
-                        default => 'success',
-                    })
+                Tables\Columns\TextColumn::make('cuenta_contable')
+                    ->label('Cuenta contable')
+                    ->getStateUsing(fn (Product $record) => $record->cuentaContable?->codigo ?? '-')
                     ->size('xs')
                     ->extraCellAttributes(['class' => $nowrapCellClass . ' text-center']),
 
-                Tables\Columns\TextColumn::make('precio_costo')
-                    ->label('Costo')
-                    ->formatStateUsing($money)
+                Tables\Columns\TextColumn::make('existencias_positivas')
+                    ->label('Positivas')
+                    ->getStateUsing(fn (Product $record) => max((float) $record->existencias, 0))
+                    ->formatStateUsing(fn ($state) => number_format((float) $state, 2, ',', '.'))
                     ->size('xs')
-                    ->extraCellAttributes(['class' => $nowrapCellClass]),
+                    ->extraCellAttributes(['class' => $nowrapCellClass . ' text-right']),
 
-                Tables\Columns\TextColumn::make('precio_venta1')
-                    ->label('Venta')
+                Tables\Columns\TextColumn::make('existencias_negativas')
+                    ->label('Negativas')
+                    ->getStateUsing(fn (Product $record) => abs(min((float) $record->existencias, 0)))
+                    ->formatStateUsing(fn ($state) => number_format((float) $state, 2, ',', '.'))
+                    ->size('xs')
+                    ->extraCellAttributes(['class' => $nowrapCellClass . ' text-right']),
+
+                Tables\Columns\TextColumn::make('costo_unitario')
+                    ->label('Costo unitario')
+                    ->getStateUsing(fn (Product $record) => (float) $record->precio_costo)
                     ->formatStateUsing($money)
                     ->size('xs')
-                    ->extraCellAttributes(['class' => $nowrapCellClass]),
+                    ->extraCellAttributes(['class' => $nowrapCellClass . ' text-right']),
+
+                Tables\Columns\TextColumn::make('iva_compra')
+                    ->label('IVA compra %')
+                    ->getStateUsing(fn (Product $record) => (float) ($record->iva_compra ?? 0))
+                    ->formatStateUsing(fn ($state) => number_format((float) $state, 2, ',', '.'))
+                    ->size('xs')
+                    ->extraCellAttributes(['class' => $nowrapCellClass . ' text-right']),
+
+                Tables\Columns\TextColumn::make('valor_costo')
+                    ->label('Valor costo')
+                    ->getStateUsing(fn (Product $record) => $financials($record)['valorCosto'])
+                    ->formatStateUsing($money)
+                    ->size('xs')
+                    ->extraCellAttributes(['class' => $nowrapCellClass . ' text-right']),
+
+                Tables\Columns\TextColumn::make('valor_iva_compra')
+                    ->label('Valor IVA compra')
+                    ->getStateUsing(fn (Product $record) => $financials($record)['valorIvaCompra'])
+                    ->formatStateUsing($money)
+                    ->size('xs')
+                    ->extraCellAttributes(['class' => $nowrapCellClass . ' text-right']),
+
+                Tables\Columns\TextColumn::make('total_costo')
+                    ->label('Total costo')
+                    ->getStateUsing(fn (Product $record) => $financials($record)['totalCosto'])
+                    ->formatStateUsing($money)
+                    ->size('xs')
+                    ->extraCellAttributes(['class' => $nowrapCellClass . ' text-right']),
 
                 Tables\Columns\TextColumn::make('iva_venta')
-                    ->label('IVA %')
+                    ->label('IVA ventas %')
+                    ->getStateUsing(fn (Product $record) => (float) ($record->iva_venta ?? 0))
+                    ->formatStateUsing(fn ($state) => number_format((float) $state, 2, ',', '.'))
                     ->size('xs')
-                    ->extraCellAttributes(['class' => $nowrapCellClass . ' text-center']),
+                    ->extraCellAttributes(['class' => $nowrapCellClass . ' text-right']),
 
-                Tables\Columns\TextColumn::make('costo_total')
-                    ->label('Costo Total')
-                    ->getStateUsing(fn (Product $record) => $unitCostWithTax($record))
+                Tables\Columns\TextColumn::make('venta_unitaria')
+                    ->label('Valor venta unitario')
+                    ->getStateUsing(fn (Product $record) => $financials($record)['ventaUnit'])
                     ->formatStateUsing($money)
                     ->size('xs')
-                    ->extraCellAttributes(['class' => $nowrapCellClass]),
+                    ->extraCellAttributes(['class' => $nowrapCellClass . ' text-right']),
 
-                Tables\Columns\TextColumn::make('utilidad1')
-                    ->label('Utilidad %')
-                    ->getStateUsing(function (Product $record) use ($unitCostWithTax): float {
-                        $salePrice = (float) $record->precio_venta1;
-
-                        if ($salePrice <= 0) {
-                            return 0;
-                        }
-
-                        return round((($salePrice - $unitCostWithTax($record)) / $salePrice) * 100, 2);
-                    })
-                    ->badge()
-                    ->color(fn ($state) => ((float) $state) < 0 ? 'danger' : 'success')
-                    ->size('xs')
-                    ->extraCellAttributes(['class' => $nowrapCellClass . ' text-center']),
-
-                Tables\Columns\TextColumn::make('utilidad_total')
-                    ->label('Utilidad $')
-                    ->getStateUsing(fn (Product $record) =>
-                        (float) $record->precio_venta1 - $unitCostWithTax($record)
-                    )
+                Tables\Columns\TextColumn::make('total_ventas')
+                    ->label('Total ventas')
+                    ->getStateUsing(fn (Product $record) => $financials($record)['totalVentas'])
                     ->formatStateUsing($money)
-                    ->color(fn ($state) => ((float) $state) < 0 ? 'danger' : 'success')
                     ->size('xs')
-                    ->extraCellAttributes(['class' => 'px-2 py-1 text-xs whitespace-nowrap']),
+                    ->extraCellAttributes(['class' => $nowrapCellClass . ' text-right']),
+
+                Tables\Columns\TextColumn::make('valor_ventas_existencias')
+                    ->label('Valor ventas por existencias')
+                    ->getStateUsing(fn (Product $record) => $financials($record)['valorVentasConIva'])
+                    ->formatStateUsing($money)
+                    ->size('xs')
+                    ->extraCellAttributes(['class' => 'px-2 py-1 text-xs whitespace-nowrap text-right']),
             ]);
     }
 

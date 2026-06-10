@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Clusters\Contabilidad;
 use App\Filament\Resources\CarteraResource\Pages;
 use App\Models\Actor;
 use App\Models\Factura;
@@ -19,6 +20,7 @@ use Illuminate\Database\Eloquent\Builder;
 class CarteraResource extends Resource
 {
     protected static ?string $model = Factura::class;
+    protected static ?string $cluster = Contabilidad::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-credit-card';
 

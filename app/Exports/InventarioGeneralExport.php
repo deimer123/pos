@@ -12,6 +12,7 @@ use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
@@ -28,7 +29,7 @@ class InventarioGeneralExport implements FromQuery, ShouldAutoSize, WithColumnFo
     public function query(): Builder
     {
         return Product::query()
-            ->with(['proveedor', 'familia1', 'subfamilia'])
+            ->with(['proveedor', 'familia1', 'subfamilia', 'cuentaContable'])
             ->where('empresa_id', $this->empresaId)
             ->orderBy('existencias');
     }
@@ -38,52 +39,69 @@ class InventarioGeneralExport implements FromQuery, ShouldAutoSize, WithColumnFo
         return [
             'Codigo',
             'Producto',
-            'Proveedor',
-            'Familia',
-            'Subfamilia',
-            'Stock',
-            'Costo',
-            'Venta',
-            'IVA %',
-            'Costo Total',
-            'Utilidad %',
-            'Utilidad $',
+            'Cuenta contable',
+            'Existencias positivas',
+            'Existencias negativas',
+            'Costo unitario',
+            'IVA compra %',
+            'Valor costo',
+            'Valor IVA compra',
+            'Total costo',
+            'IVA ventas %',
+            'Valor venta unitario',
+            'Total ventas',
+            'Valor ventas por existencias',
         ];
     }
 
     public function map($product): array
     {
-        $costWithTax = $this->unitCostWithTax($product);
-        $salePrice = (float) $product->precio_venta1;
-        $utilityPercent = $salePrice > 0
-            ? round((($salePrice - $costWithTax) / $salePrice) * 100, 2)
-            : 0;
+        $stock = (float) $product->existencias;
+        $positive = max($stock, 0);
+        $negative = abs(min($stock, 0));
+        $costUnit = (float) $product->precio_costo;
+        $ivaCompra = (float) ($product->iva_compra ?? 0);
+        $ivaVenta = (float) ($product->iva_venta ?? 0);
+        $saleUnit = (float) $product->precio_venta1;
+        $valorCosto = round($stock * $costUnit, 2);
+        $valorIvaCompra = round($valorCosto * ($ivaCompra / 100), 2);
+        $totalCosto = round($valorCosto + $valorIvaCompra, 2);
+        $valorIvaVenta = round($saleUnit * ($ivaVenta / 100), 2);
+        $totalVentas = round($stock * $saleUnit, 2);
+        $valorVentasConIva = round($totalVentas + ($stock * $valorIvaVenta), 2);
 
         return [
             $product->id_producto,
             $product->descripcion_larga,
-            $product->proveedor?->nombre,
-            $product->familia1?->nombre,
-            $product->subfamilia?->nombre,
-            (float) $product->existencias,
-            (float) $product->precio_costo,
-            $salePrice,
-            (float) $product->iva_venta,
-            $costWithTax,
-            $utilityPercent,
-            round($salePrice - $costWithTax, 2),
+            $product->cuentaContable?->codigo ?? null,
+            $positive,
+            $negative,
+            $costUnit,
+            $ivaCompra,
+            $valorCosto,
+            $valorIvaCompra,
+            $totalCosto,
+            $ivaVenta,
+            $saleUnit,
+            $totalVentas,
+            $valorVentasConIva,
         ];
     }
 
     public function columnFormats(): array
     {
         return [
-            'G' => '"$" #,##0.00',
+            'D' => NumberFormat::FORMAT_NUMBER_00,
+            'E' => NumberFormat::FORMAT_NUMBER_00,
+            'F' => '"$" #,##0.00',
+            'G' => NumberFormat::FORMAT_NUMBER_00,
             'H' => '"$" #,##0.00',
-            'I' => NumberFormat::FORMAT_NUMBER_00,
+            'I' => '"$" #,##0.00',
             'J' => '"$" #,##0.00',
             'K' => NumberFormat::FORMAT_NUMBER_00,
             'L' => '"$" #,##0.00',
+            'M' => '"$" #,##0.00',
+            'N' => '"$" #,##0.00',
         ];
     }
 
@@ -99,10 +117,10 @@ class InventarioGeneralExport implements FromQuery, ShouldAutoSize, WithColumnFo
                 $sheet = $event->sheet->getDelegate();
                 $lastDataRow = $sheet->getHighestRow();
                 $totalsRow = $lastDataRow + 2;
-                $lastColumn = $sheet->getHighestColumn();
+                $lastColumn = Coordinate::stringFromColumnIndex(14);
 
-                $sheet->mergeCells('A1:L1');
-                $sheet->mergeCells('A2:L2');
+                $sheet->mergeCells('A1:N1');
+                $sheet->mergeCells('A2:N2');
                 $sheet->setCellValue('A1', strtoupper($this->nombreAlmacen));
                 $sheet->setCellValue('A2', 'Inventario General de Productos - ' . now()->format('d/m/Y H:i'));
                 $sheet->freezePane('A5');
@@ -112,7 +130,7 @@ class InventarioGeneralExport implements FromQuery, ShouldAutoSize, WithColumnFo
                 $sheet->getRowDimension(2)->setRowHeight(20);
                 $sheet->getRowDimension(4)->setRowHeight(24);
 
-                $sheet->getStyle('A1:L1')->applyFromArray([
+                $sheet->getStyle('A1:N1')->applyFromArray([
                     'font' => [
                         'bold' => true,
                         'size' => 16,
@@ -128,7 +146,7 @@ class InventarioGeneralExport implements FromQuery, ShouldAutoSize, WithColumnFo
                     ],
                 ]);
 
-                $sheet->getStyle('A2:L2')->applyFromArray([
+                $sheet->getStyle('A2:N2')->applyFromArray([
                     'font' => [
                         'bold' => true,
                         'size' => 11,
@@ -144,7 +162,7 @@ class InventarioGeneralExport implements FromQuery, ShouldAutoSize, WithColumnFo
                     ],
                 ]);
 
-                $sheet->getStyle('A4:L4')->applyFromArray([
+                $sheet->getStyle('A4:N4')->applyFromArray([
                     'font' => [
                         'bold' => true,
                         'color' => ['rgb' => 'FFFFFF'],
@@ -175,19 +193,21 @@ class InventarioGeneralExport implements FromQuery, ShouldAutoSize, WithColumnFo
                 ]);
 
                 $sheet->getStyle('A5:A' . $lastDataRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                $sheet->getStyle('F5:F' . $lastDataRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                $sheet->getStyle('G5:L' . $lastDataRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                $sheet->getStyle('C5:C' . $lastDataRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle('D5:N' . $lastDataRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
                 $sheet->getStyle('A5:' . $lastColumn . $lastDataRow)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
 
-                $sheet->setCellValue('G' . $totalsRow, 'Total Costo');
-                $sheet->setCellValue('H' . $totalsRow, '=SUMPRODUCT(F5:F' . $lastDataRow . ',J5:J' . $lastDataRow . ')');
-                $sheet->setCellValue('I' . $totalsRow, 'Total Ventas');
-                $sheet->setCellValue('J' . $totalsRow, '=SUMPRODUCT(F5:F' . $lastDataRow . ',H5:H' . $lastDataRow . ')');
-                $sheet->setCellValue('K' . $totalsRow, 'Total Utilidades');
-                $sheet->setCellValue('L' . $totalsRow, '=J' . $totalsRow . '-H' . $totalsRow);
+                $sheet->setCellValue('C' . $totalsRow, 'Totales');
+                $sheet->setCellValue('D' . $totalsRow, '=SUM(D5:D' . $lastDataRow . ')');
+                $sheet->setCellValue('E' . $totalsRow, '=SUM(E5:E' . $lastDataRow . ')');
+                $sheet->setCellValue('H' . $totalsRow, '=SUM(H5:H' . $lastDataRow . ')');
+                $sheet->setCellValue('I' . $totalsRow, '=SUM(I5:I' . $lastDataRow . ')');
+                $sheet->setCellValue('J' . $totalsRow, '=SUM(J5:J' . $lastDataRow . ')');
+                $sheet->setCellValue('M' . $totalsRow, '=SUM(M5:M' . $lastDataRow . ')');
+                $sheet->setCellValue('N' . $totalsRow, '=SUM(N5:N' . $lastDataRow . ')');
 
                 $sheet->getRowDimension($totalsRow)->setRowHeight(24);
-                $sheet->getStyle('G' . $totalsRow . ':L' . $totalsRow)->applyFromArray([
+                $sheet->getStyle('C' . $totalsRow . ':N' . $totalsRow)->applyFromArray([
                     'font' => [
                         'bold' => true,
                         'color' => ['rgb' => 'FFFFFF'],
@@ -208,20 +228,12 @@ class InventarioGeneralExport implements FromQuery, ShouldAutoSize, WithColumnFo
                     ],
                 ]);
 
-                $sheet->getStyle('H' . $totalsRow . ':H' . $totalsRow)->getNumberFormat()->setFormatCode('"$" #,##0.00');
-                $sheet->getStyle('J' . $totalsRow . ':J' . $totalsRow)->getNumberFormat()->setFormatCode('"$" #,##0.00');
-                $sheet->getStyle('L' . $totalsRow . ':L' . $totalsRow)->getNumberFormat()->setFormatCode('"$" #,##0.00');
+                foreach (['H', 'I', 'J', 'M', 'N'] as $col) {
+                    $sheet->getStyle($col . $totalsRow . ':' . $col . $totalsRow)
+                        ->getNumberFormat()
+                        ->setFormatCode('"$" #,##0.00');
+                }
             },
         ];
-    }
-
-    protected function unitCostWithTax(Product $product): float
-    {
-        $cost = (float) $product->precio_costo;
-        $discount = (float) ($product->descuento_comercial ?? 0);
-        $tax = (float) ($product->iva_venta ?? 0);
-        $discountedCost = $cost * (1 - ($discount / 100));
-
-        return round($discountedCost * (1 + ($tax / 100)), 2);
     }
 }
