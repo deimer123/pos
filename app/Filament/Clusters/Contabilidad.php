@@ -2,7 +2,7 @@
 
 namespace App\Filament\Clusters;
 
-use Filament\Resources\Cluster;
+use Filament\Clusters\Cluster;
 
 class Contabilidad extends Cluster
 {
