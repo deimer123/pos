@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('cuentas_contables')) {
+            return;
+        }
+
         Schema::create('cuentas_contables', function (Blueprint $table) {
             $table->id();
             $table->foreignId('empresa_id')->nullable()->index();
@@ -24,6 +28,8 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('cuentas_contables');
+        if (Schema::hasTable('cuentas_contables')) {
+            Schema::drop('cuentas_contables');
+        }
     }
 };
