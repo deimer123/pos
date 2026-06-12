@@ -14,20 +14,19 @@ use Filament\Tables\Table;
 class CuentaContableResource extends Resource
 {
     protected static ?string $model = CuentaContable::class;
-
     protected static ?string $cluster = Contabilidad::class;
-
     protected static ?string $navigationIcon = 'heroicon-o-calculator';
-
     protected static ?string $navigationLabel = 'Cuentas contables';
-
     protected static ?string $modelLabel = 'Cuenta contable';
-
     protected static ?string $pluralModelLabel = 'Cuentas contables';
-
     protected static ?int $navigationSort = 1;
 
     public static function canViewAny(): bool
+    {
+        return auth()->check() && auth()->user()->hasRole('admin_empresa');
+    }
+
+    public static function canCreate(): bool
     {
         return auth()->check() && auth()->user()->hasRole('admin_empresa');
     }
@@ -41,7 +40,7 @@ class CuentaContableResource extends Resource
             Forms\Components\Section::make('Cuenta contable')
                 ->schema([
                     Forms\Components\TextInput::make('codigo')
-                        ->label('Código')
+                        ->label('Codigo')
                         ->required()
                         ->maxLength(30),
                     Forms\Components\TextInput::make('nombre')
@@ -52,7 +51,7 @@ class CuentaContableResource extends Resource
                         ->label('Tipo')
                         ->maxLength(50),
                     Forms\Components\TextInput::make('categoria')
-                        ->label('Categoría')
+                        ->label('Categoria')
                         ->maxLength(50),
                     Forms\Components\Toggle::make('activo')
                         ->label('Activo')
@@ -69,9 +68,19 @@ class CuentaContableResource extends Resource
         return $table
             ->query(CuentaContable::query()->where('empresa_id', $empresaId))
             ->defaultSort('codigo')
+            ->headerActions([
+                Tables\Actions\CreateAction::make()
+                    ->label('Crear cuenta contable'),
+            ])
+            ->emptyStateHeading('Aun no hay cuentas contables')
+            ->emptyStateDescription('Aqui creas el plan contable de tu empresa. Luego podras asignar cada cuenta a productos y reportes del modulo contable.')
+            ->emptyStateActions([
+                Tables\Actions\CreateAction::make()
+                    ->label('Crear primera cuenta'),
+            ])
             ->columns([
                 Tables\Columns\TextColumn::make('codigo')
-                    ->label('Código')
+                    ->label('Codigo')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('nombre')
@@ -83,7 +92,7 @@ class CuentaContableResource extends Resource
                     ->badge()
                     ->placeholder('-'),
                 Tables\Columns\TextColumn::make('categoria')
-                    ->label('Categoría')
+                    ->label('Categoria')
                     ->badge()
                     ->placeholder('-'),
                 Tables\Columns\IconColumn::make('activo')
