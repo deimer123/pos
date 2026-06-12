@@ -45,16 +45,32 @@ class InventarioContableResource extends Resource
             ->filters([
                 SelectFilter::make('estado_stock')
                     ->label('Existencias')
+                    ->multiple()
                     ->options([
                         'positivas' => 'Positivas',
                         'negativas' => 'Negativas',
                         'cero' => 'En cero',
                     ])
-                    ->query(fn ($query, array $data) => match ($data['value'] ?? null) {
-                        'positivas' => $query->where('existencias', '>', 0),
-                        'negativas' => $query->where('existencias', '<', 0),
-                        'cero' => $query->where('existencias', 0),
-                        default => $query,
+                    ->query(function ($query, array $data) {
+                        $values = array_values(array_filter((array) ($data['values'] ?? $data['value'] ?? [])));
+
+                        if (empty($values)) {
+                            return $query;
+                        }
+
+                        return $query->where(function ($q) use ($values) {
+                            if (in_array('positivas', $values, true)) {
+                                $q->orWhere('existencias', '>', 0);
+                            }
+
+                            if (in_array('negativas', $values, true)) {
+                                $q->orWhere('existencias', '<', 0);
+                            }
+
+                            if (in_array('cero', $values, true)) {
+                                $q->orWhere('existencias', 0);
+                            }
+                        });
                     }),
             ])
             ->headerActions([

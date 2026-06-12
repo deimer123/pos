@@ -68,16 +68,8 @@ class CuentaContableResource extends Resource
         return $table
             ->query(CuentaContable::query()->where('empresa_id', $empresaId))
             ->defaultSort('codigo')
-            ->headerActions([
-                Tables\Actions\CreateAction::make()
-                    ->label('Crear cuenta contable'),
-            ])
             ->emptyStateHeading('Aun no hay cuentas contables')
             ->emptyStateDescription('Aqui creas el plan contable de tu empresa. Luego podras asignar cada cuenta a productos y reportes del modulo contable.')
-            ->emptyStateActions([
-                Tables\Actions\CreateAction::make()
-                    ->label('Crear primera cuenta'),
-            ])
             ->columns([
                 Tables\Columns\TextColumn::make('codigo')
                     ->label('Codigo')
