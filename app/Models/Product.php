@@ -40,6 +40,7 @@ class Product extends Model
         'id_familia1',
         'id_familia2',
         'empresa_id',
+        'cuenta_contable_id',
         'descripcion_larga',
         'id_proveedor', // ✅ CAMPO CORRECTO
         'iva_compra',
@@ -98,6 +99,11 @@ public function empresa()
 {
     return $this->belongsTo(User::class, 'empresa_id');
 }
+
+    public function cuentaContable(): BelongsTo
+    {
+        return $this->belongsTo(CuentaContable::class, 'cuenta_contable_id');
+    }
     
 public static function stock(int $pid): float
 {
