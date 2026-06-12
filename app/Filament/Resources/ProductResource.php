@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ProductResource\Pages;
 use App\Models\Product;
+use App\Models\CuentaContable;
 use App\Models\Actor;
 use App\Models\Familia;
 use App\Models\Subfamilia;
@@ -224,6 +225,24 @@ return \App\Models\Familia::create($data)->id;
             
         ]),
     
+        Section::make('Contabilidad')
+            ->schema([
+                Select::make('cuenta_contable_id')
+                    ->label('Cuenta contable')
+                    ->options(function () {
+                        $empresaId = auth()->user()->getEmpresaActualId();
+
+                        return CuentaContable::query()
+                            ->where('empresa_id', $empresaId)
+                            ->orderBy('codigo')
+                            ->pluck('codigo', 'id')
+                            ->toArray();
+                    })
+                    ->searchable()
+                    ->preload()
+                    ->placeholder('Sin asignar'),
+            ]),
+
           Section::make('Impuestos y precios')
     ->schema([
         Grid::make(4)->schema([
@@ -648,4 +667,3 @@ protected static function calcularValores(Get $get, Set $set, bool $forzarUtilid
 
     
 }
-
