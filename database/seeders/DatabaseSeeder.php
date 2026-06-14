@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             RolesSeeder::class,
             DepartamentosSeeder::class,
             CiudadesSeeder::class,
+            CuentasContablesPucSeeder::class,
         ]);
 
         // Crear usuario Super Admin y asignar rol
