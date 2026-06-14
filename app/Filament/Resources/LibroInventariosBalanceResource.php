@@ -9,6 +9,7 @@ use App\Models\Compra;
 use App\Models\CuentaContable;
 use App\Models\Factura;
 use App\Models\Product;
+use Filament\Forms\Components\DatePicker;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Actions\Action;
@@ -122,10 +123,29 @@ class LibroInventariosBalanceResource extends Resource
                     ->label('Descargar Excel')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
-                    ->action(fn () => Excel::download(
-                        new LibroInventariosBalanceExport($empresaId),
-                        'libro-inventarios-balance-' . now()->format('Y-m-d') . '.xlsx'
-                    )),
+                    ->form([
+                        DatePicker::make('desde')
+                            ->label('Desde')
+                            ->default(now()->startOfMonth()),
+                        DatePicker::make('hasta')
+                            ->label('Hasta')
+                            ->default(now()),
+                    ])
+                    ->action(function (array $data) use ($empresaId) {
+                        $desde = $data['desde'] ?? null;
+                        $hasta = $data['hasta'] ?? null;
+
+                        $archivo = 'libro-inventarios-balance';
+
+                        if ($desde || $hasta) {
+                            $archivo .= '-' . now()->format('Y-m-d');
+                        }
+
+                        return Excel::download(
+                            new LibroInventariosBalanceExport($empresaId, $desde, $hasta),
+                            $archivo . '.xlsx'
+                        );
+                    }),
             ])
             ->columns([
                 Tables\Columns\TextColumn::make('codigo')

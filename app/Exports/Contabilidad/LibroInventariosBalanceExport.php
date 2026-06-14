@@ -7,6 +7,7 @@ use App\Models\ConfiguracionEmpresa;
 use App\Models\CuentaContable;
 use App\Models\Factura;
 use App\Models\Product;
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -39,7 +40,11 @@ class LibroInventariosBalanceExport implements FromCollection, ShouldAutoSize, W
 
     protected float $ivaVentas = 0.0;
 
-    public function __construct(protected int $empresaId)
+    public function __construct(
+        protected int $empresaId,
+        protected ?string $desde = null,
+        protected ?string $hasta = null,
+    )
     {
         $configuracion = ConfiguracionEmpresa::query()
             ->where('empresa_id', $this->empresaId)
@@ -49,7 +54,7 @@ class LibroInventariosBalanceExport implements FromCollection, ShouldAutoSize, W
             ?? auth()->user()?->name
             ?? 'Empresa';
         $this->nitEmpresa = $configuracion?->nit ?: 'N/A';
-        $this->periodo = now()->locale('es')->translatedFormat('F Y');
+        $this->periodo = $this->formatearPeriodo();
         $this->inventario = $this->inventarioValorizado();
         $this->cartera = $this->carteraPendiente();
         $this->proveedores = $this->cuentasPorPagar();
@@ -269,6 +274,8 @@ class LibroInventariosBalanceExport implements FromCollection, ShouldAutoSize, W
     {
         return (float) Factura::query()
             ->where('empresa_id', $this->empresaId)
+            ->when($this->desde, fn ($query) => $query->whereDate('fecha', '>=', $this->desde))
+            ->when($this->hasta, fn ($query) => $query->whereDate('fecha', '<=', $this->hasta))
             ->creditoPendiente()
             ->sum('saldo');
     }
@@ -277,6 +284,8 @@ class LibroInventariosBalanceExport implements FromCollection, ShouldAutoSize, W
     {
         return (float) Compra::query()
             ->where('empresa_id', $this->empresaId)
+            ->when($this->desde, fn ($query) => $query->whereDate('fecha', '>=', $this->desde))
+            ->when($this->hasta, fn ($query) => $query->whereDate('fecha', '<=', $this->hasta))
             ->where('tipo_pago', 'credito')
             ->sum('saldo');
     }
@@ -285,6 +294,8 @@ class LibroInventariosBalanceExport implements FromCollection, ShouldAutoSize, W
     {
         return (float) Factura::query()
             ->where('empresa_id', $this->empresaId)
+            ->when($this->desde, fn ($query) => $query->whereDate('fecha', '>=', $this->desde))
+            ->when($this->hasta, fn ($query) => $query->whereDate('fecha', '<=', $this->hasta))
             ->where('tipo_pago', 'contado')
             ->sum('total');
     }
@@ -293,6 +304,8 @@ class LibroInventariosBalanceExport implements FromCollection, ShouldAutoSize, W
     {
         return (float) Factura::query()
             ->where('empresa_id', $this->empresaId)
+            ->when($this->desde, fn ($query) => $query->whereDate('fecha', '>=', $this->desde))
+            ->when($this->hasta, fn ($query) => $query->whereDate('fecha', '<=', $this->hasta))
             ->with('detalles.producto')
             ->get()
             ->sum(function (Factura $factura): float {
@@ -302,5 +315,22 @@ class LibroInventariosBalanceExport implements FromCollection, ShouldAutoSize, W
                     return round(((float) $detalle->subtotal) * ($ivaPct / 100), 2);
                 });
             });
+    }
+
+    protected function formatearPeriodo(): string
+    {
+        if ($this->desde && $this->hasta) {
+            return Carbon::parse($this->desde)->format('d/m/Y') . ' - ' . Carbon::parse($this->hasta)->format('d/m/Y');
+        }
+
+        if ($this->desde) {
+            return 'Desde ' . Carbon::parse($this->desde)->format('d/m/Y');
+        }
+
+        if ($this->hasta) {
+            return 'Hasta ' . Carbon::parse($this->hasta)->format('d/m/Y');
+        }
+
+        return now()->locale('es')->translatedFormat('F Y');
     }
 }
