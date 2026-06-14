@@ -8,4 +8,17 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateCuentaContable extends CreateRecord
 {
     protected static string $resource = CuentaContableResource::class;
+
+    protected function getFormActions(): array
+    {
+        return [
+            $this->getCreateFormAction(),
+            $this->getCancelFormAction(),
+        ];
+    }
+
+    public static function canCreateAnother(): bool
+    {
+        return false;
+    }
 }
