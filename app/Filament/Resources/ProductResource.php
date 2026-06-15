@@ -224,7 +224,55 @@ return \App\Models\Familia::create($data)->id;
 
             
         ]),
-    
+
+        Section::make('Modo de venta')
+            ->schema([
+                Grid::make(2)->schema([
+                    Select::make('tipo_producto')
+                        ->label('Tipo de producto')
+                        ->options([
+                            'producto' => 'Producto',
+                            'servicio' => 'Servicio',
+                            'insumo' => 'Insumo',
+                            'combo' => 'Combo / Paquete',
+                        ])
+                        ->default('producto')
+                        ->required(),
+
+                    Select::make('vende_por')
+                        ->label('Vende por')
+                        ->options([
+                            'unidad' => 'Unidad',
+                            'peso' => 'Peso',
+                            'porcion' => 'Porción',
+                            'litro' => 'Litro',
+                            'metro' => 'Metro',
+                            'hora' => 'Hora',
+                        ])
+                        ->default('unidad')
+                        ->required(),
+
+                    Forms\Components\Toggle::make('maneja_inventario')
+                        ->label('Maneja inventario')
+                        ->default(true),
+
+                    Forms\Components\Toggle::make('permite_fraccion')
+                        ->label('Permite fracción')
+                        ->helperText('Para vender cantidades decimales como 0.25 o 0.5.'),
+
+                    Forms\Components\Toggle::make('requiere_cocina')
+                        ->label('Requiere cocina')
+                        ->helperText('Marca el producto para flujo de cocina o preparación.'),
+
+                    TextInput::make('peso_base')
+                        ->label('Peso base')
+                        ->numeric()
+                        ->step('0.001')
+                        ->helperText('Peso de referencia del producto cuando se vende por peso.')
+                        ->default(null),
+                ]),
+            ]),
+
         Section::make('Contabilidad')
             ->schema([
                 Select::make('cuenta_contable_id')

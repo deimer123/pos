@@ -76,6 +76,64 @@ class ConfiguracionEmpresaResource extends Resource
                         ->maxSize(2048),
                 ]),
 
+            Forms\Components\Section::make('Modo de negocio')
+                ->schema([
+                    Forms\Components\Select::make('tipo_negocio')
+                        ->label('Tipo de negocio')
+                        ->options([
+                            'tienda' => 'Tienda / Almacén',
+                            'restaurante' => 'Restaurante',
+                            'bar' => 'Bar',
+                            'carniceria' => 'Carnicería',
+                            'panaderia' => 'Panadería',
+                            'farmacia' => 'Farmacia',
+                            'servicios' => 'Servicios',
+                            'mixto' => 'Mixto',
+                            'otro' => 'Otro',
+                        ])
+                        ->required()
+                        ->default('tienda'),
+
+                    Forms\Components\Grid::make(2)
+                        ->schema([
+                            Forms\Components\Toggle::make('usa_mesas')
+                                ->label('Usa mesas')
+                                ->helperText('Actívalo solo si el negocio atiende por mesa.'),
+
+                            Forms\Components\Toggle::make('usa_cocina')
+                                ->label('Usa cocina')
+                                ->helperText('Para negocios que envían pedidos a cocina.'),
+
+                            Forms\Components\Toggle::make('usa_recetas')
+                                ->label('Usa recetas')
+                                ->helperText('Útil cuando un producto descuenta ingredientes.'),
+
+                            Forms\Components\Toggle::make('usa_variantes')
+                                ->label('Usa variantes')
+                                ->helperText('Ejemplo: talla, color, sabor o presentación.'),
+
+                            Forms\Components\Toggle::make('usa_peso')
+                                ->label('Vende por peso')
+                                ->helperText('Ideal para carnicería, fruver o productos a granel.'),
+
+                            Forms\Components\Toggle::make('usa_servicios')
+                                ->label('Vende servicios')
+                                ->helperText('Para mano de obra, horas o servicios intangibles.'),
+
+                            Forms\Components\Toggle::make('permite_stock_negativo')
+                                ->label('Permitir stock negativo')
+                                ->helperText('Deja vender aunque no haya inventario suficiente.'),
+
+                            Forms\Components\Toggle::make('imprime_ticket')
+                                ->label('Imprime ticket')
+                                ->default(true),
+
+                            Forms\Components\Toggle::make('mostrar_iva_separado')
+                                ->label('Mostrar IVA separado')
+                                ->helperText('Sirve para pantallas y reportes con IVA desglosado.'),
+                        ]),
+                ]),
+
             Forms\Components\Section::make('Facturación Electrónica')
                 ->schema([
                     Forms\Components\TextInput::make('prefijo')

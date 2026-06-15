@@ -42,6 +42,12 @@ class Product extends Model
         'empresa_id',
         'cuenta_contable_id',
         'descripcion_larga',
+        'tipo_producto',
+        'vende_por',
+        'maneja_inventario',
+        'permite_fraccion',
+        'requiere_cocina',
+        'peso_base',
         'id_proveedor', // ✅ CAMPO CORRECTO
         'iva_compra',
         'iva_venta',
@@ -61,6 +67,10 @@ class Product extends Model
     protected $casts = [
         'foto' => 'string',
         'existencias' => 'decimal:2',
+        'maneja_inventario' => 'boolean',
+        'permite_fraccion' => 'boolean',
+        'requiere_cocina' => 'boolean',
+        'peso_base' => 'decimal:3',
     ];
 
     public function proveedor()
