@@ -218,7 +218,8 @@ return \App\Models\Familia::create($data)->id;
                         5 => 'Horas (h)',
                     ])
                     ->default(1)
-                    ->required(),
+                    ->required()
+                    ->helperText('Define la unidad para compras, inventario y kardex. No cambia la forma de vender en POS.'),
                     
             ]),
 
@@ -250,7 +251,12 @@ return \App\Models\Familia::create($data)->id;
                             'hora' => 'Hora',
                         ])
                         ->default('unidad')
-                        ->required(),
+                        ->required()
+                        ->live()
+                        ->afterStateUpdated(function (Set $set, ?string $state) {
+                            $set('permite_fraccion', $state !== 'unidad');
+                        })
+                        ->helperText('Define cómo se cobra en el POS. No modifica la unidad de medida del inventario.'),
 
                     Forms\Components\Toggle::make('maneja_inventario')
                         ->label('Maneja inventario')

@@ -110,11 +110,24 @@ public function empresa()
     return $this->belongsTo(User::class, 'empresa_id');
 }
 
-    public function cuentaContable(): BelongsTo
+public function cuentaContable(): BelongsTo
     {
         return $this->belongsTo(CuentaContable::class, 'cuenta_contable_id');
     }
     
+public function permiteCantidadDecimal(): bool
+{
+    if (! empty($this->vende_por)) {
+        return (string) $this->vende_por !== 'unidad';
+    }
+
+    if (! is_null($this->permite_fraccion)) {
+        return (bool) $this->permite_fraccion;
+    }
+
+    return (int) ($this->id_unidad_de_medida ?? 1) !== 1;
+}
+
 public static function stock(int $pid): float
 {
     return cache()->remember("stock_$pid", 4, function () use ($pid) {
