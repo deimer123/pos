@@ -74,6 +74,12 @@ class Product extends Model
         'peso_base' => 'decimal:3',
     ];
 
+    public function permiteCantidadDecimal(): bool
+    {
+        return in_array($this->vende_por, ['peso', 'porcion', 'litro', 'metro', 'hora'], true)
+            || (bool) $this->permite_fraccion;
+    }
+
     public function proveedor()
     {
         return $this->belongsTo(Actor::class, 'id_proveedor', 'id_clip_pro');

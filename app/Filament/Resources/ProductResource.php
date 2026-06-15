@@ -250,7 +250,24 @@ return \App\Models\Familia::create($data)->id;
                             'hora' => 'Hora',
                         ])
                         ->default('unidad')
-                        ->required(),
+                        ->required()
+                        ->live()
+                        ->afterStateUpdated(function (Set $set, $state) {
+                            if (in_array($state, ['peso', 'porcion', 'litro', 'metro', 'hora'], true)) {
+                                $set('permite_fraccion', true);
+                                $set('maneja_inventario', true);
+                            }
+
+                            if ($state === 'servicio') {
+                                $set('maneja_inventario', false);
+                                $set('permite_fraccion', false);
+                            }
+                        }),
+
+                    Placeholder::make('modo_ayuda')
+                        ->label('Modo de venta')
+                        ->content('Unidad: venta normal. Peso o porción: cantidades decimales. Servicio: sin inventario. Esto ya afecta al POS.')
+                        ->columnSpanFull(),
 
                     Forms\Components\Toggle::make('maneja_inventario')
                         ->label('Maneja inventario')
@@ -506,6 +523,22 @@ return \App\Models\Familia::create($data)->id;
             })
 
                 ->alignCenter(),
+
+            TextColumn::make('vende_por')
+                ->label('Venta')
+                ->badge()
+                ->formatStateUsing(fn ($state) => match ($state) {
+                    'peso' => 'Peso',
+                    'porcion' => 'Porción',
+                    'litro' => 'Litro',
+                    'metro' => 'Metro',
+                    'hora' => 'Hora',
+                    default => 'Unidad',
+                })
+                ->color(fn ($state) => match ($state) {
+                    'peso', 'porcion', 'litro', 'metro', 'hora' => 'warning',
+                    default => 'gray',
+                }),
         ])
 
         ->filters([

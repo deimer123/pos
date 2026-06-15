@@ -309,6 +309,17 @@ private function limpiarUtf8Array(array $datos): array
             return (bool) $item['permite_decimal'];
         }
 
+        $vendePor = strtolower(trim((string) ($item['vende_por'] ?? '')));
+        $permiteFraccion = (bool) ($item['permite_fraccion'] ?? false);
+
+        if (in_array($vendePor, ['peso', 'porcion', 'litro', 'metro', 'hora'], true)) {
+            return true;
+        }
+
+        if ($permiteFraccion) {
+            return true;
+        }
+
         return (int) ($item['id_unidad_de_medida'] ?? 1) !== 1;
     }
 
@@ -392,7 +403,7 @@ private function limpiarUtf8Array(array $datos): array
         }
 
         $precioVenta = floatval($item['nuevo_precio'] ?? $item['precio'] ?? $producto->precio_venta1);
-        $cantidad    = $this->normalizarCantidad($item['cantidad'] ?? 1, (int) ($producto->id_unidad_de_medida ?? 1) !== 1);
+        $cantidad    = $this->normalizarCantidad($item['cantidad'] ?? 1, $producto->permiteCantidadDecimal());
         $precioCosto = floatval($producto->precio_costo ?? 0);
         $costoConIva = $this->costoConIvaProducto($producto);
         $descuento   = floatval($item['descuento'] ?? 0);
@@ -414,7 +425,9 @@ private function limpiarUtf8Array(array $datos): array
             'total'         => round($precioVenta * $cantidad, 2),
             'existencias'   => (float) ($producto->existencias ?? 0),
             'id_unidad_de_medida' => (int) ($producto->id_unidad_de_medida ?? 1),
-            'permite_decimal' => (int) ($producto->id_unidad_de_medida ?? 1) !== 1,
+            'vende_por'     => $producto->vende_por ?? 'unidad',
+            'permite_fraccion' => (bool) ($producto->permite_fraccion ?? false),
+            'permite_decimal' => $producto->permiteCantidadDecimal(),
         ];
     }
 }
@@ -669,7 +682,9 @@ public function asignarConsumidorFinalPorDefecto()
             'total'         => $precioVenta,
             'existencias'   => $existencias,
             'id_unidad_de_medida' => (int) ($producto->id_unidad_de_medida ?? 1),
-            'permite_decimal' => (int) ($producto->id_unidad_de_medida ?? 1) !== 1,
+            'vende_por'     => $producto->vende_por ?? 'unidad',
+            'permite_fraccion' => (bool) ($producto->permite_fraccion ?? false),
+            'permite_decimal' => $producto->permiteCantidadDecimal(),
         ];
     }
     $this->actualizarTotales();
@@ -705,6 +720,8 @@ public function asignarConsumidorFinalPorDefecto()
         'descuento'    => 0,
         'existencias'  => 0,
         'id_unidad_de_medida' => 1,
+        'vende_por' => 'unidad',
+        'permite_fraccion' => false,
         'permite_decimal' => false,
         'temporal'     => true,
     ];
@@ -1214,7 +1231,9 @@ $prefactura = $query->first();
         'total'         => $item->subtotal,
         'existencias'   => $producto->existencias ?? 0,
         'id_unidad_de_medida' => (int) ($producto->id_unidad_de_medida ?? 1),
-        'permite_decimal' => (int) ($producto->id_unidad_de_medida ?? 1) !== 1,
+        'vende_por' => $producto->vende_por ?? 'unidad',
+        'permite_fraccion' => (bool) ($producto->permite_fraccion ?? false),
+        'permite_decimal' => $producto->permiteCantidadDecimal(),
     ];
 }
 
