@@ -5,6 +5,7 @@ use App\Models\Actor;
 use App\Models\AlternateCode;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 
 
@@ -113,6 +114,21 @@ public function empresa()
     public function cuentaContable(): BelongsTo
     {
         return $this->belongsTo(CuentaContable::class, 'cuenta_contable_id');
+    }
+
+    public function recetas(): HasMany
+    {
+        return $this->hasMany(Receta::class, 'product_id', 'id');
+    }
+
+    public function recetaPrincipal(): HasOne
+    {
+        return $this->hasOne(Receta::class, 'product_id', 'id');
+    }
+
+    public function variantes(): HasMany
+    {
+        return $this->hasMany(ProductoVariante::class, 'product_id', 'id');
     }
     
 public static function stock(int $pid): float
