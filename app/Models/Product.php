@@ -74,12 +74,6 @@ class Product extends Model
         'peso_base' => 'decimal:3',
     ];
 
-    public function permiteCantidadDecimal(): bool
-    {
-        return in_array($this->vende_por, ['peso', 'porcion', 'litro', 'metro', 'hora'], true)
-            || (bool) $this->permite_fraccion;
-    }
-
     public function proveedor()
     {
         return $this->belongsTo(Actor::class, 'id_proveedor', 'id_clip_pro');
@@ -137,18 +131,20 @@ public function cuentaContable(): BelongsTo
         return $this->hasMany(ProductoVariante::class, 'product_id', 'id');
     }
     
-public function permiteCantidadDecimal(): bool
-{
-    if (! empty($this->vende_por)) {
-        return (string) $this->vende_por !== 'unidad';
-    }
+    public function permiteCantidadDecimal(): bool
+    {
+        $vendePor = strtolower(trim((string) ($this->vende_por ?? '')));
 
-    if (! is_null($this->permite_fraccion)) {
-        return (bool) $this->permite_fraccion;
-    }
+        if ($vendePor !== '') {
+            return in_array($vendePor, ['peso', 'porcion', 'litro', 'metro', 'hora'], true);
+        }
 
-    return (int) ($this->id_unidad_de_medida ?? 1) !== 1;
-}
+        if (! is_null($this->permite_fraccion)) {
+            return (bool) $this->permite_fraccion;
+        }
+
+        return (int) ($this->id_unidad_de_medida ?? 1) !== 1;
+    }
 
 public static function stock(int $pid): float
 {
