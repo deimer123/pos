@@ -116,6 +116,9 @@ public function configurePanel(Panel $panel): void
 
 // ADMIN EMPRESA
 if ($user->hasRole('admin_empresa')) {
+    if (method_exists($user, 'necesitaConfiguracionInicial') && $user->necesitaConfiguracionInicial()) {
+        return route('filament.admin.resources.configuracion-empresas.create');
+    }
     return route('eleccion');
 }
 

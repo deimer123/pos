@@ -234,6 +234,30 @@ class User extends Authenticatable implements FilamentUser
         ]);
     }
 
+    public function necesitaConfiguracionInicial(): bool
+    {
+        if ($this->hasRole('super_admin')) {
+            return false;
+        }
+
+        $empresaId = $this->getEmpresaActualId();
+
+        if (! $empresaId) {
+            return true;
+        }
+
+        $configuracion = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();
+
+        if (! $configuracion) {
+            return true;
+        }
+
+        return blank($configuracion->tipo_negocio)
+            || blank($configuracion->nombre_empresa)
+            || blank($configuracion->representante_legal)
+            || blank($configuracion->nit);
+    }
+
     public function puedeAbrirCaja(): bool
     {
         return $this->hasAnyRole([
