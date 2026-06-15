@@ -69,6 +69,23 @@
                         ${{ number_format($product->precio_venta1, 0, ',', '.') }}
                     </div>
 
+                    @php
+                        $modoVenta = match ($product->vende_por ?? 'unidad') {
+                            'peso' => 'Peso',
+                            'porcion' => 'Porción',
+                            'litro' => 'Litro',
+                            'metro' => 'Metro',
+                            'hora' => 'Hora',
+                            default => 'Unidad',
+                        };
+                    @endphp
+
+                    <div class="w-24 text-center">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            {{ $modoVenta }}
+                        </span>
+                    </div>
+
                     {{-- Boton --}}
                     <div class="w-24 text-center">
                         <button wire:click="agregarAlCarrito({{ $product->id_producto }})"
@@ -101,6 +118,11 @@
                                 Stock: {{ $product->existencias }}
                             </span>
                             <strong>${{ number_format($product->precio_venta1, 0, ',', '.') }}</strong>
+                        </div>
+                        <div class="mt-1">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                {{ $modoVenta }}
+                            </span>
                         </div>
                     </div>
 

@@ -47,6 +47,10 @@ Route::middleware(['auth'])->get('/eleccion', function () {
     // ADMIN EMPRESA
     if ($user->hasRole('admin_empresa')) {
 
+        if ($user->necesitaConfiguracionInicial()) {
+            return redirect()->route('filament.admin.resources.configuracion-empresas.create');
+        }
+
         return response()->view('eleccion');
 
     }

@@ -84,7 +84,7 @@ class InventarioContableResource extends Resource
                     )),
             ])
             ->columns([
-                Tables\Columns\TextColumn::make('id_producto')->label('Código')->searchable()->sortable(),
+                Tables\Columns\TextColumn::make('id_producto')->label('CÃ³digo')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('descripcion_larga')->label('Nombre')->searchable()->wrap(),
                 Tables\Columns\TextColumn::make('cuentaContable.codigo')->label('Cuenta contable')->placeholder('-'),
                 Tables\Columns\TextColumn::make('existencias')->label('Existencias')->sortable()->alignRight(),

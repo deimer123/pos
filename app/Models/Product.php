@@ -5,6 +5,7 @@ use App\Models\Actor;
 use App\Models\AlternateCode;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 
 
@@ -73,6 +74,12 @@ class Product extends Model
         'peso_base' => 'decimal:3',
     ];
 
+    public function permiteCantidadDecimal(): bool
+    {
+        return in_array($this->vende_por, ['peso', 'porcion', 'litro', 'metro', 'hora'], true)
+            || (bool) $this->permite_fraccion;
+    }
+
     public function proveedor()
     {
         return $this->belongsTo(Actor::class, 'id_proveedor', 'id_clip_pro');
@@ -113,6 +120,21 @@ public function empresa()
 public function cuentaContable(): BelongsTo
     {
         return $this->belongsTo(CuentaContable::class, 'cuenta_contable_id');
+    }
+
+    public function recetas(): HasMany
+    {
+        return $this->hasMany(Receta::class, 'product_id', 'id');
+    }
+
+    public function recetaPrincipal(): HasOne
+    {
+        return $this->hasOne(Receta::class, 'product_id', 'id');
+    }
+
+    public function variantes(): HasMany
+    {
+        return $this->hasMany(ProductoVariante::class, 'product_id', 'id');
     }
     
 public function permiteCantidadDecimal(): bool

@@ -309,13 +309,15 @@ private function limpiarUtf8Array(array $datos): array
             return (bool) $item['permite_decimal'];
         }
 
-        $vendePor = (string) ($item['vende_por'] ?? '');
-        if ($vendePor !== '') {
-            return $vendePor !== 'unidad';
+        $vendePor = strtolower(trim((string) ($item['vende_por'] ?? '')));
+        $permiteFraccion = (bool) ($item['permite_fraccion'] ?? false);
+
+        if (in_array($vendePor, ['peso', 'porcion', 'litro', 'metro', 'hora'], true)) {
+            return true;
         }
 
-        if (array_key_exists('permite_fraccion', $item)) {
-            return (bool) $item['permite_fraccion'];
+        if ($permiteFraccion) {
+            return true;
         }
 
         return (int) ($item['id_unidad_de_medida'] ?? 1) !== 1;
@@ -3535,4 +3537,3 @@ public function uiCreditoActual(): array
    
 
 }
-

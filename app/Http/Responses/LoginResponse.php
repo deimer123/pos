@@ -36,6 +36,10 @@ class LoginResponse implements FilamentLoginResponseContract, FortifyLoginRespon
             return redirect()->intended(route('filament.admin.pages.dashboard'));
         }
 
+        if ($user?->necesitaConfiguracionInicial()) {
+            return redirect()->intended(route('filament.admin.resources.configuracion-empresas.create'));
+        }
+
         return redirect()->intended('/eleccion');
     }
 }

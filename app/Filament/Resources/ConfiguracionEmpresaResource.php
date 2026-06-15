@@ -51,6 +51,7 @@ class ConfiguracionEmpresaResource extends Resource
                         
                     Forms\Components\TextInput::make('nit')
                         ->label('NIT')
+                        ->required()
                         ->maxLength(20),
                         
                     Forms\Components\TextInput::make('telefono')
