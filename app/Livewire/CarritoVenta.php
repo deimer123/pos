@@ -1280,21 +1280,12 @@ $this->dispatch('guardar-carrito-en-cache', $this->carrito); // âœ… GUARDAR 
         ->orderBy('nombre')
         ->get(['id', 'id_clip_pro', 'nombre', 'identificacion']);
 
-    $this->carrito = $this->limpiarUtf8Array($this->carrito);
-    $this->clienteSeleccionadoNombre = $this->textoUtf8($this->clienteSeleccionadoNombre);
-    $this->observacionesPrefactura = $this->textoUtf8($this->observacionesPrefactura);
+    $carrito = $this->limpiarUtf8Array($this->carrito);
+    $observacionesPrefactura = $this->textoUtf8($this->observacionesPrefactura);
 
-    session()->put('carrito_guardado', $this->carrito);
-    session()->put('observaciones_guardadas', $this->observacionesPrefactura);
-    $this->guardarCarritoPersistente();
-
-    // âœ… AGREGAR ESTA LÃNEA
-
-    // âœ… CORREGIR: ASEGURAR CONVERSIONES NUMÃ‰RICAS
-    foreach ($this->carrito as $id => &$item) {
+    foreach ($carrito as $id => &$item) {
         $item['cantidad'] = $this->normalizarCantidad($item['cantidad'] ?? 1, $this->permiteCantidadDecimal($item));
-        
-        // âœ… SOLO RECALCULAR SI NO HAY TOTAL O SI LA CANTIDAD CAMBIÃ“
+
         if (!isset($item['total']) || !isset($item['nuevo_precio'])) {
             $precio = isset($item['nuevo_precio']) ? floatval($item['nuevo_precio']) : floatval($item['precio']);
             $cantidad = $this->normalizarCantidad($item['cantidad'] ?? 1, $this->permiteCantidadDecimal($item));
@@ -1303,19 +1294,18 @@ $this->dispatch('guardar-carrito-en-cache', $this->carrito); // âœ… GUARDAR 
     }
     unset($item);
 
-    $this->carrito = $this->limpiarUtf8Array($this->carrito);
-    $this->clienteSeleccionadoNombre = $this->textoUtf8($this->clienteSeleccionadoNombre);
-    $this->observacionesPrefactura = $this->textoUtf8($this->observacionesPrefactura);
+    session()->put('carrito_guardado', $carrito);
+    session()->put('observaciones_guardadas', $observacionesPrefactura);
+    $this->guardarCarritoPersistente();
 
-    // âœ… CALCULAR TOTAL GENERAL BASADO EN LOS TOTALES ACTUALES
     $totalGeneral = 0;
     $itemsActivos = 0;
-    foreach ($this->carrito as $item) {
+    foreach ($carrito as $item) {
         $totalGeneral += floatval($item['total'] ?? 0);
     }
 
     return view('livewire.carrito-venta', [
-        'carrito'                 => $this->carrito,
+        'carrito'                 => $carrito,
         'totalGeneral'            => $totalGeneral,
         'itemsActivos'            => $itemsActivos,
         'creditoInfo'             => $this->clienteCreditoInfo,
@@ -1324,11 +1314,10 @@ $this->dispatch('guardar-carrito-en-cache', $this->carrito); // âœ… GUARDAR 
         'prefacturas'             => $this->prefacturasDisponibles,
         'prefacturaSeleccionada'  => $this->prefacturaSeleccionada,
         'detallesPrefactura'      => $this->detalleSeleccionado,
-        'observacionesPrefactura' => $this->observacionesPrefactura,
+        'observacionesPrefactura' => $observacionesPrefactura,
         'preciosBase'             => $this->preciosBase,
-        'cajaEstado'               => $this->cajaEstado,
-        'cajaActual'               => $this->cajaActual,
-        
+        'cajaEstado'              => $this->cajaEstado,
+        'cajaActual'              => $this->cajaActual,
     ]);
 }
 
@@ -3546,3 +3535,4 @@ public function uiCreditoActual(): array
    
 
 }
+
