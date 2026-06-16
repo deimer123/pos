@@ -462,13 +462,41 @@
             <tbody>
                 @forelse($carrito as $id => $item)
                     <tr class="border-b hover:bg-indigo-50">
+                        @php
+                            $modoVenta = match ($item['vende_por'] ?? 'unidad') {
+                                'peso' => 'Venta por peso',
+                                'porcion' => 'Venta por porcion',
+                                'litro' => 'Venta por litro',
+                                'metro' => 'Venta por metro',
+                                'hora' => 'Venta por hora',
+                                default => 'Venta por unidad',
+                            };
+                            $sufijoVenta = match ($item['vende_por'] ?? 'unidad') {
+                                'peso' => '/ kg',
+                                'porcion' => '/ porcion',
+                                'litro' => '/ lt',
+                                'metro' => '/ mt',
+                                'hora' => '/ hr',
+                                default => '/ und',
+                            };
+                            $permiteDecimal = (bool) ($item['permite_decimal'] ?? ((int) ($item['id_unidad_de_medida'] ?? 1) !== 1));
+                        @endphp
                         <td class="px-1 py-0.5 border">{{ $item['id_producto'] ?? '-' }}</td>
-                        <td class="px-1 py-0.5 border truncate {{ ($item['existencias'] ?? 0) <= 0 ? 'text-red-600 font-semibold' : '' }}"
+                        <td class="px-1 py-0.5 border {{ ($item['existencias'] ?? 0) <= 0 ? 'text-red-600 font-semibold' : '' }}"
                             title="Existencias: {{ $item['existencias'] ?? 0 }}">
-                            {{ $item['nombre'] }}
+                            <div class="truncate">{{ $item['nombre'] }}</div>
+                            <div class="mt-0.5 flex flex-wrap gap-1 text-[10px] leading-tight">
+                                <span class="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 font-semibold text-indigo-700">
+                                    {{ $modoVenta }}
+                                </span>
+                                @if (!empty($item['permite_fraccion']))
+                                    <span class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 font-semibold text-emerald-700">
+                                        Fraccion
+                                    </span>
+                                @endif
+                            </div>
                         </td>
                         <td class="px-1 py-0.5 border text-center">
-                                                        <?php $permiteDecimal = (bool) ($item['permite_decimal'] ?? ((int) ($item['id_unidad_de_medida'] ?? 1) !== 1)); ?>
                             <input type="number"
                                 min="{{ $permiteDecimal ? '0.01' : '1' }}"
                                 step="{{ $permiteDecimal ? '0.01' : '1' }}"
@@ -480,7 +508,8 @@
                                 style="width: 58px; height: 24px; font-size: 11px; padding: 0 3px;" />
                         </td>
                         <td class="px-1 py-0.5 border text-center whitespace-nowrap">
-                            ${{ number_format(round($item['nuevo_precio'] ?? ($item['precio'] ?? 0)), 0, ',', '.') }}
+                            <div>${{ number_format(round($item['nuevo_precio'] ?? ($item['precio'] ?? 0)), 0, ',', '.') }}</div>
+                            <div class="text-[10px] font-medium text-slate-500">{{ $sufijoVenta }}</div>
                         </td>
                         <td class="px-1 py-0.5 border text-center font-semibold text-indigo-600 whitespace-nowrap">
                             ${{ number_format($item['total'] ?? 0, 0, ',', '.') }}

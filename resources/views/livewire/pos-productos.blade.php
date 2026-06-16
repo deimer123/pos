@@ -1,10 +1,48 @@
-<div
-    style="width: 100%; height: 100%; display: flex; flex-direction: column; background: white;">
+<div style="width: 100%; height: 100%; display: flex; flex-direction: column; background: white;">
+    @php
+        $tipoNegocio = $empresaContexto['tipo_negocio'] ?? 'tienda';
+        $usaPeso = (bool) ($empresaContexto['usa_peso'] ?? false);
+        $usaVariantes = (bool) ($empresaContexto['usa_variantes'] ?? false);
+        $nombreEmpresa = $empresaContexto['nombre_empresa'] ?? null;
+        $etiquetaNegocio = match ($tipoNegocio) {
+            'carniceria' => 'Carniceria',
+            'almacen' => 'Almacen',
+            'restaurante' => 'Restaurante',
+            'bar' => 'Bar',
+            'panaderia' => 'Panaderia',
+            'farmacia' => 'Farmacia',
+            'servicios' => 'Servicios',
+            'mixto' => 'Mixto',
+            default => 'Tienda',
+        };
+        $placeholderBusqueda = $tipoNegocio === 'carniceria'
+            ? 'Buscar corte, codigo o producto por peso...'
+            : 'Buscar producto...';
+    @endphp
 
-    {{-- Ã°Å¸â€Â Buscador superior --}}
     <div style="padding: 1rem; border-bottom: 1px solid #ddd; text-align: center; font-weight: bold; font-size: 1.5rem;">
+        <div class="mb-3 flex flex-wrap items-center justify-center gap-2 text-xs font-semibold">
+            @if ($nombreEmpresa)
+                <span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-700">
+                    {{ $nombreEmpresa }}
+                </span>
+            @endif
+            <span class="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-700">
+                POS {{ $etiquetaNegocio }}
+            </span>
+            @if ($usaPeso)
+                <span class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700">
+                    Venta por peso activa
+                </span>
+            @endif
+            @if ($usaVariantes)
+                <span class="inline-flex items-center rounded-full border border-fuchsia-200 bg-fuchsia-50 px-3 py-1 text-fuchsia-700">
+                    Variantes habilitadas
+                </span>
+            @endif
+        </div>
 
-        <input type="text" wire:model.live="search" placeholder="Buscar producto..."
+        <input type="text" wire:model.live="search" placeholder="{{ $placeholderBusqueda }}"
             class="w-full p-2 border border-gray-300 rounded-full shadow focus:ring focus:ring-blue-200" />
 
         <script>
@@ -12,81 +50,86 @@
                 const input = document.querySelector('input[wire\\:model\\.live="search"]');
 
                 if (input) {
-                    // Establece el valor en blanco
                     input.value = '';
-
-                    // Dispara evento input para que Livewire lo sincronice
-                    input.dispatchEvent(new Event('input', {
-                        bubbles: true
-                    }));
-
-                    // Opcional: vuelve a enfocar el input para escribir mÃƒÂ¡s rÃƒÂ¡pido
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
                     input.focus();
                 }
             });
         </script>
-
     </div>
 
-    {{-- Ã°Å¸Â§Â± CuadrÃƒÂ­cula de productos --}}
     <div style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 1rem;">
         @forelse ($products as $product)
             @php
                 $tieneImagen = !empty($product->foto) && $product->foto !== 'NULL' && $product->foto !== null;
                 $urlImagen = $tieneImagen ? asset('storage/' . $product->foto) : asset('images/sin-imagen.png');
+                $modoVenta = match ($product->vende_por ?? 'unidad') {
+                    'peso' => 'Venta por peso',
+                    'porcion' => 'Venta por porcion',
+                    'litro' => 'Venta por litro',
+                    'metro' => 'Venta por metro',
+                    'hora' => 'Venta por hora',
+                    default => 'Venta por unidad',
+                };
+                $sufijoVenta = match ($product->vende_por ?? 'unidad') {
+                    'peso' => '/ kg',
+                    'porcion' => '/ porcion',
+                    'litro' => '/ lt',
+                    'metro' => '/ mt',
+                    'hora' => '/ hr',
+                    default => '/ und',
+                };
+                $stockUnidad = match ((int) ($product->id_unidad_de_medida ?? 1)) {
+                    2 => 'kg',
+                    3 => 'lt',
+                    4 => 'mt',
+                    5 => 'hr',
+                    default => 'und',
+                };
+                $decimalesStock = $stockUnidad === 'und' ? 0 : 2;
             @endphp
-            <div wire:key="producto-{{ $product->id_producto }}">
 
+            <div wire:key="producto-{{ $product->id_producto }}">
                 <div
-                    class="pos-product-card-desktop bg-white rounded-lg shadow p-2 border flex items-center justify-between gap-4
-                {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }}
-                {{ $product->existencias <= 0 ? 'opacity-60' : '' }}">
-                    {{-- Codigo --}}
+                    class="pos-product-card-desktop bg-white rounded-lg shadow p-2 border flex items-center justify-between gap-4 {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }} {{ $product->existencias <= 0 ? 'opacity-60' : '' }}">
                     <div class="w-20 text-xs text-gray-600 text-center">
                         <strong>{{ $product->id_producto }}</strong>
                     </div>
 
-                    {{-- Imagen --}}
                     <div class="w-20 flex-shrink-0">
-                        <img wire:click="$dispatch('ver-imagen', { url: @js($urlImagen) })"
-                            src="{{ $urlImagen }}"
+                        <img wire:click="$dispatch('ver-imagen', { url: @js($urlImagen) })" src="{{ $urlImagen }}"
                             class="w-16 h-16 object-cover border rounded cursor-pointer hover:opacity-80"
                             alt="Foto del producto" />
                     </div>
 
-                    {{-- Descripcion --}}
                     <div class="flex-1 text-sm text-gray-800">
-                        {{ $product->descripcion_larga }}
+                        <div>{{ $product->descripcion_larga }}</div>
+                        <div class="mt-1 flex flex-wrap gap-1 text-[11px]">
+                            <span class="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 font-semibold text-indigo-700">
+                                {{ $modoVenta }}
+                            </span>
+                            @if (!empty($product->permite_fraccion))
+                                <span class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 font-semibold text-emerald-700">
+                                    Fraccion
+                                </span>
+                            @endif
+                            @if ($usaVariantes && (int) ($product->variantes_count ?? 0) > 0)
+                                <span class="inline-flex items-center rounded-full border border-fuchsia-200 bg-fuchsia-50 px-2 py-0.5 font-semibold text-fuchsia-700">
+                                    {{ $product->variantes_count }} variante{{ (int) $product->variantes_count === 1 ? '' : 's' }}
+                                </span>
+                            @endif
+                        </div>
                     </div>
 
-                    {{-- Stock --}}
-                    <div class="w-20 text-xs {{ $product->existencias > 0 ? 'text-green-600' : 'text-red-600' }}">
-                        Stock: {{ $product->existencias }}
+                    <div class="w-24 text-xs {{ $product->existencias > 0 ? 'text-green-600' : 'text-red-600' }}">
+                        Stock: {{ number_format((float) $product->existencias, $decimalesStock, ',', '.') }} {{ $stockUnidad }}
                     </div>
 
-                    {{-- Precio --}}
                     <div class="w-24 text-sm font-bold text-right">
-                        ${{ number_format($product->precio_venta1, 0, ',', '.') }}
+                        <div>${{ number_format($product->precio_venta1, 0, ',', '.') }}</div>
+                        <div class="text-[11px] font-medium text-slate-500">{{ $sufijoVenta }}</div>
                     </div>
 
-                    @php
-                        $modoVenta = match ($product->vende_por ?? 'unidad') {
-                            'peso' => 'Peso',
-                            'porcion' => 'Porción',
-                            'litro' => 'Litro',
-                            'metro' => 'Metro',
-                            'hora' => 'Hora',
-                            default => 'Unidad',
-                        };
-                    @endphp
-
-                    <div class="w-24 text-center">
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                            {{ $modoVenta }}
-                        </span>
-                    </div>
-
-                    {{-- Boton --}}
                     <div class="w-24 text-center">
                         <button wire:click="agregarAlCarrito({{ $product->id_producto }})"
                             class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 text-xs rounded-full shadow">
@@ -96,16 +139,13 @@
                 </div>
 
                 <div
-                    class="pos-product-card-mobile bg-white rounded-lg shadow border
-                {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }}
-                {{ $product->existencias <= 0 ? 'opacity-60' : '' }}">
+                    class="pos-product-card-mobile bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }} {{ $product->existencias <= 0 ? 'opacity-60' : '' }}">
                     <div class="pos-mobile-product-code">
                         <strong>{{ $product->id_producto }}</strong>
                     </div>
 
                     <div class="pos-mobile-product-image">
-                        <img wire:click="$dispatch('ver-imagen', { url: @js($urlImagen) })"
-                            src="{{ $urlImagen }}"
+                        <img wire:click="$dispatch('ver-imagen', { url: @js($urlImagen) })" src="{{ $urlImagen }}"
                             alt="Foto del producto" />
                     </div>
 
@@ -115,14 +155,24 @@
                         </div>
                         <div class="pos-mobile-product-meta">
                             <span class="{{ $product->existencias > 0 ? 'text-green-600' : 'text-red-600' }}">
-                                Stock: {{ $product->existencias }}
+                                Stock: {{ number_format((float) $product->existencias, $decimalesStock, ',', '.') }} {{ $stockUnidad }}
                             </span>
-                            <strong>${{ number_format($product->precio_venta1, 0, ',', '.') }}</strong>
+                            <strong>${{ number_format($product->precio_venta1, 0, ',', '.') }} <span class="text-[11px] text-slate-500">{{ $sufijoVenta }}</span></strong>
                         </div>
-                        <div class="mt-1">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                        <div class="mt-1 flex flex-wrap gap-1">
+                            <span class="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700">
                                 {{ $modoVenta }}
                             </span>
+                            @if (!empty($product->permite_fraccion))
+                                <span class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                                    Fraccion
+                                </span>
+                            @endif
+                            @if ($usaVariantes && (int) ($product->variantes_count ?? 0) > 0)
+                                <span class="inline-flex items-center rounded-full border border-fuchsia-200 bg-fuchsia-50 px-2 py-0.5 text-[11px] font-semibold text-fuchsia-700">
+                                    Variantes: {{ $product->variantes_count }}
+                                </span>
+                            @endif
                         </div>
                     </div>
 
@@ -134,7 +184,6 @@
                     </div>
                 </div>
             </div>
-
         @empty
             <div class="p-4 space-y-4 min-h-[700px]">
                 No se encontraron productos.
@@ -142,7 +191,6 @@
         @endforelse
     </div>
 
-    {{-- Ã°Å¸â€“Â¼Ã¯Â¸Â Modal para ampliar imagen --}}
     <div x-data="{ imagenUrl: null }" @ver-imagen.window="imagenUrl = $event.detail.url">
         <div x-show="imagenUrl" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50" x-transition>
             <div @click.outside="imagenUrl = null"
@@ -151,6 +199,7 @@
             </div>
         </div>
     </div>
+
     @if ($mostrarModalProductoManual)
         <div x-data="{ open: @entangle('mostrarModalProductoManual') }" x-show="open"
             @keydown.escape.window="open = false; $wire.set('mostrarModalProductoManual', false)"
@@ -159,7 +208,6 @@
             <div class="bg-white rounded-xl shadow-lg p-6 w-[580px]">
                 <h2 class="text-lg font-bold text-gray-800 text-center mb-4">Agregar producto temporal</h2>
 
-                {{-- Tabla de campos --}}
                 <table class="w-full text-sm" style="width: 100%;">
                     <tr class="align-top">
                         <td style="width: 75%;" class="pr-4">
@@ -186,10 +234,9 @@
                     </tr>
                 </table>
 
-                {{-- Botones --}}
                 <div class="flex justify-center gap-6 mt-6">
                     <button @click="open = false; $wire.set('mostrarModalProductoManual', false)"
-                         class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-sm rounded-full shadow">
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-sm rounded-full shadow">
                         Cancelar
                     </button>
 
@@ -211,7 +258,4 @@
             });
         </script>
     @endonce
-    
-
-
 </div>

@@ -277,6 +277,12 @@ class CompraResource extends Resource
         $exist = \App\Models\Product::stock($pid);
         $set("detalles.$i.existencias_actuales", (int)$exist);
 
+        if (!empty($producto)) {
+            $set("detalles.$i.unidad_medida_label", static::unidadMedidaLabel((int) ($producto->id_unidad_de_medida ?? 1)));
+            $set("detalles.$i.modo_venta_label", static::modoVentaLabel((string) ($producto->vende_por ?? 'unidad')));
+            $set("detalles.$i.permite_decimal_cantidad", $producto->permiteCantidadDecimal());
+        }
+
     }
 })
 
@@ -413,7 +419,8 @@ class CompraResource extends Resource
         $p = \App\Models\Product::select([
             'id','id_producto','descripcion_larga',
             'precio_costo','descuento_comercial','iva_compra',
-            'precio_venta1','utilidad1'
+            'precio_venta1','utilidad1','id_unidad_de_medida',
+            'vende_por','permite_fraccion'
         ])->find($pidFromCode);
 
         if (! $p) return;
@@ -438,6 +445,9 @@ class CompraResource extends Resource
         $set('precio_venta', round($cIva * (1 + $util / 100), 2));
 
         $set('existencias_actuales', \App\Filament\Resources\CompraResource::stockActual($p->id));
+        $set('unidad_medida_label', static::unidadMedidaLabel((int) ($p->id_unidad_de_medida ?? 1)));
+        $set('modo_venta_label', static::modoVentaLabel((string) ($p->vende_por ?? 'unidad')));
+        $set('permite_decimal_cantidad', $p->permiteCantidadDecimal());
         static::recalcLinea($get, $set);
     })
 
@@ -597,7 +607,8 @@ class CompraResource extends Resource
             $p = \App\Models\Product::select([
                 'id','id_producto','descripcion_larga',
                 'precio_costo','descuento_comercial','iva_compra',
-                'precio_venta1','utilidad1','existencias'
+                'precio_venta1','utilidad1','existencias',
+                'id_unidad_de_medida','vende_por','permite_fraccion'
             ])->find($productId);
 
             if (! $p) {
@@ -626,6 +637,9 @@ class CompraResource extends Resource
             $set('precio_venta', round($cIva * (1 + (float)$p->utilidad1 / 100), 2));
 
             $set('existencias_actuales', \App\Filament\Resources\CompraResource::stockActual($p->id));
+            $set('unidad_medida_label', static::unidadMedidaLabel((int) ($p->id_unidad_de_medida ?? 1)));
+            $set('modo_venta_label', static::modoVentaLabel((string) ($p->vende_por ?? 'unidad')));
+            $set('permite_decimal_cantidad', $p->permiteCantidadDecimal());
             static::recalcLinea($get, $set);
         })
 )
@@ -639,7 +653,19 @@ TextInput::make('nombre_producto')
     ->disabled()
     ->dehydrated(true)
     ->extraInputAttributes(['class' => 'h-9 text-sm'])
-    ->columnSpan(7),
+    ->columnSpan(5),
+
+Placeholder::make('unidad_medida_info')
+    ->label('Unidad')
+    ->content(fn (Get $get) => $get('unidad_medida_label') ?: '-')
+    ->dehydrated(false)
+    ->columnSpan(2),
+
+Placeholder::make('modo_venta_info')
+    ->label('Modo')
+    ->content(fn (Get $get) => $get('modo_venta_label') ?: '-')
+    ->dehydrated(false)
+    ->columnSpan(2),
 
 Placeholder::make('existencias_inline')
     ->label('Exist.')
@@ -772,6 +798,9 @@ TextInput::make('precio_venta')
         ->minValue(0.01)
         ->default(1)
         ->lazy()
+        ->step(fn (Get $get) => $get('permite_decimal_cantidad') ? '0.01' : '1')
+        ->inputMode(fn (Get $get) => $get('permite_decimal_cantidad') ? 'decimal' : 'numeric')
+        ->helperText(fn (Get $get) => $get('permite_decimal_cantidad') ? 'Acepta decimales para peso, fraccion o medida continua.' : 'Usa cantidades enteras para venta por unidad.')
         ->extraInputAttributes([
             'class' => 'h-8 text-xs text-center',
             'style' => 'max-width:120px',
@@ -799,6 +828,9 @@ TextInput::make('precio_venta')
 
             // Persistencia (FK y totales)
             Forms\Components\Hidden::make('id')->dehydrated(), // <-- NECESARIO para upsert
+            Forms\Components\Hidden::make('unidad_medida_label')->dehydrated(false),
+            Forms\Components\Hidden::make('modo_venta_label')->dehydrated(false),
+            Forms\Components\Hidden::make('permite_decimal_cantidad')->dehydrated(false),
             Forms\Components\Hidden::make('product_id')->required(),
             Forms\Components\Hidden::make('subtotal'),
             Forms\Components\Hidden::make('impuesto'),
@@ -1028,6 +1060,29 @@ TextInput::make('precio_venta')
             };
         }
         return '$ ' . number_format($sum, 0, ',', '.');
+    }
+
+    protected static function unidadMedidaLabel(int $unidadId): string
+    {
+        return match ($unidadId) {
+            2 => 'Kilogramos (kg)',
+            3 => 'Litros (lt)',
+            4 => 'Metros (mt)',
+            5 => 'Horas (hr)',
+            default => 'Pieza (und)',
+        };
+    }
+
+    protected static function modoVentaLabel(string $modo): string
+    {
+        return match ($modo) {
+            'peso' => 'Compra para venta por peso',
+            'porcion' => 'Compra para venta por porcion',
+            'litro' => 'Compra para venta por litro',
+            'metro' => 'Compra para venta por metro',
+            'hora' => 'Compra para venta por hora',
+            default => 'Compra para venta por unidad',
+        };
     }
 
     /** ----------------- Tabla (Listado) ----------------- */

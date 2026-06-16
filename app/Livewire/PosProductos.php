@@ -3,11 +3,19 @@
 
 namespace App\Livewire;
 
+use App\Models\ConfiguracionEmpresa;
 use App\Models\Product;
 use Livewire\Component;
 
 class PosProductos extends Component
 {
+    public array $empresaContexto = [
+        'tipo_negocio' => 'tienda',
+        'usa_peso' => false,
+        'usa_variantes' => false,
+        'nombre_empresa' => null,
+    ];
+
     private function textoUtf8($valor): string
     {
         $texto = (string) ($valor ?? '');
@@ -46,6 +54,7 @@ class PosProductos extends Component
             'nombre' => '',
             'precio' => '',
         ];
+        $this->cargarContextoEmpresa();
     }
 
     protected $listeners = ['limpiar-input-busqueda' => 'limpiarBusqueda', 'agregarManual'];
@@ -75,7 +84,8 @@ class PosProductos extends Component
             ->orderByRaw('existencias > 0 DESC') // 🟢 primero los que tienen stock
             ->orderByDesc('existencias')         // 🔽 luego por mayor cantidad
             ->with('alternateCodes')
-                        ->take(40)
+            ->withCount('variantes')
+            ->take(40)
             ->get()
             ->map(function ($product) {
                 $product->descripcion_larga = $this->textoUtf8($product->descripcion_larga);
@@ -86,6 +96,7 @@ class PosProductos extends Component
 
         return view('livewire.pos-productos', [
             'products' => $query,
+            'empresaContexto' => $this->empresaContexto,
         ]);
     }
 
@@ -184,5 +195,30 @@ public function updatedSearch($value)
 
         // Fallback: usar el ID del usuario si no hay empresa_id
         return $user->id;
+    }
+
+    private function cargarContextoEmpresa(): void
+    {
+        $user = auth()->user();
+
+        if (! $user) {
+            return;
+        }
+
+        $empresaId = $this->getEmpresaId($user);
+        $config = ConfiguracionEmpresa::query()
+            ->where('empresa_id', $empresaId)
+            ->first();
+
+        if (! $config) {
+            return;
+        }
+
+        $this->empresaContexto = [
+            'tipo_negocio' => (string) ($config->tipo_negocio ?: 'tienda'),
+            'usa_peso' => (bool) $config->usa_peso,
+            'usa_variantes' => (bool) $config->usa_variantes,
+            'nombre_empresa' => $this->textoUtf8($config->nombre_empresa),
+        ];
     }
 }
