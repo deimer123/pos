@@ -62,9 +62,18 @@
                         </div>
 
                         <div class="flex h-[56px] w-full items-center justify-center self-center overflow-hidden px-1">
-                            <div class="w-full max-h-[56px] overflow-hidden text-center text-[8px] leading-[1.02] text-slate-700 break-words" style="display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;">
-                                {{ $product->descripcion_larga }}
-                            </div>
+                            <button type="button"
+                                title="{{ $product->descripcion_larga }}"
+                                @click="$dispatch('ver-nombre-producto', { nombre: @js($product->descripcion_larga) })"
+                                class="group relative flex h-full w-full items-center justify-center">
+                                <div class="w-full max-h-[56px] overflow-hidden text-center text-[8px] leading-[1.02] text-slate-700 break-words" style="display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;">
+                                    {{ $product->descripcion_larga }}
+                                </div>
+
+                                <div class="pointer-events-none absolute left-1/2 top-full z-20 mt-2 hidden w-[210px] -translate-x-1/2 rounded-lg bg-slate-800 px-3 py-2 text-[11px] leading-tight text-white shadow-lg md:group-hover:block">
+                                    {{ $product->descripcion_larga }}
+                                </div>
+                            </button>
                         </div>
 
                         <div class="flex h-[40px] items-center justify-center self-center">
@@ -100,9 +109,14 @@
                         </div>
 
                         <div class="mt-1 flex w-full min-h-[2.8rem] items-center justify-center overflow-hidden px-1">
-                            <div class="max-h-[2.8rem] overflow-hidden text-center text-[7px] leading-[1] text-slate-700 break-words" style="display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;">
-                                {{ $product->descripcion_larga }}
-                            </div>
+                            <button type="button"
+                                title="{{ $product->descripcion_larga }}"
+                                @click="$dispatch('ver-nombre-producto', { nombre: @js($product->descripcion_larga) })"
+                                class="flex h-full w-full items-center justify-center">
+                                <div class="max-h-[2.8rem] overflow-hidden text-center text-[7px] leading-[1] text-slate-700 break-words" style="display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;">
+                                    {{ $product->descripcion_larga }}
+                                </div>
+                            </button>
                         </div>
 
                         <div class="mt-1 flex min-h-[30px] items-center justify-center text-center">
@@ -138,6 +152,23 @@
             <div @click.outside="imagenUrl = null"
                 class="bg-white p-3 rounded shadow w-[300px] h-[300px] flex items-center justify-center">
                 <img :src="imagenUrl" class="w-60 h-60 object-contain rounded shadow" alt="Vista previa" />
+            </div>
+        </div>
+    </div>
+
+    <div x-data="{ nombreProducto: null }" @ver-nombre-producto.window="nombreProducto = $event.detail.nombre">
+        <div x-show="nombreProducto" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" x-transition>
+            <div @click.outside="nombreProducto = null" class="w-full max-w-sm rounded-xl bg-white p-4 shadow-lg">
+                <div class="text-center text-sm font-semibold text-slate-800">
+                    <span x-text="nombreProducto"></span>
+                </div>
+
+                <div class="mt-4 flex justify-center">
+                    <button @click="nombreProducto = null"
+                        class="rounded-full bg-indigo-600 px-4 py-2 text-sm text-white shadow hover:bg-indigo-700">
+                        Cerrar
+                    </button>
+                </div>
             </div>
         </div>
     </div>
