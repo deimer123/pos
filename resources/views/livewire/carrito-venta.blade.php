@@ -453,7 +453,7 @@
                     <th class="px-1 py-1 text-left w-14">Codigo</th>
                     <th class="px-1 py-1 text-left">Producto</th>
                     <th class="px-1 py-1 text-center w-14">Cant.</th>
-                    <th class="px-1 py-1 text-center w-14">Precio</th>
+                    <th class="px-1 py-1 text-center w-20">Precio</th>
                     <th class="px-1 py-1 text-center w-16">Subtotal</th>
                     <th class="px-1 py-1 text-center w-24">Accion</th>
                 </tr>
@@ -490,9 +490,9 @@
                                 style="width: 58px; height: 24px; font-size: 11px; padding: 0 3px;" />
                         </td>
                         <td class="px-1 py-0.5 border text-center whitespace-nowrap">
-                            <div class="whitespace-nowrap text-[12px] leading-none">
+                            <div class="whitespace-nowrap text-[11px] leading-none">
                                 <span>${{ number_format(round($item['nuevo_precio'] ?? ($item['precio'] ?? 0)), 0, ',', '.') }}</span>
-                                <span class="text-[10px] font-medium text-slate-500">{{ $sufijoVenta }}</span>
+                                <span class="text-[9px] font-medium text-slate-500">{{ $sufijoVenta }}</span>
                             </div>
                         </td>
                         <td class="px-1 py-0.5 border text-center font-semibold text-indigo-600 whitespace-nowrap">
