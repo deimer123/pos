@@ -50,49 +50,47 @@
             <div wire:key="producto-{{ $product->id_producto }}" class="h-full">
                 <div
                     class="pos-product-card-desktop h-full bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }} {{ $product->existencias <= 0 ? 'opacity-60' : '' }}">
-                    <div class="flex h-full flex-col items-center px-2.5 py-2 text-center" style="min-height: 210px;">
-                        <div class="text-[11px] font-semibold text-slate-500 min-h-[16px]">
+                    <div class="flex h-full flex-col items-center px-3 py-3 text-center" style="min-height: 228px;">
+                        <div class="inline-flex min-h-[20px] min-w-[58px] items-center justify-center rounded-full bg-slate-100 px-2.5 text-[11px] font-semibold text-slate-600 shadow-sm">
                             {{ $product->id_producto }}
                         </div>
 
-                        <div class="mt-2 flex min-h-[48px] items-center justify-center">
+                        <div class="mt-2 flex h-[48px] items-center justify-center">
                             <img wire:click="$dispatch('ver-imagen', { url: @js($urlImagen) })" src="{{ $urlImagen }}"
                                 class="w-12 h-12 object-cover border rounded cursor-pointer hover:opacity-80"
                                 alt="Foto del producto" />
                         </div>
 
-                        <div class="mt-2 flex w-full min-h-[2.5rem] items-center justify-center px-1">
+                        <div class="mt-2 flex h-[40px] w-full items-center justify-center px-1">
                             <div class="overflow-hidden text-center text-[11px] leading-tight text-slate-700 break-words" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
                                 {{ $product->descripcion_larga }}
                             </div>
                         </div>
 
-                        <div class="mt-2 flex min-h-[34px] items-center justify-center">
-                            <div class="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[13px] font-extrabold text-indigo-700 whitespace-nowrap shadow-sm">
+                        <div class="mt-2 flex h-[40px] items-center justify-center">
+                            <div class="inline-flex min-w-[118px] items-center justify-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-[13px] font-extrabold text-indigo-700 whitespace-nowrap shadow-sm">
                                 <span>${{ number_format($product->precio_venta1, 0, ',', '.') }}</span>
                                 <span class="text-[9px] font-semibold text-indigo-500">{{ $sufijoVenta }}</span>
                             </div>
                         </div>
 
-                        <div class="mt-2 flex w-full flex-col items-center gap-1.5">
+                        <div class="mt-2 flex h-[54px] w-full flex-col items-center justify-start gap-1.5">
                             <button wire:click="agregarAlCarrito({{ $product->id_producto }})"
                                 class="w-[84px] bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 text-[11px] rounded-full shadow">
                                 Agregar
                             </button>
 
-                            <div class="flex min-h-[22px] items-center justify-center text-[10px] leading-tight text-center whitespace-nowrap {{ $product->existencias > 0 ? 'text-green-600' : 'text-red-600' }}">
+                            <div class="flex h-[20px] items-center justify-center text-[10px] leading-tight text-center whitespace-nowrap {{ $product->existencias > 0 ? 'text-green-600' : 'text-red-600' }}">
                                 Stock: {{ number_format((float) $product->existencias, $decimalesStock, ',', '.') }} {{ $stockUnidad }}
                             </div>
                         </div>
-
-                        <div class="mt-auto"></div>
                     </div>
                 </div>
 
                 <div
                     class="pos-product-card-mobile h-full bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }} {{ $product->existencias <= 0 ? 'opacity-60' : '' }}">
                     <div class="flex h-full flex-col items-center px-2 py-2.5 text-center" style="min-height: 168px;">
-                        <div class="text-[11px] font-semibold text-slate-500 min-h-[16px]">
+                        <div class="inline-flex min-h-[18px] min-w-[50px] items-center justify-center rounded-full bg-slate-100 px-2 text-[10px] font-semibold text-slate-600 shadow-sm">
                             {{ $product->id_producto }}
                         </div>
 
@@ -107,8 +105,8 @@
                             </div>
                         </div>
 
-                        <div class="mt-1 flex min-h-[28px] items-center justify-center text-center">
-                            <div class="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[11px] font-extrabold text-indigo-700 whitespace-nowrap shadow-sm">
+                        <div class="mt-1 flex min-h-[30px] items-center justify-center text-center">
+                            <div class="inline-flex min-w-[92px] items-center justify-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11px] font-extrabold text-indigo-700 whitespace-nowrap shadow-sm">
                                 <span>${{ number_format($product->precio_venta1, 0, ',', '.') }}</span>
                                 <span class="text-[8px] font-semibold text-indigo-500">{{ $sufijoVenta }}</span>
                             </div>
