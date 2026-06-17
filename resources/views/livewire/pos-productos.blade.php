@@ -102,11 +102,13 @@
                         </div>
 
                         <div class="relative z-10 mt-1 flex w-full min-h-[2rem] items-center justify-center overflow-hidden bg-white px-1">
-                            <div title="{{ $product->descripcion_larga }}"
-                                class="h-[2rem] overflow-hidden text-center text-[6px] leading-[1] text-slate-700 break-words cursor-default"
+                            <button type="button"
+                                title="{{ $product->descripcion_larga }}"
+                                @click="$dispatch('ver-nombre-producto-mobile', { nombre: @js($product->descripcion_larga) })"
+                                class="h-[2rem] overflow-hidden text-center text-[6px] leading-[1] text-slate-700 break-words"
                                 style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-overflow: ellipsis;">
                                 {{ $product->descripcion_larga }}
-                            </div>
+                            </button>
                         </div>
 
                         <div class="relative z-10 mt-1 flex min-h-[30px] items-center justify-center bg-white text-center">
@@ -142,6 +144,20 @@
             <div @click.outside="imagenUrl = null"
                 class="bg-white p-3 rounded shadow w-[300px] h-[300px] flex items-center justify-center">
                 <img :src="imagenUrl" class="w-60 h-60 object-contain rounded shadow" alt="Vista previa" />
+            </div>
+        </div>
+    </div>
+
+    <div x-data="{ nombreProductoMobile: null }" @ver-nombre-producto-mobile.window="nombreProductoMobile = $event.detail.nombre">
+        <div x-show="nombreProductoMobile" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" x-transition>
+            <div @click.outside="nombreProductoMobile = null" class="w-full max-w-sm rounded-xl bg-white p-4 shadow-lg">
+                <div class="text-center text-sm font-semibold text-slate-800 break-words" x-text="nombreProductoMobile"></div>
+                <div class="mt-4 flex justify-center">
+                    <button @click="nombreProductoMobile = null"
+                        class="rounded-full bg-indigo-600 px-4 py-2 text-sm text-white shadow hover:bg-indigo-700">
+                        Cerrar
+                    </button>
+                </div>
             </div>
         </div>
     </div>

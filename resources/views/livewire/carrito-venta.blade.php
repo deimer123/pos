@@ -468,7 +468,12 @@
                         <td class="px-1 py-0.5 border">{{ $item['id_producto'] ?? '-' }}</td>
                         <td class="px-1 py-0.5 border {{ ($item['existencias'] ?? 0) <= 0 ? 'text-red-600 font-semibold' : '' }}"
                             title="Existencias: {{ $item['existencias'] ?? 0 }}">
-                            <div class="truncate">{{ $item['nombre'] }}</div>
+                            <button type="button"
+                                title="{{ $item['nombre'] }}"
+                                @click="$dispatch('ver-nombre-carrito-mobile', { nombre: @js($item['nombre']) })"
+                                class="block w-full truncate text-left">
+                                {{ $item['nombre'] }}
+                            </button>
                         </td>
                         <td class="px-1 py-0.5 border text-center">
                             <input type="number"
@@ -651,8 +656,8 @@
             </button>
         </div>
 
-        <div class="pos-cart-mobile-more" x-data="{ open: false }" wire:key="mobile-actions-root-{{ $cajaEstado }}">
-            <button type="button" class="pos-cart-mobile-more-button" @click="open = !open">
+    <div class="pos-cart-mobile-more" x-data="{ open: false }" wire:key="mobile-actions-root-{{ $cajaEstado }}">
+        <button type="button" class="pos-cart-mobile-more-button" @click="open = !open">
                 Acciones
             </button>
 
@@ -697,6 +702,20 @@
                 <button type="button" wire:key="mobile-action-ver" @click.prevent.stop="open = false; $wire.verPrefacturas();">
                     Ver
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <div x-data="{ nombreCarritoMobile: null }" @ver-nombre-carrito-mobile.window="nombreCarritoMobile = $event.detail.nombre">
+        <div x-show="nombreCarritoMobile" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" x-transition>
+            <div @click.outside="nombreCarritoMobile = null" class="w-full max-w-sm rounded-xl bg-white p-4 shadow-lg">
+                <div class="text-center text-sm font-semibold text-slate-800 break-words" x-text="nombreCarritoMobile"></div>
+                <div class="mt-4 flex justify-center">
+                    <button @click="nombreCarritoMobile = null"
+                        class="rounded-full bg-indigo-600 px-4 py-2 text-sm text-white shadow hover:bg-indigo-700">
+                        Cerrar
+                    </button>
+                </div>
             </div>
         </div>
     </div>
