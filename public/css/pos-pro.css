@@ -2629,25 +2629,24 @@ button:hover {
         height: 32px !important;
         padding: 0 8px !important;
         border-radius: 999px !important;
-        background: #111827 !important;
-        color: transparent !important;
-        font-size: 0 !important;
+        background: #4338ca !important;
+        color: #ffffff !important;
+        font-size: 12px !important;
+        font-weight: 800 !important;
         overflow: hidden !important;
         position: relative !important;
-        text-indent: -9999px !important;
+        text-indent: 0 !important;
     }
 
     .pos-cart-component .pos-cart-mobile-more-button::before {
-        content: '' !important;
-        position: absolute !important;
-        left: 50% !important;
-        top: 50% !important;
-        width: 15px !important;
-        height: 2px !important;
-        border-radius: 999px !important;
-        background: #ffffff !important;
-        box-shadow: 0 -5px 0 #ffffff, 0 5px 0 #ffffff !important;
-        transform: translate(-50%, -50%) !important;
+        content: 'Acciones' !important;
+        position: static !important;
+        width: auto !important;
+        height: auto !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        transform: none !important;
     }
 
     .pos-cart-component .pos-cart-mobile-more-menu {
