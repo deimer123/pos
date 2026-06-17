@@ -87,14 +87,22 @@
                 <div
                     class="pos-product-card-mobile bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }} {{ $product->existencias <= 0 ? 'opacity-60' : '' }}">
                     <div class="px-3 py-3">
-                        <div class="grid grid-cols-[48px_60px_minmax(0,1fr)_92px] items-center gap-3">
-                            <div class="text-[13px] text-center font-semibold text-slate-500">
-                                {{ $product->id_producto }}
+                        <div class="grid grid-cols-2 gap-x-3 gap-y-2 items-start">
+                            <div class="flex items-start gap-2 min-w-0">
+                                <div class="w-10 pt-1 text-[12px] text-center font-semibold text-slate-500">
+                                    {{ $product->id_producto }}
+                                </div>
+                                <div class="flex justify-center shrink-0">
+                                    <img wire:click="$dispatch('ver-imagen', { url: @js($urlImagen) })" src="{{ $urlImagen }}"
+                                        class="h-14 w-14 rounded border object-cover" alt="Foto del producto" />
+                                </div>
                             </div>
 
-                            <div class="flex justify-center">
-                                <img wire:click="$dispatch('ver-imagen', { url: @js($urlImagen) })" src="{{ $urlImagen }}"
-                                    class="h-14 w-14 rounded border object-cover" alt="Foto del producto" />
+                            <div class="min-w-0 pt-1 text-right">
+                                <div class="whitespace-nowrap text-[13px] font-bold text-slate-700">
+                                    ${{ number_format($product->precio_venta1, 0, ',', '.') }}
+                                    <span class="text-[9px] font-medium text-slate-500">{{ $sufijoVenta }}</span>
+                                </div>
                             </div>
 
                             <div class="min-w-0">
@@ -103,20 +111,15 @@
                                 </div>
                             </div>
 
-                            <div class="text-right">
-                                <div class="whitespace-nowrap text-[13px] font-bold text-slate-700">
-                                    ${{ number_format($product->precio_venta1, 0, ',', '.') }}
-                                    <span class="text-[9px] font-medium text-slate-500">{{ $sufijoVenta }}</span>
+                            <div class="flex flex-col items-end justify-between gap-2">
+                                <div class="text-[12px] text-right {{ $product->existencias > 0 ? 'text-green-600' : 'text-red-600' }}">
+                                    Stock: {{ number_format((float) $product->existencias, $decimalesStock, ',', '.') }} {{ $stockUnidad }}
                                 </div>
                                 <button wire:click="agregarAlCarrito({{ $product->id_producto }})"
-                                    class="mt-2 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 text-[12px] rounded-full shadow">
+                                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 text-[12px] rounded-full shadow">
                                     Agregar
                                 </button>
                             </div>
-                        </div>
-
-                        <div class="mt-2 pl-[111px] text-[12px] {{ $product->existencias > 0 ? 'text-green-600' : 'text-red-600' }}">
-                            Stock: {{ number_format((float) $product->existencias, $decimalesStock, ',', '.') }} {{ $stockUnidad }}
                         </div>
                     </div>
                 </div>
