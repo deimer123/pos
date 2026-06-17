@@ -61,8 +61,8 @@
                                 alt="Foto del producto" />
                         </div>
 
-                        <div class="flex h-[56px] w-full items-center justify-center self-center px-1">
-                            <div class="w-full overflow-hidden text-center text-[9px] leading-[1.05] text-slate-700 break-words" style="display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;">
+                        <div class="flex h-[56px] w-full items-center justify-center self-center overflow-hidden px-1">
+                            <div class="w-full max-h-[56px] overflow-hidden text-center text-[8px] leading-[1.02] text-slate-700 break-words" style="display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;">
                                 {{ $product->descripcion_larga }}
                             </div>
                         </div>
@@ -99,8 +99,8 @@
                                 class="h-10 w-10 rounded border object-cover" alt="Foto del producto" />
                         </div>
 
-                        <div class="mt-1 flex w-full min-h-[2.8rem] items-center justify-center px-1">
-                            <div class="overflow-hidden text-center text-[8px] leading-[1.05] text-slate-700 break-words" style="display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;">
+                        <div class="mt-1 flex w-full min-h-[2.8rem] items-center justify-center overflow-hidden px-1">
+                            <div class="max-h-[2.8rem] overflow-hidden text-center text-[7px] leading-[1] text-slate-700 break-words" style="display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;">
                                 {{ $product->descripcion_larga }}
                             </div>
                         </div>
