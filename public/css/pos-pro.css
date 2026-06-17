@@ -1301,9 +1301,8 @@ button:hover {
     }
 
     .pos-cart-component > .pos-desktop-cart-actions {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        justify-content: space-between !important;
+        display: grid !important;
+        grid-template-columns: 1fr auto !important;
         align-items: center !important;
         gap: 8px !important;
         padding: 8px !important;
@@ -1312,32 +1311,69 @@ button:hover {
         box-shadow: none !important;
     }
 
-    .pos-cart-component > .pos-desktop-cart-actions > .pos-cart-secondary-action {
-        display: inline-flex !important;
-        flex: 0 0 auto !important;
-    }
-
+    .pos-cart-component > .pos-desktop-cart-actions > .pos-cart-secondary-action,
     .pos-cart-component > .pos-desktop-cart-actions > .flex.gap-2 {
-        display: flex !important;
-        flex: 1 1 100% !important;
-        flex-wrap: wrap !important;
-        gap: 8px !important;
-        justify-content: flex-end !important;
+        display: none !important;
     }
 
-    .pos-cart-component > .pos-desktop-cart-actions > .flex.gap-2 .pos-cart-secondary-action,
-    .pos-cart-component > .pos-desktop-cart-actions > .flex.gap-2 .pos-cart-main-action {
+    .pos-cart-component > .pos-desktop-cart-actions .pos-cart-main-action {
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
-        min-width: 96px !important;
+        width: 100% !important;
+        min-width: 0 !important;
         height: 34px !important;
         padding: 0 10px !important;
         white-space: nowrap !important;
     }
 
     .pos-cart-component .pos-cart-mobile-more {
-        display: none !important;
+        display: block !important;
+        position: relative !important;
+        min-width: 88px !important;
+    }
+
+    .pos-cart-component .pos-cart-mobile-more-button {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+        min-width: 88px !important;
+        height: 34px !important;
+        padding: 0 10px !important;
+        border-radius: 999px !important;
+        background: #111827 !important;
+        color: #ffffff !important;
+        font-size: 0 !important;
+        overflow: hidden !important;
+        position: relative !important;
+        text-indent: -9999px !important;
+    }
+
+    .pos-cart-component .pos-cart-mobile-more-button::before {
+        content: '' !important;
+        position: absolute !important;
+        left: 50% !important;
+        top: 50% !important;
+        width: 15px !important;
+        height: 2px !important;
+        border-radius: 999px !important;
+        background: #ffffff !important;
+        box-shadow: 0 -5px 0 #ffffff, 0 5px 0 #ffffff !important;
+        transform: translate(-50%, -50%) !important;
+    }
+
+    .pos-cart-component .pos-cart-mobile-more-menu {
+        z-index: 700 !important;
+    }
+
+    .pos-cart-mobile-more-menu button {
+        background: #475569 !important;
+        color: #ffffff !important;
+        min-height: 34px !important;
+        font-size: 12px !important;
+        font-weight: 800 !important;
+        text-align: left !important;
     }
 
     .pos-products-grid {
@@ -1351,10 +1387,14 @@ button:hover {
 
     .pos-product-card-mobile {
         display: block !important;
-        min-height: 168px !important;
+        min-height: 176px !important;
         padding: 0 !important;
         width: 100% !important;
         box-sizing: border-box !important;
+    }
+
+    .pos-product-card-mobile > div {
+        min-height: 176px !important;
     }
 }
 /* POS JS injected action buttons */
