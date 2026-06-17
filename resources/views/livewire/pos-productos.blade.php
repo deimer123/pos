@@ -50,8 +50,8 @@
             <div wire:key="producto-{{ $product->id_producto }}" class="h-full">
                 <div
                     class="pos-product-card-desktop h-full bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }} {{ $product->existencias <= 0 ? 'opacity-60' : '' }}">
-                    <div class="grid h-full justify-items-center px-3 py-3 text-center" style="min-height: 228px; grid-template-rows: 24px 52px 44px 42px 58px;">
-                        <div class="inline-flex min-h-[20px] min-w-[58px] items-center justify-center self-center rounded-full bg-slate-100 px-2.5 text-[11px] font-semibold text-slate-600 shadow-sm">
+                    <div class="grid h-full justify-items-center px-3 py-3 text-center" style="min-height: 244px; grid-template-rows: 24px 52px 60px 42px 58px;">
+                        <div class="inline-flex min-h-[20px] min-w-[58px] items-center justify-center self-center rounded-full bg-slate-300 px-2.5 text-[11px] font-semibold text-slate-700 shadow-sm">
                             {{ $product->id_producto }}
                         </div>
 
@@ -61,8 +61,8 @@
                                 alt="Foto del producto" />
                         </div>
 
-                        <div class="flex h-[40px] w-full items-center justify-center self-center px-1">
-                            <div class="w-full overflow-hidden text-center text-[11px] leading-tight text-slate-700 break-words" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                        <div class="flex h-[56px] w-full items-center justify-center self-center px-1">
+                            <div class="w-full overflow-hidden text-center text-[10px] leading-[1.15] text-slate-700 break-words" style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;">
                                 {{ $product->descripcion_larga }}
                             </div>
                         </div>
@@ -90,7 +90,7 @@
                 <div
                     class="pos-product-card-mobile h-full bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }} {{ $product->existencias <= 0 ? 'opacity-60' : '' }}">
                     <div class="flex h-full flex-col items-center px-2 py-2.5 text-center" style="min-height: 168px;">
-                        <div class="inline-flex min-h-[18px] min-w-[50px] items-center justify-center rounded-full bg-slate-100 px-2 text-[10px] font-semibold text-slate-600 shadow-sm">
+                        <div class="inline-flex min-h-[18px] min-w-[50px] items-center justify-center rounded-full bg-slate-300 px-2 text-[10px] font-semibold text-slate-700 shadow-sm">
                             {{ $product->id_producto }}
                         </div>
 
@@ -99,8 +99,8 @@
                                 class="h-10 w-10 rounded border object-cover" alt="Foto del producto" />
                         </div>
 
-                        <div class="mt-1 flex w-full min-h-[2.2rem] items-center justify-center px-1">
-                            <div class="overflow-hidden text-center text-[10px] leading-tight text-slate-700 break-words" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                        <div class="mt-1 flex w-full min-h-[2.8rem] items-center justify-center px-1">
+                            <div class="overflow-hidden text-center text-[9px] leading-[1.15] text-slate-700 break-words" style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;">
                                 {{ $product->descripcion_larga }}
                             </div>
                         </div>
