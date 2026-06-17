@@ -50,7 +50,7 @@
             <div wire:key="producto-{{ $product->id_producto }}" class="h-full">
                 <div
                     class="pos-product-card-desktop h-full bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }} {{ $product->existencias <= 0 ? 'opacity-60' : '' }}">
-                    <div class="grid h-full justify-items-center px-3 py-3 text-center" style="min-height: 244px; grid-template-rows: 24px 52px 48px 42px 64px;">
+                    <div class="grid h-full justify-items-center px-3 py-3 text-center" style="min-height: 244px; grid-template-rows: 24px 52px 40px 42px 72px;">
                         <div class="inline-flex min-h-[20px] min-w-[58px] items-center justify-center self-center rounded-full bg-slate-300 px-2.5 text-[11px] font-semibold text-slate-700 shadow-sm">
                             {{ $product->id_producto }}
                         </div>
@@ -61,10 +61,10 @@
                                 alt="Foto del producto" />
                         </div>
 
-                        <div class="flex h-[44px] w-full items-center justify-center self-center overflow-hidden px-1">
+                        <div class="relative z-10 flex h-[36px] w-full items-center justify-center self-center overflow-hidden bg-white px-1">
                             <div title="{{ $product->descripcion_larga }}"
-                                class="h-[44px] w-full overflow-hidden text-center text-[7px] leading-[1] text-slate-700 break-words cursor-default"
-                                style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; text-overflow: ellipsis;">
+                                class="h-[36px] w-full overflow-hidden text-center text-[7px] leading-[1] text-slate-700 break-words cursor-default"
+                                style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-overflow: ellipsis;">
                                 {{ $product->descripcion_larga }}
                             </div>
                         </div>
@@ -76,7 +76,7 @@
                             </div>
                         </div>
 
-                        <div class="relative z-10 flex h-[64px] w-full flex-col items-center justify-center self-center gap-2 bg-white">
+                        <div class="relative z-10 flex h-[72px] w-full flex-col items-center justify-center self-center gap-2.5 bg-white">
                             <button wire:click="agregarAlCarrito({{ $product->id_producto }})"
                                 class="w-[84px] bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 text-[11px] rounded-full shadow">
                                 Agregar
@@ -101,10 +101,10 @@
                                 class="h-10 w-10 rounded border object-cover" alt="Foto del producto" />
                         </div>
 
-                        <div class="mt-1 flex w-full min-h-[2.2rem] items-center justify-center overflow-hidden px-1">
+                        <div class="relative z-10 mt-1 flex w-full min-h-[2rem] items-center justify-center overflow-hidden bg-white px-1">
                             <div title="{{ $product->descripcion_larga }}"
-                                class="h-[2.2rem] overflow-hidden text-center text-[6px] leading-[1] text-slate-700 break-words cursor-default"
-                                style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; text-overflow: ellipsis;">
+                                class="h-[2rem] overflow-hidden text-center text-[6px] leading-[1] text-slate-700 break-words cursor-default"
+                                style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-overflow: ellipsis;">
                                 {{ $product->descripcion_larga }}
                             </div>
                         </div>
