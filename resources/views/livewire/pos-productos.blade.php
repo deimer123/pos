@@ -63,7 +63,7 @@
                             </div>
 
                             <div class="min-w-0 text-sm text-gray-800">
-                                <div class="overflow-hidden text-center text-[12px] leading-tight break-words" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 1.9rem;">
+                                <div class="overflow-hidden text-center text-[11px] leading-tight break-words" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 1.7rem;">
                                     {{ $product->descripcion_larga }}
                                 </div>
                             </div>
@@ -77,13 +77,13 @@
 
                             <div class="text-center">
                                 <button wire:click="agregarAlCarrito({{ $product->id_producto }})"
-                                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 text-[11px] rounded-full shadow">
+                                    class="w-[72px] bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 text-[11px] rounded-full shadow">
                                     Agregar
                                 </button>
                             </div>
                         </div>
 
-                        <div class="mt-1.5 text-center text-[11px] {{ $product->existencias > 0 ? 'text-green-600' : 'text-red-600' }}">
+                        <div class="mt-1.5 text-center text-[10px] {{ $product->existencias > 0 ? 'text-green-600' : 'text-red-600' }}">
                             Stock: {{ number_format((float) $product->existencias, $decimalesStock, ',', '.') }} {{ $stockUnidad }}
                         </div>
                     </div>
@@ -103,7 +103,7 @@
                             </div>
 
                             <div class="w-full px-1">
-                                <div class="overflow-hidden text-center text-[11px] leading-tight text-slate-700 break-words" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 2rem;">
+                                <div class="overflow-hidden text-center text-[10px] leading-tight text-slate-700 break-words" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 1.8rem;">
                                     {{ $product->descripcion_larga }}
                                 </div>
                             </div>
@@ -118,11 +118,11 @@
 
                         <div class="mt-2 flex w-full flex-col items-center gap-1.5">
                             <button wire:click="agregarAlCarrito({{ $product->id_producto }})"
-                                class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 text-[11px] rounded-full shadow">
+                                class="w-[78px] bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 text-[11px] rounded-full shadow">
                                 Agregar
                             </button>
 
-                            <div class="text-[11px] text-center {{ $product->existencias > 0 ? 'text-green-600' : 'text-red-600' }}">
+                            <div class="text-[10px] text-center {{ $product->existencias > 0 ? 'text-green-600' : 'text-red-600' }}">
                                 Stock: {{ number_format((float) $product->existencias, $decimalesStock, ',', '.') }} {{ $stockUnidad }}
                             </div>
                         </div>
