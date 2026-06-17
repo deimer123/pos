@@ -63,14 +63,16 @@
                             </div>
 
                             <div class="min-w-0 text-sm text-gray-800">
-                                <div class="overflow-hidden text-[13px] leading-tight break-words" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 2.1rem;">
+                                <div class="overflow-hidden text-center text-[13px] leading-tight break-words" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 2.1rem;">
                                     {{ $product->descripcion_larga }}
                                 </div>
                             </div>
 
-                            <div class="text-sm font-bold text-right whitespace-nowrap">
-                                <span>${{ number_format($product->precio_venta1, 0, ',', '.') }}</span>
-                                <span class="text-[10px] font-medium text-slate-500">{{ $sufijoVenta }}</span>
+                            <div class="text-center">
+                                <div class="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-[15px] font-extrabold text-indigo-700 whitespace-nowrap shadow-sm">
+                                    <span>${{ number_format($product->precio_venta1, 0, ',', '.') }}</span>
+                                    <span class="text-[10px] font-semibold text-indigo-500">{{ $sufijoVenta }}</span>
+                                </div>
                             </div>
 
                             <div class="text-center">
@@ -81,7 +83,7 @@
                             </div>
                         </div>
 
-                        <div class="mt-2 pl-[131px] text-xs {{ $product->existencias > 0 ? 'text-green-600' : 'text-red-600' }}">
+                        <div class="mt-2 text-center text-xs {{ $product->existencias > 0 ? 'text-green-600' : 'text-red-600' }}">
                             Stock: {{ number_format((float) $product->existencias, $decimalesStock, ',', '.') }} {{ $stockUnidad }}
                         </div>
                     </div>
@@ -101,21 +103,21 @@
                                 </div>
                             </div>
 
-                            <div class="min-w-0 pt-1 text-right">
-                                <div class="whitespace-nowrap text-[13px] font-bold text-slate-700">
-                                    ${{ number_format($product->precio_venta1, 0, ',', '.') }}
-                                    <span class="text-[9px] font-medium text-slate-500">{{ $sufijoVenta }}</span>
+                            <div class="min-w-0 pt-1 text-center">
+                                <div class="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[13px] font-extrabold text-indigo-700 whitespace-nowrap shadow-sm">
+                                    <span>${{ number_format($product->precio_venta1, 0, ',', '.') }}</span>
+                                    <span class="text-[9px] font-semibold text-indigo-500">{{ $sufijoVenta }}</span>
                                 </div>
                             </div>
 
                             <div class="min-w-0">
-                                <div class="overflow-hidden text-[12px] leading-tight text-slate-700 break-words" style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; min-height: 2.9rem;">
+                                <div class="overflow-hidden text-center text-[12px] leading-tight text-slate-700 break-words" style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; min-height: 2.9rem;">
                                     {{ $product->descripcion_larga }}
                                 </div>
                             </div>
 
-                            <div class="flex flex-col items-end justify-between gap-2">
-                                <div class="text-[12px] text-right {{ $product->existencias > 0 ? 'text-green-600' : 'text-red-600' }}">
+                            <div class="flex flex-col items-center justify-between gap-2">
+                                <div class="text-[12px] text-center {{ $product->existencias > 0 ? 'text-green-600' : 'text-red-600' }}">
                                     Stock: {{ number_format((float) $product->existencias, $decimalesStock, ',', '.') }} {{ $stockUnidad }}
                                 </div>
                                 <button wire:click="agregarAlCarrito({{ $product->id_producto }})"
