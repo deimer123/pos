@@ -490,8 +490,10 @@
                                 style="width: 58px; height: 24px; font-size: 11px; padding: 0 3px;" />
                         </td>
                         <td class="px-1 py-0.5 border text-center whitespace-nowrap">
-                            <div>${{ number_format(round($item['nuevo_precio'] ?? ($item['precio'] ?? 0)), 0, ',', '.') }}</div>
-                            <div class="text-[10px] font-medium text-slate-500">{{ $sufijoVenta }}</div>
+                            <div class="whitespace-nowrap text-[12px] leading-none">
+                                <span>${{ number_format(round($item['nuevo_precio'] ?? ($item['precio'] ?? 0)), 0, ',', '.') }}</span>
+                                <span class="text-[10px] font-medium text-slate-500">{{ $sufijoVenta }}</span>
+                            </div>
                         </td>
                         <td class="px-1 py-0.5 border text-center font-semibold text-indigo-600 whitespace-nowrap">
                             ${{ number_format($item['total'] ?? 0, 0, ',', '.') }}

@@ -48,35 +48,37 @@
 
             <div wire:key="producto-{{ $product->id_producto }}">
                 <div
-                    class="pos-product-card-desktop bg-white rounded-lg shadow p-2 border flex items-center justify-between gap-4 {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }} {{ $product->existencias <= 0 ? 'opacity-60' : '' }}">
-                    <div class="w-20 text-xs text-gray-600 text-center">
+                    class="pos-product-card-desktop bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }} {{ $product->existencias <= 0 ? 'opacity-60' : '' }}">
+                    <div class="grid grid-cols-[64px_72px_minmax(0,1fr)_92px_120px_88px] items-center gap-3 px-3 py-2">
+                    <div class="text-xs text-gray-600 text-center font-semibold">
                         <strong>{{ $product->id_producto }}</strong>
                     </div>
 
-                    <div class="w-20 flex-shrink-0">
+                    <div class="flex justify-center">
                         <img wire:click="$dispatch('ver-imagen', { url: @js($urlImagen) })" src="{{ $urlImagen }}"
                             class="w-16 h-16 object-cover border rounded cursor-pointer hover:opacity-80"
                             alt="Foto del producto" />
                     </div>
 
-                    <div class="flex-1 text-sm text-gray-800">
-                        <div>{{ $product->descripcion_larga }}</div>
+                    <div class="min-w-0 text-sm text-gray-800">
+                        <div class="leading-tight break-words">{{ $product->descripcion_larga }}</div>
                     </div>
 
-                    <div class="w-24 text-xs {{ $product->existencias > 0 ? 'text-green-600' : 'text-red-600' }}">
+                    <div class="text-xs text-center {{ $product->existencias > 0 ? 'text-green-600' : 'text-red-600' }}">
                         Stock: {{ number_format((float) $product->existencias, $decimalesStock, ',', '.') }} {{ $stockUnidad }}
                     </div>
 
-                    <div class="w-24 text-sm font-bold text-right">
-                        <div>${{ number_format($product->precio_venta1, 0, ',', '.') }}</div>
-                        <div class="text-[11px] font-medium text-slate-500">{{ $sufijoVenta }}</div>
+                    <div class="text-sm font-bold text-right whitespace-nowrap">
+                        <span>${{ number_format($product->precio_venta1, 0, ',', '.') }}</span>
+                        <span class="text-[10px] font-medium text-slate-500">{{ $sufijoVenta }}</span>
                     </div>
 
-                    <div class="w-24 text-center">
+                    <div class="text-center">
                         <button wire:click="agregarAlCarrito({{ $product->id_producto }})"
                             class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 text-xs rounded-full shadow">
                             Agregar
                         </button>
+                    </div>
                     </div>
                 </div>
 
@@ -99,7 +101,7 @@
                             <span class="{{ $product->existencias > 0 ? 'text-green-600' : 'text-red-600' }}">
                                 Stock: {{ number_format((float) $product->existencias, $decimalesStock, ',', '.') }} {{ $stockUnidad }}
                             </span>
-                            <strong>${{ number_format($product->precio_venta1, 0, ',', '.') }} <span class="text-[11px] text-slate-500">{{ $sufijoVenta }}</span></strong>
+                            <strong class="whitespace-nowrap">${{ number_format($product->precio_venta1, 0, ',', '.') }} <span class="text-[10px] text-slate-500">{{ $sufijoVenta }}</span></strong>
                         </div>
                     </div>
 
