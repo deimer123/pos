@@ -1,47 +1,12 @@
 <div style="width: 100%; height: 100%; display: flex; flex-direction: column; background: white;">
     @php
         $tipoNegocio = $empresaContexto['tipo_negocio'] ?? 'tienda';
-        $usaPeso = (bool) ($empresaContexto['usa_peso'] ?? false);
-        $usaVariantes = (bool) ($empresaContexto['usa_variantes'] ?? false);
-        $nombreEmpresa = $empresaContexto['nombre_empresa'] ?? null;
-        $etiquetaNegocio = match ($tipoNegocio) {
-            'carniceria' => 'Carniceria',
-            'almacen' => 'Almacen',
-            'restaurante' => 'Restaurante',
-            'bar' => 'Bar',
-            'panaderia' => 'Panaderia',
-            'farmacia' => 'Farmacia',
-            'servicios' => 'Servicios',
-            'mixto' => 'Mixto',
-            default => 'Tienda',
-        };
         $placeholderBusqueda = $tipoNegocio === 'carniceria'
             ? 'Buscar corte, codigo o producto por peso...'
             : 'Buscar producto...';
     @endphp
 
     <div style="padding: 1rem; border-bottom: 1px solid #ddd; text-align: center; font-weight: bold; font-size: 1.5rem;">
-        <div class="mb-3 flex flex-wrap items-center justify-center gap-2 text-xs font-semibold">
-            @if ($nombreEmpresa)
-                <span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-700">
-                    {{ $nombreEmpresa }}
-                </span>
-            @endif
-            <span class="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-700">
-                POS {{ $etiquetaNegocio }}
-            </span>
-            @if ($usaPeso)
-                <span class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700">
-                    Venta por peso activa
-                </span>
-            @endif
-            @if ($usaVariantes)
-                <span class="inline-flex items-center rounded-full border border-fuchsia-200 bg-fuchsia-50 px-3 py-1 text-fuchsia-700">
-                    Variantes habilitadas
-                </span>
-            @endif
-        </div>
-
         <input type="text" wire:model.live="search" placeholder="{{ $placeholderBusqueda }}"
             class="w-full p-2 border border-gray-300 rounded-full shadow focus:ring focus:ring-blue-200" />
 
@@ -63,14 +28,6 @@
             @php
                 $tieneImagen = !empty($product->foto) && $product->foto !== 'NULL' && $product->foto !== null;
                 $urlImagen = $tieneImagen ? asset('storage/' . $product->foto) : asset('images/sin-imagen.png');
-                $modoVenta = match ($product->vende_por ?? 'unidad') {
-                    'peso' => 'Venta por peso',
-                    'porcion' => 'Venta por porcion',
-                    'litro' => 'Venta por litro',
-                    'metro' => 'Venta por metro',
-                    'hora' => 'Venta por hora',
-                    default => 'Venta por unidad',
-                };
                 $sufijoVenta = match ($product->vende_por ?? 'unidad') {
                     'peso' => '/ kg',
                     'porcion' => '/ porcion',
@@ -104,21 +61,6 @@
 
                     <div class="flex-1 text-sm text-gray-800">
                         <div>{{ $product->descripcion_larga }}</div>
-                        <div class="mt-1 flex flex-wrap gap-1 text-[11px]">
-                            <span class="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 font-semibold text-indigo-700">
-                                {{ $modoVenta }}
-                            </span>
-                            @if (!empty($product->permite_fraccion))
-                                <span class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 font-semibold text-emerald-700">
-                                    Fraccion
-                                </span>
-                            @endif
-                            @if ($usaVariantes && (int) ($product->variantes_count ?? 0) > 0)
-                                <span class="inline-flex items-center rounded-full border border-fuchsia-200 bg-fuchsia-50 px-2 py-0.5 font-semibold text-fuchsia-700">
-                                    {{ $product->variantes_count }} variante{{ (int) $product->variantes_count === 1 ? '' : 's' }}
-                                </span>
-                            @endif
-                        </div>
                     </div>
 
                     <div class="w-24 text-xs {{ $product->existencias > 0 ? 'text-green-600' : 'text-red-600' }}">
@@ -158,21 +100,6 @@
                                 Stock: {{ number_format((float) $product->existencias, $decimalesStock, ',', '.') }} {{ $stockUnidad }}
                             </span>
                             <strong>${{ number_format($product->precio_venta1, 0, ',', '.') }} <span class="text-[11px] text-slate-500">{{ $sufijoVenta }}</span></strong>
-                        </div>
-                        <div class="mt-1 flex flex-wrap gap-1">
-                            <span class="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700">
-                                {{ $modoVenta }}
-                            </span>
-                            @if (!empty($product->permite_fraccion))
-                                <span class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
-                                    Fraccion
-                                </span>
-                            @endif
-                            @if ($usaVariantes && (int) ($product->variantes_count ?? 0) > 0)
-                                <span class="inline-flex items-center rounded-full border border-fuchsia-200 bg-fuchsia-50 px-2 py-0.5 text-[11px] font-semibold text-fuchsia-700">
-                                    Variantes: {{ $product->variantes_count }}
-                                </span>
-                            @endif
                         </div>
                     </div>
 
