@@ -893,7 +893,50 @@ button:hover {
     display: none;
 }
 
-@media (max-width: 1024px) {
+@media (min-width: 769px) and (max-width: 1024px) {
+    .pos-cart-component > .pos-desktop-cart-actions {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        gap: 8px !important;
+        width: 100% !important;
+        padding: 8px !important;
+        background: #ffffff !important;
+        border-top: 1px solid #dbe3f0 !important;
+    }
+
+    .pos-cart-component > .pos-desktop-cart-actions > .pos-cart-secondary-action {
+        display: inline-flex !important;
+        flex: 0 0 auto !important;
+    }
+
+    .pos-cart-component > .pos-desktop-cart-actions > .flex.gap-2 {
+        display: flex !important;
+        flex: 1 1 100% !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+        justify-content: flex-end !important;
+    }
+
+    .pos-cart-component > .pos-desktop-cart-actions > .flex.gap-2 .pos-cart-secondary-action,
+    .pos-cart-component > .pos-desktop-cart-actions > .flex.gap-2 .pos-cart-main-action {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex: 0 0 auto !important;
+        min-width: 96px !important;
+        height: 34px !important;
+        padding: 0 10px !important;
+        white-space: nowrap !important;
+    }
+
+    .pos-cart-component .pos-cart-mobile-more {
+        display: none !important;
+    }
+}
+
+@media (max-width: 768px) {
     .pos-cart-component > .pos-cart-total-bar {
         align-items: center !important;
         flex-wrap: nowrap !important;
@@ -1212,7 +1255,7 @@ button:hover {
 }
 /* END POS force cart buttons visible on tablet */
 /* POS JS injected action buttons */
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
     .pos-cart-mobile-more-menu .pos-js-menu-action {
         display: block !important;
         width: 100% !important;
@@ -1233,7 +1276,7 @@ button:hover {
 }
 /* END POS JS injected action buttons */
 /* POS acciones menu cleanup */
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
     .pos-cart-component > .pos-cart-header button[wire\:click="abrirModalBuscarCliente"],
     .pos-cart-component > .pos-cart-header button[wire\:click="cerrarCajaModal"],
     .pos-cart-component > .pos-cart-header button[wire\:click="abrirCajaModal"] {
@@ -1275,7 +1318,7 @@ button:hover {
 }
 /* END POS acciones menu cleanup */
 /* POS icon menu buttons cleanup */
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
     .pos-mobile-menu-button,
     .pos-cart-mobile-more-button {
         font-size: 0 !important;
@@ -1333,7 +1376,7 @@ button:hover {
     }
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
     .pos-mobile-menu-button,
     .pos-cart-mobile-more-button {
         overflow: hidden !important;
