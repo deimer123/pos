@@ -463,14 +463,6 @@
                 @forelse($carrito as $id => $item)
                     <tr class="border-b hover:bg-indigo-50">
                         @php
-                            $sufijoVenta = match ($item['vende_por'] ?? 'unidad') {
-                                'peso' => '/ kg',
-                                'porcion' => '/ porcion',
-                                'litro' => '/ lt',
-                                'metro' => '/ mt',
-                                'hora' => '/ hr',
-                                default => '/ und',
-                            };
                             $permiteDecimal = (bool) ($item['permite_decimal'] ?? ((int) ($item['id_unidad_de_medida'] ?? 1) !== 1));
                         @endphp
                         <td class="px-1 py-0.5 border">{{ $item['id_producto'] ?? '-' }}</td>
@@ -491,8 +483,7 @@
                         </td>
                         <td class="px-1 py-0.5 border text-center whitespace-nowrap">
                             <div class="whitespace-nowrap text-[11px] leading-none">
-                                <span>${{ number_format(round($item['nuevo_precio'] ?? ($item['precio'] ?? 0)), 0, ',', '.') }}</span>
-                                <span class="text-[9px] font-medium text-slate-500">{{ $sufijoVenta }}</span>
+                                ${{ number_format(round($item['nuevo_precio'] ?? ($item['precio'] ?? 0)), 0, ',', '.') }}
                             </div>
                         </td>
                         <td class="px-1 py-0.5 border text-center font-semibold text-indigo-600 whitespace-nowrap">
