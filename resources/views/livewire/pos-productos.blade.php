@@ -24,6 +24,7 @@
     </div>
 
     <div style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 1rem;">
+        <div class="grid gap-4" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
         @forelse ($products as $product)
             @php
                 $tieneImagen = !empty($product->foto) && $product->foto !== 'NULL' && $product->foto !== null;
@@ -46,7 +47,7 @@
                 $decimalesStock = $stockUnidad === 'und' ? 0 : 2;
             @endphp
 
-            <div wire:key="producto-{{ $product->id_producto }}">
+            <div wire:key="producto-{{ $product->id_producto }}" class="h-full">
                 <div
                     class="pos-product-card-desktop bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }} {{ $product->existencias <= 0 ? 'opacity-60' : '' }}">
                     <div class="px-3 py-2">
@@ -85,7 +86,7 @@
                 </div>
 
                 <div
-                    class="pos-product-card-mobile bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }} {{ $product->existencias <= 0 ? 'opacity-60' : '' }}">
+                    class="pos-product-card-mobile h-full bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }} {{ $product->existencias <= 0 ? 'opacity-60' : '' }}">
                     <div class="px-3 py-3">
                         <div class="grid grid-cols-2 gap-x-3 gap-y-2 items-start">
                             <div class="flex items-start gap-2 min-w-0">
@@ -106,7 +107,7 @@
                             </div>
 
                             <div class="min-w-0">
-                                <div class="text-[13px] leading-tight text-slate-700 break-words">
+                                <div class="text-[12px] leading-tight text-slate-700 break-words">
                                     {{ $product->descripcion_larga }}
                                 </div>
                             </div>
@@ -129,6 +130,7 @@
                 No se encontraron productos.
             </div>
         @endforelse
+        </div>
     </div>
 
     <div x-data="{ imagenUrl: null }" @ver-imagen.window="imagenUrl = $event.detail.url">
