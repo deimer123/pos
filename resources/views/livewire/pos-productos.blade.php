@@ -49,8 +49,8 @@
 
             <div wire:key="producto-{{ $product->id_producto }}" class="h-full">
                 <div
-                    class="pos-product-card-desktop bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }} {{ $product->existencias <= 0 ? 'opacity-60' : '' }}">
-                    <div class="px-3 py-2">
+                    class="pos-product-card-desktop h-full bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }} {{ $product->existencias <= 0 ? 'opacity-60' : '' }}">
+                    <div class="flex h-full flex-col justify-between px-3 py-2" style="min-height: 150px;">
                         <div class="grid grid-cols-[60px_68px_minmax(0,1fr)_120px_88px] items-center gap-3">
                             <div class="text-xs text-gray-600 text-center font-semibold">
                                 <strong>{{ $product->id_producto }}</strong>
@@ -63,7 +63,9 @@
                             </div>
 
                             <div class="min-w-0 text-sm text-gray-800">
-                                <div class="leading-tight break-words">{{ $product->descripcion_larga }}</div>
+                                <div class="overflow-hidden text-[13px] leading-tight break-words" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 2.1rem;">
+                                    {{ $product->descripcion_larga }}
+                                </div>
                             </div>
 
                             <div class="text-sm font-bold text-right whitespace-nowrap">
@@ -87,7 +89,7 @@
 
                 <div
                     class="pos-product-card-mobile h-full bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }} {{ $product->existencias <= 0 ? 'opacity-60' : '' }}">
-                    <div class="px-3 py-3">
+                    <div class="flex h-full flex-col justify-between px-3 py-3" style="min-height: 208px;">
                         <div class="grid grid-cols-2 gap-x-3 gap-y-2 items-start">
                             <div class="flex items-start gap-2 min-w-0">
                                 <div class="w-10 pt-1 text-[12px] text-center font-semibold text-slate-500">
@@ -107,7 +109,7 @@
                             </div>
 
                             <div class="min-w-0">
-                                <div class="text-[12px] leading-tight text-slate-700 break-words">
+                                <div class="overflow-hidden text-[12px] leading-tight text-slate-700 break-words" style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; min-height: 2.9rem;">
                                     {{ $product->descripcion_larga }}
                                 </div>
                             </div>
