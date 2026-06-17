@@ -1549,17 +1549,19 @@ button:hover {
 }
 
 @media (max-width: 768px) {
+    .pos-products-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 10px !important;
+    }
+
     .pos-product-card-desktop {
         display: none !important;
     }
 
     .pos-product-card-mobile {
-        display: grid !important;
-        grid-template-columns: 42px 54px minmax(0, 1fr) 66px !important;
-        align-items: center !important;
-        gap: 8px !important;
-        min-height: 86px !important;
-        padding: 9px 8px !important;
+        display: block !important;
+        min-height: 168px !important;
+        padding: 0 !important;
         width: 100% !important;
         box-sizing: border-box !important;
     }
@@ -1627,6 +1629,17 @@ button:hover {
         font-size: 10px !important;
         font-weight: 800 !important;
         line-height: 1 !important;
+    }
+}
+
+@media (max-width: 420px) {
+    .pos-products-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+    }
+
+    .pos-product-card-mobile {
+        min-height: 160px !important;
     }
 }
 
