@@ -62,11 +62,13 @@
                         </div>
 
                         <div class="relative z-10 flex h-[36px] w-full items-center justify-center self-center overflow-hidden bg-white px-1">
-                            <div title="{{ $product->descripcion_larga }}"
-                                class="h-[36px] w-full overflow-hidden text-center text-[7px] leading-[1] text-slate-700 break-words cursor-default"
+                            <button type="button"
+                                title="{{ $product->descripcion_larga }}"
+                                @click="$dispatch('ver-nombre-producto-mobile', { nombre: @js($product->descripcion_larga) })"
+                                class="h-[36px] w-full overflow-hidden text-center text-[7px] leading-[1] text-slate-700 break-words"
                                 style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-overflow: ellipsis;">
                                 {{ $product->descripcion_larga }}
-                            </div>
+                            </button>
                         </div>
 
                         <div class="relative z-10 flex h-[40px] items-center justify-center self-center bg-white">
