@@ -893,7 +893,7 @@ button:hover {
     display: none;
 }
 
-@media (min-width: 769px) and (max-width: 1024px) {
+@media (min-width: 769px) and (max-width: 1366px) {
     .pos-cart-component > .pos-desktop-cart-actions {
         display: flex !important;
         flex-wrap: wrap !important;
@@ -1070,7 +1070,7 @@ button:hover {
 }
 /* END POS mobile cart buttons visibility fix */
 /* POS desktop cart fixed footer */
-@media (min-width: 1025px) {
+@media (min-width: 1367px) {
     .pos-cart-pane,
     .pos-cart-pane > .flex {
         height: 100% !important;
@@ -1138,7 +1138,7 @@ button:hover {
 }
 /* END POS cart sticky header background fix */
 /* POS iPad cart footer visibility fix */
-@media (min-width: 769px) and (max-width: 1024px) {
+@media (min-width: 769px) and (max-width: 1366px) {
     .pos-cart-pane,
     .pos-cart-pane > .flex,
     .pos-cart-component {
@@ -1255,7 +1255,7 @@ button:hover {
 }
 /* END POS force cart buttons visible on tablet */
 
-@media (min-width: 769px) and (max-width: 1024px) {
+@media (min-width: 769px) and (max-width: 1366px) {
     .pos-products-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
         gap: 10px !important;
@@ -1274,7 +1274,7 @@ button:hover {
     }
 }
 
-@media (hover: none) and (pointer: coarse) and (min-width: 769px) {
+@media (hover: none) and (pointer: coarse) and (min-width: 769px) and (max-width: 1366px) {
     .pos-cart-component {
         display: flex !important;
         flex-direction: column !important;
