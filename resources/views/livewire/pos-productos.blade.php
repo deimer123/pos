@@ -67,7 +67,7 @@
                     class="pos-product-card-desktop h-full bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }}">
                     <div class="grid h-full justify-items-center px-3 py-3 text-center" style="min-height: 244px; grid-template-rows: 28px 52px 40px 42px 72px;">
                         <div class="inline-flex min-h-[24px] min-w-[62px] items-center justify-center self-center rounded-full border px-3 text-[11px] font-bold leading-none shadow-sm"
-                            style="border-color:#1e293b;background:#1e293b;color:#ffffff;">
+                            style="border-color:#312e81;background:#4338ca;color:#fefefe;">
                             {{ $product->id_producto }}
                         </div>
 
@@ -111,7 +111,7 @@
                     class="pos-product-card-mobile h-full bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }}">
                     <div class="flex h-full flex-col items-center px-2 py-2.5 text-center" style="min-height: 168px;">
                         <div class="inline-flex min-h-[20px] min-w-[54px] items-center justify-center rounded-full border px-2.5 text-[10px] font-bold leading-none shadow-sm"
-                            style="border-color:#1e293b;background:#1e293b;color:#ffffff;">
+                            style="border-color:#312e81;background:#4338ca;color:#fefefe;">
                             {{ $product->id_producto }}
                         </div>
 
