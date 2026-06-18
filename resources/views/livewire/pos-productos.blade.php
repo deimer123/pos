@@ -65,23 +65,23 @@
             <div wire:key="producto-{{ $product->id_producto }}" class="h-full">
                 <div
                     class="pos-product-card-desktop h-full bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }}">
-                    <div class="grid h-full justify-items-center px-3 py-3 text-center" style="min-height: 244px; grid-template-rows: 28px 52px 40px 42px 72px;">
+                    <div class="grid h-full justify-items-center px-3 py-3 text-center" style="min-height: 268px; grid-template-rows: 30px 68px 48px 44px 78px;">
                         <div class="inline-flex min-h-[24px] min-w-[62px] items-center justify-center self-center mx-auto rounded-full border px-3 text-[11px] font-bold leading-none shadow-sm"
                             style="border-color:#312e81;background:#4338ca;color:#fefefe;">
                             {{ $product->id_producto }}
                         </div>
 
-                        <div class="relative z-10 flex h-[62px] w-full items-center justify-center self-center bg-white">
+                        <div class="relative z-10 flex h-[68px] w-full items-center justify-center self-center bg-white pt-1">
                             <img wire:click="$dispatch('ver-imagen', { url: @js($urlImagen) })" src="{{ $urlImagen }}"
                                 class="w-16 h-16 object-cover border rounded cursor-pointer hover:opacity-80"
                                 alt="Foto del producto" />
                         </div>
 
-                        <div class="relative z-10 flex h-[36px] w-full items-center justify-center self-center overflow-hidden bg-white px-1 text-center">
+                        <div class="relative z-10 flex h-[48px] w-full items-center justify-center self-center overflow-hidden bg-white px-1 text-center">
                             <button type="button"
                                 title="{{ $product->descripcion_larga }}"
                                 @click="$dispatch('ver-nombre-producto-mobile', { nombre: @js($product->descripcion_larga), stock: @js($stockTexto) })"
-                                class="flex h-[36px] w-full items-center justify-center overflow-hidden text-center text-[7px] font-semibold leading-[1.05] text-slate-700 break-words"
+                                class="flex h-[48px] w-full items-center justify-center overflow-hidden text-center text-[7px] font-semibold leading-[1.05] text-slate-700 break-words"
                                 style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-overflow: ellipsis;">
                                 {{ $product->descripcion_larga }}
                             </button>
@@ -94,7 +94,7 @@
                             </div>
                         </div>
 
-                        <div class="relative z-10 flex h-[72px] w-full flex-col items-center justify-center self-center gap-2.5 bg-white text-center">
+                        <div class="relative z-10 flex h-[78px] w-full flex-col items-center justify-center self-center gap-3 bg-white pt-1 text-center">
                             <button wire:click="agregarAlCarrito({{ $product->id_producto }})"
                                 class="w-[106px] self-center mx-auto bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 text-[12px] font-semibold rounded-full shadow">
                                 Agregar
