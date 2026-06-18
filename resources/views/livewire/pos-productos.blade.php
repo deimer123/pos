@@ -53,11 +53,12 @@
                 };
                 $decimalesStock = $stockUnidad === 'und' ? 0 : 2;
                 $stockCantidad = (float) ($product->existencias ?? 0);
+                $stockTexto = number_format($stockCantidad, $decimalesStock, ',', '.') . ' ' . $stockUnidad;
                 $stockBadgeClasses = match (true) {
                     $stockCantidad < 0 => 'border-red-200 bg-red-50 text-red-700',
-                    $stockCantidad == 0.0 => 'border-slate-200 bg-slate-50 text-slate-700',
-                    $stockCantidad <= 5 => 'border-amber-200 bg-amber-50 text-amber-700',
-                    default => 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                    $stockCantidad == 0.0 => 'border-slate-200 bg-slate-100 text-slate-700',
+                    $stockCantidad <= 5 => 'border-amber-200 bg-amber-100 text-amber-800',
+                    default => 'border-emerald-200 bg-emerald-100 text-emerald-800',
                 };
             @endphp
 
@@ -65,8 +66,10 @@
                 <div
                     class="pos-product-card-desktop h-full bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }}">
                     <div class="grid h-full justify-items-center px-3 py-3 text-center" style="min-height: 244px; grid-template-rows: 28px 52px 40px 42px 72px;">
-                        <div class="inline-flex min-h-[24px] min-w-[62px] items-center justify-center self-center rounded-full border border-slate-300 bg-slate-100 px-3 text-[11px] font-bold leading-none text-slate-700 shadow-sm">
-                            {{ $product->id_producto }}
+                        <div class="inline-flex min-h-[24px] min-w-[118px] max-w-full items-center justify-center self-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-3 text-[10px] font-bold leading-none text-slate-700 shadow-sm">
+                            <span>{{ $product->id_producto }}</span>
+                            <span class="text-slate-400">|</span>
+                            <span>{{ $stockTexto }}</span>
                         </div>
 
                         <div class="relative z-10 flex h-[48px] items-center justify-center self-center bg-white">
@@ -78,7 +81,7 @@
                         <div class="relative z-10 flex h-[36px] w-full items-center justify-center self-center overflow-hidden bg-white px-1 text-center">
                             <button type="button"
                                 title="{{ $product->descripcion_larga }}"
-                                @click="$dispatch('ver-nombre-producto-mobile', { nombre: @js($product->descripcion_larga) })"
+                                @click="$dispatch('ver-nombre-producto-mobile', { nombre: @js($product->descripcion_larga), stock: @js($stockTexto) })"
                                 class="flex h-[36px] w-full items-center justify-center overflow-hidden text-center text-[7px] font-semibold leading-[1.05] text-slate-700 break-words"
                                 style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-overflow: ellipsis;">
                                 {{ $product->descripcion_larga }}
@@ -99,7 +102,7 @@
                             </button>
 
                             <div class="inline-flex min-h-[24px] min-w-[124px] items-center justify-center rounded-full border px-3 py-1 text-[10px] font-bold leading-tight text-center shadow-sm {{ $stockBadgeClasses }}">
-                                Stock: {{ number_format((float) $product->existencias, $decimalesStock, ',', '.') }} {{ $stockUnidad }}
+                                Stock: {{ $stockTexto }}
                             </div>
                         </div>
                     </div>
@@ -108,8 +111,10 @@
                 <div
                     class="pos-product-card-mobile h-full bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }}">
                     <div class="flex h-full flex-col items-center px-2 py-2.5 text-center" style="min-height: 168px;">
-                        <div class="inline-flex min-h-[20px] min-w-[54px] items-center justify-center rounded-full border border-slate-300 bg-slate-100 px-2.5 text-[10px] font-bold leading-none text-slate-700 shadow-sm">
-                            {{ $product->id_producto }}
+                        <div class="inline-flex min-h-[20px] min-w-[96px] max-w-full items-center justify-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-2.5 text-[9px] font-bold leading-none text-slate-700 shadow-sm">
+                            <span>{{ $product->id_producto }}</span>
+                            <span class="text-slate-400">|</span>
+                            <span>{{ $stockTexto }}</span>
                         </div>
 
                         <div class="relative z-10 mt-1 flex justify-center min-h-[40px] items-center bg-white">
@@ -120,7 +125,7 @@
                         <div class="relative z-10 mt-1 flex w-full min-h-[2rem] items-center justify-center overflow-hidden bg-white px-1 text-center">
                             <button type="button"
                                 title="{{ $product->descripcion_larga }}"
-                                @click="$dispatch('ver-nombre-producto-mobile', { nombre: @js($product->descripcion_larga) })"
+                                @click="$dispatch('ver-nombre-producto-mobile', { nombre: @js($product->descripcion_larga), stock: @js($stockTexto) })"
                                 class="flex h-[2rem] w-full items-center justify-center overflow-hidden text-center text-[6px] font-semibold leading-[1.05] text-slate-700 break-words"
                                 style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-overflow: ellipsis;">
                                 {{ $product->descripcion_larga }}
@@ -141,7 +146,7 @@
                             </button>
 
                             <div class="inline-flex min-h-[21px] min-w-[102px] items-center justify-center rounded-full border px-2.5 py-1 text-[9px] font-bold leading-tight text-center shadow-sm {{ $stockBadgeClasses }}">
-                                Stock: {{ number_format((float) $product->existencias, $decimalesStock, ',', '.') }} {{ $stockUnidad }}
+                                Stock: {{ $stockTexto }}
                             </div>
                         </div>
                     </div>
@@ -164,12 +169,17 @@
         </div>
     </div>
 
-    <div x-data="{ nombreProductoMobile: null }" @ver-nombre-producto-mobile.window="nombreProductoMobile = $event.detail.nombre">
+    <div x-data="{ nombreProductoMobile: null, stockProductoMobile: null }" @ver-nombre-producto-mobile.window="nombreProductoMobile = $event.detail.nombre; stockProductoMobile = $event.detail.stock">
         <div x-show="nombreProductoMobile" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" x-transition>
             <div @click.outside="nombreProductoMobile = null" class="w-full max-w-sm rounded-xl bg-white p-4 shadow-lg">
                 <div class="text-center text-sm font-semibold text-slate-800 break-words" x-text="nombreProductoMobile"></div>
+                <div x-show="stockProductoMobile" class="mt-3 flex justify-center">
+                    <div class="inline-flex items-center justify-center rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 shadow-sm">
+                        Stock: <span class="ml-1" x-text="stockProductoMobile"></span>
+                    </div>
+                </div>
                 <div class="mt-4 flex justify-center">
-                    <button @click="nombreProductoMobile = null"
+                    <button @click="nombreProductoMobile = null; stockProductoMobile = null"
                         class="rounded-full bg-indigo-600 px-4 py-2 text-sm text-white shadow hover:bg-indigo-700">
                         Cerrar
                     </button>
