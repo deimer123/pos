@@ -2564,26 +2564,31 @@ button:hover {
     .pos-cart-component > .pos-desktop-cart-actions { order: 5 !important; }
 
     .pos-cart-pane,
-    .pos-cart-pane > .flex,
-    .pos-cart-component {
-        height: auto !important;
-        max-height: none !important;
+    .pos-cart-pane > .flex {
+        height: 100% !important;
+        max-height: 100% !important;
         min-height: 0 !important;
+        overflow: hidden !important;
     }
 
     .pos-cart-component {
-        overflow-y: auto !important;
+        display: flex !important;
+        flex-direction: column !important;
+        height: 100% !important;
+        max-height: 100% !important;
+        min-height: 0 !important;
+        overflow-y: hidden !important;
         overflow-x: hidden !important;
-        -webkit-overflow-scrolling: touch !important;
-        padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+        padding-bottom: 0 !important;
     }
 
     .pos-cart-component > .pos-cart-table-scroll {
         flex: 1 1 auto !important;
         min-height: 120px !important;
-        max-height: calc(100dvh - 360px) !important;
+        max-height: none !important;
         overflow-y: auto !important;
         overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
     }
 
     .pos-product-card-desktop {
@@ -2612,8 +2617,9 @@ button:hover {
         grid-template-columns: 1fr auto !important;
         align-items: center !important;
         gap: 6px !important;
+        margin-top: auto !important;
         width: 100% !important;
-        padding: 6px 8px !important;
+        padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px)) !important;
         background: #ffffff !important;
         border-top: 1px solid #dbe3f0 !important;
         position: sticky !important;
@@ -2681,7 +2687,34 @@ button:hover {
     }
 
     .pos-cart-component .pos-cart-mobile-more-menu {
+        position: absolute !important;
+        right: 0 !important;
+        left: auto !important;
+        bottom: calc(100% + 8px) !important;
+        width: 220px !important;
+        max-width: min(220px, calc(100vw - 32px)) !important;
+        padding: 8px !important;
+        border: 1px solid #dbe3f0 !important;
+        border-radius: 12px !important;
+        background: #ffffff !important;
+        box-shadow: 0 14px 30px rgba(15, 23, 42, .22) !important;
         z-index: 700 !important;
+    }
+
+    .pos-cart-component .pos-cart-mobile-more-menu button {
+        display: block !important;
+        width: 100% !important;
+        min-height: 36px !important;
+        margin: 0 !important;
+        padding: 0 10px !important;
+        border: 0 !important;
+        border-radius: 8px !important;
+        text-align: left !important;
+        white-space: nowrap !important;
+    }
+
+    .pos-cart-component .pos-cart-mobile-more-menu button + button {
+        margin-top: 6px !important;
     }
 
     .pos-cart-component > .pos-cart-observation {
