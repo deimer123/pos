@@ -2560,8 +2560,8 @@ button:hover {
     .pos-cart-component > .pos-cart-header { order: 1 !important; }
     .pos-cart-component > .pos-cart-table-scroll { order: 2 !important; }
     .pos-cart-component > .pos-cart-total-bar { order: 3 !important; }
-    .pos-cart-component > .pos-desktop-cart-actions { order: 4 !important; }
-    .pos-cart-component > .pos-cart-observation { order: 5 !important; }
+    .pos-cart-component > .pos-cart-observation { order: 4 !important; }
+    .pos-cart-component > .pos-desktop-cart-actions { order: 5 !important; }
 
     .pos-cart-pane,
     .pos-cart-pane > .flex,
@@ -2616,8 +2616,10 @@ button:hover {
         padding: 6px 8px !important;
         background: #ffffff !important;
         border-top: 1px solid #dbe3f0 !important;
-        position: static !important;
-        z-index: 50 !important;
+        position: sticky !important;
+        bottom: 0 !important;
+        z-index: 60 !important;
+        box-shadow: 0 -6px 14px rgba(15, 23, 42, .08) !important;
     }
 
     .pos-cart-component > .pos-desktop-cart-actions > .pos-cart-secondary-action,
@@ -2653,23 +2655,29 @@ button:hover {
         padding: 0 8px !important;
         border-radius: 999px !important;
         background: #4338ca !important;
-        color: #ffffff !important;
-        font-size: 12px !important;
+        color: transparent !important;
+        font-size: 0 !important;
         font-weight: 800 !important;
         overflow: hidden !important;
         position: relative !important;
-        text-indent: 0 !important;
+        text-indent: -9999px !important;
     }
 
     .pos-cart-component .pos-cart-mobile-more-button::before {
         content: 'Acciones' !important;
-        position: static !important;
+        position: absolute !important;
+        left: 50% !important;
+        top: 50% !important;
         width: auto !important;
         height: auto !important;
         border-radius: 0 !important;
         background: transparent !important;
         box-shadow: none !important;
-        transform: none !important;
+        transform: translate(-50%, -50%) !important;
+        color: #ffffff !important;
+        font-size: 12px !important;
+        line-height: 1 !important;
+        text-indent: 0 !important;
     }
 
     .pos-cart-component .pos-cart-mobile-more-menu {
