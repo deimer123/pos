@@ -66,10 +66,8 @@
                 <div
                     class="pos-product-card-desktop h-full bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }}">
                     <div class="grid h-full justify-items-center px-3 py-3 text-center" style="min-height: 244px; grid-template-rows: 28px 52px 40px 42px 72px;">
-                        <div class="inline-flex min-h-[24px] min-w-[118px] max-w-full items-center justify-center self-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-3 text-[10px] font-bold leading-none text-slate-700 shadow-sm">
-                            <span>{{ $product->id_producto }}</span>
-                            <span class="text-slate-400">|</span>
-                            <span>{{ $stockTexto }}</span>
+                        <div class="inline-flex min-h-[24px] min-w-[62px] items-center justify-center self-center rounded-full border border-slate-700 bg-slate-700 px-3 text-[11px] font-bold leading-none text-white shadow-sm">
+                            {{ $product->id_producto }}
                         </div>
 
                         <div class="relative z-10 flex h-[48px] items-center justify-center self-center bg-white">
@@ -111,10 +109,8 @@
                 <div
                     class="pos-product-card-mobile h-full bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }}">
                     <div class="flex h-full flex-col items-center px-2 py-2.5 text-center" style="min-height: 168px;">
-                        <div class="inline-flex min-h-[20px] min-w-[96px] max-w-full items-center justify-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-2.5 text-[9px] font-bold leading-none text-slate-700 shadow-sm">
-                            <span>{{ $product->id_producto }}</span>
-                            <span class="text-slate-400">|</span>
-                            <span>{{ $stockTexto }}</span>
+                        <div class="inline-flex min-h-[20px] min-w-[54px] items-center justify-center rounded-full border border-slate-700 bg-slate-700 px-2.5 text-[10px] font-bold leading-none text-white shadow-sm">
+                            {{ $product->id_producto }}
                         </div>
 
                         <div class="relative z-10 mt-1 flex justify-center min-h-[40px] items-center bg-white">

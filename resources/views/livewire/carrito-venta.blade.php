@@ -466,10 +466,22 @@
                             $permiteDecimal = (bool) ($item['permite_decimal'] ?? ((int) ($item['id_unidad_de_medida'] ?? 1) !== 1));
                         @endphp
                         <td class="px-1 py-0.5 border">{{ $item['id_producto'] ?? '-' }}</td>
+                        @php
+                            $stockUnidadCarrito = match ($item['vende_por'] ?? 'unidad') {
+                                'peso' => 'kg',
+                                'porcion' => 'porcion',
+                                'litro' => 'lt',
+                                'metro' => 'mt',
+                                'hora' => 'hr',
+                                default => ((bool) ($item['permite_decimal'] ?? false) ? 'kg' : 'und'),
+                            };
+                            $stockDecimalesCarrito = $stockUnidadCarrito === 'und' ? 0 : 2;
+                            $stockTooltipCarrito = number_format((float) ($item['existencias'] ?? 0), $stockDecimalesCarrito, ',', '.') . ' ' . $stockUnidadCarrito;
+                        @endphp
                         <td class="px-1 py-0.5 border {{ ($item['existencias'] ?? 0) <= 0 ? 'text-red-600 font-semibold' : '' }}"
-                            title="Existencias: {{ $item['existencias'] ?? 0 }}">
+                            title="Existencias: {{ $stockTooltipCarrito }}">
                             <button type="button"
-                                title="{{ $item['nombre'] }}"
+                                title="{{ $item['nombre'] }} | Stock: {{ $stockTooltipCarrito }}"
                                 @click="$dispatch('ver-nombre-carrito-mobile', { nombre: @js($item['nombre']) })"
                                 class="block w-full truncate text-left">
                                 {{ $item['nombre'] }}
