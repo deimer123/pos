@@ -71,9 +71,9 @@
                             {{ $product->id_producto }}
                         </div>
 
-                        <div class="relative z-10 flex h-[48px] items-center justify-center self-center bg-white">
+                        <div class="relative z-10 flex h-[62px] items-center justify-center self-center bg-white">
                             <img wire:click="$dispatch('ver-imagen', { url: @js($urlImagen) })" src="{{ $urlImagen }}"
-                                class="w-12 h-12 object-cover border rounded cursor-pointer hover:opacity-80"
+                                class="w-16 h-16 object-cover border rounded cursor-pointer hover:opacity-80"
                                 alt="Foto del producto" />
                         </div>
 
@@ -96,7 +96,7 @@
 
                         <div class="relative z-10 flex h-[72px] w-full flex-col items-center justify-center self-center gap-2.5 bg-white">
                             <button wire:click="agregarAlCarrito({{ $product->id_producto }})"
-                                class="w-[84px] bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 text-[11px] rounded-full shadow">
+                                class="w-[106px] bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 text-[12px] font-semibold rounded-full shadow">
                                 Agregar
                             </button>
 
@@ -115,9 +115,9 @@
                             {{ $product->id_producto }}
                         </div>
 
-                        <div class="relative z-10 mt-1 flex justify-center min-h-[40px] items-center bg-white">
+                        <div class="relative z-10 mt-1 flex justify-center min-h-[50px] items-center bg-white">
                             <img wire:click="$dispatch('ver-imagen', { url: @js($urlImagen) })" src="{{ $urlImagen }}"
-                                class="h-10 w-10 rounded border object-cover" alt="Foto del producto" />
+                                class="h-12 w-12 rounded border object-cover" alt="Foto del producto" />
                         </div>
 
                         <div class="relative z-10 mt-1 flex w-full min-h-[2rem] items-center justify-center overflow-hidden bg-white px-1 text-center">
@@ -139,7 +139,7 @@
 
                         <div class="relative z-10 mt-1 flex w-full flex-col items-center gap-1.5 bg-white">
                             <button wire:click="agregarAlCarrito({{ $product->id_producto }})"
-                                class="w-[84px] bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 text-[11px] rounded-full shadow">
+                                class="w-[96px] bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 text-[11px] font-semibold rounded-full shadow">
                                 Agregar
                             </button>
 
