@@ -54,18 +54,18 @@
                 $decimalesStock = $stockUnidad === 'und' ? 0 : 2;
                 $stockCantidad = (float) ($product->existencias ?? 0);
                 $stockBadgeClasses = match (true) {
-                    $stockCantidad < 0 => 'border-red-300 bg-red-600 text-white',
-                    $stockCantidad == 0.0 => 'border-slate-300 bg-slate-500 text-white',
-                    $stockCantidad <= 5 => 'border-amber-300 bg-amber-500 text-white',
-                    default => 'border-emerald-300 bg-emerald-600 text-white',
+                    $stockCantidad < 0 => 'border-red-200 bg-red-50 text-red-700',
+                    $stockCantidad == 0.0 => 'border-slate-200 bg-slate-50 text-slate-700',
+                    $stockCantidad <= 5 => 'border-amber-200 bg-amber-50 text-amber-700',
+                    default => 'border-emerald-200 bg-emerald-50 text-emerald-700',
                 };
             @endphp
 
             <div wire:key="producto-{{ $product->id_producto }}" class="h-full">
                 <div
-                    class="pos-product-card-desktop h-full bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }} {{ $product->existencias <= 0 ? 'opacity-60' : '' }}">
-                    <div class="grid h-full justify-items-center px-3 py-3 text-center" style="min-height: 244px; grid-template-rows: 24px 52px 40px 42px 72px;">
-                        <div class="inline-flex min-h-[22px] min-w-[62px] items-center justify-center self-center rounded-full border border-slate-700 bg-slate-700 px-3 text-[11px] font-bold text-white shadow-sm">
+                    class="pos-product-card-desktop h-full bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }}">
+                    <div class="grid h-full justify-items-center px-3 py-3 text-center" style="min-height: 244px; grid-template-rows: 28px 52px 40px 42px 72px;">
+                        <div class="inline-flex min-h-[24px] min-w-[62px] items-center justify-center self-center rounded-full border border-slate-300 bg-slate-100 px-3 text-[11px] font-bold leading-none text-slate-700 shadow-sm">
                             {{ $product->id_producto }}
                         </div>
 
@@ -79,7 +79,7 @@
                             <button type="button"
                                 title="{{ $product->descripcion_larga }}"
                                 @click="$dispatch('ver-nombre-producto-mobile', { nombre: @js($product->descripcion_larga) })"
-                                class="h-[36px] w-full overflow-hidden text-center text-[7px] font-semibold leading-[1.05] text-slate-700 break-words"
+                                class="flex h-[36px] w-full items-center justify-center overflow-hidden text-center text-[7px] font-semibold leading-[1.05] text-slate-700 break-words"
                                 style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-overflow: ellipsis;">
                                 {{ $product->descripcion_larga }}
                             </button>
@@ -106,9 +106,9 @@
                 </div>
 
                 <div
-                    class="pos-product-card-mobile h-full bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }} {{ $product->existencias <= 0 ? 'opacity-60' : '' }}">
+                    class="pos-product-card-mobile h-full bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }}">
                     <div class="flex h-full flex-col items-center px-2 py-2.5 text-center" style="min-height: 168px;">
-                        <div class="inline-flex min-h-[20px] min-w-[54px] items-center justify-center rounded-full border border-slate-700 bg-slate-700 px-2.5 text-[10px] font-bold text-white shadow-sm">
+                        <div class="inline-flex min-h-[20px] min-w-[54px] items-center justify-center rounded-full border border-slate-300 bg-slate-100 px-2.5 text-[10px] font-bold leading-none text-slate-700 shadow-sm">
                             {{ $product->id_producto }}
                         </div>
 
@@ -121,7 +121,7 @@
                             <button type="button"
                                 title="{{ $product->descripcion_larga }}"
                                 @click="$dispatch('ver-nombre-producto-mobile', { nombre: @js($product->descripcion_larga) })"
-                                class="h-[2rem] overflow-hidden text-center text-[6px] font-semibold leading-[1.05] text-slate-700 break-words"
+                                class="flex h-[2rem] w-full items-center justify-center overflow-hidden text-center text-[6px] font-semibold leading-[1.05] text-slate-700 break-words"
                                 style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-overflow: ellipsis;">
                                 {{ $product->descripcion_larga }}
                             </button>
