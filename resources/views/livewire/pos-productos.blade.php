@@ -86,16 +86,14 @@
                                 </div>
                             </div>
 
-                            <div class="flex shrink-0 items-center justify-end gap-3">
-                                <div class="flex min-w-[124px] flex-col items-end gap-2">
-                                    <div class="inline-flex min-w-[124px] items-center justify-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-[13px] font-extrabold text-indigo-700 whitespace-nowrap shadow-sm">
-                                        <span>${{ number_format($product->precio_venta1, 0, ',', '.') }}</span>
-                                        <span class="text-[9px] font-semibold text-indigo-500">{{ $sufijoVenta }}</span>
-                                    </div>
+                            <div class="flex w-[150px] shrink-0 flex-col items-end justify-center gap-2">
+                                <div class="inline-flex min-w-[124px] items-center justify-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-[13px] font-extrabold text-indigo-700 whitespace-nowrap shadow-sm">
+                                    <span>${{ number_format($product->precio_venta1, 0, ',', '.') }}</span>
+                                    <span class="text-[9px] font-semibold text-indigo-500">{{ $sufijoVenta }}</span>
+                                </div>
 
-                                    <div class="inline-flex min-h-[24px] min-w-[124px] items-center justify-center rounded-full border px-3 py-1 text-[10px] font-bold leading-tight text-center shadow-sm {{ $stockBadgeClasses }}">
-                                        Stock: {{ $stockTexto }}
-                                    </div>
+                                <div class="inline-flex min-h-[24px] min-w-[124px] items-center justify-center rounded-full border px-3 py-1 text-[10px] font-bold leading-tight text-center shadow-sm {{ $stockBadgeClasses }}">
+                                    Stock: {{ $stockTexto }}
                                 </div>
 
                                 <button wire:click="agregarAlCarrito({{ $product->id_producto }})"
@@ -130,16 +128,14 @@
                                 </button>
                             </div>
 
-                            <div class="flex shrink-0 items-center justify-end gap-2">
-                                <div class="flex min-w-[94px] flex-col items-end gap-1.5">
-                                    <div class="inline-flex min-w-[90px] items-center justify-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2 py-1 text-[10px] font-extrabold text-indigo-700 whitespace-nowrap shadow-sm">
-                                        <span>${{ number_format($product->precio_venta1, 0, ',', '.') }}</span>
-                                        <span class="text-[7px] font-semibold text-indigo-500">{{ $sufijoVenta }}</span>
-                                    </div>
+                            <div class="flex w-[102px] shrink-0 flex-col items-end justify-center gap-1.5">
+                                <div class="inline-flex min-w-[90px] items-center justify-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2 py-1 text-[10px] font-extrabold text-indigo-700 whitespace-nowrap shadow-sm">
+                                    <span>${{ number_format($product->precio_venta1, 0, ',', '.') }}</span>
+                                    <span class="text-[7px] font-semibold text-indigo-500">{{ $sufijoVenta }}</span>
+                                </div>
 
-                                    <div class="inline-flex min-h-[21px] min-w-[94px] items-center justify-center rounded-full border px-2 py-1 text-[8px] font-bold leading-tight text-center shadow-sm {{ $stockBadgeClasses }}">
-                                        Stock: {{ $stockTexto }}
-                                    </div>
+                                <div class="inline-flex min-h-[21px] min-w-[94px] items-center justify-center rounded-full border px-2 py-1 text-[8px] font-bold leading-tight text-center shadow-sm {{ $stockBadgeClasses }}">
+                                    Stock: {{ $stockTexto }}
                                 </div>
 
                                 <button wire:click="agregarAlCarrito({{ $product->id_producto }})"
