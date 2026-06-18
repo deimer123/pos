@@ -2226,7 +2226,7 @@
 
                             <div id="swal_efectivo_wrap" style="margin-bottom:8px;text-align:center;">
                                 <label style="display:block;font-size:11px;font-weight:800;color:#4b5563;margin-bottom:4px;text-align:center;">Valor recibido</label>
-                                <input id="swal_monto_recibido" type="text" inputmode="numeric" value="" placeholder="0" style="display:block;width:220px;max-width:100%;height:38px;border:1px solid #cbd5e1;border-radius:10px;padding:4px 12px;text-align:center;font-weight:800;margin:0 auto;">
+                                <input id="swal_monto_recibido" type="text" inputmode="numeric" value="" placeholder="0" style="display:block;width:220px;max-width:100%;height:38px;border:1px solid #cbd5e1;border-radius:10px;padding:4px 12px;text-align:center;font-weight:800;margin:0 auto;" autocomplete="off">
                                 <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:8px auto 0;max-width:310px;">
                                     <button type="button" data-cash-exact="1" style="border:0;border-radius:999px;background:#2563eb;color:white;font-weight:800;font-size:11px;padding:6px 10px;">Exacto</button>
                                     <button type="button" data-cash-add="5000" style="border:0;border-radius:999px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:6px 9px;">+5.000</button>
@@ -2278,6 +2278,12 @@
                     const montoRecibido = document.getElementById('swal_monto_recibido');
                     const vuelto = document.getElementById('swal_vuelto');
 
+                    const formatearMontoInput = (valor) => {
+                        const numero = parseMoney(valor);
+                        montoRecibido.value = numero > 0 ? formatMoney(numero).replace('$', '').trim() : '';
+                        return numero;
+                    };
+
                     const actualizarVuelto = () => {
                         const recibido = parseMoney(montoRecibido.value);
                         vuelto.textContent = formatMoney(Math.max(0, recibido - totalNumero));
@@ -2293,18 +2299,21 @@
                         actualizarVuelto();
                     };
 
-                    montoRecibido.addEventListener('input', actualizarVuelto);
+                    montoRecibido.addEventListener('input', () => {
+                        formatearMontoInput(montoRecibido.value);
+                        actualizarVuelto();
+                    });
                     document.querySelectorAll('[data-cash-add]').forEach((button) => {
                         button.addEventListener('click', () => {
                             const actual = parseMoney(montoRecibido.value);
                             const suma = Number(button.getAttribute('data-cash-add') || 0);
-                            montoRecibido.value = String(actual + suma);
+                            formatearMontoInput(String(actual + suma));
                             actualizarVuelto();
                         });
                     });
                     document.querySelectorAll('[data-cash-exact]').forEach((button) => {
                         button.addEventListener('click', () => {
-                            montoRecibido.value = String(totalNumero);
+                            formatearMontoInput(String(totalNumero));
                             actualizarVuelto();
                         });
                     });

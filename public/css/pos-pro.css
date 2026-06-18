@@ -2808,11 +2808,16 @@ button:hover {
 
     .pos-cart-component > .pos-desktop-cart-actions .pos-cart-main-action,
     .pos-cart-component > .pos-desktop-cart-actions .pos-cart-secondary-action {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
         width: auto !important;
         min-width: 0 !important;
         height: 36px !important;
         padding: 0 14px !important;
         font-size: 12px !important;
+        line-height: 1 !important;
+        text-align: center !important;
         white-space: nowrap !important;
         border-radius: 999px !important;
     }
