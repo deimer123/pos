@@ -2784,6 +2784,7 @@ button:hover {
         gap: 8px !important;
         justify-content: flex-start !important;
         align-items: center !important;
+        flex-wrap: nowrap !important;
         background: #ffffff !important;
         border-top: 0 !important;
         box-shadow: none !important;
@@ -2797,6 +2798,8 @@ button:hover {
         display: flex !important;
         gap: 8px !important;
         flex-wrap: wrap !important;
+        width: auto !important;
+        flex: 0 1 auto !important;
     }
 
     .pos-cart-component > .pos-desktop-cart-actions > .pos-cart-secondary-action {
