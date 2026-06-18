@@ -24,7 +24,7 @@
     </div>
 
     <div style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 1rem;">
-        <div class="pos-products-grid grid gap-3" style="grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));">
+        <div class="pos-products-grid grid gap-3" style="grid-template-columns: 1fr;">
         @forelse ($products as $product)
             @php
                 $tieneImagen = !empty($product->foto) && $product->foto !== 'NULL' && $product->foto !== null;
@@ -122,7 +122,7 @@
                         <div class="relative z-10 mt-2 flex w-full min-h-[2.5rem] items-center justify-center overflow-hidden bg-white px-1 text-center">
                             <button type="button"
                                 title="{{ $product->descripcion_larga }}"
-                                @click="$dispatch('ver-nombre-producto-mobile', { nombre: @js($product->descripcion_larga) })"
+                                @click="$dispatch('ver-nombre-producto-mobile', { nombre: @js($product->descripcion_larga), stock: @js($stockTexto) })"
                                 class="flex h-[2.5rem] w-full items-center justify-center overflow-hidden text-center text-[6px] font-semibold leading-[1.05] text-slate-700 break-words"
                                 style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-overflow: ellipsis;">
                                 {{ $product->descripcion_larga }}
@@ -166,12 +166,17 @@
         </div>
     </div>
 
-    <div x-data="{ nombreProductoMobile: null }" @ver-nombre-producto-mobile.window="nombreProductoMobile = $event.detail.nombre">
+    <div x-data="{ nombreProductoMobile: null, stockProductoMobile: null }" @ver-nombre-producto-mobile.window="nombreProductoMobile = $event.detail.nombre; stockProductoMobile = $event.detail.stock">
         <div x-show="nombreProductoMobile" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" x-transition>
             <div @click.outside="nombreProductoMobile = null" class="w-full max-w-sm rounded-xl bg-white p-4 shadow-lg">
                 <div class="text-center text-sm font-semibold text-slate-800 break-words" x-text="nombreProductoMobile"></div>
+                <div x-show="stockProductoMobile" class="mt-3 flex justify-center">
+                    <div class="inline-flex items-center justify-center rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 shadow-sm">
+                        Stock: <span class="ml-1" x-text="stockProductoMobile"></span>
+                    </div>
+                </div>
                 <div class="mt-4 flex justify-center">
-                    <button @click="nombreProductoMobile = null"
+                    <button @click="nombreProductoMobile = null; stockProductoMobile = null"
                         class="rounded-full bg-indigo-600 px-4 py-2 text-sm text-white shadow hover:bg-indigo-700">
                         Cerrar
                     </button>

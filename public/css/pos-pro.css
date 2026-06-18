@@ -2556,6 +2556,11 @@ button:hover {
     color: #b45309 !important;
 }
 
+/* FINAL single product per row */
+.pos-products-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+}
+
 /* FINAL iPad touch override */
 @media (hover: none) and (pointer: coarse) and (min-width: 769px) and (max-width: 1366px) {
     .pos-cart-component > .pos-cart-header { order: 1 !important; }
