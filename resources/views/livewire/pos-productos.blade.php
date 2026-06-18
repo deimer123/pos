@@ -65,36 +65,37 @@
             <div wire:key="producto-{{ $product->id_producto }}" class="h-full">
                 <div
                     class="pos-product-card-desktop h-full bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }}">
-                    <div class="flex h-full flex-col px-4 py-3 text-center" style="min-height: 190px;">
-                        <div class="inline-flex min-h-[24px] min-w-[62px] items-center justify-center self-center mx-auto rounded-full border px-3 text-[11px] font-bold leading-none shadow-sm"
-                            style="border-color:#312e81;background:#4338ca;color:#fefefe;">
-                            {{ $product->id_producto }}
-                        </div>
+                    <div class="flex items-center gap-4 px-4 py-4" style="min-height: 154px;">
+                        <div class="flex w-[96px] shrink-0 flex-col items-center justify-center gap-3">
+                            <div class="inline-flex min-h-[24px] min-w-[62px] items-center justify-center rounded-full border px-3 text-[11px] font-bold leading-none shadow-sm"
+                                style="border-color:#312e81;background:#4338ca;color:#fefefe;">
+                                {{ $product->id_producto }}
+                            </div>
 
-                        <div class="relative z-10 mt-2 flex h-[68px] w-full items-center justify-center bg-white">
                             <img wire:click="$dispatch('ver-imagen', { url: @js($urlImagen) })" src="{{ $urlImagen }}"
-                                class="w-16 h-16 object-cover border rounded cursor-pointer hover:opacity-80"
+                                class="h-16 w-16 object-cover border rounded cursor-pointer hover:opacity-80"
                                 alt="Foto del producto" />
                         </div>
 
-                        <div class="relative z-10 mt-2 flex min-h-[46px] w-full items-center justify-center overflow-hidden bg-white px-2 text-center">
-                            <div
-                                title="{{ $product->descripcion_larga }}"
-                                class="flex min-h-[46px] w-full items-center justify-center overflow-hidden text-center text-[9px] font-semibold leading-[1.15] text-slate-700 break-words"
-                                style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-overflow: ellipsis;">
-                                {{ $product->descripcion_larga }}
-                            </div>
-                        </div>
-
-                        <div class="relative z-10 mt-auto flex w-full items-center justify-center bg-white pt-3">
-                            <div class="flex w-full items-center justify-center gap-3">
-                                <div class="inline-flex min-w-[124px] items-center justify-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-[13px] font-extrabold text-indigo-700 whitespace-nowrap shadow-sm">
-                                    <span>${{ number_format($product->precio_venta1, 0, ',', '.') }}</span>
-                                    <span class="text-[9px] font-semibold text-indigo-500">{{ $sufijoVenta }}</span>
+                        <div class="flex min-w-0 flex-1 items-center gap-4">
+                            <div class="flex min-w-0 flex-1 items-center">
+                                <div
+                                    title="{{ $product->descripcion_larga }}"
+                                    class="w-full text-left text-[11px] font-semibold leading-[1.2] text-slate-700 break-words">
+                                    {{ $product->descripcion_larga }}
                                 </div>
+                            </div>
 
-                                <div class="inline-flex min-h-[24px] min-w-[124px] items-center justify-center rounded-full border px-3 py-1 text-[10px] font-bold leading-tight text-center shadow-sm {{ $stockBadgeClasses }}">
-                                    Stock: {{ $stockTexto }}
+                            <div class="flex shrink-0 items-center gap-3">
+                                <div class="flex flex-col items-center gap-2">
+                                    <div class="inline-flex min-w-[124px] items-center justify-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-[13px] font-extrabold text-indigo-700 whitespace-nowrap shadow-sm">
+                                        <span>${{ number_format($product->precio_venta1, 0, ',', '.') }}</span>
+                                        <span class="text-[9px] font-semibold text-indigo-500">{{ $sufijoVenta }}</span>
+                                    </div>
+
+                                    <div class="inline-flex min-h-[24px] min-w-[124px] items-center justify-center rounded-full border px-3 py-1 text-[10px] font-bold leading-tight text-center shadow-sm {{ $stockBadgeClasses }}">
+                                        Stock: {{ $stockTexto }}
+                                    </div>
                                 </div>
 
                                 <button wire:click="agregarAlCarrito({{ $product->id_producto }})"
@@ -108,36 +109,37 @@
 
                 <div
                     class="pos-product-card-mobile h-full bg-white rounded-lg shadow border {{ $product->existencias > 0 ? 'border-green-300' : 'border-red-200' }}">
-                    <div class="flex h-full flex-col px-3 py-3 text-center" style="min-height: 186px;">
-                        <div class="inline-flex min-h-[20px] min-w-[54px] items-center justify-center self-center mx-auto rounded-full border px-2.5 text-[10px] font-bold leading-none shadow-sm"
-                            style="border-color:#312e81;background:#4338ca;color:#fefefe;">
-                            {{ $product->id_producto }}
-                        </div>
+                    <div class="flex items-center gap-3 px-3 py-3" style="min-height: 146px;">
+                        <div class="flex w-[72px] shrink-0 flex-col items-center justify-center gap-2">
+                            <div class="inline-flex min-h-[20px] min-w-[54px] items-center justify-center rounded-full border px-2.5 text-[10px] font-bold leading-none shadow-sm"
+                                style="border-color:#312e81;background:#4338ca;color:#fefefe;">
+                                {{ $product->id_producto }}
+                            </div>
 
-                        <div class="relative z-10 mt-2 flex w-full justify-center min-h-[56px] items-center bg-white">
                             <img wire:click="$dispatch('ver-imagen', { url: @js($urlImagen) })" src="{{ $urlImagen }}"
                                 class="h-12 w-12 rounded border object-cover" alt="Foto del producto" />
                         </div>
 
-                        <div class="relative z-10 mt-2 flex w-full min-h-[2.6rem] items-center justify-center overflow-hidden bg-white px-1 text-center">
-                            <button type="button"
-                                title="{{ $product->descripcion_larga }}"
-                                @click="$dispatch('ver-nombre-producto-mobile', { nombre: @js($product->descripcion_larga), stock: @js($stockTexto) })"
-                                class="flex h-[2.6rem] w-full items-center justify-center overflow-hidden text-center text-[8px] font-semibold leading-[1.1] text-slate-700 break-words"
-                                style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-overflow: ellipsis;">
-                                {{ $product->descripcion_larga }}
-                            </button>
-                        </div>
+                        <div class="flex min-w-0 flex-1 items-center gap-2">
+                            <div class="flex min-w-0 flex-1 items-center">
+                                <button type="button"
+                                    title="{{ $product->descripcion_larga }}"
+                                    @click="$dispatch('ver-nombre-producto-mobile', { nombre: @js($product->descripcion_larga), stock: @js($stockTexto) })"
+                                    class="w-full text-left text-[9px] font-semibold leading-[1.15] text-slate-700 break-words">
+                                    {{ $product->descripcion_larga }}
+                                </button>
+                            </div>
 
-                        <div class="relative z-10 mt-auto flex w-full items-center justify-center bg-white pt-3">
-                            <div class="flex w-full items-center justify-center gap-2">
-                                <div class="inline-flex min-w-[90px] items-center justify-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2 py-1 text-[10px] font-extrabold text-indigo-700 whitespace-nowrap shadow-sm">
-                                    <span>${{ number_format($product->precio_venta1, 0, ',', '.') }}</span>
-                                    <span class="text-[7px] font-semibold text-indigo-500">{{ $sufijoVenta }}</span>
-                                </div>
+                            <div class="flex shrink-0 items-center gap-2">
+                                <div class="flex flex-col items-center gap-1.5">
+                                    <div class="inline-flex min-w-[90px] items-center justify-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2 py-1 text-[10px] font-extrabold text-indigo-700 whitespace-nowrap shadow-sm">
+                                        <span>${{ number_format($product->precio_venta1, 0, ',', '.') }}</span>
+                                        <span class="text-[7px] font-semibold text-indigo-500">{{ $sufijoVenta }}</span>
+                                    </div>
 
-                                <div class="inline-flex min-h-[21px] min-w-[94px] items-center justify-center rounded-full border px-2 py-1 text-[8px] font-bold leading-tight text-center shadow-sm {{ $stockBadgeClasses }}">
-                                    Stock: {{ $stockTexto }}
+                                    <div class="inline-flex min-h-[21px] min-w-[94px] items-center justify-center rounded-full border px-2 py-1 text-[8px] font-bold leading-tight text-center shadow-sm {{ $stockBadgeClasses }}">
+                                        Stock: {{ $stockTexto }}
+                                    </div>
                                 </div>
 
                                 <button wire:click="agregarAlCarrito({{ $product->id_producto }})"
