@@ -2615,7 +2615,8 @@ button:hover {
 
     .pos-cart-component > .pos-desktop-cart-actions {
         display: grid !important;
-        grid-template-columns: 1fr auto !important;
+        grid-template-columns: auto auto !important;
+        justify-content: flex-start !important;
         align-items: center !important;
         gap: 6px !important;
         margin-top: auto !important;
@@ -2638,10 +2639,10 @@ button:hover {
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
-        width: 100% !important;
-        min-width: 0 !important;
+        width: auto !important;
+        min-width: 110px !important;
         height: 32px !important;
-        padding: 0 8px !important;
+        padding: 0 16px !important;
         white-space: nowrap !important;
         font-size: 11px !important;
     }
@@ -2649,17 +2650,17 @@ button:hover {
     .pos-cart-component .pos-cart-mobile-more {
         display: block !important;
         position: relative !important;
-        min-width: 88px !important;
+        min-width: 92px !important;
     }
 
     .pos-cart-component .pos-cart-mobile-more-button {
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
-        width: 100% !important;
-        min-width: 88px !important;
+        width: auto !important;
+        min-width: 92px !important;
         height: 32px !important;
-        padding: 0 8px !important;
+        padding: 0 16px !important;
         border-radius: 999px !important;
         background: #4338ca !important;
         color: transparent !important;
@@ -2760,5 +2761,55 @@ button:hover {
         font-size: 11px !important;
         padding-top: 4px !important;
         padding-bottom: 4px !important;
+    }
+}
+
+@media (hover: hover) and (pointer: fine) and (min-width: 769px) and (max-width: 1366px) {
+    .pos-cart-component {
+        position: static !important;
+        padding-bottom: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .pos-cart-component > .pos-desktop-cart-actions {
+        display: flex !important;
+        position: static !important;
+        left: auto !important;
+        right: auto !important;
+        bottom: auto !important;
+        width: 100% !important;
+        min-height: 0 !important;
+        padding: 8px 12px !important;
+        gap: 10px !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        background: #ffffff !important;
+        border-top: 0 !important;
+        box-shadow: none !important;
+    }
+
+    .pos-cart-component > .pos-desktop-cart-actions > .pos-cart-secondary-action {
+        display: inline-flex !important;
+    }
+
+    .pos-cart-component > .pos-desktop-cart-actions > .flex.gap-2 {
+        display: flex !important;
+        gap: 8px !important;
+        flex-wrap: wrap !important;
+    }
+
+    .pos-cart-component > .pos-desktop-cart-actions .pos-cart-main-action,
+    .pos-cart-component > .pos-desktop-cart-actions .pos-cart-secondary-action {
+        width: auto !important;
+        min-width: 0 !important;
+        height: 36px !important;
+        padding: 0 14px !important;
+        font-size: 12px !important;
+        white-space: nowrap !important;
+        border-radius: 999px !important;
+    }
+
+    .pos-cart-component .pos-cart-mobile-more {
+        display: none !important;
     }
 }
