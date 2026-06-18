@@ -2614,11 +2614,10 @@ button:hover {
     }
 
     .pos-cart-component > .pos-desktop-cart-actions {
-        display: grid !important;
-        grid-template-columns: auto auto !important;
-        justify-content: flex-start !important;
+        display: flex !important;
+        justify-content: flex-end !important;
         align-items: center !important;
-        gap: 6px !important;
+        gap: 8px !important;
         margin-top: auto !important;
         width: 100% !important;
         padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px)) !important;
@@ -2626,7 +2625,8 @@ button:hover {
         border-top: 1px solid #dbe3f0 !important;
         position: sticky !important;
         bottom: 0 !important;
-        z-index: 60 !important;
+        overflow: visible !important;
+        z-index: 120 !important;
         box-shadow: 0 -6px 14px rgba(15, 23, 42, .08) !important;
     }
 
@@ -2651,6 +2651,7 @@ button:hover {
         display: block !important;
         position: relative !important;
         min-width: 92px !important;
+        flex: 0 0 auto !important;
     }
 
     .pos-cart-component .pos-cart-mobile-more-button {
@@ -2700,7 +2701,7 @@ button:hover {
         border-radius: 12px !important;
         background: #ffffff !important;
         box-shadow: 0 14px 30px rgba(15, 23, 42, .22) !important;
-        z-index: 700 !important;
+        z-index: 999 !important;
     }
 
     .pos-cart-component .pos-cart-mobile-more-menu button {
@@ -2780,8 +2781,8 @@ button:hover {
         width: 100% !important;
         min-height: 0 !important;
         padding: 8px 12px !important;
-        gap: 10px !important;
-        justify-content: space-between !important;
+        gap: 8px !important;
+        justify-content: flex-start !important;
         align-items: center !important;
         background: #ffffff !important;
         border-top: 0 !important;
@@ -2796,6 +2797,10 @@ button:hover {
         display: flex !important;
         gap: 8px !important;
         flex-wrap: wrap !important;
+    }
+
+    .pos-cart-component > .pos-desktop-cart-actions > .pos-cart-secondary-action {
+        flex: 0 0 auto !important;
     }
 
     .pos-cart-component > .pos-desktop-cart-actions .pos-cart-main-action,
