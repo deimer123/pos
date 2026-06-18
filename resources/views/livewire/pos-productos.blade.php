@@ -37,14 +37,24 @@
                     'hora' => '/ hr',
                     default => '/ und',
                 };
-                $stockUnidad = match ((int) ($product->id_unidad_de_medida ?? 1)) {
-                    2 => 'kg',
-                    3 => 'lt',
-                    4 => 'mt',
-                    5 => 'hr',
-                    default => 'und',
+                $stockUnidad = match ($product->vende_por ?? 'unidad') {
+                    'peso' => 'kg',
+                    'porcion' => 'porcion',
+                    'litro' => 'lt',
+                    'metro' => 'mt',
+                    'hora' => 'hr',
+                    default => match ((int) ($product->id_unidad_de_medida ?? 1)) {
+                        2 => 'kg',
+                        3 => 'lt',
+                        4 => 'mt',
+                        5 => 'hr',
+                        default => 'und',
+                    },
                 };
                 $decimalesStock = $stockUnidad === 'und' ? 0 : 2;
+                $stockBadgeClasses = $product->existencias > 0
+                    ? 'border-emerald-200 bg-emerald-600 text-white'
+                    : 'border-red-200 bg-red-500 text-white';
             @endphp
 
             <div wire:key="producto-{{ $product->id_producto }}" class="h-full">
@@ -84,7 +94,7 @@
                                 Agregar
                             </button>
 
-                            <div class="flex h-[20px] items-center justify-center text-[10px] leading-tight text-center whitespace-nowrap {{ $product->existencias > 0 ? 'text-green-600' : 'text-red-600' }}">
+                            <div class="inline-flex min-h-[22px] min-w-[118px] items-center justify-center rounded-full border px-3 py-1 text-[10px] font-bold leading-tight text-center shadow-sm {{ $stockBadgeClasses }}">
                                 Stock: {{ number_format((float) $product->existencias, $decimalesStock, ',', '.') }} {{ $stockUnidad }}
                             </div>
                         </div>
@@ -126,7 +136,7 @@
                                 Agregar
                             </button>
 
-                            <div class="flex min-h-[20px] items-center justify-center text-[9px] leading-tight text-center whitespace-nowrap {{ $product->existencias > 0 ? 'text-green-600' : 'text-red-600' }}">
+                            <div class="inline-flex min-h-[20px] min-w-[98px] items-center justify-center rounded-full border px-2.5 py-1 text-[9px] font-bold leading-tight text-center shadow-sm {{ $stockBadgeClasses }}">
                                 Stock: {{ number_format((float) $product->existencias, $decimalesStock, ',', '.') }} {{ $stockUnidad }}
                             </div>
                         </div>
