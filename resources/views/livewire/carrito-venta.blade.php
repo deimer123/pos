@@ -662,7 +662,7 @@
             </button>
 
             <div class="pos-cart-mobile-more-menu" x-show="open" x-cloak @click.stop @click.outside="open = false" wire:key="mobile-actions-menu-{{ $cajaEstado }}">
-                <button type="button" wire:key="mobile-action-editar"
+                <button type="button" class="pos-cart-menu-item pos-cart-menu-item-edit" wire:key="mobile-action-editar"
                     @click.prevent.stop="
                         open = false;
                         if (($wire.get('carrito') ?? []).length === 0) {
@@ -672,34 +672,27 @@
                     Editar
                 </button>
 
-                <button type="button" wire:key="mobile-action-buscar-cliente" @click.prevent.stop="open = false; $wire.abrirModalBuscarCliente();">
-                    Buscar Cliente
-                </button>
-
-                <button type="button" wire:key="mobile-action-crear-cliente" @click.prevent.stop="open = false; $wire.abrirModalCrearCliente();">
+                <button type="button" class="pos-cart-menu-item pos-cart-menu-item-create-client" wire:key="mobile-action-crear-cliente" @click.prevent.stop="open = false; $wire.abrirModalCrearCliente();">
                     Crear Cliente
                 </button>
 
                 @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
                     @if ($cajaEstado === 'abierta')
-                        <button type="button" wire:key="mobile-action-movimiento-caja" @click.prevent.stop="open = false; $wire.abrirMovimientoCajaModal('salida');">
+                        <button type="button" class="pos-cart-menu-item pos-cart-menu-item-cash-move" wire:key="mobile-action-movimiento-caja" @click.prevent.stop="open = false; $wire.abrirMovimientoCajaModal('salida');">
                             Entrada / salida
                         </button>
-                        <button type="button" wire:key="mobile-action-cerrar-caja" @click.prevent.stop="open = false; $wire.cerrarCajaModal();">
-                            Cerrar caja
-                        </button>
                     @else
-                        <button type="button" wire:key="mobile-action-abrir-caja" @click.prevent.stop="open = false; $wire.abrirCajaModal();">
+                        <button type="button" class="pos-cart-menu-item pos-cart-menu-item-open-cash" wire:key="mobile-action-abrir-caja" @click.prevent.stop="open = false; $wire.abrirCajaModal();">
                             Abrir caja
                         </button>
                     @endif
 
-                    <button type="button" wire:key="mobile-action-cartera" @click.prevent.stop="open = false; $wire.abrirModalCartera();">
+                    <button type="button" class="pos-cart-menu-item pos-cart-menu-item-wallet" wire:key="mobile-action-cartera" @click.prevent.stop="open = false; $wire.abrirModalCartera();">
                         Cartera
                     </button>
                 @endif
 
-                <button type="button" wire:key="mobile-action-ver" @click.prevent.stop="open = false; $wire.verPrefacturas();">
+                <button type="button" class="pos-cart-menu-item pos-cart-menu-item-view" wire:key="mobile-action-ver" @click.prevent.stop="open = false; $wire.verPrefacturas();">
                     Ver
                 </button>
             </div>

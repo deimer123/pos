@@ -2718,6 +2718,36 @@ button:hover {
         margin-top: 6px !important;
     }
 
+    .pos-cart-component .pos-cart-mobile-more-menu .pos-cart-menu-item-edit {
+        background: #4f46e5 !important;
+        color: #ffffff !important;
+    }
+
+    .pos-cart-component .pos-cart-mobile-more-menu .pos-cart-menu-item-create-client {
+        background: #0f766e !important;
+        color: #ffffff !important;
+    }
+
+    .pos-cart-component .pos-cart-mobile-more-menu .pos-cart-menu-item-cash-move {
+        background: #0891b2 !important;
+        color: #ffffff !important;
+    }
+
+    .pos-cart-component .pos-cart-mobile-more-menu .pos-cart-menu-item-open-cash {
+        background: #16a34a !important;
+        color: #ffffff !important;
+    }
+
+    .pos-cart-component .pos-cart-mobile-more-menu .pos-cart-menu-item-wallet {
+        background: #7c3aed !important;
+        color: #ffffff !important;
+    }
+
+    .pos-cart-component .pos-cart-mobile-more-menu .pos-cart-menu-item-view {
+        background: #475569 !important;
+        color: #ffffff !important;
+    }
+
     .pos-cart-component > .pos-cart-observation {
         margin: 0 !important;
         padding: 0 8px 6px !important;
