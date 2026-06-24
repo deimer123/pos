@@ -130,6 +130,11 @@ public function cuentaContable(): BelongsTo
     {
         return $this->hasMany(ProductoVariante::class, 'product_id', 'id');
     }
+
+    public function combos(): HasMany
+    {
+        return $this->hasMany(ProductCombo::class, 'product_id', 'id');
+    }
     
     public function permiteCantidadDecimal(): bool
     {
