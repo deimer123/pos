@@ -13,6 +13,8 @@ class PosProductos extends Component
         'tipo_negocio' => 'tienda',
         'usa_peso' => false,
         'usa_variantes' => false,
+        'usa_recetas' => false,
+        'usa_servicios' => false,
         'nombre_empresa' => null,
     ];
 
@@ -35,6 +37,7 @@ class PosProductos extends Component
         return iconv('Windows-1252', 'UTF-8//IGNORE', $texto) ?: '';
     }
     public $search = '';
+    public $filtroTipo = '';
     public $mostrarModal = false;
     public $mostrarModalProductoManual = false;
     public $productoTemporal = [
@@ -69,9 +72,17 @@ class PosProductos extends Component
         $busqueda = '%' . str_replace(' ', '%', $this->search) . '%';
 
         $query = Product::query()
-            // ✅ FILTRAR POR empresa_id (NO por $user->id)
             ->where('empresa_id', $empresaId)
-            ->where('id_producto', '!=', '10001') // excluimos código temporal
+            ->where('id_producto', '!=', '10001')
+            ->when($this->filtroTipo, function ($q) {
+                if ($this->filtroTipo === 'receta') {
+                    $q->whereHas('recetas', fn($r) => $r->where('activo', true));
+                } elseif ($this->filtroTipo === 'combo') {
+                    $q->whereHas('combos');
+                } else {
+                    $q->where('tipo_producto', $this->filtroTipo);
+                }
+            })
             ->when($this->search, function ($q) use ($busqueda) {
                 $q->where(function ($q) use ($busqueda) {
                     $q->where('descripcion_larga', 'like', $busqueda)
@@ -218,6 +229,8 @@ public function updatedSearch($value)
             'tipo_negocio' => (string) ($config->tipo_negocio ?: 'tienda'),
             'usa_peso' => (bool) $config->usa_peso,
             'usa_variantes' => (bool) $config->usa_variantes,
+            'usa_recetas' => (bool) $config->usa_recetas,
+            'usa_servicios' => (bool) $config->usa_servicios,
             'nombre_empresa' => $this->textoUtf8($config->nombre_empresa),
         ];
     }
