@@ -74,5 +74,8 @@ class Kernel extends HttpKernel
     'no_digitadores_en_pos' => \App\Http\Middleware\RestrictDigitadorFromPos::class,
 'no_vendedores_en_panel' => \App\Http\Middleware\RestrictVendedorFromPanel::class,
         'empresa.activa' => \App\Http\Middleware\EnsureEmpresaActiva::class,
+        'solo.cocina' => \App\Http\Middleware\RestrictCocinaAccess::class,
+        'solo.mesero' => \App\Http\Middleware\RestrictMeseroFromPanel::class,
+        'no.cocina.en.pos' => \App\Http\Middleware\RedirectCocinaFromPos::class,
     ];
 }

@@ -27,7 +27,7 @@ Route::get('/', fn () => view('welcome'));
 | Redirección después del login
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth'])->get('/eleccion', function () {
+Route::middleware(['auth', 'no.cocina.en.pos'])->get('/eleccion', function () {
 
     $user = Auth::user();
 
@@ -92,11 +92,6 @@ Route::middleware(['auth'])->get('/eleccion', function () {
 | Solo pueden acceder vendedores. Se controla con un middleware personalizado
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'no_digitadores_en_pos'])->get('/pos', function () {
-    return view('pos');
-})->name('pos');
-
-
 Route::middleware(['auth'])->get('/prefactura/imprimir/{id}', [\App\Http\Controllers\PrefacturaController::class, 'imprimir'])->name('prefactura.imprimir');
 Route::middleware(['auth'])->get('/salida/imprimir/{id}', function ($id) {
     $factura = \App\Models\Factura::with(['cliente','detalles'])
@@ -210,12 +205,51 @@ Route::get('/check-session', function () {
 
 });
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'no.cocina.en.pos'])->group(function () {
 
     Route::view('/pos', 'pos')
         ->name('pos');
 
+    Route::get('/pos/mesa/{mesa}', function (\App\Models\Mesa $mesa) {
+        $empresaId = auth()->user()->getEmpresaActualId();
+        abort_if($mesa->empresa_id !== $empresaId, 403);
+        return view('pos-mesa', compact('mesa'));
+    })->name('pos.mesa');
+
+    Route::get('/pos/mesa/{mesa}/cuenta', function (\App\Models\Mesa $mesa) {
+        $empresaId = auth()->user()->getEmpresaActualId();
+        abort_if($mesa->empresa_id !== $empresaId, 403);
+        $orden = \App\Models\OrdenMesa::where('empresa_id', $empresaId)
+            ->where('mesa_id', $mesa->id)
+            ->whereIn('estado', ['abierta', 'en_preparacion', 'lista'])
+            ->with(['items.producto', 'usuario'])
+            ->latest()->first();
+        abort_if(! $orden, 404);
+        $items = $orden->items;
+        $total = $items->sum('subtotal');
+        $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();
+        return view('tickets.cuenta-mesa', compact('mesa', 'orden', 'items', 'total', 'config'));
+    })->name('pos.mesa.cuenta');
+
 });
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/cocina', \App\Livewire\PantallaCocina::class)
+        ->middleware('solo.cocina')
+        ->name('cocina');
+});
+
+Route::post('/cocina/logout', function (\Illuminate\Http\Request $request) {
+    $user = auth()->user();
+    if ($user) {
+        $user->update(['session_id' => null, 'session_token' => null]);
+    }
+    \Illuminate\Support\Facades\Auth::logout();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+    return redirect()->route('filament.admin.auth.login');
+})->name('cocina.logout')->middleware('auth');
+
 Route::get('/productos/buscar', function(Request $request) {
 
     $texto = trim($request->texto);
