@@ -80,20 +80,40 @@ class EmpleadoResource extends Resource
 
                         Forms\Components\CheckboxList::make('roles')
                             ->label('Roles del Empleado')
-                            ->options([
-                                'vendedor' => 'Vendedor',
-                                'digitador' => 'Digitador',
-                                'cajero' => 'Cajero',
-                                'mesero' => 'Mesero',
-                                'cocina' => 'Cocina',
-                            ])
-                            ->descriptions([
-                                'vendedor' => 'Puede realizar ventas y consultar productos',
-                                'digitador' => 'Puede crear y editar productos, familias, etc.',
-                                'cajero' => 'Puede realizar ventas y gestionar el caja',
-                                'mesero' => 'Puede tomar órdenes en mesas y enviar a cocina',
-                                'cocina' => 'Solo accede a la pantalla de cocina para ver órdenes',
-                            ])
+                            ->options(function () {
+                                $empresaId = auth()->user()->getEmpresaActualId();
+                                $usaMesas = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_mesas');
+
+                                $opciones = [
+                                    'vendedor'  => 'Vendedor',
+                                    'digitador' => 'Digitador',
+                                    'cajero'    => 'Cajero',
+                                ];
+
+                                if ($usaMesas) {
+                                    $opciones['mesero'] = 'Mesero';
+                                    $opciones['cocina'] = 'Cocina';
+                                }
+
+                                return $opciones;
+                            })
+                            ->descriptions(function () {
+                                $empresaId = auth()->user()->getEmpresaActualId();
+                                $usaMesas = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_mesas');
+
+                                $desc = [
+                                    'vendedor'  => 'Puede realizar ventas y consultar productos',
+                                    'digitador' => 'Puede crear y editar productos, familias, etc.',
+                                    'cajero'    => 'Puede realizar ventas y gestionar el caja',
+                                ];
+
+                                if ($usaMesas) {
+                                    $desc['mesero'] = 'Puede tomar órdenes en mesas y enviar a cocina';
+                                    $desc['cocina'] = 'Solo accede a la pantalla de cocina para ver órdenes';
+                                }
+
+                                return $desc;
+                            })
                             ->required()
                             ->columns(1)
                             ->afterStateHydrated(function (Forms\Components\CheckboxList $component, $state, $record) {
@@ -179,13 +199,16 @@ class EmpleadoResource extends Resource
 
                 Tables\Filters\SelectFilter::make('roles')
                     ->label('Rol')
-                    ->options([
-                        'vendedor' => 'Vendedor',
-                        'digitador' => 'Digitador',
-                        'cajero' => 'Cajero',
-                        'mesero' => 'Mesero',
-                        'cocina' => 'Cocina',
-                    ])
+                    ->options(function () {
+                        $empresaId = auth()->user()->getEmpresaActualId();
+                        $usaMesas = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_mesas');
+                        $opciones = ['vendedor' => 'Vendedor', 'digitador' => 'Digitador', 'cajero' => 'Cajero'];
+                        if ($usaMesas) {
+                            $opciones['mesero'] = 'Mesero';
+                            $opciones['cocina'] = 'Cocina';
+                        }
+                        return $opciones;
+                    })
                     ->query(function (Builder $query, array $data): Builder {
                         if (filled($data['value'])) {
                             return $query->role($data['value']);
