@@ -718,28 +718,28 @@
                     Acciones ▾
                 </button>
                 <div x-show="openAcc" x-cloak @click.outside="openAcc = false"
-                    style="position:absolute; bottom:calc(100% + 6px); right:0; background:white; border:1px solid #e2e8f0; border-radius:10px; box-shadow:0 4px 16px rgba(0,0,0,.12); min-width:160px; z-index:9999; display:flex; flex-direction:column; overflow:hidden;">
+                    style="position:absolute; bottom:calc(100% + 6px); right:0; background:white; border:1px solid #e2e8f0; border-radius:10px; box-shadow:0 4px 16px rgba(0,0,0,.12); min-width:170px; z-index:9999; display:flex; flex-direction:column; overflow:hidden; padding:6px;">
                     @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
                         @if ($cajaEstado === 'abierta')
                         <button type="button"
                             @click.stop="openAcc = false; $wire.abrirMovimientoCajaModal('salida')"
-                            style="padding:10px 16px; text-align:left; font-size:12px; background:white; border:none; cursor:pointer; border-bottom:1px solid #f1f5f9;"
-                            onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='white'">
+                            style="margin-bottom:5px; padding:8px 14px; text-align:left; font-size:12px; font-weight:600; background:#0ea5e9; color:white; border:none; border-radius:8px; cursor:pointer;"
+                            onmouseover="this.style.background='#0284c7'" onmouseout="this.style.background='#0ea5e9'">
                             📥 Entrada / salida
                         </button>
                         @endif
                         <button type="button"
                             @click.stop="openAcc = false; $wire.abrirModalCartera()"
-                            style="padding:10px 16px; text-align:left; font-size:12px; background:white; border:none; cursor:pointer; border-bottom:1px solid #f1f5f9;"
-                            onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='white'">
+                            style="margin-bottom:5px; padding:8px 14px; text-align:left; font-size:12px; font-weight:600; background:#8b5cf6; color:white; border:none; border-radius:8px; cursor:pointer;"
+                            onmouseover="this.style.background='#7c3aed'" onmouseout="this.style.background='#8b5cf6'">
                             💼 Cartera
                         </button>
                     @endif
                     <button type="button"
                         @click.stop="openAcc = false; $wire.verPrefacturas()"
-                        style="padding:10px 16px; text-align:left; font-size:12px; background:white; border:none; cursor:pointer;"
-                        onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='white'">
-                        🗒️ Ver prefacturas
+                        style="padding:8px 14px; text-align:left; font-size:12px; font-weight:600; background:#475569; color:white; border:none; border-radius:8px; cursor:pointer;"
+                        onmouseover="this.style.background='#334155'" onmouseout="this.style.background='#475569'">
+                        🗒️ Ver facturas
                     </button>
                 </div>
             </div>
