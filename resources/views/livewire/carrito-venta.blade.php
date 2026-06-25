@@ -673,7 +673,7 @@
             @if($mesaId)
             @php $esMesero = auth()->user()->hasRole('mesero') && ! auth()->user()->hasAnyRole(['cajero','admin_empresa','vendedor']); @endphp
             @if(! $esMesero)
-            {{-- Modo mesa desktop: mismos botones secundarios que POS normal --}}
+            {{-- AFUERA: Editar, Liberar, Espera, Cuenta --}}
             <button
                 x-on:click="
                     if (($wire.get('carrito') ?? []).length === 0) {
@@ -683,25 +683,6 @@
                 class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
                 Editar
             </button>
-            <button wire:click="abrirModalCrearCliente"
-                class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
-                + Crear Cliente
-            </button>
-            @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
-                @if ($cajaEstado === 'abierta')
-                    <button type="button"
-                        class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow"
-                        wire:click="abrirMovimientoCajaModal('salida')">
-                        Entrada / salida
-                    </button>
-                @endif
-                <button type="button"
-                    class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow"
-                    wire:click="abrirModalCartera">
-                    Cartera
-                </button>
-            @endif
-            {{-- Liberar, Espera, Cuenta: solo desktop (en móvil van en menú ☰) --}}
             <button
                 x-on:click="Swal.fire({
                           title: '¿Liberar mesa?', text: 'Se cancelará la comanda y se liberará la mesa.',
@@ -728,10 +709,40 @@
                 style="background:#374151;">
                 🖨️ Cuenta
             </button>
-            <button wire:click="verPrefacturas"
-                class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
-                Ver
-            </button>
+
+            {{-- BOTÓN ACCIONES: Entrada/salida, Cartera, Ver --}}
+            <div class="pos-cart-secondary-action" x-data="{ openAcc: false }" style="position:relative;">
+                <button type="button"
+                    @click="openAcc = !openAcc"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow flex items-center gap-1">
+                    Acciones ▾
+                </button>
+                <div x-show="openAcc" x-cloak @click.outside="openAcc = false"
+                    style="position:absolute; bottom:calc(100% + 6px); right:0; background:white; border:1px solid #e2e8f0; border-radius:10px; box-shadow:0 4px 16px rgba(0,0,0,.12); min-width:160px; z-index:9999; display:flex; flex-direction:column; overflow:hidden;">
+                    @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
+                        @if ($cajaEstado === 'abierta')
+                        <button type="button"
+                            @click.stop="openAcc = false; $wire.abrirMovimientoCajaModal('salida')"
+                            style="padding:10px 16px; text-align:left; font-size:12px; background:white; border:none; cursor:pointer; border-bottom:1px solid #f1f5f9;"
+                            onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='white'">
+                            📥 Entrada / salida
+                        </button>
+                        @endif
+                        <button type="button"
+                            @click.stop="openAcc = false; $wire.abrirModalCartera()"
+                            style="padding:10px 16px; text-align:left; font-size:12px; background:white; border:none; cursor:pointer; border-bottom:1px solid #f1f5f9;"
+                            onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='white'">
+                            💼 Cartera
+                        </button>
+                    @endif
+                    <button type="button"
+                        @click.stop="openAcc = false; $wire.verPrefacturas()"
+                        style="padding:10px 16px; text-align:left; font-size:12px; background:white; border:none; cursor:pointer;"
+                        onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='white'">
+                        🗒️ Ver prefacturas
+                    </button>
+                </div>
+            </div>
             @endif {{-- fin !$esMesero --}}
             @else
             <button
