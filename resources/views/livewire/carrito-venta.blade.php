@@ -593,11 +593,25 @@
 
     
 
-    <div class="pos-cart-total-bar px-3 py-2 border-t bg-white flex items-center justify-end">
-        @if(! $mesaId)
+    <div class="pos-cart-total-bar px-3 py-2 border-t bg-white flex items-center justify-between">
+        @if($mesaId)
+            {{-- Desktop: Enviar cocina y Facturar en la barra del total (ocultos en móvil) --}}
+            <div class="flex gap-2 flex-shrink-0 pos-hide-mobile">
+                <button onclick="window.Livewire.dispatch('mesa-enviar-cocina')"
+                    style="background:#2563eb; color:white; border:none; border-radius:9999px; padding:0 14px; height:34px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">
+                    📤 Enviar cocina
+                </button>
+                @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
+                <button onclick="window.Livewire.dispatch('mesa-facturar')"
+                    style="background:#16a34a; color:white; border:none; border-radius:9999px; padding:0 14px; height:34px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">
+                    💳 Facturar mesa
+                </button>
+                @endif
+            </div>
+        @else
         @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
             <button type="button" id="btn-abrir-facturar"
-                class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow mr-3"
+                class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow"
                 wire:click="confirmarFacturar" wire:loading.attr="disabled" wire:target="confirmarFacturar">
                 Facturar
             </button>
@@ -658,30 +672,15 @@
 
             @if($mesaId)
             @php $esMesero = auth()->user()->hasRole('mesero') && ! auth()->user()->hasAnyRole(['cajero','admin_empresa','vendedor']); @endphp
-            {{-- En modo mesa: Enviar cocina y Facturar siempre visibles --}}
-            <button type="button"
-                class="pos-cart-main-action text-white text-xs px-3 h-8 rounded-full"
-                style="background:#2563eb;"
-                @click.prevent="$wire.dispatch('mesa-enviar-cocina')">
-                📤 Enviar cocina
-            </button>
-            @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
-            <button type="button"
-                class="pos-cart-main-action text-white text-xs px-3 h-8 rounded-full"
-                style="background:#16a34a;"
-                @click.prevent="$wire.dispatch('mesa-facturar')">
-                💳 Facturar
-            </button>
-            @endif
             @if(! $esMesero)
-            {{-- Liberar, Espera, Cuenta: solo desktop (en móvil van en menú ☰) --}}
+            {{-- Desktop: Liberar, Espera, Cuenta visibles; en móvil van en menú ☰ --}}
             <button
                 x-on:click="Swal.fire({
                           title: '¿Liberar mesa?', text: 'Se cancelará la comanda y se liberará la mesa.',
                           icon: 'warning', showCancelButton: true,
                           confirmButtonColor: '#dc2626', confirmButtonText: 'Sí, liberar', cancelButtonText: 'Cancelar'
                         }).then(r=>{ if(r.isConfirmed){ $wire.dispatch('mesa-liberar'); }})"
-                class="pos-cart-secondary-action text-white text-xs px-3 h-8 rounded-full"
+                class="pos-cart-main-action text-white text-xs px-3 h-8 rounded-full pos-hide-mobile"
                 style="background:#dc2626;">
                 🔓 Liberar
             </button>
@@ -691,13 +690,13 @@
                           icon: 'question', showCancelButton: true,
                           confirmButtonColor: '#d97706', confirmButtonText: 'Sí, en espera', cancelButtonText: 'Cancelar'
                         }).then(r=>{ if(r.isConfirmed){ $wire.dispatch('mesa-en-espera'); }})"
-                class="pos-cart-secondary-action text-white text-xs px-3 h-8 rounded-full"
+                class="pos-cart-main-action text-white text-xs px-3 h-8 rounded-full pos-hide-mobile"
                 style="background:#d97706;">
                 ⏸ Espera
             </button>
             <button
                 onclick="window.open('/pos/mesa/{{ $mesaId }}/cuenta', '_blank', 'width=420,height=680')"
-                class="pos-cart-secondary-action text-white text-xs px-3 h-8 rounded-full"
+                class="pos-cart-main-action text-white text-xs px-3 h-8 rounded-full pos-hide-mobile"
                 style="background:#374151;">
                 🖨️ Cuenta
             </button>

@@ -960,9 +960,18 @@ button:hover {
     .pos-hide-desktop {
         display: none !important;
     }
+    /* En desktop, ocultar botones que son solo para móvil */
+    .pos-hide-mobile {
+        display: inline-flex !important;
+    }
 }
 
 @media (max-width: 768px) {
+    /* Ocultar en móvil los elementos marcados como solo-desktop */
+    .pos-hide-mobile {
+        display: none !important;
+    }
+
     .pos-cart-component > .pos-cart-total-bar {
         align-items: center !important;
         flex-wrap: nowrap !important;
