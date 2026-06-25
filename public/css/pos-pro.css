@@ -956,6 +956,10 @@ button:hover {
     .pos-cart-component .pos-cart-mobile-more {
         display: none !important;
     }
+    /* En desktop, ocultar los ítems del menú ☰ que son solo para móvil */
+    .pos-hide-desktop {
+        display: none !important;
+    }
 }
 
 @media (max-width: 768px) {
