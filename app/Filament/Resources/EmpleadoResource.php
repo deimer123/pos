@@ -84,11 +84,14 @@ class EmpleadoResource extends Resource
                                 $empresaId = auth()->user()->getEmpresaActualId();
                                 $usaMesas = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_mesas');
 
-                                $opciones = [
-                                    'vendedor'  => 'Vendedor',
-                                    'digitador' => 'Digitador',
-                                    'cajero'    => 'Cajero',
-                                ];
+                                $opciones = [];
+
+                                if (! $usaMesas) {
+                                    $opciones['vendedor'] = 'Vendedor';
+                                }
+
+                                $opciones['digitador'] = 'Digitador';
+                                $opciones['cajero']    = 'Cajero';
 
                                 if ($usaMesas) {
                                     $opciones['mesero'] = 'Mesero';
@@ -101,11 +104,14 @@ class EmpleadoResource extends Resource
                                 $empresaId = auth()->user()->getEmpresaActualId();
                                 $usaMesas = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_mesas');
 
-                                $desc = [
-                                    'vendedor'  => 'Puede realizar ventas y consultar productos',
-                                    'digitador' => 'Puede crear y editar productos, familias, etc.',
-                                    'cajero'    => 'Puede realizar ventas y gestionar el caja',
-                                ];
+                                $desc = [];
+
+                                if (! $usaMesas) {
+                                    $desc['vendedor'] = 'Puede realizar ventas y consultar productos';
+                                }
+
+                                $desc['digitador'] = 'Puede crear y editar productos, familias, etc.';
+                                $desc['cajero']    = 'Puede realizar ventas y gestionar el caja';
 
                                 if ($usaMesas) {
                                     $desc['mesero'] = 'Puede tomar órdenes en mesas y enviar a cocina';
@@ -202,7 +208,12 @@ class EmpleadoResource extends Resource
                     ->options(function () {
                         $empresaId = auth()->user()->getEmpresaActualId();
                         $usaMesas = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_mesas');
-                        $opciones = ['vendedor' => 'Vendedor', 'digitador' => 'Digitador', 'cajero' => 'Cajero'];
+                        $opciones = [];
+                        if (! $usaMesas) {
+                            $opciones['vendedor'] = 'Vendedor';
+                        }
+                        $opciones['digitador'] = 'Digitador';
+                        $opciones['cajero']    = 'Cajero';
                         if ($usaMesas) {
                             $opciones['mesero'] = 'Mesero';
                             $opciones['cocina'] = 'Cocina';
