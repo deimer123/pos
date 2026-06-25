@@ -84,11 +84,15 @@ class EmpleadoResource extends Resource
                                 'vendedor' => 'Vendedor',
                                 'digitador' => 'Digitador',
                                 'cajero' => 'Cajero',
+                                'mesero' => 'Mesero',
+                                'cocina' => 'Cocina',
                             ])
                             ->descriptions([
                                 'vendedor' => 'Puede realizar ventas y consultar productos',
                                 'digitador' => 'Puede crear y editar productos, familias, etc.',
                                 'cajero' => 'Puede realizar ventas y gestionar el caja',
+                                'mesero' => 'Puede tomar órdenes en mesas y enviar a cocina',
+                                'cocina' => 'Solo accede a la pantalla de cocina para ver órdenes',
                             ])
                             ->required()
                             ->columns(1)
@@ -137,6 +141,8 @@ class EmpleadoResource extends Resource
                             'vendedor' => 'Vendedor',
                             'digitador' => 'Digitador',
                             'cajero' => 'Cajero',
+                            'mesero' => 'Mesero',
+                            'cocina' => 'Cocina',
                         ];
                         
                         return $record->roles
@@ -177,6 +183,8 @@ class EmpleadoResource extends Resource
                         'vendedor' => 'Vendedor',
                         'digitador' => 'Digitador',
                         'cajero' => 'Cajero',
+                        'mesero' => 'Mesero',
+                        'cocina' => 'Cocina',
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         if (filled($data['value'])) {
@@ -214,7 +222,7 @@ class EmpleadoResource extends Resource
         return parent::getEloquentQuery()
             ->where('tipo_usuario', 'empleado')
             ->where('empresa_id', auth()->user()->getEmpresaActualId())
-            ->role(['vendedor', 'digitador', 'cajero']);
+            ->role(['vendedor', 'digitador', 'cajero', 'mesero', 'cocina']);
     }
 
     // Solo ADMIN_EMPRESA puede acceder
