@@ -38,6 +38,12 @@ class User extends Authenticatable implements FilamentUser
         'max_digitadores',
         'telefono',
         'direccion',
+        'session_token',
+        'active_tab_id',
+        'session_id',
+        'last_login_at',
+        'last_login_ip',
+        'last_user_agent',
     ];
 
     protected $hidden = [
@@ -272,6 +278,10 @@ class User extends Authenticatable implements FilamentUser
             'super_admin',
             'admin_empresa',
             'digitador',
+            'mesero',
+            'cocina',
+            'vendedor',
+            'cajero',
         ]);
     }
 }

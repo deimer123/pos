@@ -306,7 +306,8 @@ return \App\Models\Familia::create($data)->id;
                         return CuentaContable::query()
                             ->where('empresa_id', $empresaId)
                             ->orderBy('codigo')
-                            ->pluck('codigo', 'id')
+                            ->get()
+                            ->mapWithKeys(fn ($c) => [$c->id => $c->codigo . ' - ' . $c->nombre])
                             ->toArray();
                     })
                     ->searchable()

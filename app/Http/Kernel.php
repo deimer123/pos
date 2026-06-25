@@ -37,7 +37,7 @@ class Kernel extends HttpKernel
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\EnsureEmpresaActiva::class,
-           
+            \App\Http\Middleware\EnforceSessionUniqueness::class,
         ],
 
         'api' => [
@@ -72,10 +72,10 @@ class Kernel extends HttpKernel
      'solo.vendedor' => \App\Http\Middleware\SoloVendedor::class,
     'solo.digitador' => \App\Http\Middleware\SoloDigitador::class,
     'no_digitadores_en_pos' => \App\Http\Middleware\RestrictDigitadorFromPos::class,
-'no_vendedores_en_panel' => \App\Http\Middleware\RestrictVendedorFromPanel::class,
-        'empresa.activa' => \App\Http\Middleware\EnsureEmpresaActiva::class,
-        'solo.cocina' => \App\Http\Middleware\RestrictCocinaAccess::class,
-        'solo.mesero' => \App\Http\Middleware\RestrictMeseroFromPanel::class,
-        'no.cocina.en.pos' => \App\Http\Middleware\RedirectCocinaFromPos::class,
+    'no_vendedores_en_panel' => \App\Http\Middleware\RestrictVendedorFromPanel::class,
+    'solo.cocina' => \App\Http\Middleware\RestrictCocinaAccess::class,
+    'solo.mesero' => \App\Http\Middleware\RestrictMeseroFromPanel::class,
+    'no.cocina.en.pos' => \App\Http\Middleware\RedirectCocinaFromPos::class,
+    'empresa.activa' => \App\Http\Middleware\EnsureEmpresaActiva::class,
     ];
 }

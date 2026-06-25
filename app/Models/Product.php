@@ -126,14 +126,16 @@ public function cuentaContable(): BelongsTo
         return $this->hasOne(Receta::class, 'product_id', 'id');
     }
 
+    public function combos(): HasMany
+    {
+        return $this->hasMany(ProductCombo::class, 'product_id', 'id')
+            ->where('activo', true)
+            ->orderBy('cantidad_minima');
+    }
+
     public function variantes(): HasMany
     {
         return $this->hasMany(ProductoVariante::class, 'product_id', 'id');
-    }
-
-    public function combos(): HasMany
-    {
-        return $this->hasMany(ProductCombo::class, 'product_id', 'id');
     }
     
     public function permiteCantidadDecimal(): bool

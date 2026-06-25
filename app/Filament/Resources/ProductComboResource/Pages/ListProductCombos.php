@@ -6,14 +6,12 @@ use App\Filament\Resources\ProductComboResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
-class ListCombos extends ListRecords
+class ListProductCombos extends ListRecords
 {
     protected static string $resource = ProductComboResource::class;
 
     protected function getHeaderActions(): array
     {
-        return [
-            Actions\CreateAction::make(),
-        ];
+        return [Actions\CreateAction::make()->label('Crear Combo')];
     }
 }

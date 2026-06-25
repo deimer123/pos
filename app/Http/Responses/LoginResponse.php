@@ -4,8 +4,8 @@ namespace App\Http\Responses;
 
 use Filament\Http\Responses\Auth\Contracts\LoginResponse as FilamentLoginResponseContract;
 use Laravel\Fortify\Contracts\LoginResponse as FortifyLoginResponseContract;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class LoginResponse implements FilamentLoginResponseContract, FortifyLoginResponseContract
 {
@@ -26,10 +26,27 @@ class LoginResponse implements FilamentLoginResponseContract, FortifyLoginRespon
         }
 
         if ($user) {
-            DB::table('sessions')
-                ->where('user_id', $user->id)
-                ->where('id', '!=', $request->session()->getId())
-                ->delete();
+            // Guardar el session_id real de PHP y datos de auditoría
+            $token = Str::random(60);
+            $user->update([
+                'session_token'   => $token,
+                'session_id'      => $request->session()->getId(),
+                'last_login_at'   => now(),
+                'last_login_ip'   => $request->ip(),
+                'last_user_agent' => $request->userAgent(),
+            ]);
+
+            $request->session()->put('session_token', $token);
+        }
+
+        // Rol cocina: solo puede ir a la pantalla de cocina
+        if ($user?->hasRole('cocina') && ! $user->hasAnyRole(['admin_empresa', 'cajero', 'vendedor', 'mesero', 'digitador'])) {
+            return redirect()->route('cocina');
+        }
+
+        // Rol mesero puro: va directo al POS
+        if ($user?->hasRole('mesero') && ! $user->hasAnyRole(['admin_empresa', 'cajero', 'vendedor', 'digitador'])) {
+            return redirect()->to('/pos');
         }
 
         if ($user?->hasRole('super_admin')) {

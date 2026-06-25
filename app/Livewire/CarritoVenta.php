@@ -7,6 +7,7 @@ use App\Models\Actor;
 use App\Models\Gasto;
 use App\Models\Prefactura;
 use App\Models\Product;
+use App\Models\ProductCombo;
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -22,6 +23,8 @@ use App\Models\Caja;
 use App\Models\ConfiguracionEmpresa;
 class CarritoVenta extends Component
 {
+    public ?int $mesaId = null;
+
     public $preciosBase               = [];
     public $carrito                   = [];
     public $mostrarModal              = false;
@@ -164,11 +167,15 @@ class CarritoVenta extends Component
 
    
     protected $listeners = [
-    'productoAgregado' => 'agregarProducto',
-    'agregarManual' => 'agregarProductoManual',
-    'borrar-prefactura-confirmada' => 'borrarPrefacturaConfirmada',
-    'reiniciar-prefactura' => 'reiniciarPrefactura',
-];
+        'productoAgregado'             => 'agregarProducto',
+        'agregarManual'                => 'agregarProductoManual',
+        'borrar-prefactura-confirmada' => 'borrarPrefacturaConfirmada',
+        'reiniciar-prefactura'         => 'reiniciarPrefactura',
+        'mesa-enviar-cocina'           => 'mesaEnviarACocina',
+        'mesa-facturar'                => 'mesaPreFacturar',
+        'mesa-liberar'                 => 'mesaLiberar',
+        'mesa-en-espera'               => 'mesaEnEspera',
+    ];
 
    
 
@@ -295,13 +302,15 @@ private function limpiarUtf8Array(array $datos): array
     protected function carritoCacheKey(?int $empresaId = null): string
     {
         $empresaId = $empresaId ?: $this->getEmpresaId();
-        return 'pos_carrito_' . $empresaId . '_' . auth()->id();
+        $sufijo = $this->mesaId ? '_mesa_' . $this->mesaId : '';
+        return 'pos_carrito_' . $empresaId . '_' . auth()->id() . $sufijo;
     }
 
     protected function observacionesCacheKey(?int $empresaId = null): string
     {
         $empresaId = $empresaId ?: $this->getEmpresaId();
-        return 'pos_observaciones_' . $empresaId . '_' . auth()->id();
+        $sufijo = $this->mesaId ? '_mesa_' . $this->mesaId : '';
+        return 'pos_observaciones_' . $empresaId . '_' . auth()->id() . $sufijo;
     }
     protected function permiteCantidadDecimal(array $item): bool
     {
@@ -368,10 +377,14 @@ private function limpiarUtf8Array(array $datos): array
 
      public function mount()
 {
-    
-    
-
     $empresaId = $this->getEmpresaId();
+
+    // Modo mesa: cargar ítems desde la OrdenMesa activa (ignora caché general)
+    if ($this->mesaId) {
+        $this->cargarCarritoDesdeOrdenMesa($empresaId);
+        $this->observacionesPrefactura = Cache::get($this->observacionesCacheKey($empresaId), '');
+        goto fin_carga_carrito;
+    }
 
    $carritoGuardado = [];
 
@@ -424,6 +437,14 @@ private function limpiarUtf8Array(array $datos): array
             'utilidad_nueva'=> $utilidad,
             'total'         => round($precioVenta * $cantidad, 2),
             'existencias'   => (float) ($producto->existencias ?? 0),
+            'porciones_receta' => (function() use ($producto, $empresaId) {
+                $r = \App\Models\Receta::where('empresa_id', $empresaId)
+                    ->where('product_id', $producto->id)
+                    ->where('activo', true)
+                    ->with('items.ingrediente')
+                    ->first();
+                return $r ? ['porciones' => $r->porciones_disponibles, 'unidad' => $r->unidad_rendimiento] : null;
+            })(),
             'id_unidad_de_medida' => (int) ($producto->id_unidad_de_medida ?? 1),
             'vende_por'     => (string) ($producto->vende_por ?? 'unidad'),
             'permite_fraccion' => (bool) ($producto->permite_fraccion ?? false),
@@ -438,6 +459,8 @@ if (request()->hasSession() && session()->has('observaciones_guardadas')) {
     $this->observacionesPrefactura = Cache::get($this->observacionesCacheKey($empresaId), '');
 }
 
+
+    fin_carga_carrito:
 
     // Cargar clientes
     $this->clientes = Actor::where('tipo', 1)
@@ -454,8 +477,8 @@ if (request()->hasSession() && session()->has('observaciones_guardadas')) {
     $this->asignarConsumidorFinalPorDefecto();
     $this->codigoCliente = Actor::max('id_clip_pro') + 1;
     $this->dispatch('limpiar-input-busqueda')->to('pos-productos');
-    
-    // âœ… CALCULAR TOTAL INICIAL DESPUÃ‰S DE CARGAR EL CARRITO
+
+    // Calcular total inicial después de cargar el carrito
     $this->actualizarTotales();
     $this->maxFechaFacturas = now()->toDateString();
     $this->minFechaFacturas = now()->subMonths(3)->toDateString();
@@ -681,18 +704,67 @@ public function asignarConsumidorFinalPorDefecto()
             'utilidad_nueva'=> $utilidad1,
             'total'         => $precioVenta,
             'existencias'   => $existencias,
+            'porciones_receta' => (function() use ($producto, $empresaId) {
+                $r = \App\Models\Receta::where('empresa_id', $empresaId)
+                    ->where('product_id', $producto->id)
+                    ->where('activo', true)
+                    ->with('items.ingrediente')
+                    ->first();
+                return $r ? ['porciones' => $r->porciones_disponibles, 'unidad' => $r->unidad_rendimiento] : null;
+            })(),
             'id_unidad_de_medida' => (int) ($producto->id_unidad_de_medida ?? 1),
             'vende_por'     => (string) ($producto->vende_por ?? 'unidad'),
             'permite_fraccion' => (bool) ($producto->permite_fraccion ?? false),
             'permite_decimal' => $producto->permiteCantidadDecimal(),
+            'combo_activo'  => null,
+            'precio_editado_manual' => false,
         ];
     }
     $this->actualizarTotales();
+
+    // En modo mesa: guardar inmediatamente en OrdenMesa
+    if ($this->mesaId) {
+        $this->guardarProductoEnOrdenMesa($producto, $this->carrito[$key]['cantidad']);
+    }
 }
     public function agregarProductoAlCarrito($idProducto)
     {
         $this->agregarProducto($idProducto);
         $this->dispatch('limpiar-input-busqueda')->to('pos-productos');
+    }
+
+    private function guardarProductoEnOrdenMesa(\App\Models\Product $producto, float $cantidad): void
+    {
+        $empresaId = $this->getEmpresaId();
+        $orden = $this->obtenerOrdenMesaActiva($empresaId);
+
+        $existente = \App\Models\OrdenMesaItem::where('orden_mesa_id', $orden->id)
+            ->where('product_id', $producto->id)
+            ->whereIn('estado_cocina', ['pendiente', 'enviado', 'preparando'])
+            ->orderByDesc('id')
+            ->first();
+
+        if ($existente && $existente->estado_cocina === 'pendiente') {
+            // Sumar al ítem pendiente existente
+            $existente->cantidad  = $cantidad;
+            $existente->subtotal  = round($existente->precio_unitario * $cantidad, 2);
+            $existente->save();
+        } else {
+            // Crear nuevo ítem pendiente
+            \App\Models\OrdenMesaItem::create([
+                'empresa_id'      => $empresaId,
+                'orden_mesa_id'   => $orden->id,
+                'product_id'      => $producto->id,
+                'cantidad'        => $cantidad,
+                'precio_unitario' => (float) $producto->precio_venta1,
+                'subtotal'        => round((float) $producto->precio_venta1 * $cantidad, 2),
+                'estado_cocina'   => 'pendiente',
+                'requiere_cocina' => true,
+            ]);
+        }
+
+        \App\Models\Mesa::where('id', $this->mesaId)->update(['estado' => 'ocupada']);
+        $this->recalcularTotalOrden($orden->id);
     }
 
     // âœ… MÃ‰TODO PARA AGREGAR PRODUCTO MANUAL
@@ -745,19 +817,38 @@ public function asignarConsumidorFinalPorDefecto()
 
     public function eliminarDelCarrito($uuid)
 {
-   
-    
     foreach ($this->carrito as $index => $item) {
         $itemUuid = (string) ($item['uuid'] ?? $item['id_producto'] ?? $index);
         $itemIdProducto = (string) ($item['id_producto'] ?? '');
         $indexStr = (string) $index;
-        
+
         if ($itemUuid === (string)$uuid || $itemIdProducto === (string)$uuid || $indexStr === (string)$uuid) {
+            // En modo mesa: si el ítem estaba pendiente en BD, eliminarlo
+            if ($this->mesaId && ! empty($item['enviado_cocina'])) {
+                // Ya enviado a cocina, no se puede eliminar desde aquí
+            } elseif ($this->mesaId) {
+                $empresaId = $this->getEmpresaId();
+                $orden = \App\Models\OrdenMesa::where('empresa_id', $empresaId)
+                    ->where('mesa_id', $this->mesaId)
+                    ->whereIn('estado', ['abierta', 'en_preparacion'])
+                    ->latest()->first();
+                if ($orden) {
+                    $producto = \App\Models\Product::where('id_producto', $item['id_producto'])
+                        ->where('empresa_id', $empresaId)->first();
+                    if ($producto) {
+                        \App\Models\OrdenMesaItem::where('orden_mesa_id', $orden->id)
+                            ->where('product_id', $producto->id)
+                            ->where('estado_cocina', 'pendiente')
+                            ->delete();
+                        $this->recalcularTotalOrden($orden->id);
+                    }
+                }
+            }
             unset($this->carrito[$index]);
             break;
         }
     }
-    
+
     $this->actualizarTotales();
 }
 public function updatedCarrito($value, $key)
@@ -842,35 +933,67 @@ public function limpiarCarrito()
 
    public function actualizarTotales()
 {
+    $empresaId = $this->getEmpresaId();
+
     foreach ($this->carrito as $id => $item) {
-        // âœ… USAR nuevo_precio SI EXISTE, SI NO usar precio original
-        $nuevoPrecio = isset($item['nuevo_precio']) ? floatval($item['nuevo_precio']) : floatval($item['precio']);
         $cantidad = $this->normalizarCantidad($item['cantidad'] ?? 1, $this->permiteCantidadDecimal($item));
+
+        // Aplicar combo si corresponde (solo si el usuario no editó el precio manualmente)
+        $precioBase = floatval($item['precio']);
+        $combo = $this->obtenerComboActivo($item['id_producto'] ?? null, $cantidad, $empresaId);
+
+        if ($combo && ! ($item['precio_editado_manual'] ?? false)) {
+            $nuevoPrecio = $combo['precio_unitario_combo'];
+            $this->carrito[$id]['nuevo_precio'] = $nuevoPrecio;
+            $this->carrito[$id]['combo_activo'] = $combo['nombre'] ?? ('x' . (int)$combo['cantidad_minima']);
+        } else {
+            // Sin combo: restaurar precio base si venía de combo anterior
+            if (isset($this->carrito[$id]['combo_activo']) && ! ($item['precio_editado_manual'] ?? false)) {
+                $this->carrito[$id]['nuevo_precio'] = $precioBase;
+                $this->carrito[$id]['combo_activo'] = null;
+            }
+            $nuevoPrecio = isset($item['nuevo_precio']) ? floatval($item['nuevo_precio']) : $precioBase;
+        }
+
         $costo = floatval($item['costo']);
         $costoConIva = isset($item['costo_iva'])
             ? floatval($item['costo_iva'])
             : round($costo + ($costo * floatval($item['iva_venta'] ?? 0) / 100), 2);
 
-        // âœ… CALCULAR SUBTOTAL CON EL PRECIO CORRECTO
         $subtotal = round($nuevoPrecio * $cantidad, 2);
-        
-        // Calcular nueva utilidad
         $utilidad_nueva = $this->utilidadSobreVenta($nuevoPrecio, $costoConIva);
-        
-        // âœ… ACTUALIZAR VALORES EN EL CARRITO
+
         $this->carrito[$id]['utilidad_nueva'] = $utilidad_nueva;
         $this->carrito[$id]['total'] = $subtotal;
-        
-        // âœ… ASEGURARSE DE QUE nuevo_precio ESTÃ‰ ESTABLECIDO
+
         if (!isset($this->carrito[$id]['nuevo_precio'])) {
             $this->carrito[$id]['nuevo_precio'] = $nuevoPrecio;
         }
     }
 
-    // âœ… RECALCULAR TOTAL GENERAL
     $this->calcularTotalGeneral();
-    
     $this->dispatch('guardar-carrito-en-cache', $this->carrito);
+}
+
+protected function obtenerComboActivo(?string $idProducto, float $cantidad, int $empresaId): ?array
+{
+    if (! $idProducto) return null;
+
+    $producto = Product::where('id_producto', $idProducto)
+        ->where('empresa_id', $empresaId)
+        ->first();
+
+    if (! $producto) return null;
+
+    // El combo que aplica es el de mayor cantidad_minima que no supere la cantidad actual
+    $combo = ProductCombo::where('product_id', $producto->id)
+        ->where('empresa_id', $empresaId)
+        ->where('activo', true)
+        ->where('cantidad_minima', '<=', $cantidad)
+        ->orderBy('cantidad_minima', 'desc')
+        ->first();
+
+    return $combo ? $combo->toArray() : null;
 }
 public function recalcularPorDescuento($id, $descuento)
 {
@@ -894,6 +1017,8 @@ public function recalcularPorPrecio($id, $nuevoPrecio)
         
         $this->carrito[$id]['nuevo_precio'] = round((float) $nuevoPrecio, 2);
         $this->carrito[$id]['descuento'] = $descuento;
+        $this->carrito[$id]['precio_editado_manual'] = true;
+        $this->carrito[$id]['combo_activo'] = null;
         
         $this->actualizarTotales();
     }
@@ -1116,6 +1241,9 @@ public function guardarPrefacturaConfirmada()
             ->get();
 
         $this->mostrarModalPrefacturas = true;
+        if ($this->mesaId) {
+            $this->tab = 'facturas';
+        }
     }
 
     public function seleccionarPrefactura($id)
@@ -1590,10 +1718,34 @@ if ($producto) {
         $stockAnterior
     );
 
-    // ðŸ”¥ 2. DESCONTAR STOCK
-    $producto->existencias = $stockAnterior - $cant;
+    // 2. DESCONTAR STOCK (solo si NO tiene receta activa)
+    $receta = \App\Models\Receta::where('empresa_id', $empresaId)
+        ->where('product_id', $producto->id)
+        ->where('activo', true)
+        ->with('items.ingrediente')
+        ->first();
 
-    $producto->save();
+    if (! $receta) {
+        $producto->existencias = $stockAnterior - $cant;
+        $producto->save();
+    }
+
+    // 3. DESCONTAR INGREDIENTES si el producto tiene receta
+
+    if ($receta && $receta->items->isNotEmpty()) {
+        $rendimiento = (float) $receta->rendimiento ?: 1;
+        foreach ($receta->items as $recetaItem) {
+            $ingrediente = $recetaItem->ingrediente;
+            if (!$ingrediente) continue;
+            $cantBase = ((float) $recetaItem->cantidad / $rendimiento) * $cant;
+            $merma = (float) $recetaItem->merma;
+            $cantConMerma = $merma > 0 ? $cantBase * (1 + $merma / 100) : $cantBase;
+            $stockIngAnterior = (float) $ingrediente->existencias;
+            guardarKardex($ingrediente->id_producto, 'venta', $cantConMerma, $empresaId, $factura->id, $stockIngAnterior);
+            $ingrediente->existencias = $stockIngAnterior - $cantConMerma;
+            $ingrediente->save();
+        }
+    }
 }
         }
 
@@ -1658,7 +1810,23 @@ if ($producto) {
         session()->forget('observaciones_guardadas');
         $this->olvidarCarritoPersistente();
 
+        // Liberar mesa si estamos en modo mesa
+        if ($this->mesaId) {
+            \App\Models\OrdenMesa::where('mesa_id', $this->mesaId)
+                ->whereIn('estado', ['abierta', 'en_preparacion'])
+                ->update(['estado' => 'facturada', 'cerrada_en' => now()]);
+            // Solo liberar la mesa si no quedan cuentas en espera para esta mesa
+            $cuentasEnEspera = \App\Models\OrdenMesa::where('mesa_id', $this->mesaId)
+                ->where('estado', 'lista')->count();
+            if ($cuentasEnEspera === 0) {
+                \App\Models\Mesa::where('id', $this->mesaId)->update(['estado' => 'libre']);
+            }
+        }
+
         $this->dispatch('success', $factura->numero_visual . ' creada.');
+        if ($this->mesaId) {
+            $this->redirect(route('pos'));
+        }
     } catch (\Throwable $e) {
         DB::rollBack();
         Log::error('POS no pudo crear factura', [
@@ -2048,10 +2216,33 @@ if ($producto) {
         $stockAnterior
     );
 
-    // ðŸ”¥ 2. DESCONTAR STOCK
-    $producto->existencias = $stockAnterior - $cant;
+    // 2. DESCONTAR STOCK (solo si NO tiene receta activa)
+    $receta = \App\Models\Receta::where('empresa_id', $empresaId)
+        ->where('product_id', $producto->id)
+        ->where('activo', true)
+        ->with('items.ingrediente')
+        ->first();
 
-    $producto->save();
+    if (! $receta) {
+        $producto->existencias = $stockAnterior - $cant;
+        $producto->save();
+    }
+
+
+    if ($receta && $receta->items->isNotEmpty()) {
+        $rendimiento = (float) $receta->rendimiento ?: 1;
+        foreach ($receta->items as $recetaItem) {
+            $ingrediente = $recetaItem->ingrediente;
+            if (!$ingrediente) continue;
+            $cantBase = ((float) $recetaItem->cantidad / $rendimiento) * $cant;
+            $merma = (float) $recetaItem->merma;
+            $cantConMerma = $merma > 0 ? $cantBase * (1 + $merma / 100) : $cantBase;
+            $stockIngAnterior = (float) $ingrediente->existencias;
+            guardarKardex($ingrediente->id_producto, 'venta', $cantConMerma, $empresaId, $factura->id, $stockIngAnterior);
+            $ingrediente->existencias = $stockIngAnterior - $cantConMerma;
+            $ingrediente->save();
+        }
+    }
 }
         }
 
@@ -2111,10 +2302,23 @@ if ($producto) {
         session()->forget('observaciones_guardadas');
         $this->olvidarCarritoPersistente();
 
-        // ===== Devolver URL para imprimir (lo consume el .then del botÃ³n)
+        // Liberar mesa si estamos en modo mesa
+        if ($this->mesaId) {
+            \App\Models\OrdenMesa::where('mesa_id', $this->mesaId)
+                ->whereIn('estado', ['abierta', 'en_preparacion'])
+                ->update(['estado' => 'facturada', 'cerrada_en' => now()]);
+            // Solo liberar la mesa si no quedan cuentas en espera para esta mesa
+            $cuentasEnEspera = \App\Models\OrdenMesa::where('mesa_id', $this->mesaId)
+                ->where('estado', 'lista')->count();
+            if ($cuentasEnEspera === 0) {
+                \App\Models\Mesa::where('id', $this->mesaId)->update(['estado' => 'libre']);
+            }
+        }
+
+        // ===== Devolver URL para imprimir (lo consume el .then del botón)
         $url = route('factura.imprimir', $factura->id);
         $this->dispatch('success', $factura->numero_visual . ' creada.');
-        return ['ok' => true, 'factura_id' => $factura->id, 'print_url' => $url];
+        return ['ok' => true, 'factura_id' => $factura->id, 'print_url' => $url, 'redirect_url' => $this->mesaId ? route('pos') : null];
 
     } catch (\Throwable $e) {
         DB::rollBack();
@@ -3535,5 +3739,185 @@ public function uiCreditoActual(): array
    
 
    
+
+    // ===== MÉTODOS DE MESA =====
+
+    private function recalcularTotalOrden(int $ordenId): void
+    {
+        $total = \App\Models\OrdenMesaItem::where('orden_mesa_id', $ordenId)->sum('subtotal');
+        \App\Models\OrdenMesa::where('id', $ordenId)->update(['total' => $total]);
+    }
+
+    private function obtenerOrdenMesaActiva(int $empresaId): \App\Models\OrdenMesa
+    {
+        // Buscar orden activa (abierta o en preparación)
+        $existente = \App\Models\OrdenMesa::where('empresa_id', $empresaId)
+            ->where('mesa_id', $this->mesaId)
+            ->whereIn('estado', ['abierta', 'en_preparacion'])
+            ->latest()
+            ->first();
+
+        if ($existente) return $existente;
+
+        // Crear nueva si no existe
+        return \App\Models\OrdenMesa::create([
+            'empresa_id' => $empresaId,
+            'mesa_id'    => $this->mesaId,
+            'estado'     => 'abierta',
+            'usuario_id' => auth()->id(),
+            'abierta_en' => now(),
+            'total'      => 0,
+        ]);
+    }
+
+    private function cargarCarritoDesdeOrdenMesa(int $empresaId): void
+    {
+        $orden = \App\Models\OrdenMesa::where('empresa_id', $empresaId)
+            ->where('mesa_id', $this->mesaId)
+            ->whereIn('estado', ['abierta', 'en_preparacion'])
+            ->with('items.producto')
+            ->latest()
+            ->first();
+
+        if (! $orden) return;
+
+        foreach ($orden->items as $item) {
+            $producto = $item->producto;
+            if (! $producto) continue;
+
+            $key = (string) ($item->id);
+            $precio = (float) $item->precio_unitario;
+            $cant   = (float) $item->cantidad;
+
+            $this->carrito[$key] = [
+                'uuid'             => $key,
+                'id_producto'      => $producto->id_producto,
+                'nombre'           => $this->textoUtf8($producto->descripcion_larga),
+                'cantidad'         => $cant,
+                'precio'           => $precio,
+                'nuevo_precio'     => $precio,
+                'descuento'        => 0,
+                'iva_venta'        => (float) ($producto->iva_venta ?? 0),
+                'utilidad1'        => 0,
+                'costo'            => 0,
+                'costo_iva'        => 0,
+                'utilidad_nueva'   => 0,
+                'total'            => round($precio * $cant, 2),
+                'existencias'      => (float) ($producto->existencias ?? 0),
+                'porciones_receta' => null,
+                'id_unidad_de_medida' => (int) ($producto->id_unidad_de_medida ?? 1),
+                'vende_por'        => (string) ($producto->vende_por ?? 'unidad'),
+                'permite_fraccion' => (bool) ($producto->permite_fraccion ?? false),
+                'permite_decimal'  => $producto->permiteCantidadDecimal(),
+                'enviado_cocina'   => in_array($item->estado_cocina, ['enviado', 'preparando', 'listo']),
+            ];
+        }
+    }
+
+    public function mesaEnviarACocina(): void
+    {
+        if (! $this->mesaId) return;
+
+        $empresaId = $this->getEmpresaId();
+
+        $orden = \App\Models\OrdenMesa::where('empresa_id', $empresaId)
+            ->where('mesa_id', $this->mesaId)
+            ->whereIn('estado', ['abierta', 'en_preparacion'])
+            ->latest()->first();
+
+        if (! $orden) {
+            $this->dispatch('error', 'No hay productos para enviar.');
+            return;
+        }
+
+        $pendientes = $orden->items()->where('estado_cocina', 'pendiente')->count();
+        if ($pendientes === 0) {
+            $this->dispatch('error', 'No hay productos nuevos para enviar a cocina.');
+            return;
+        }
+
+        // Marcar pendientes como enviados
+        $orden->items()->where('estado_cocina', 'pendiente')
+            ->update(['estado_cocina' => 'enviado', 'enviado_cocina_en' => now()]);
+
+        // Asignar número de orden del día si aún no tiene
+        $numeroCocina = $orden->numero_cocina_dia;
+        if (! $numeroCocina) {
+            $hoy = now()->toDateString();
+            $ultimo = \App\Models\OrdenMesa::where('empresa_id', $empresaId)
+                ->whereDate('created_at', $hoy)
+                ->whereNotNull('numero_cocina_dia')
+                ->max('numero_cocina_dia');
+            $numeroCocina = ($ultimo ?? 0) + 1;
+        }
+
+        $orden->update([
+            'estado'            => 'en_preparacion',
+            'observaciones'     => trim($this->observacionesPrefactura ?? ''),
+            'numero_cocina_dia' => $numeroCocina,
+        ]);
+
+        // Marcar en el carrito local como enviado
+        foreach ($this->carrito as $key => $item) {
+            if (empty($item['enviado_cocina'])) {
+                $this->carrito[$key]['enviado_cocina'] = true;
+            }
+        }
+
+        $this->recalcularTotalOrden($orden->id);
+        $this->actualizarTotales();
+        $this->dispatch('success', '📤 Comanda enviada a cocina');
+    }
+
+    public function mesaPreFacturar(): void
+    {
+        if (empty($this->carrito)) {
+            $this->dispatch('error', 'Agregue productos a la comanda antes de facturar.');
+            return;
+        }
+        // Desmarcar enviado_cocina para que el total se calcule con todos los ítems
+        foreach ($this->carrito as $k => $item) {
+            $this->carrito[$k]['enviado_cocina'] = false;
+        }
+        $this->confirmarFacturar();
+    }
+
+    public function mesaLiberar(): void
+    {
+        if (! $this->mesaId) return;
+        if (auth()->user()->hasRole('mesero') && ! auth()->user()->hasAnyRole(['cajero','admin_empresa','vendedor'])) return;
+
+        // Solo cancelar la orden activa, no las cuentas en espera (estado lista)
+        \App\Models\OrdenMesa::where('mesa_id', $this->mesaId)
+            ->whereIn('estado', ['abierta', 'en_preparacion'])
+            ->update(['estado' => 'cancelada', 'cerrada_en' => now()]);
+
+        // Liberar la mesa solo si no quedan cuentas en espera
+        $cuentasEnEspera = \App\Models\OrdenMesa::where('mesa_id', $this->mesaId)
+            ->where('estado', 'lista')->count();
+        if ($cuentasEnEspera === 0) {
+            \App\Models\Mesa::where('id', $this->mesaId)->update(['estado' => 'libre']);
+        }
+
+        $this->limpiarCarrito();
+        $this->redirect(route('pos'));
+    }
+
+    public function mesaEnEspera(): void
+    {
+        if (! $this->mesaId) return;
+        if (auth()->user()->hasRole('mesero') && ! auth()->user()->hasAnyRole(['cajero','admin_empresa','vendedor'])) return;
+
+        \App\Models\OrdenMesa::where('mesa_id', $this->mesaId)
+            ->whereIn('estado', ['abierta', 'en_preparacion'])
+            ->update(['estado' => 'lista']);
+
+        // Mesa queda libre para nuevos clientes
+        \App\Models\Mesa::where('id', $this->mesaId)->update(['estado' => 'libre']);
+
+        $this->limpiarCarrito();
+        $this->redirect(route('pos'));
+    }
+
 
 }

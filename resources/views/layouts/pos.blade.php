@@ -12,7 +12,8 @@
 <body style="height: 100vh; margin: 0; padding: 0; overflow: hidden; background: #f3f4f6; color: #111827;">
 
     {{-- Boton de logout --}}
-    <div class="pos-top-actions" x-data="{ menuOpen: false }" style="position: fixed; top: 10px; right: 20px; z-index: 50;">
+    <div class="pos-top-actions" x-data="{ menuOpen: false }" style="position: fixed; top: 10px; right: 20px; z-index: 50; display:flex; align-items:center; gap:8px;">
+
       <button type="button" class="pos-mobile-menu-button" @click="menuOpen = !menuOpen" aria-label="Menu POS">
         Menu
       </button>
@@ -57,14 +58,38 @@
     </div>
 
     {{-- Titulo punto de venta --}}
-    <div class="pos-app-header" style="width: 100%; height: 60px; background: #2563eb; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #1d4ed8; flex-shrink: 0;">
-        <h1 style="color: white; font-size: 24px; font-weight: bold; margin: 0; text-align: center;">
+    <div class="pos-app-header" style="width: 100%; height: 60px; background: #2563eb; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 2px solid #1d4ed8; flex-shrink: 0;">
+        {{-- Izquierda: botón ← Mesas (solo en vista mesa) o usuario logueado --}}
+        <div class="pos-header-left" style="flex:1; display:flex; align-items:center; justify-content:flex-start; gap:8px; min-width:0;">
+            @hasSection('header-left')
+                @yield('header-left')
+            @else
+                @auth
+                @php
+                    $u = auth()->user();
+                    $roleLabels = ['admin_empresa'=>'Admin','cajero'=>'Cajero','vendedor'=>'Vendedor','mesero'=>'Mesero','digitador'=>'Digitador'];
+                    $rolActual = collect($roleLabels)->first(fn($l,$r) => $u->hasRole($r));
+                @endphp
+                <span style="background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.3); border-radius:20px; padding:3px 12px; font-size:12px; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;">
+                    👤 {{ $u->name }}@if($rolActual) · {{ $rolActual }}@endif
+                </span>
+                @endauth
+            @endif
+        </div>
+        {{-- Centro: nombre empresa --}}
+        <h1 class="pos-header-empresa" style="color: white; font-size: 24px; font-weight: bold; margin: 0; text-align: center; flex:0 0 auto;">
             {{ $nombreEmpresa }}
         </h1>
+        {{-- Derecha: espacio para balance visual --}}
+        <div style="flex:1; display:flex; align-items:center; justify-content:flex-end; gap:8px;">
+            @hasSection('mesa-nav')
+                @yield('mesa-nav')
+            @endif
+        </div>
     </div>
 
     {{-- Contenedor para el contenido --}}
-    <div style="height: calc(100vh - 60px); overflow: hidden;">
+    <div style="height: calc(100vh - 60px); overflow: hidden;" class="pos-main-content">
         @yield('content')
     </div>
 
@@ -98,6 +123,8 @@
 
         function cerrarSesionPorInactividad() {
             if (sesionCerradaPorInactividad) return;
+            // Si ya hay overlay de sesión duplicada, no redirigir por inactividad
+            if (document.getElementById('_sesion_aviso')) return;
 
             sesionCerradaPorInactividad = true;
             clearTimeout(temporizador);
@@ -145,6 +172,58 @@
 
         reiniciarTemporizador();
     </script>
+
+    {{-- Sesión única global --}}
+    @auth
+    <script>
+        (function () {
+            const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+            // Generar un ID único para ESTA carga de página y registrarlo en BD
+            const TAB_ID = Math.random().toString(36).substr(2, 20) + Date.now();
+
+            fetch('/register-tab', {
+                method: 'POST', credentials: 'same-origin',
+                headers: { 'X-CSRF-TOKEN': CSRF, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tab_id: TAB_ID })
+            }).then(function () {
+                // Solo empezar a verificar DESPUÉS de registrarse exitosamente
+                iniciarVerificacion();
+            }).catch(function () {
+                iniciarVerificacion();
+            });
+
+            function iniciarVerificacion() {
+                setInterval(function () {
+                    if (document.getElementById('_sesion_aviso')) return;
+                    fetch('/check-tab?tab_id=' + TAB_ID, {
+                        credentials: 'same-origin',
+                        headers: { 'Accept': 'application/json' }
+                    }).then(function (r) {
+                        if (r.status === 401) mostrarAvisoSesion();
+                    }).catch(function () {});
+                }, 5000);
+            }
+
+            function mostrarAvisoSesion() {
+                if (document.getElementById('_sesion_aviso')) return;
+                const div = document.createElement('div');
+                div.id = '_sesion_aviso';
+                div.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99999;display:flex;align-items:center;justify-content:center;';
+                div.innerHTML = `<div style="background:#1f2937;border:2px solid #ef4444;border-radius:12px;padding:32px 40px;text-align:center;max-width:400px;">
+                    <div style="font-size:40px;margin-bottom:12px;">🔒</div>
+                    <h2 style="color:#f87171;margin:0 0 10px;font-size:18px;">Sesión cerrada</h2>
+                    <p style="color:#d1d5db;font-size:14px;margin:0 0 20px;">Tu sesión fue abierta en otro lugar.<br>Solo se permite una sesión activa a la vez.</p>
+                    <button onclick="window.location.replace('/sesion-desactivada')"
+                        style="background:#ef4444;color:white;border:none;border-radius:8px;padding:10px 24px;font-size:14px;font-weight:700;cursor:pointer;">
+                        Cerrar sesión
+                    </button>
+                </div>`;
+                document.body.appendChild(div);
+            }
+        })();
+    </script>
+    @endauth
 
 </body>
 </html>

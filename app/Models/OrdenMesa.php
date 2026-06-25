@@ -43,6 +43,11 @@ class OrdenMesa extends Model
         return $this->belongsTo(Mesa::class, 'mesa_id');
     }
 
+    public function usuario(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'usuario_id');
+    }
+
     public function items(): HasMany
     {
         return $this->hasMany(OrdenMesaItem::class, 'orden_mesa_id');

@@ -1,4 +1,4 @@
-<div class="pos-cart-component" style="display: flex; flex-direction: column; height: 100%; min-height: 0;">
+<div class="pos-cart-component" style="display: flex; flex-direction: column; {{ $mesaId ? 'min-height: 100%' : 'height: 100%; min-height: 0;' }}">
     
 
     <div class="pos-cart-header" style="padding: 1rem; border-bottom: 1px solid #ddd;">
@@ -461,7 +461,8 @@
 
             <tbody>
                 @forelse($carrito as $id => $item)
-                    <tr class="border-b hover:bg-indigo-50">
+                    @php $enviado = !empty($item['enviado_cocina']); @endphp
+                    <tr class="border-b {{ $enviado ? 'bg-gray-100 opacity-70' : 'hover:bg-indigo-50' }}">
                         @php
                             $permiteDecimal = (bool) ($item['permite_decimal'] ?? ((int) ($item['id_unidad_de_medida'] ?? 1) !== 1));
                         @endphp
@@ -476,15 +477,29 @@
                                 default => ((bool) ($item['permite_decimal'] ?? false) ? 'kg' : 'und'),
                             };
                             $stockDecimalesCarrito = $stockUnidadCarrito === 'und' ? 0 : 2;
-                            $stockTooltipCarrito = number_format((float) ($item['existencias'] ?? 0), $stockDecimalesCarrito, ',', '.') . ' ' . $stockUnidadCarrito;
+                            // Si tiene receta, mostrar porciones disponibles por ingredientes
+                            if (!empty($item['porciones_receta'])) {
+                                $stockValorCarrito  = (float) $item['porciones_receta']['porciones'];
+                                $stockUnidadCarrito = $item['porciones_receta']['unidad'];
+                                $stockDecimalesCarrito = 2;
+                            } else {
+                                $stockValorCarrito = (float) ($item['existencias'] ?? 0);
+                            }
+                            $stockTooltipCarrito = number_format($stockValorCarrito, $stockDecimalesCarrito, ',', '.') . ' ' . $stockUnidadCarrito;
                         @endphp
-                        <td class="px-1 py-0.5 border {{ ($item['existencias'] ?? 0) <= 0 ? 'text-red-600 font-semibold' : '' }}"
+                        <td class="px-1 py-0.5 border {{ $stockValorCarrito <= 0 ? 'text-red-600 font-semibold' : '' }}"
                             title="Existencias: {{ $stockTooltipCarrito }}">
                             <button type="button"
                                 title="{{ $item['nombre'] }} | Stock: {{ $stockTooltipCarrito }}"
                                 @click="$dispatch('ver-nombre-carrito-mobile', { nombre: @js($item['nombre']), stock: @js($stockTooltipCarrito) })"
                                 class="block w-full truncate text-left">
                                 {{ $item['nombre'] }}
+                                @if($enviado)
+                                    <span style="font-size:9px; background:#22c55e; color:white; border-radius:4px; padding:1px 4px; margin-left:3px;">✓ Cocina</span>
+                                @endif
+                                @if(!empty($item['combo_activo']))
+                                    <span style="font-size:9px; background:#7c3aed; color:white; border-radius:4px; padding:1px 5px; margin-left:3px;">🎁 {{ $item['combo_activo'] }}</span>
+                                @endif
                             </button>
                         </td>
                         <td class="px-1 py-0.5 border text-center">
@@ -496,7 +511,8 @@
                                 wire:change="actualizarTotales"
                                 wire:key="cantidad-{{ $id }}-{{ $item['cantidad'] }}"
                                 class="border rounded text-center"
-                                style="width: 58px; height: 24px; font-size: 11px; padding: 0 3px;" />
+                                style="width: 58px; height: 24px; font-size: 11px; padding: 0 3px;"
+                                {{ $enviado ? 'disabled' : '' }} />
                         </td>
                         <td class="px-1 py-0.5 border text-center whitespace-nowrap">
                             <div class="whitespace-nowrap text-[11px] leading-none">
@@ -508,6 +524,7 @@
                         </td>
                         <td class="px-1 py-0.5 border text-center">
                             <div class="flex items-center justify-center gap-1">
+                            @if(! $enviado)
                               <button x-data
     x-on:click="$wire.abrirModalRenombrar('{{ $item['uuid'] ?? $item['id_producto'] }}')"
     class="text-indigo-600 hover:text-indigo-800 transition"
@@ -559,6 +576,7 @@
     </svg>
 
 </button>
+                            @endif
                             </div>
                         </td>
                     </tr>
@@ -577,12 +595,27 @@
 
     <div class="pos-cart-total-bar px-3 py-2 border-t bg-white flex items-center justify-between">
         <script></script>
+        @if($mesaId)
+            <div class="flex gap-2 flex-shrink-0">
+                <button onclick="window.Livewire.dispatch('mesa-enviar-cocina')"
+                    style="background:#2563eb; color:white; border:none; border-radius:9999px; padding:0 14px; height:34px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">
+                    📤 Enviar cocina
+                </button>
+                @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
+                <button onclick="window.Livewire.dispatch('mesa-facturar')"
+                    style="background:#16a34a; color:white; border:none; border-radius:9999px; padding:0 14px; height:34px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">
+                    💳 Facturar mesa
+                </button>
+                @endif
+            </div>
+        @else
         @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
             <button type="button" id="btn-abrir-facturar"
                 class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow"
                 wire:click="confirmarFacturar" wire:loading.attr="disabled" wire:target="confirmarFacturar">
                 Facturar
             </button>
+        @endif
         @endif
         <div class="text-right">
             <span class="text-indigo-700 font-bold text-sm align-middle">TOTAL:</span>
@@ -592,21 +625,17 @@
         </div>
     </div>
 
-
-
-    
     <div class="pos-cart-observation mb-2 w-full">
         <textarea
             class="form-control w-full rounded border border-gray-300 px-3 py-1 resize-y min-h-[36px] focus:outline-none focus:ring-2 focus:ring-indigo-500"
             id="identificadorPrefactura" wire:model="observacionesPrefactura"
-            wire:key="observacion-input-{{ $observacionKey }}" placeholder="Ingrese una observacion para esta factura"
+            wire:key="observacion-input-{{ $observacionKey }}"
+            placeholder="{{ $mesaId ? 'Observaciones para cocina...' : 'Ingrese una observacion para esta factura' }}"
             rows="1"></textarea>
-
     </div>
 
-
-    
     <div class="pos-desktop-cart-actions flex items-center justify-between">
+        @if(! $mesaId)
         <button
             x-on:click="
                         if (($wire.get('carrito') ?? []).length === 0) {
@@ -616,9 +645,11 @@
             class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
             Editar
         </button>
+        @endif
 
         <div class="flex gap-2">
 
+            @if(! $mesaId)
             <button wire:click="abrirModalCrearCliente"
                 class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
                 + Crear Cliente
@@ -631,13 +662,70 @@
                         Entrada / salida
                     </button>
                 @endif
-
                 <button type="button"
                     class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow"
                     wire:click="abrirModalCartera">
                     Cartera
                 </button>
             @endif
+            @endif
+
+            @if($mesaId)
+            @php $esMesero = auth()->user()->hasRole('mesero') && ! auth()->user()->hasAnyRole(['cajero','admin_empresa','vendedor']); @endphp
+            {{-- En modo mesa: botones visibles en desktop, ocultos en móvil --}}
+            @if(! $esMesero)
+            <button
+                x-on:click="
+                    if (($wire.get('carrito') ?? []).length === 0) {
+                      Swal.fire({icon:'warning', title:'Carrito vacio', text:'Debe agregar productos antes de editar.'});
+                    } else { $wire.abrirModalEditar(); }
+                "
+                class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
+                Editar
+            </button>
+            <button wire:click="abrirModalCrearCliente"
+                class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
+                + Crear Cliente
+            </button>
+            @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
+            <button type="button"
+                class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow"
+                wire:click="abrirModalCartera">
+                Cartera
+            </button>
+            @endif
+            <button
+                x-on:click="Swal.fire({
+                          title: '¿Liberar mesa?', text: 'Se cancelará la comanda y se liberará la mesa.',
+                          icon: 'warning', showCancelButton: true,
+                          confirmButtonColor: '#dc2626', confirmButtonText: 'Sí, liberar', cancelButtonText: 'Cancelar'
+                        }).then(r=>{ if(r.isConfirmed){ $wire.dispatch('mesa-liberar'); }})"
+                class="pos-cart-main-action text-white text-xs px-3 h-8 rounded-full"
+                style="background:#dc2626;">
+                🔓 Liberar
+            </button>
+            <button
+                x-on:click="Swal.fire({
+                          title: '¿Poner en espera?', text: 'La cuenta se guarda y la mesa queda libre.',
+                          icon: 'question', showCancelButton: true,
+                          confirmButtonColor: '#d97706', confirmButtonText: 'Sí, en espera', cancelButtonText: 'Cancelar'
+                        }).then(r=>{ if(r.isConfirmed){ $wire.dispatch('mesa-en-espera'); }})"
+                class="pos-cart-main-action text-white text-xs px-3 h-8 rounded-full"
+                style="background:#d97706;">
+                ⏸ Espera
+            </button>
+            <button
+                onclick="window.open('/pos/mesa/{{ $mesaId }}/cuenta', '_blank', 'width=420,height=680')"
+                class="pos-cart-main-action text-white text-xs px-3 h-8 rounded-full"
+                style="background:#374151;">
+                🖨️ Cuenta
+            </button>
+            <button wire:click="verPrefacturas"
+                class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
+                Ver
+            </button>
+            @endif {{-- fin !$esMesero --}}
+            @else
             <button
                 x-on:click="Swal.fire({
                           title:'Vaciar carrito?', text:'Se eliminaran todos los productos.',
@@ -646,7 +734,9 @@
                 class="pos-cart-main-action bg-red-600 hover:bg-red-700 text-white text-xs px-3 h-8 rounded-full">
                 Limpiar
             </button>
+            @endif
 
+            @if(! $mesaId)
             <button
                 x-on:click="
                           if (($wire.get('carrito') ?? []).length === 0) {
@@ -666,8 +756,55 @@
                 class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
                 Ver
             </button>
+            @endif
         </div>
 
+        @if($mesaId)
+        {{-- Menú de acciones de mesa dentro del actions bar --}}
+        <div class="pos-cart-mobile-more pos-cart-mesa-actions" x-data="{ open: false }" wire:key="mobile-actions-mesa-root">
+        <button type="button" class="pos-cart-mobile-more-button pos-cart-mesa-actions-btn" @click="open = !open">☰</button>
+        <div class="pos-cart-mobile-more-menu" x-show="open" x-cloak @click.stop @click.outside="open = false">
+            <button type="button" class="pos-cart-menu-item" style="background:#2563eb;color:white;" wire:key="mesa-mobile-cocina"
+                @click.prevent.stop="open = false; $wire.dispatch('mesa-enviar-cocina');">
+                📤 Enviar cocina
+            </button>
+            <button type="button" class="pos-cart-menu-item" style="background:#d97706;color:white;" wire:key="mesa-mobile-espera"
+                @click.prevent.stop="open = false; Swal.fire({
+                    title: '¿Poner en espera?', text: 'La mesa quedará en estado de espera (amarillo).',
+                    icon: 'question', showCancelButton: true,
+                    confirmButtonColor: '#d97706', confirmButtonText: 'Sí, en espera', cancelButtonText: 'Cancelar'
+                }).then(r=>{ if(r.isConfirmed){ $wire.dispatch('mesa-en-espera'); }})">
+                ⏸ En espera
+            </button>
+            <button type="button" class="pos-cart-menu-item" style="background:#374151;color:white;" wire:key="mesa-mobile-cuenta"
+                @click.prevent.stop="open = false; window.open('/pos/mesa/{{ $mesaId }}/cuenta', '_blank', 'width=420,height=680')">
+                🖨️ Cuenta
+            </button>
+            @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
+            <button type="button" class="pos-cart-menu-item" style="background:#16a34a;color:white;" wire:key="mesa-mobile-facturar"
+                @click.prevent.stop="open = false; $wire.dispatch('mesa-facturar');">
+                💳 Facturar mesa
+            </button>
+            @endif
+            <button type="button" class="pos-cart-menu-item" style="background:#dc2626;color:white;" wire:key="mesa-mobile-liberar"
+                @click.prevent.stop="open = false; Swal.fire({
+                    title: '¿Liberar mesa?', text: 'Se cancelará la comanda y se liberará la mesa.',
+                    icon: 'warning', showCancelButton: true,
+                    confirmButtonColor: '#dc2626', confirmButtonText: 'Sí, liberar', cancelButtonText: 'Cancelar'
+                }).then(r=>{ if(r.isConfirmed){ $wire.dispatch('mesa-liberar'); }})">
+                🔓 Liberar
+            </button>
+            <button type="button" class="pos-cart-menu-item" style="background:#4f46e5;color:white;" wire:key="mesa-mobile-ver"
+                @click.prevent.stop="open = false; $wire.verPrefacturas();">
+                Ver
+            </button>
+        </div>
+        </div>
+        @endif
+
+    </div>{{-- /pos-desktop-cart-actions --}}
+
+    @if(! $mesaId)
     <div class="pos-cart-mobile-more" x-data="{ open: false }" wire:key="mobile-actions-root-{{ $cajaEstado }}">
         <button type="button" class="pos-cart-mobile-more-button" @click="open = !open">
                 Acciones
@@ -704,12 +841,20 @@
                     </button>
                 @endif
 
+                @if(! $mesaId)
                 <button type="button" class="pos-cart-menu-item pos-cart-menu-item-view" wire:key="mobile-action-ver" @click.prevent.stop="open = false; $wire.verPrefacturas();">
                     Ver
                 </button>
+                @endif
+
+                @if($mesaId)
+                <button type="button" class="pos-cart-menu-item" style="background:#16a34a;color:white;" wire:key="mobile-action-cocina" @click.prevent.stop="open = false; $wire.dispatch('mesa-enviar-cocina');">
+                    📤 Enviar cocina
+                </button>
+                @endif
             </div>
         </div>
-    </div>
+    @endif
 
     <div x-data="{ nombreCarritoMobile: null, stockCarritoMobile: null }" @ver-nombre-carrito-mobile.window="nombreCarritoMobile = $event.detail.nombre; stockCarritoMobile = $event.detail.stock">
         <div x-show="nombreCarritoMobile" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" x-transition>
@@ -1228,10 +1373,12 @@
                             </span>
 
                             <div class="flex gap-2">
+                                @if(! $mesaId)
                                 <button wire:click="setTab('prefacturas')"
                                     class="px-3 py-1.5 rounded-full text-sm font-semibold shadow-sm {{ $tab === 'prefacturas' ? 'bg-indigo-600 text-white' : 'bg-white text-indigo-700 border border-indigo-200' }}">
                                     Prefacturas
                                 </button>
+                                @endif
 
                                 <button wire:click="setTab('facturas')"
                                     class="px-3 py-1.5 rounded-full text-sm font-semibold shadow-sm {{ $tab === 'facturas' ? 'bg-indigo-600 text-white' : 'bg-white text-indigo-700 border border-indigo-200' }}">
@@ -2089,6 +2236,7 @@
                     if (r.print_url) {
                         if (popup && !popup.closed) popup.location.replace(r.print_url);
                         else window.open(r.print_url, '_blank');
+                        if (r.redirect_url) setTimeout(() => { window.location.href = r.redirect_url; }, 600);
                         return;
                     }
                     if (r.html) {
@@ -2373,6 +2521,7 @@
                             if (r.print_url) {
                                 if (popup && !popup.closed) popup.location.replace(r.print_url);
                                 else window.open(r.print_url, '_blank');
+                                if (r.redirect_url) setTimeout(() => { window.location.href = r.redirect_url; }, 600);
                                 return;
                             }
                             if (popup && !popup.closed) popup.close();

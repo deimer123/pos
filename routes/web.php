@@ -92,6 +92,11 @@ Route::middleware(['auth', 'no.cocina.en.pos'])->get('/eleccion', function () {
 | Solo pueden acceder vendedores. Se controla con un middleware personalizado
 |--------------------------------------------------------------------------
 */
+Route::middleware(['auth', 'no_digitadores_en_pos', 'no.cocina.en.pos'])->get('/pos', function () {
+    return view('pos');
+})->name('pos');
+
+
 Route::middleware(['auth'])->get('/prefactura/imprimir/{id}', [\App\Http\Controllers\PrefacturaController::class, 'imprimir'])->name('prefactura.imprimir');
 Route::middleware(['auth'])->get('/salida/imprimir/{id}', function ($id) {
     $factura = \App\Models\Factura::with(['cliente','detalles'])
@@ -195,14 +200,59 @@ Route::get('/notas-credito/{nota}/pdf', [NotaCreditoPdfController::class, 'pdf']
 
 });
 
+// Página neutral para sesión desactivada (no requiere auth, no re-registra tab)
+Route::get('/sesion-desactivada', function () {
+    return response('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Sesión cerrada</title>
+    <style>body{margin:0;background:#111827;display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui,sans-serif;}
+    .box{background:#1f2937;border:2px solid #374151;border-radius:12px;padding:40px;text-align:center;max-width:400px;}
+    h2{color:#9ca3af;margin:0 0 10px;}p{color:#6b7280;font-size:14px;margin:0 0 20px;}
+    a{background:#2563eb;color:white;text-decoration:none;border-radius:8px;padding:10px 24px;font-size:14px;font-weight:700;}</style>
+    </head><body><div class="box"><div style="font-size:48px;margin-bottom:16px;">🔒</div>
+    <h2>Esta pestaña fue desactivada</h2>
+    <p>Otra sesión tomó el control. Puede cerrar esta pestaña o iniciar sesión nuevamente.</p>
+    <a href="/admin/login">Iniciar sesión</a></div></body></html>', 200, ['Content-Type' => 'text/html']);
+})->name('sesion.desactivada');
+
 Route::get('/check-session', function () {
 
     if (!auth()->check()) {
         return response()->json(['error' => 'no auth'], 401);
     }
 
+    $user = auth()->user();
+    $sessionToken = session('session_token');
+
+    if ($sessionToken && $user->session_token !== $sessionToken) {
+        return response()->json(['error' => 'session_invalid'], 401);
+    }
+
     return response()->json(['ok' => true]);
 
+});
+
+Route::middleware('auth')->post('/register-tab', function (\Illuminate\Http\Request $request) {
+    $tabId = $request->input('tab_id');
+    if ($tabId) {
+        auth()->user()->update(['active_tab_id' => $tabId]);
+    }
+    return response()->json(['ok' => true]);
+});
+
+Route::middleware('auth')->get('/check-tab', function (\Illuminate\Http\Request $request) {
+    $user = auth()->user();
+    $tabId = $request->query('tab_id');
+
+    // Verificar también session_token
+    $sessionToken = session('session_token');
+    if ($sessionToken && $user->session_token !== $sessionToken) {
+        return response()->json(['error' => 'session_invalid'], 401);
+    }
+
+    if ($tabId && $user->active_tab_id !== $tabId) {
+        return response()->json(['error' => 'tab_replaced'], 401);
+    }
+
+    return response()->json(['ok' => true]);
 });
 
 Route::middleware(['auth', 'no.cocina.en.pos'])->group(function () {
@@ -239,6 +289,7 @@ Route::middleware(['auth'])->group(function () {
         ->name('cocina');
 });
 
+// Logout de cocina (redirige al login del admin)
 Route::post('/cocina/logout', function (\Illuminate\Http\Request $request) {
     $user = auth()->user();
     if ($user) {
@@ -249,7 +300,6 @@ Route::post('/cocina/logout', function (\Illuminate\Http\Request $request) {
     $request->session()->regenerateToken();
     return redirect()->route('filament.admin.auth.login');
 })->name('cocina.logout')->middleware('auth');
-
 Route::get('/productos/buscar', function(Request $request) {
 
     $texto = trim($request->texto);
@@ -290,6 +340,11 @@ Route::post('/cerrar-sesion', function () {
         if (trim((string) $observaciones) !== '') {
             Cache::put('pos_observaciones_' . $empresaId . '_' . $user->id, $observaciones, now()->addDays(7));
         }
+    }
+
+    // Limpiar session_id y session_token en BD para liberar la sesión
+    if ($user) {
+        $user->update(['session_id' => null, 'session_token' => null]);
     }
 
     auth()->logout();
