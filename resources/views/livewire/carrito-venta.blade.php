@@ -683,35 +683,8 @@
                 class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
                 Editar
             </button>
-            <button
-                x-on:click="Swal.fire({
-                          title: '¿Liberar mesa?', text: 'Se cancelará la comanda y se liberará la mesa.',
-                          icon: 'warning', showCancelButton: true,
-                          confirmButtonColor: '#dc2626', confirmButtonText: 'Sí, liberar', cancelButtonText: 'Cancelar'
-                        }).then(r=>{ if(r.isConfirmed){ $wire.dispatch('mesa-liberar'); }})"
-                class="pos-cart-main-action text-white text-xs px-3 h-8 rounded-full pos-hide-mobile"
-                style="background:#dc2626;">
-                🔓 Liberar
-            </button>
-            <button
-                x-on:click="Swal.fire({
-                          title: '¿Poner en espera?', text: 'La cuenta se guarda y la mesa queda libre.',
-                          icon: 'question', showCancelButton: true,
-                          confirmButtonColor: '#d97706', confirmButtonText: 'Sí, en espera', cancelButtonText: 'Cancelar'
-                        }).then(r=>{ if(r.isConfirmed){ $wire.dispatch('mesa-en-espera'); }})"
-                class="pos-cart-main-action text-white text-xs px-3 h-8 rounded-full pos-hide-mobile"
-                style="background:#d97706;">
-                ⏸ Espera
-            </button>
-            <button
-                onclick="window.open('/pos/mesa/{{ $mesaId }}/cuenta', '_blank', 'width=420,height=680')"
-                class="pos-cart-main-action text-white text-xs px-3 h-8 rounded-full pos-hide-mobile"
-                style="background:#374151;">
-                🖨️ Cuenta
-            </button>
-
-            {{-- BOTÓN ACCIONES: Entrada/salida, Cartera, Ver --}}
-            <div class="pos-cart-secondary-action" x-data="{ openAcc: false }" style="position:relative;">
+            {{-- BOTÓN ACCIONES: Liberar, Espera, Cuenta + Entrada/salida, Cartera, Ver --}}
+            <div x-data="{ openAcc: false }" style="position:relative;">
                 <button type="button"
                     @click="openAcc = !openAcc"
                     class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow flex items-center gap-1">
@@ -719,6 +692,32 @@
                 </button>
                 <div x-show="openAcc" x-cloak @click.outside="openAcc = false"
                     style="position:absolute; bottom:calc(100% + 6px); right:0; background:white; border:1px solid #e2e8f0; border-radius:10px; box-shadow:0 4px 16px rgba(0,0,0,.12); min-width:170px; z-index:9999; display:flex; flex-direction:column; overflow:hidden; padding:6px;">
+                    <button type="button"
+                        @click.stop="openAcc = false; Swal.fire({
+                            title: '¿Liberar mesa?', text: 'Se cancelará la comanda y se liberará la mesa.',
+                            icon: 'warning', showCancelButton: true,
+                            confirmButtonColor: '#dc2626', confirmButtonText: 'Sí, liberar', cancelButtonText: 'Cancelar'
+                        }).then(r=>{ if(r.isConfirmed){ $wire.dispatch('mesa-liberar'); }})"
+                        style="margin-bottom:5px; padding:8px 14px; text-align:left; font-size:12px; font-weight:600; background:#dc2626; color:white; border:none; border-radius:8px; cursor:pointer;"
+                        onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'">
+                        🔓 Liberar
+                    </button>
+                    <button type="button"
+                        @click.stop="openAcc = false; Swal.fire({
+                            title: '¿Poner en espera?', text: 'La cuenta se guarda y la mesa queda libre.',
+                            icon: 'question', showCancelButton: true,
+                            confirmButtonColor: '#d97706', confirmButtonText: 'Sí, en espera', cancelButtonText: 'Cancelar'
+                        }).then(r=>{ if(r.isConfirmed){ $wire.dispatch('mesa-en-espera'); }})"
+                        style="margin-bottom:5px; padding:8px 14px; text-align:left; font-size:12px; font-weight:600; background:#d97706; color:white; border:none; border-radius:8px; cursor:pointer;"
+                        onmouseover="this.style.background='#b45309'" onmouseout="this.style.background='#d97706'">
+                        ⏸ Espera
+                    </button>
+                    <button type="button"
+                        @click.stop="openAcc = false; window.open('/pos/mesa/{{ $mesaId }}/cuenta', '_blank', 'width=420,height=680')"
+                        style="margin-bottom:5px; padding:8px 14px; text-align:left; font-size:12px; font-weight:600; background:#374151; color:white; border:none; border-radius:8px; cursor:pointer;"
+                        onmouseover="this.style.background='#1f2937'" onmouseout="this.style.background='#374151'">
+                        🖨️ Cuenta
+                    </button>
                     @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
                         @if ($cajaEstado === 'abierta')
                         <button type="button"
@@ -778,34 +777,6 @@
             @endif
         </div>
 
-        @if($mesaId)
-        {{-- Menú ☰ de mesa: Liberar, Espera, Cuenta --}}
-        <div class="pos-cart-mobile-more pos-cart-mesa-actions" x-data="{ open: false }" wire:key="mobile-actions-mesa-root">
-        <button type="button" class="pos-cart-mobile-more-button pos-cart-mesa-actions-btn" @click="open = !open">☰</button>
-        <div class="pos-cart-mobile-more-menu" x-show="open" x-cloak @click.stop @click.outside="open = false">
-            <button type="button" class="pos-cart-menu-item" style="background:#dc2626;color:white;" wire:key="mesa-mobile-liberar"
-                @click.prevent.stop="open = false; Swal.fire({
-                    title: '¿Liberar mesa?', text: 'Se cancelará la comanda y se liberará la mesa.',
-                    icon: 'warning', showCancelButton: true,
-                    confirmButtonColor: '#dc2626', confirmButtonText: 'Sí, liberar', cancelButtonText: 'Cancelar'
-                }).then(r=>{ if(r.isConfirmed){ $wire.dispatch('mesa-liberar'); }})">
-                🔓 Liberar
-            </button>
-            <button type="button" class="pos-cart-menu-item" style="background:#d97706;color:white;" wire:key="mesa-mobile-espera"
-                @click.prevent.stop="open = false; Swal.fire({
-                    title: '¿Poner en espera?', text: 'La mesa quedará en estado de espera (amarillo).',
-                    icon: 'question', showCancelButton: true,
-                    confirmButtonColor: '#d97706', confirmButtonText: 'Sí, en espera', cancelButtonText: 'Cancelar'
-                }).then(r=>{ if(r.isConfirmed){ $wire.dispatch('mesa-en-espera'); }})">
-                ⏸ En espera
-            </button>
-            <button type="button" class="pos-cart-menu-item" style="background:#374151;color:white;" wire:key="mesa-mobile-cuenta"
-                @click.prevent.stop="open = false; window.open('/pos/mesa/{{ $mesaId }}/cuenta', '_blank', 'width=420,height=680')">
-                🖨️ Cuenta
-            </button>
-        </div>
-        </div>
-        @endif
 
     </div>{{-- /pos-desktop-cart-actions --}}
 
