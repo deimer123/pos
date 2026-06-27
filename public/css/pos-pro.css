@@ -970,12 +970,20 @@ button:hover {
     .pos-hide-mobile {
         display: inline-flex !important;
     }
+    /* En desktop, ocultar elementos que son solo para móvil/iPad */
+    .pos-show-mobile-only {
+        display: none !important;
+    }
 }
 
 @media (max-width: 768px) {
     /* Ocultar en móvil los elementos marcados como solo-desktop */
     .pos-hide-mobile {
         display: none !important;
+    }
+    /* Mostrar en móvil los elementos que son solo para móvil/iPad */
+    .pos-show-mobile-only {
+        display: block !important;
     }
 
     .pos-cart-component > .pos-cart-total-bar {
@@ -2598,6 +2606,10 @@ button:hover {
 
 /* FINAL iPad touch override */
 @media (hover: none) and (pointer: coarse) and (min-width: 769px) and (max-width: 1366px) {
+    /* En iPad mostrar dropdown Acciones y ocultar botones individuales de escritorio */
+    .pos-show-mobile-only { display: block !important; }
+    .pos-hide-mobile { display: none !important; }
+
     .pos-cart-component > .pos-cart-header { order: 1 !important; }
     .pos-cart-component > .pos-cart-table-scroll { order: 2 !important; }
     .pos-cart-component > .pos-cart-total-bar { order: 3 !important; }
