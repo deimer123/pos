@@ -682,13 +682,14 @@
                       Swal.fire({icon:'warning', title:'Carrito vacio', text:'Debe agregar productos antes de editar.'});
                     } else { $wire.abrirModalEditar(); }
                 "
-                class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
+                class="pos-hide-mobile text-white rounded-full shadow"
+                style="background:#4f46e5; font-size:10px; font-weight:700; padding:0 8px; height:28px; white-space:nowrap; border:none; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">
                 Editar
             </button>
             {{-- ESCRITORIO: botones directos visibles en línea --}}
             <button type="button"
                 class="pos-hide-mobile text-white rounded-full shadow"
-                style="background:#dc2626; font-size:10px; font-weight:700; padding:0 8px; height:28px; white-space:nowrap; border:none; cursor:pointer;"
+                style="background:#dc2626; font-size:10px; font-weight:700; padding:0 8px; height:28px; white-space:nowrap; border:none; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;"
                 x-on:click="Swal.fire({
                     title: '¿Liberar mesa?', text: 'Se cancelará la comanda y se liberará la mesa.',
                     icon: 'warning', showCancelButton: true,
@@ -698,7 +699,7 @@
             </button>
             <button type="button"
                 class="pos-hide-mobile text-white rounded-full shadow"
-                style="background:#d97706; font-size:10px; font-weight:700; padding:0 8px; height:28px; white-space:nowrap; border:none; cursor:pointer;"
+                style="background:#d97706; font-size:10px; font-weight:700; padding:0 8px; height:28px; white-space:nowrap; border:none; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;"
                 x-on:click="Swal.fire({
                     title: '¿Poner en espera?', text: 'La cuenta se guarda y la mesa queda libre.',
                     icon: 'question', showCancelButton: true,
@@ -708,7 +709,7 @@
             </button>
             <button type="button"
                 class="pos-hide-mobile text-white rounded-full shadow"
-                style="background:#374151; font-size:10px; font-weight:700; padding:0 8px; height:28px; white-space:nowrap; border:none; cursor:pointer;"
+                style="background:#374151; font-size:10px; font-weight:700; padding:0 8px; height:28px; white-space:nowrap; border:none; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;"
                 onclick="window.open('/pos/mesa/{{ $mesaId }}/cuenta', '_blank', 'width=420,height=680')">
                 🖨️ Cuenta
             </button>
@@ -716,21 +717,21 @@
                 @if ($cajaEstado === 'abierta')
                 <button type="button"
                     class="pos-hide-mobile text-white rounded-full shadow"
-                    style="background:#0ea5e9; font-size:10px; font-weight:700; padding:0 8px; height:28px; white-space:nowrap; border:none; cursor:pointer;"
+                    style="background:#0ea5e9; font-size:10px; font-weight:700; padding:0 8px; height:28px; white-space:nowrap; border:none; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;"
                     wire:click="abrirMovimientoCajaModal('salida')">
                     📥 Entrada/salida
                 </button>
                 @endif
                 <button type="button"
                     class="pos-hide-mobile text-white rounded-full shadow"
-                    style="background:#8b5cf6; font-size:10px; font-weight:700; padding:0 8px; height:28px; white-space:nowrap; border:none; cursor:pointer;"
+                    style="background:#8b5cf6; font-size:10px; font-weight:700; padding:0 8px; height:28px; white-space:nowrap; border:none; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;"
                     wire:click="abrirModalCartera">
                     💼 Cartera
                 </button>
             @endif
             <button type="button"
                 class="pos-hide-mobile text-white rounded-full shadow"
-                style="background:#475569; font-size:10px; font-weight:700; padding:0 8px; height:28px; white-space:nowrap; border:none; cursor:pointer;"
+                style="background:#475569; font-size:10px; font-weight:700; padding:0 8px; height:28px; white-space:nowrap; border:none; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;"
                 wire:click="verPrefacturas">
                 🗒️ Ver facturas
             </button>
