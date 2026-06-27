@@ -598,11 +598,13 @@
             {{-- Enviar cocina y Facturar: visibles siempre (desktop Y móvil) --}}
             <div class="flex gap-2 flex-shrink-0">
                 <button onclick="window.Livewire.dispatch('mesa-enviar-cocina')"
+                    class="pos-mesa-total-btn"
                     style="background:#2563eb; color:white; border:none; border-radius:9999px; padding:0 14px; height:34px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">
                     📤 Enviar cocina
                 </button>
                 @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
                 <button onclick="window.Livewire.dispatch('mesa-facturar')"
+                    class="pos-mesa-total-btn"
                     style="background:#16a34a; color:white; border:none; border-radius:9999px; padding:0 14px; height:34px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">
                     💳 Facturar
                 </button>

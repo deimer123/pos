@@ -759,6 +759,12 @@ h2, h3, h4 {
         display: none !important;
     }
 
+    .pos-cart-component > .pos-cart-total-bar button.pos-mesa-total-btn {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+    }
+
     .pos-cart-component > .pos-cart-total-bar .text-right {
         width: 100%;
         display: flex;
