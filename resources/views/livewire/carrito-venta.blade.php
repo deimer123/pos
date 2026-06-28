@@ -445,64 +445,69 @@
 
 
     
-    <div class="pos-cart-table-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-1 py-1"
-        style="font-size: 12px; line-height: 1.1;">
-        <table class="w-full table-fixed bg-white border">
-            <thead class="sticky top-0 z-20 bg-gray-100 text-gray-700">
-                <tr class="border-b">
-                    <th class="px-1 py-1 text-left w-14">Codigo</th>
-                    <th class="px-1 py-1 text-left">Producto</th>
-                    <th class="px-1 py-1 text-center w-14">Cant.</th>
-                    <th class="px-1 py-1 text-center w-20">Precio</th>
-                    <th class="px-1 py-1 text-center w-16">Subtotal</th>
-                    <th class="px-1 py-1 text-center w-24">Accion</th>
+    {{-- CARRITO POS PROFESIONAL --}}
+    <div class="pos-cart-table-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden" style="background:#f1f5f9;">
+        <table class="w-full table-fixed" style="border-collapse:separate; border-spacing:0;">
+            <thead class="sticky top-0 z-20">
+                <tr style="background:linear-gradient(135deg,#1e293b 0%,#334155 100%); color:white;">
+                    <th style="padding:8px 6px; text-align:left; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; width:52px; border-right:1px solid rgba(255,255,255,.1);">#</th>
+                    <th style="padding:8px 6px; text-align:left; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; border-right:1px solid rgba(255,255,255,.1);">Producto</th>
+                    <th style="padding:8px 6px; text-align:center; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; width:62px; border-right:1px solid rgba(255,255,255,.1);">Cant.</th>
+                    <th style="padding:8px 6px; text-align:right; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; width:80px; border-right:1px solid rgba(255,255,255,.1);">Precio</th>
+                    <th style="padding:8px 6px; text-align:right; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; width:80px; border-right:1px solid rgba(255,255,255,.1);">Total</th>
+                    <th style="padding:8px 6px; text-align:center; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; width:52px;"></th>
                 </tr>
             </thead>
-
             <tbody>
                 @forelse($carrito as $id => $item)
-                    @php $enviado = !empty($item['enviado_cocina']); @endphp
-                    <tr class="border-b {{ $enviado ? 'bg-gray-100 opacity-70' : 'hover:bg-indigo-50' }}">
-                        @php
-                            $permiteDecimal = (bool) ($item['permite_decimal'] ?? ((int) ($item['id_unidad_de_medida'] ?? 1) !== 1));
-                        @endphp
-                        <td class="px-1 py-0.5 border">{{ $item['id_producto'] ?? '-' }}</td>
-                        @php
-                            $stockUnidadCarrito = match ($item['vende_por'] ?? 'unidad') {
-                                'peso' => 'kg',
-                                'porcion' => 'porcion',
-                                'litro' => 'lt',
-                                'metro' => 'mt',
-                                'hora' => 'hr',
-                                default => ((bool) ($item['permite_decimal'] ?? false) ? 'kg' : 'und'),
-                            };
-                            $stockDecimalesCarrito = $stockUnidadCarrito === 'und' ? 0 : 2;
-                            // Si tiene receta, mostrar porciones disponibles por ingredientes
-                            if (!empty($item['porciones_receta'])) {
-                                $stockValorCarrito  = (float) $item['porciones_receta']['porciones'];
-                                $stockUnidadCarrito = $item['porciones_receta']['unidad'];
-                                $stockDecimalesCarrito = 2;
-                            } else {
-                                $stockValorCarrito = (float) ($item['existencias'] ?? 0);
-                            }
-                            $stockTooltipCarrito = number_format($stockValorCarrito, $stockDecimalesCarrito, ',', '.') . ' ' . $stockUnidadCarrito;
-                        @endphp
-                        <td class="px-1 py-0.5 border {{ $stockValorCarrito <= 0 ? 'text-red-600 font-semibold' : '' }}"
-                            title="Existencias: {{ $stockTooltipCarrito }}">
+                    @php
+                        $enviado = !empty($item['enviado_cocina']);
+                        $permiteDecimal = (bool) ($item['permite_decimal'] ?? ((int) ($item['id_unidad_de_medida'] ?? 1) !== 1));
+                        $stockUnidadCarrito = match ($item['vende_por'] ?? 'unidad') {
+                            'peso' => 'kg', 'porcion' => 'porcion', 'litro' => 'lt', 'metro' => 'mt', 'hora' => 'hr',
+                            default => ((bool) ($item['permite_decimal'] ?? false) ? 'kg' : 'und'),
+                        };
+                        $stockDecimalesCarrito = $stockUnidadCarrito === 'und' ? 0 : 2;
+                        if (!empty($item['porciones_receta'])) {
+                            $stockValorCarrito  = (float) $item['porciones_receta']['porciones'];
+                            $stockUnidadCarrito = $item['porciones_receta']['unidad'];
+                            $stockDecimalesCarrito = 2;
+                        } else {
+                            $stockValorCarrito = (float) ($item['existencias'] ?? 0);
+                        }
+                        $stockTooltipCarrito = number_format($stockValorCarrito, $stockDecimalesCarrito, ',', '.') . ' ' . $stockUnidadCarrito;
+                        $sinStock = $stockValorCarrito <= 0;
+                    @endphp
+                    <tr wire:key="cart-row-{{ $id }}"
+                        style="{{ $enviado ? 'background:#f0fdf4; opacity:.82;' : 'background:white;' }} border-bottom:1px solid #e2e8f0; transition:background .15s;">
+                        {{-- Código --}}
+                        <td style="padding:7px 6px; font-size:10px; color:#94a3b8; font-weight:600; border-right:1px solid #f1f5f9; vertical-align:middle;">
+                            {{ $item['id_producto'] ?? '-' }}
+                        </td>
+                        {{-- Nombre + badges --}}
+                        <td style="padding:7px 6px; border-right:1px solid #f1f5f9; vertical-align:middle; {{ $sinStock ? 'color:#dc2626;' : '' }}">
                             <button type="button"
                                 title="{{ $item['nombre'] }} | Stock: {{ $stockTooltipCarrito }}"
                                 @click="$dispatch('ver-nombre-carrito-mobile', { nombre: @js($item['nombre']), stock: @js($stockTooltipCarrito) })"
-                                class="block w-full truncate text-left">
-                                {{ $item['nombre'] }}
-                                @if($enviado)
-                                    <span style="font-size:9px; background:#22c55e; color:white; border-radius:4px; padding:1px 4px; margin-left:3px;">✓ Cocina</span>
-                                @endif
-                                @if(!empty($item['combo_activo']))
-                                    <span style="font-size:9px; background:#7c3aed; color:white; border-radius:4px; padding:1px 5px; margin-left:3px;">🎁 {{ $item['combo_activo'] }}</span>
-                                @endif
+                                style="display:block; width:100%; text-align:left; background:none; border:none; padding:0; cursor:pointer;">
+                                <span style="font-size:12px; font-weight:700; color:{{ $sinStock ? '#dc2626' : '#1e293b' }}; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;">
+                                    {{ $item['nombre'] }}
+                                </span>
+                                <span style="display:flex; gap:4px; flex-wrap:wrap; margin-top:2px;">
+                                    @if($enviado)
+                                        <span style="font-size:9px; background:#16a34a; color:white; border-radius:20px; padding:1px 6px; font-weight:700; letter-spacing:.03em;">✓ Cocina</span>
+                                    @endif
+                                    @if(!empty($item['combo_activo']))
+                                        <span style="font-size:9px; background:#7c3aed; color:white; border-radius:20px; padding:1px 6px; font-weight:700;">🎁 {{ $item['combo_activo'] }}</span>
+                                    @endif
+                                    @if($sinStock)
+                                        <span style="font-size:9px; background:#dc2626; color:white; border-radius:20px; padding:1px 6px; font-weight:700;">Sin stock</span>
+                                    @endif
+                                </span>
                             </button>
                         </td>
-                        <td class="px-1 py-0.5 border text-center">
+                        {{-- Cantidad --}}
+                        <td style="padding:5px 4px; text-align:center; border-right:1px solid #f1f5f9; vertical-align:middle;">
                             <input type="number"
                                 min="{{ $permiteDecimal ? '0.01' : '1' }}"
                                 step="{{ $permiteDecimal ? '0.01' : '1' }}"
@@ -510,79 +515,49 @@
                                 wire:model.lazy="carrito.{{ $id }}.cantidad"
                                 wire:change="actualizarTotales"
                                 wire:key="cantidad-{{ $id }}-{{ $item['cantidad'] }}"
-                                class="border rounded text-center"
-                                style="width: 58px; height: 24px; font-size: 11px; padding: 0 3px;"
-                                {{ $enviado ? 'disabled' : '' }} />
+                                {{ $enviado ? 'disabled' : '' }}
+                                style="width:52px; height:28px; font-size:13px; font-weight:800; text-align:center; border:2px solid {{ $enviado ? '#bbf7d0' : '#c7d2fe' }}; border-radius:8px; background:{{ $enviado ? '#f0fdf4' : '#eef2ff' }}; color:{{ $enviado ? '#16a34a' : '#3730a3' }}; padding:0 3px; outline:none;" />
                         </td>
-                        <td class="px-1 py-0.5 border text-center whitespace-nowrap">
-                            <div class="whitespace-nowrap text-[11px] leading-none">
-                                ${{ number_format(round($item['nuevo_precio'] ?? ($item['precio'] ?? 0)), 0, ',', '.') }}
-                            </div>
+                        {{-- Precio --}}
+                        <td style="padding:7px 6px; text-align:right; font-size:11px; color:#64748b; font-weight:600; border-right:1px solid #f1f5f9; white-space:nowrap; vertical-align:middle;">
+                            ${{ number_format(round($item['nuevo_precio'] ?? ($item['precio'] ?? 0)), 0, ',', '.') }}
                         </td>
-                        <td class="px-1 py-0.5 border text-center font-semibold text-indigo-600 whitespace-nowrap">
+                        {{-- Subtotal --}}
+                        <td style="padding:7px 6px; text-align:right; font-size:13px; font-weight:800; color:#0f766e; white-space:nowrap; border-right:1px solid #f1f5f9; vertical-align:middle;">
                             ${{ number_format($item['total'] ?? 0, 0, ',', '.') }}
                         </td>
-                        <td class="px-1 py-0.5 border text-center">
-                            <div class="flex items-center justify-center gap-1">
+                        {{-- Acciones --}}
+                        <td style="padding:5px 4px; text-align:center; vertical-align:middle;">
                             @if(! $enviado)
-                              <button x-data
-    x-on:click="$wire.abrirModalRenombrar('{{ $item['uuid'] ?? $item['id_producto'] }}')"
-    class="text-indigo-600 hover:text-indigo-800 transition"
-    title="Editar">
-
-    <svg xmlns="http://www.w3.org/2000/svg"
-        class="w-5 h-5"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor">
-
-        <path stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L12 15l-4 1 1-4 9.586-9.586z"/>
-    </svg>
-
-</button>
-
-    <button x-data="{ uuid: @js($item['uuid'] ?? $item['id_producto']) }"
-
-    x-on:click="
-        Swal.fire({
-            title:'Borrar?',
-            icon:'warning',
-            showCancelButton:true,
-            confirmButtonText:'Si',
-            cancelButtonText:'No'
-        }).then(r=>{
-            if(r.isConfirmed){
-                $wire.eliminarDelCarrito(uuid)
-            }
-        })
-    "
-
-    class="text-red-600 hover:text-red-800 transition"
-    title="Eliminar">
-
-    <svg xmlns="http://www.w3.org/2000/svg"
-        class="w-5 h-5"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor">
-
-        <path stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M19 7l-.867 12.142A2.25 2.25 0 0115.891 21H8.109a2.25 2.25 0 01-2.242-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3m-7 0h8"/>
-    </svg>
-
-</button>
-                            @endif
+                            <div style="display:flex; flex-direction:column; gap:3px; align-items:center;">
+                                <button x-data
+                                    x-on:click="$wire.abrirModalRenombrar('{{ $item['uuid'] ?? $item['id_producto'] }}')"
+                                    title="Editar"
+                                    style="width:26px; height:26px; border-radius:6px; border:none; background:#e0e7ff; color:#4338ca; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" style="width:13px;height:13px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L12 15l-4 1 1-4 9.586-9.586z"/>
+                                    </svg>
+                                </button>
+                                <button x-data="{ uuid: @js($item['uuid'] ?? $item['id_producto']) }"
+                                    x-on:click="Swal.fire({ title:'Borrar?', icon:'warning', showCancelButton:true, confirmButtonText:'Si', cancelButtonText:'No' }).then(r=>{ if(r.isConfirmed){ $wire.eliminarDelCarrito(uuid) } })"
+                                    title="Eliminar"
+                                    style="width:26px; height:26px; border-radius:6px; border:none; background:#fee2e2; color:#dc2626; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" style="width:13px;height:13px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2.25 2.25 0 0115.891 21H8.109a2.25 2.25 0 01-2.242-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3m-7 0h8"/>
+                                    </svg>
+                                </button>
                             </div>
+                            @endif
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="text-center text-gray-500 py-4">No hay productos en el carrito.</td>
+                        <td colspan="6" style="padding:40px 16px; text-align:center;">
+                            <div style="color:#94a3b8; font-size:13px; font-weight:500;">
+                                <div style="font-size:32px; margin-bottom:8px;">🛒</div>
+                                Sin productos en la orden
+                            </div>
+                        </td>
                     </tr>
                 @endforelse
             </tbody>
