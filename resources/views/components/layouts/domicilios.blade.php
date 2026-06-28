@@ -3,6 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    @php
+        use Illuminate\Support\Facades\Auth;
+        $empresaId = Auth::user()->empresa_id ?? Auth::id();
+        $cfgLayout = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();
+        $nombreEmpresa = $cfgLayout?->nombre_empresa ?? 'Empresa';
+    @endphp
     <title>Domicilios — {{ $nombreEmpresa }}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
