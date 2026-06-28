@@ -2575,9 +2575,9 @@
             const factElecHtml = `<input id="swal_dom_nit" type="hidden"><input id="swal_dom_email" type="hidden"><input id="swal_dom_razon" type="hidden">`;
 
             Swal.fire({
-                title: '',
+                title: '<span style="font-size:15px;font-weight:800;color:#1f2937;">Confirmar factura</span>',
                 width: '460px',
-                padding: '12px 16px 12px',
+                padding: '10px 16px 12px',
                 html: `
                     <div style="text-align:left;font-size:12px;color:#1f2937;">
                         ${factElecHtml}
