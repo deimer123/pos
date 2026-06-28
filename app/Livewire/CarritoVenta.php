@@ -1635,8 +1635,9 @@ public function facturarConfirmada(array $data = [])
         $tipoPago     = $data['tipo_pago']    ?? 'contado';
         $medioPago    = $tipoPago === 'contado' ? ($data['medio_pago'] ?? 'efectivo') : null;
         $vencRaw      = $data['fecha_vencimiento'] ?? null;
-        $tipoPedido   = $data['tipo_pedido'] ?? 'local';
-        $costoEmpaque = (float)($data['costo_empaque'] ?? 0);
+        $tipoPedido     = $data['tipo_pedido'] ?? 'local';
+        $costoEmpaque   = (float)($data['costo_empaque'] ?? 0);
+        $cobroDomicilio = $data['cobro_domicilio'] ?? 'anticipado';
 
         if ($tipoFactura === 'electronica' && ! $this->facturacionElectronicaDisponible($empresaId)) {
             throw new \Exception('La facturacion electronica no esta activa o no tiene rango Factus configurado para esta empresa.');
@@ -1686,10 +1687,7 @@ public function facturarConfirmada(array $data = [])
             ‘transferencia_obs’  => $transferObs,
             ‘tipo_pedido’        => $tipoPedido,
             ‘costo_empaque’      => $costoEmpaque,
-            ‘dom_nombre’         => $data[‘dom_nombre’] ?? null,
-            ‘dom_telefono’       => $data[‘dom_telefono’] ?? null,
-            ‘dom_direccion’      => $data[‘dom_direccion’] ?? null,
-            ‘dom_ciudad’         => $data[‘dom_ciudad’] ?? null,
+            ‘cobro_domicilio’    => $cobroDomicilio,
             ‘dom_nit’            => $data[‘dom_nit’] ?? null,
             ‘dom_email’          => $data[‘dom_email’] ?? null,
             ‘dom_razon_social’   => $data[‘dom_razon_social’] ?? null,
@@ -1758,6 +1756,23 @@ if ($producto) {
         }
     }
 }
+        }
+
+        // Agregar costo de domicilio/empaque como ítem de detalle
+        if ($costoEmpaque > 0) {
+            $label = match($tipoPedido) {
+                'domicilio'   => 'Domicilio + desechables',
+                'para_llevar' => 'Empaque / desechables',
+                default       => 'Empaque',
+            };
+            $factura->detalles()->create([
+                'producto_id'       => 0,
+                'descripcion_larga' => $label,
+                'cantidad'          => 1,
+                'precio'            => $costoEmpaque,
+                'subtotal'          => $costoEmpaque,
+                'descuento'         => 0,
+            ]);
         }
 
         // Recalcular totales
@@ -2144,14 +2159,15 @@ public function facturarEImprimir(array $data = [])
         $tipoPago     = $data['tipo_pago']    ?? 'contado';
         $medioPago    = $tipoPago === 'contado' ? ($data['medio_pago'] ?? 'efectivo') : null;
         $vencRaw      = $data['fecha_vencimiento'] ?? null;
-        $tipoPedido   = $data['tipo_pedido'] ?? 'local';
-        $costoEmpaque = (float)($data['costo_empaque'] ?? 0);
+        $tipoPedido     = $data[‘tipo_pedido’] ?? ‘local’;
+        $costoEmpaque   = (float)($data[‘costo_empaque’] ?? 0);
+        $cobroDomicilio = $data[‘cobro_domicilio’] ?? ‘anticipado’;
 
-        if ($tipoFactura === 'electronica' && ! $this->facturacionElectronicaDisponible($empresaId)) {
-            throw new \Exception('La facturacion electronica no esta activa o no tiene rango Factus configurado para esta empresa.');
+        if ($tipoFactura === ‘electronica’ && ! $this->facturacionElectronicaDisponible($empresaId)) {
+            throw new \Exception(‘La facturacion electronica no esta activa o no tiene rango Factus configurado para esta empresa.’);
         }
 
-        // ðŸ‘‡ ObservaciÃ³n especÃ­fica si es transferencia en contado
+        // ðŸ’‡ ObservaciÃ³n especÃ­fica si es transferencia en contado
         $transferObs = ($tipoPago === 'contado' && $medioPago === 'transferencia')
             ? trim((string)($data['transferencia_obs'] ?? ''))
             : null;
@@ -2195,10 +2211,7 @@ public function facturarEImprimir(array $data = [])
             ‘observaciones’      => $obs,
             ‘tipo_pedido’        => $tipoPedido,
             ‘costo_empaque’      => $costoEmpaque,
-            ‘dom_nombre’         => $data[‘dom_nombre’] ?? null,
-            ‘dom_telefono’       => $data[‘dom_telefono’] ?? null,
-            ‘dom_direccion’      => $data[‘dom_direccion’] ?? null,
-            ‘dom_ciudad’         => $data[‘dom_ciudad’] ?? null,
+            ‘cobro_domicilio’    => $cobroDomicilio,
             ‘dom_nit’            => $data[‘dom_nit’] ?? null,
             ‘dom_email’          => $data[‘dom_email’] ?? null,
             ‘dom_razon_social’   => $data[‘dom_razon_social’] ?? null,
@@ -2266,6 +2279,23 @@ if ($producto) {
         }
     }
 }
+        }
+
+        // Agregar costo de domicilio/empaque como ítem de detalle
+        if ($costoEmpaque > 0) {
+            $label = match($tipoPedido) {
+                'domicilio'   => 'Domicilio + desechables',
+                'para_llevar' => 'Empaque / desechables',
+                default       => 'Empaque',
+            };
+            $factura->detalles()->create([
+                'producto_id'       => 0,
+                'descripcion_larga' => $label,
+                'cantidad'          => 1,
+                'precio'            => $costoEmpaque,
+                'subtotal'          => $costoEmpaque,
+                'descuento'         => 0,
+            ]);
         }
 
         // Totales
@@ -3839,15 +3869,13 @@ public function uiCreditoActual(): array
     #[On('mesa-enviar-cocina-confirmado')]
     public function mesaEnviarCocinaConfirmado(array $data = []): void
     {
-        $tipoPedido   = $data['tipo_pedido'] ?? 'mesa';
-        $costoEmpaque = (float)($data['costo_empaque'] ?? 0);
-        $domNombre    = $data['dom_nombre'] ?? null;
-        $domTelefono  = $data['dom_telefono'] ?? null;
-        $domDireccion = $data['dom_direccion'] ?? null;
-        $this->mesaEnviarACocina($tipoPedido, $costoEmpaque, $domNombre, $domTelefono, $domDireccion);
+        $tipoPedido    = $data['tipo_pedido'] ?? 'mesa';
+        $costoDomicilio= (float)($data['costo_domicilio'] ?? 0);
+        $costoEmpaque  = (float)($data['costo_empaque'] ?? 0);
+        $this->mesaEnviarACocina($tipoPedido, $costoDomicilio, $costoEmpaque);
     }
 
-    public function mesaEnviarACocina(string $tipoPedido = 'mesa', float $costoEmpaque = 0, ?string $domNombre = null, ?string $domTelefono = null, ?string $domDireccion = null): void
+    public function mesaEnviarACocina(string $tipoPedido = 'mesa', float $costoDomicilio = 0, float $costoEmpaque = 0): void
     {
         if (! $this->mesaId) return;
 
@@ -3889,10 +3917,7 @@ public function uiCreditoActual(): array
             'observaciones'     => trim($this->observacionesPrefactura ?? ''),
             'numero_cocina_dia' => $numeroCocina,
             'tipo_pedido'       => $tipoPedido,
-            'costo_empaque'     => $costoEmpaque,
-            'dom_nombre'        => $domNombre,
-            'dom_telefono'      => $domTelefono,
-            'dom_direccion'     => $domDireccion,
+            'costo_empaque'     => $costoDomicilio + $costoEmpaque,
         ]);
 
         // Marcar en el carrito local como enviado

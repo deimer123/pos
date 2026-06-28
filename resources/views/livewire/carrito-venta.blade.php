@@ -2177,16 +2177,15 @@
                     </label>
                 </div>
                 <div id="pc_dom_wrap" style="display:none;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px;text-align:left;">
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
-                        <div><label style="font-size:10px;font-weight:700;color:#6b7280;">Nombre *</label>
-                            <input id="pc_dom_nombre" type="text" placeholder="Cliente" style="width:100%;height:30px;border:1px solid #cbd5e1;border-radius:7px;padding:3px 7px;font-size:12px;"></div>
-                        <div><label style="font-size:10px;font-weight:700;color:#6b7280;">Teléfono</label>
-                            <input id="pc_dom_telefono" type="text" placeholder="3001234567" style="width:100%;height:30px;border:1px solid #cbd5e1;border-radius:7px;padding:3px 7px;font-size:12px;"></div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                        <div><label style="font-size:10px;font-weight:700;color:#92400e;">Costo domicilio</label>
+                            <input id="pc_costo_dom" type="number" min="0" value="0" style="width:100%;height:32px;border:1px solid #fde68a;border-radius:7px;padding:3px 8px;font-size:13px;font-weight:700;"></div>
+                        <div><label style="font-size:10px;font-weight:700;color:#92400e;">Costo desechables</label>
+                            <input id="pc_costo_dom_desech" type="number" min="0" value="0" style="width:100%;height:32px;border:1px solid #fde68a;border-radius:7px;padding:3px 8px;font-size:13px;font-weight:700;"></div>
                     </div>
-                    <div style="margin-bottom:6px;"><label style="font-size:10px;font-weight:700;color:#6b7280;">Dirección</label>
-                        <input id="pc_dom_dir" type="text" placeholder="Calle, Carrera..." style="width:100%;height:30px;border:1px solid #cbd5e1;border-radius:7px;padding:3px 7px;font-size:12px;"></div>
-                    <div><label style="font-size:10px;font-weight:700;color:#6b7280;">Costo domicilio</label>
-                        <input id="pc_costo_emp" type="number" min="0" value="0" style="width:100%;height:30px;border:1px solid #cbd5e1;border-radius:7px;padding:3px 7px;font-size:12px;"></div>
+                    <div style="margin-top:8px;background:#fef9c3;border-radius:7px;padding:5px 8px;font-size:10px;color:#92400e;font-weight:700;">
+                        💡 Los datos del cliente se toman del POS. Se sumarán al total de la factura.
+                    </div>
                 </div>
                 <div id="pc_llevar_wrap" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:10px;text-align:left;">
                     <label style="font-size:11px;font-weight:700;color:#166534;">Costo empaque / desechables</label>
@@ -2222,17 +2221,14 @@
             },
             preConfirm: () => {
                 const tipo = document.querySelector('input[name="pc_tipo"]:checked')?.value || 'mesa';
-                if (tipo === 'domicilio' && !(document.getElementById('pc_dom_nombre')?.value||'').trim()) {
-                    Swal.showValidationMessage('Escriba el nombre del cliente para domicilio.');
-                    return false;
-                }
+                const costoDom = tipo === 'domicilio' ? (parseFloat(document.getElementById('pc_costo_dom')?.value)||0) : 0;
+                const costoDesech = tipo === 'domicilio'
+                    ? (parseFloat(document.getElementById('pc_costo_dom_desech')?.value)||0)
+                    : tipo === 'para_llevar' ? (parseFloat(document.getElementById('pc_costo_llevar')?.value)||0) : 0;
                 return {
                     tipo_pedido: tipo,
-                    costo_empaque: tipo === 'domicilio' ? (parseFloat(document.getElementById('pc_costo_emp')?.value)||0)
-                        : tipo === 'para_llevar' ? (parseFloat(document.getElementById('pc_costo_llevar')?.value)||0) : 0,
-                    dom_nombre: (document.getElementById('pc_dom_nombre')?.value||'').trim()||null,
-                    dom_telefono: (document.getElementById('pc_dom_telefono')?.value||'').trim()||null,
-                    dom_direccion: (document.getElementById('pc_dom_dir')?.value||'').trim()||null,
+                    costo_domicilio: costoDom,
+                    costo_empaque: costoDesech,
                 };
             }
         }).then(r => {
@@ -2409,11 +2405,14 @@
                 const venc = document.getElementById('swal_fecha_venc').value;
                 const recibido = parseMoney(document.getElementById('swal_monto_recibido').value);
                 const tipoPedido = document.querySelector('input[name="swal_tipo_pedido"]:checked')?.value || 'local';
-                const costoEmpaque = tipoPedido === 'domicilio'
-                    ? (parseFloat(document.getElementById('swal_costo_empaque')?.value) || 0)
+                const costoDomicilio = tipoPedido === 'domicilio' ? (parseFloat(document.getElementById('swal_costo_dom')?.value) || 0) : 0;
+                const costoDesech = tipoPedido === 'domicilio'
+                    ? (parseFloat(document.getElementById('swal_costo_desech')?.value) || 0)
                     : tipoPedido === 'para_llevar'
                         ? (parseFloat(document.getElementById('swal_costo_empaque_llevar')?.value) || 0)
                         : 0;
+                const costoEmpaque = costoDomicilio + costoDesech;
+                const cobroDomicilio = document.querySelector('input[name="swal_cobro"]:checked')?.value || 'anticipado';
 
                 if (tipoPago === 'credito' && !creditoActivo) {
                     Swal.showValidationMessage('Este cliente no tiene credito activo o cupo suficiente.');
@@ -2431,15 +2430,6 @@
                     Swal.showValidationMessage('Escriba la observacion de la transferencia.');
                     return false;
                 }
-                if (tipoPedido === 'domicilio' && !(document.getElementById('swal_dom_nombre')?.value || '').trim()) {
-                    Swal.showValidationMessage('Escriba el nombre del cliente para el domicilio.');
-                    return false;
-                }
-                if (tipoPedido === 'domicilio' && !(document.getElementById('swal_dom_direccion')?.value || '').trim()) {
-                    Swal.showValidationMessage('Escriba la dirección de entrega.');
-                    return false;
-                }
-
                 return {
                     tipo_factura: tipoFactura,
                     tipo_pago: tipoPago,
@@ -2450,10 +2440,7 @@
                     fecha_vencimiento: tipoPago === 'credito' ? venc : null,
                     tipo_pedido: tipoPedido,
                     costo_empaque: costoEmpaque,
-                    dom_nombre: (document.getElementById('swal_dom_nombre')?.value || '').trim() || null,
-                    dom_telefono: (document.getElementById('swal_dom_telefono')?.value || '').trim() || null,
-                    dom_direccion: (document.getElementById('swal_dom_direccion')?.value || '').trim() || null,
-                    dom_ciudad: (document.getElementById('swal_dom_ciudad')?.value || '').trim() || null,
+                    cobro_domicilio: cobroDomicilio,
                     dom_nit: (document.getElementById('swal_dom_nit')?.value || '').trim() || null,
                     dom_email: (document.getElementById('swal_dom_email')?.value || '').trim() || null,
                     dom_razon_social: (document.getElementById('swal_dom_razon')?.value || '').trim() || null,
@@ -2515,33 +2502,36 @@
 
                         {{-- Datos domicilio --}}
                         <div id="swal_domicilio_wrap" style="display:none;background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:10px 12px;margin-bottom:10px;">
-                            <div style="font-size:11px;font-weight:800;color:#92400e;margin-bottom:8px;">📋 Datos del pedido</div>
+                            <div style="font-size:11px;font-weight:800;color:#92400e;margin-bottom:8px;">🛵 Domicilio</div>
                             <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
                                 <div>
-                                    <label style="display:block;font-size:10px;font-weight:700;color:#6b7280;margin-bottom:2px;">Nombre *</label>
-                                    <input id="swal_dom_nombre" type="text" placeholder="Nombre cliente" style="width:100%;height:32px;border:1px solid #cbd5e1;border-radius:8px;padding:4px 8px;font-size:12px;">
+                                    <label style="display:block;font-size:10px;font-weight:700;color:#92400e;margin-bottom:2px;">Costo domicilio</label>
+                                    <input id="swal_costo_dom" type="number" min="0" value="0" placeholder="0" style="width:100%;height:32px;border:1px solid #fde68a;border-radius:8px;padding:4px 8px;font-size:13px;font-weight:700;">
                                 </div>
                                 <div>
-                                    <label style="display:block;font-size:10px;font-weight:700;color:#6b7280;margin-bottom:2px;">Teléfono</label>
-                                    <input id="swal_dom_telefono" type="text" placeholder="3001234567" style="width:100%;height:32px;border:1px solid #cbd5e1;border-radius:8px;padding:4px 8px;font-size:12px;">
+                                    <label style="display:block;font-size:10px;font-weight:700;color:#92400e;margin-bottom:2px;">Costo desechables</label>
+                                    <input id="swal_costo_desech" type="number" min="0" value="0" placeholder="0" style="width:100%;height:32px;border:1px solid #fde68a;border-radius:8px;padding:4px 8px;font-size:13px;font-weight:700;">
                                 </div>
                             </div>
                             <div style="margin-bottom:6px;">
-                                <label style="display:block;font-size:10px;font-weight:700;color:#6b7280;margin-bottom:2px;">Dirección *</label>
-                                <input id="swal_dom_direccion" type="text" placeholder="Calle, Carrera, Avenida..." style="width:100%;height:32px;border:1px solid #cbd5e1;border-radius:8px;padding:4px 8px;font-size:12px;">
-                            </div>
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
-                                <div>
-                                    <label style="display:block;font-size:10px;font-weight:700;color:#6b7280;margin-bottom:2px;">Ciudad</label>
-                                    <input id="swal_dom_ciudad" type="text" placeholder="Ciudad" style="width:100%;height:32px;border:1px solid #cbd5e1;border-radius:8px;padding:4px 8px;font-size:12px;">
-                                </div>
-                                <div>
-                                    <label style="display:block;font-size:10px;font-weight:700;color:#6b7280;margin-bottom:2px;">Costo domicilio</label>
-                                    <input id="swal_costo_empaque" type="number" min="0" value="0" placeholder="0" style="width:100%;height:32px;border:1px solid #cbd5e1;border-radius:8px;padding:4px 8px;font-size:12px;">
+                                <label style="display:block;font-size:10px;font-weight:700;color:#92400e;margin-bottom:4px;">¿Cuándo se cobra?</label>
+                                <div style="display:flex;gap:8px;">
+                                    <label id="lbl_cobro_anticipado" style="flex:1;cursor:pointer;border:2px solid #f59e0b;border-radius:9px;padding:6px;text-align:center;background:#fef3c7;">
+                                        <input type="radio" name="swal_cobro" value="anticipado" style="display:none;" checked>
+                                        <div style="font-size:14px;">💰</div>
+                                        <div style="font-size:10px;font-weight:800;color:#92400e;">Cobrar ahora</div>
+                                        <div style="font-size:9px;color:#b45309;">Antes de preparar</div>
+                                    </label>
+                                    <label id="lbl_cobro_entrega" style="flex:1;cursor:pointer;border:2px solid #e2e8f0;border-radius:9px;padding:6px;text-align:center;background:white;">
+                                        <input type="radio" name="swal_cobro" value="entrega" style="display:none;">
+                                        <div style="font-size:14px;">🤝</div>
+                                        <div style="font-size:10px;font-weight:800;color:#6b7280;">Al entregar</div>
+                                        <div style="font-size:9px;color:#9ca3af;">Al momento de entrega</div>
+                                    </label>
                                 </div>
                             </div>
                             <div style="border-top:1px dashed #fde68a;padding-top:6px;margin-top:4px;">
-                                <div style="font-size:10px;font-weight:800;color:#92400e;margin-bottom:6px;">🧾 Datos facturación (opcional)</div>
+                                <div style="font-size:10px;font-weight:800;color:#92400e;margin-bottom:6px;">🧾 Datos facturación electrónica (opcional)</div>
                                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
                                     <div>
                                         <label style="display:block;font-size:10px;font-weight:700;color:#6b7280;margin-bottom:2px;">NIT / CC</label>
@@ -2646,9 +2636,24 @@
                     document.querySelectorAll('input[name="swal_tipo_pedido"]').forEach(r => r.addEventListener('change', syncTipoPedido));
                     document.querySelectorAll('label[id^="lbl_"]').forEach(lbl => lbl.addEventListener('click', () => {
                         const radio = lbl.querySelector('input[type="radio"]');
-                        if (radio) { radio.checked = true; syncTipoPedido(); }
+                        if (radio && radio.name === 'swal_tipo_pedido') { radio.checked = true; syncTipoPedido(); }
                     }));
                     syncTipoPedido();
+
+                    // Radios cobro domicilio
+                    const syncCobro = () => {
+                        const val = document.querySelector('input[name="swal_cobro"]:checked')?.value || 'anticipado';
+                        const la = document.getElementById('lbl_cobro_anticipado');
+                        const le = document.getElementById('lbl_cobro_entrega');
+                        if (la) { la.style.borderColor = val === 'anticipado' ? '#f59e0b' : '#e2e8f0'; la.style.background = val === 'anticipado' ? '#fef3c7' : 'white'; la.querySelector('div:nth-child(2)').style.color = val === 'anticipado' ? '#92400e' : '#6b7280'; }
+                        if (le) { le.style.borderColor = val === 'entrega' ? '#2563eb' : '#e2e8f0'; le.style.background = val === 'entrega' ? '#eff6ff' : 'white'; le.querySelector('div:nth-child(2)').style.color = val === 'entrega' ? '#1d4ed8' : '#6b7280'; }
+                    };
+                    document.querySelectorAll('input[name="swal_cobro"]').forEach(r => r.addEventListener('change', syncCobro));
+                    document.querySelectorAll('#lbl_cobro_anticipado, #lbl_cobro_entrega').forEach(lbl => lbl.addEventListener('click', () => {
+                        const radio = lbl.querySelector('input[type="radio"]');
+                        if (radio) { radio.checked = true; syncCobro(); }
+                    }));
+                    syncCobro();
 
                     const formatearMontoInput = (valor) => {
                         const numero = parseMoney(valor);

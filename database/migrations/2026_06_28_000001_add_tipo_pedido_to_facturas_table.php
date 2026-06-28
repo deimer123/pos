@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('dom_nit', 30)->nullable()->after('dom_ciudad');
             $table->string('dom_email', 150)->nullable()->after('dom_nit');
             $table->string('dom_razon_social', 200)->nullable()->after('dom_email');
+            $table->enum('cobro_domicilio', ['anticipado', 'entrega'])->default('anticipado')->after('dom_razon_social');
         });
     }
 
@@ -27,7 +28,7 @@ return new class extends Migration
             $table->dropColumn([
                 'tipo_pedido', 'costo_empaque',
                 'dom_nombre', 'dom_telefono', 'dom_direccion', 'dom_ciudad',
-                'dom_nit', 'dom_email', 'dom_razon_social',
+                'dom_nit', 'dom_email', 'dom_razon_social', 'cobro_domicilio',
             ]);
         });
     }
