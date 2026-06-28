@@ -24,6 +24,9 @@ use App\Models\ConfiguracionEmpresa;
 class CarritoVenta extends Component
 {
     public ?int $mesaId = null;
+    public string $ordenEstadoActual = 'abierta'; // 'abierta' | 'en_preparacion'
+    public string $ordenTipoPedido   = 'mesa';    // 'mesa' | 'domicilio' | 'para_llevar'
+    public float  $ordenCostoEmpaque = 0;
 
     public $preciosBase               = [];
     public $carrito                   = [];
@@ -383,6 +386,15 @@ private function limpiarUtf8Array(array $datos): array
     if ($this->mesaId) {
         $this->cargarCarritoDesdeOrdenMesa($empresaId);
         $this->observacionesPrefactura = Cache::get($this->observacionesCacheKey($empresaId), '');
+        // Cargar estado y tipo de pedido de la orden activa
+        $ordenActiva = \App\Models\OrdenMesa::where('mesa_id', $this->mesaId)
+            ->whereIn('estado', ['abierta', 'en_preparacion'])
+            ->latest()->first();
+        if ($ordenActiva) {
+            $this->ordenEstadoActual = $ordenActiva->estado ?? 'abierta';
+            $this->ordenTipoPedido   = $ordenActiva->tipo_pedido ?? 'mesa';
+            $this->ordenCostoEmpaque = (float)($ordenActiva->costo_empaque ?? 0);
+        }
         goto fin_carga_carrito;
     }
 
@@ -1572,33 +1584,24 @@ public function confirmarFacturar()
         $totalActual = $this->calcularTotalGeneral();
         $nombreCliente = $this->clienteSeleccionadoNombre ?: 'CONSUMIDOR FINAL';
 
-        // Si hay mesa activa, pasar datos de tipo_pedido ya capturados al enviar a cocina
-        $ordenData = [];
-        if ($this->mesaId) {
-            $orden = \App\Models\OrdenMesa::where('mesa_id', $this->mesaId)
-                ->whereIn('estado', ['abierta', 'en_preparacion'])
-                ->latest()
-                ->first();
-            if ($orden) {
-                $ordenData = [
-                    'mesa_id'        => $this->mesaId,
-                    'tipo_pedido'    => $orden->tipo_pedido ?? 'local',
-                    'costo_empaque'  => (float)($orden->costo_empaque ?? 0),
-                    'cobro_domicilio'=> $orden->cobro_domicilio ?? 'anticipado',
-                ];
-            }
-        }
+        // Si hay mesa, usar los datos ya cargados en las propiedades reactivas
+        $mesaId       = $this->mesaId ?? null;
+        $tipoPedido   = $mesaId ? $this->ordenTipoPedido   : 'local';
+        $costoEmpaque = $mesaId ? $this->ordenCostoEmpaque : 0;
+        // El total que ve el cajero debe incluir los extras
+        $totalConExtras = $totalActual + $costoEmpaque;
 
         $this->dispatch(
             'confirmar-facturar',
             clienteNombre: $this->textoUtf8($nombreCliente),
             creditoInfo: $this->clienteCreditoInfo,
-            totalVenta: $totalActual,
+            totalVenta: $totalConExtras,
+            totalProductos: $totalActual,
             factusHabilitado: $this->facturacionElectronicaDisponible($this->getEmpresaId()),
-            mesa_id: $ordenData['mesa_id'] ?? null,
-            tipo_pedido: $ordenData['tipo_pedido'] ?? 'local',
-            costo_empaque: $ordenData['costo_empaque'] ?? 0,
-            cobro_domicilio: $ordenData['cobro_domicilio'] ?? 'anticipado'
+            mesa_id: $mesaId,
+            tipo_pedido: $tipoPedido,
+            costo_empaque: $costoEmpaque,
+            cobro_domicilio: 'anticipado'
         );
     }
 
@@ -3951,6 +3954,10 @@ public function uiCreditoActual(): array
 
         $this->recalcularTotalOrden($orden->id);
         $this->actualizarTotales();
+        // Actualizar propiedades reactivas de estado
+        $this->ordenEstadoActual = 'en_preparacion';
+        $this->ordenTipoPedido   = $tipoPedido;
+        $this->ordenCostoEmpaque = $costoDomicilio + $costoEmpaque;
         $this->dispatch('success', '📤 Comanda enviada a cocina');
     }
 

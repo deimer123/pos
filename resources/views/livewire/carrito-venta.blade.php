@@ -570,7 +570,15 @@
     <div class="pos-cart-total-bar px-3 py-2 border-t bg-white flex items-center justify-between">
         @if($mesaId)
             {{-- Enviar cocina y Facturar: visibles siempre (desktop Y móvil) --}}
-            <div class="flex gap-2 flex-shrink-0">
+            <div class="flex gap-2 flex-shrink-0 items-center">
+                {{-- Badge estado cocina --}}
+                @if($ordenEstadoActual === 'en_preparacion')
+                    <span style="background:#fef3c7;border:1px solid #fde68a;color:#92400e;border-radius:999px;padding:2px 10px;font-size:10px;font-weight:800;white-space:nowrap;">
+                        🍳 En cocina
+                        @if($ordenTipoPedido === 'domicilio') · 🛵 Dom @elseif($ordenTipoPedido === 'para_llevar') · 🥡 Llevar @endif
+                        @if($ordenCostoEmpaque > 0) +${{ number_format($ordenCostoEmpaque,0,',','.') }} @endif
+                    </span>
+                @endif
                 <button x-on:click="window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '')"
                     class="pos-mesa-total-btn"
                     style="background:#2563eb; color:white; border:none; border-radius:9999px; padding:0 14px; height:34px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">
@@ -2445,6 +2453,10 @@
             const tieneMesa = !!(dataEvento.mesa_id || @js($mesaId ?? 0));
             const esConsumidorFinal = !clienteVenta || clienteVenta.toUpperCase().includes('CONSUMIDOR FINAL') || clienteVenta.trim().toUpperCase() === 'CF';
 
+            // Si hay extras, el total real incluye costoEmpaqueOrden (ya viene sumado en totalNumero desde PHP)
+            // Pero necesitamos el total de productos solo para mostrar desglose
+            const totalProductos = Number(dataEvento.totalProductos || totalNumero);
+
             const collectFacturaData = () => {
                 const tipoFactura = document.getElementById('swal_tipo_factura').value;
                 const tipoPago = document.getElementById('swal_tipo_pago').value;
@@ -2581,11 +2593,23 @@
                     <div style="text-align:left;width:360px;max-width:100%;margin:0 auto;font-size:13px;color:#1f2937;">
                         <div style="background:#f8fafc;border:1px solid #dbeafe;border-radius:10px;padding:8px 12px;margin-bottom:8px;">
                             <div style="font-size:11px;color:#64748b;font-weight:800;">Cliente</div>
-                            <div style="font-weight:900;color:#111827;line-height:1.2;margin-bottom:4px;">${clienteVenta}</div>
+                            <div style="font-weight:900;color:#111827;line-height:1.2;margin-bottom:6px;">${clienteVenta}</div>
+                            ${costoEmpaqueOrden > 0 ? `
+                            <div style="display:flex;justify-content:space-between;font-size:11px;color:#64748b;margin-bottom:2px;">
+                                <span>Productos</span><span>${formatMoney(totalProductos)}</span>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;font-size:11px;color:#92400e;margin-bottom:4px;">
+                                <span>${tipoPedidoOrden === 'domicilio' ? '🛵 Domicilio + desechables' : '🥡 Empaque / desechables'}</span>
+                                <span>+${formatMoney(costoEmpaqueOrden)}</span>
+                            </div>
+                            <div style="border-top:1px solid #dbeafe;padding-top:4px;display:flex;justify-content:space-between;align-items:center;">
+                                <span style="font-size:11px;color:#64748b;font-weight:800;">TOTAL A COBRAR</span>
+                                <b style="font-size:20px;color:#111827;">${formatMoney(totalNumero)}</b>
+                            </div>` : `
                             <div style="display:flex;justify-content:space-between;align-items:center;">
                                 <span style="font-size:11px;color:#64748b;font-weight:800;">Total venta</span>
-                                <b style="font-size:19px;color:#111827;">${formatMoney(totalNumero)}</b>
-                            </div>
+                                <b style="font-size:20px;color:#111827;">${formatMoney(totalNumero)}</b>
+                            </div>`}
                         </div>
 
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
@@ -2615,21 +2639,22 @@
                                 <option value="transferencia">Transferencia</option>
                             </select>
 
-                            <div id="swal_efectivo_wrap" style="margin-bottom:8px;text-align:center;">
-                                <label style="display:block;font-size:11px;font-weight:800;color:#4b5563;margin-bottom:4px;text-align:center;">Valor recibido</label>
-                                <input id="swal_monto_recibido" type="text" inputmode="numeric" value="" placeholder="0" style="display:block;width:220px;max-width:100%;height:38px;border:1px solid #cbd5e1;border-radius:10px;padding:4px 12px;text-align:center;font-weight:800;margin:0 auto;" autocomplete="off">
-                                <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:8px auto 0;max-width:310px;">
-                                    <button type="button" data-cash-exact="1" style="border:0;border-radius:999px;background:#2563eb;color:white;font-weight:800;font-size:11px;padding:6px 10px;">Exacto</button>
-                                    <button type="button" data-cash-add="5000" style="border:0;border-radius:999px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:6px 9px;">+5.000</button>
-                                    <button type="button" data-cash-add="10000" style="border:0;border-radius:999px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:6px 9px;">+10.000</button>
-                                    <button type="button" data-cash-add="20000" style="border:0;border-radius:999px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:6px 9px;">+20.000</button>
-                                    <button type="button" data-cash-add="50000" style="border:0;border-radius:999px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:6px 9px;">+50.000</button>
-                                    <button type="button" data-cash-add="100000" style="border:0;border-radius:999px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:6px 9px;">+100.000</button>
-                                    <button type="button" data-cash-clear="1" style="border:0;border-radius:999px;background:#f3f4f6;color:#374151;font-weight:800;font-size:11px;padding:6px 10px;">Limpiar</button>
+                            <div id="swal_efectivo_wrap" style="margin-bottom:6px;">
+                                <label style="display:block;font-size:11px;font-weight:800;color:#4b5563;margin-bottom:3px;">Valor recibido</label>
+                                <input id="swal_monto_recibido" type="text" inputmode="numeric" value="" placeholder="0" style="display:block;width:100%;height:40px;border:2px solid #a5b4fc;border-radius:10px;padding:4px 12px;text-align:center;font-weight:900;font-size:18px;" autocomplete="off">
+                                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:5px;">
+                                    <button type="button" data-cash-exact="1" style="border:0;border-radius:8px;background:#2563eb;color:white;font-weight:800;font-size:11px;padding:7px 4px;">Exacto</button>
+                                    <button type="button" data-cash-add="5000" style="border:0;border-radius:8px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:7px 4px;">+5.000</button>
+                                    <button type="button" data-cash-add="10000" style="border:0;border-radius:8px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:7px 4px;">+10.000</button>
+                                    <button type="button" data-cash-add="20000" style="border:0;border-radius:8px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:7px 4px;">+20.000</button>
+                                    <button type="button" data-cash-add="50000" style="border:0;border-radius:8px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:7px 4px;">+50.000</button>
+                                    <button type="button" data-cash-add="100000" style="border:0;border-radius:8px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:7px 4px;">+100.000</button>
+                                    <button type="button" data-cash-add="200000" style="border:0;border-radius:8px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:7px 4px;">+200.000</button>
+                                    <button type="button" data-cash-clear="1" style="border:0;border-radius:8px;background:#f3f4f6;color:#374151;font-weight:800;font-size:11px;padding:7px 4px;">Limpiar</button>
                                 </div>
-                                <div style="width:220px;max-width:100%;margin:7px auto 0;background:#f1f5f9;border-radius:10px;padding:7px 10px;text-align:center;">
-                                    <div style="font-size:11px;font-weight:800;color:#64748b;">Vuelto</div>
-                                    <b id="swal_vuelto" style="display:block;font-size:18px;color:#111827;">$0</b>
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:6px 12px;">
+                                    <span style="font-size:12px;font-weight:800;color:#166534;">Vuelto</span>
+                                    <b id="swal_vuelto" style="font-size:20px;color:#15803d;">$0</b>
                                 </div>
                             </div>
 
