@@ -2575,90 +2575,85 @@
             const factElecHtml = `<input id="swal_dom_nit" type="hidden"><input id="swal_dom_email" type="hidden"><input id="swal_dom_razon" type="hidden">`;
 
             Swal.fire({
-                title: 'Confirmar factura',
-                width: '440px',
+                title: '',
+                width: '460px',
+                padding: '12px 16px 12px',
                 html: `
-                    <div style="text-align:left;width:360px;max-width:100%;margin:0 auto;font-size:13px;color:#1f2937;">
-                        <div style="background:#f8fafc;border:1px solid #dbeafe;border-radius:10px;padding:8px 12px;margin-bottom:8px;">
-                            <div style="font-size:11px;color:#64748b;font-weight:800;">Cliente</div>
-                            <div style="font-weight:900;color:#111827;line-height:1.2;margin-bottom:6px;">${clienteVenta}</div>
-                            ${costoEmpaqueOrden > 0 ? `
-                            <div style="display:flex;justify-content:space-between;font-size:11px;color:#64748b;margin-bottom:2px;">
-                                <span>Productos</span><span>${formatMoney(totalProductos)}</span>
+                    <div style="text-align:left;font-size:12px;color:#1f2937;">
+                        ${factElecHtml}
+
+                        {{-- Resumen cliente + total --}}
+                        <div style="display:flex;justify-content:space-between;align-items:center;background:#f8fafc;border:1px solid #dbeafe;border-radius:8px;padding:6px 10px;margin-bottom:6px;">
+                            <div>
+                                <div style="font-size:10px;color:#64748b;font-weight:700;">Cliente</div>
+                                <div style="font-weight:900;color:#111827;font-size:12px;line-height:1.2;">${clienteVenta}</div>
+                                ${costoEmpaqueOrden > 0 ? `<div style="font-size:10px;color:#92400e;margin-top:1px;">${tipoPedidoOrden === 'domicilio' ? '🛵' : '🥡'} Productos ${formatMoney(totalProductos)} + extra ${formatMoney(costoEmpaqueOrden)}</div>` : ''}
                             </div>
-                            <div style="display:flex;justify-content:space-between;font-size:11px;color:#92400e;margin-bottom:4px;">
-                                <span>${tipoPedidoOrden === 'domicilio' ? '🛵 Domicilio + desechables' : '🥡 Empaque / desechables'}</span>
-                                <span>+${formatMoney(costoEmpaqueOrden)}</span>
+                            <div style="text-align:right;">
+                                <div style="font-size:10px;color:#64748b;font-weight:700;">${costoEmpaqueOrden > 0 ? 'TOTAL A COBRAR' : 'TOTAL'}</div>
+                                <b style="font-size:22px;color:#111827;white-space:nowrap;">${formatMoney(totalNumero)}</b>
                             </div>
-                            <div style="border-top:1px solid #dbeafe;padding-top:4px;display:flex;justify-content:space-between;align-items:center;">
-                                <span style="font-size:11px;color:#64748b;font-weight:800;">TOTAL A COBRAR</span>
-                                <b style="font-size:20px;color:#111827;">${formatMoney(totalNumero)}</b>
-                            </div>` : `
-                            <div style="display:flex;justify-content:space-between;align-items:center;">
-                                <span style="font-size:11px;color:#64748b;font-weight:800;">Total venta</span>
-                                <b style="font-size:20px;color:#111827;">${formatMoney(totalNumero)}</b>
-                            </div>`}
                         </div>
 
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+                        {{-- Tipo venta / pago / medio en una fila --}}
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:6px;">
                             <div>
-                                <label style="display:block;font-size:11px;font-weight:800;color:#4b5563;margin-bottom:4px;">Tipo de venta</label>
-                                <select id="swal_tipo_factura" style="width:100%;height:34px;border:1px solid #cbd5e1;border-radius:9px;padding:4px 9px;background:white;">
+                                <label style="display:block;font-size:10px;font-weight:700;color:#4b5563;margin-bottom:2px;">Tipo venta</label>
+                                <select id="swal_tipo_factura" style="width:100%;height:30px;border:1px solid #cbd5e1;border-radius:7px;padding:2px 6px;font-size:11px;background:white;">
                                     <option value="salida">Salida</option>
                                     ${factusHabilitado ? '<option value="electronica">Electronica</option>' : ''}
                                 </select>
                             </div>
                             <div>
-                                <label style="display:block;font-size:11px;font-weight:800;color:#4b5563;margin-bottom:4px;">Tipo de pago</label>
-                                <select id="swal_tipo_pago" style="width:100%;height:34px;border:1px solid #cbd5e1;border-radius:9px;padding:4px 9px;background:white;">
+                                <label style="display:block;font-size:10px;font-weight:700;color:#4b5563;margin-bottom:2px;">Tipo pago</label>
+                                <select id="swal_tipo_pago" style="width:100%;height:30px;border:1px solid #cbd5e1;border-radius:7px;padding:2px 6px;font-size:11px;background:white;">
                                     <option value="contado">Contado</option>
-                                    ${creditoActivo ? '<option value="credito">Venta a credito</option>' : ''}
+                                    ${creditoActivo ? '<option value="credito">Credito</option>' : ''}
+                                </select>
+                            </div>
+                            <div id="swal_medio_wrap">
+                                <label style="display:block;font-size:10px;font-weight:700;color:#4b5563;margin-bottom:2px;">Medio pago</label>
+                                <select id="swal_medio_pago" style="width:100%;height:30px;border:1px solid #cbd5e1;border-radius:7px;padding:2px 6px;font-size:11px;background:white;">
+                                    <option value="efectivo">Efectivo</option>
+                                    <option value="transferencia">Transferencia</option>
                                 </select>
                             </div>
                         </div>
 
-                        ${factElecHtml}
-
                         <div id="swal_contado_wrap">
-                            <label style="display:block;font-size:11px;font-weight:800;color:#4b5563;margin-bottom:4px;">Medio de pago</label>
-                            <select id="swal_medio_pago" style="width:100%;height:36px;border:1px solid #cbd5e1;border-radius:9px;padding:4px 9px;background:white;margin-bottom:8px;">
-                                <option value="efectivo">Efectivo</option>
-                                <option value="transferencia">Transferencia</option>
-                            </select>
-
-                            <div id="swal_efectivo_wrap" style="margin-bottom:6px;">
-                                <label style="display:block;font-size:11px;font-weight:800;color:#4b5563;margin-bottom:3px;">Valor recibido</label>
-                                <input id="swal_monto_recibido" type="text" inputmode="numeric" value="" placeholder="0" style="display:block;width:100%;height:40px;border:2px solid #a5b4fc;border-radius:10px;padding:4px 12px;text-align:center;font-weight:900;font-size:18px;" autocomplete="off">
-                                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:5px;">
-                                    <button type="button" data-cash-exact="1" style="border:0;border-radius:8px;background:#2563eb;color:white;font-weight:800;font-size:11px;padding:7px 4px;">Exacto</button>
-                                    <button type="button" data-cash-add="5000" style="border:0;border-radius:8px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:7px 4px;">+5.000</button>
-                                    <button type="button" data-cash-add="10000" style="border:0;border-radius:8px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:7px 4px;">+10.000</button>
-                                    <button type="button" data-cash-add="20000" style="border:0;border-radius:8px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:7px 4px;">+20.000</button>
-                                    <button type="button" data-cash-add="50000" style="border:0;border-radius:8px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:7px 4px;">+50.000</button>
-                                    <button type="button" data-cash-add="100000" style="border:0;border-radius:8px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:7px 4px;">+100.000</button>
-                                    <button type="button" data-cash-add="200000" style="border:0;border-radius:8px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:7px 4px;">+200.000</button>
-                                    <button type="button" data-cash-clear="1" style="border:0;border-radius:8px;background:#f3f4f6;color:#374151;font-weight:800;font-size:11px;padding:7px 4px;">Limpiar</button>
+                            <div id="swal_efectivo_wrap">
+                                <label style="display:block;font-size:10px;font-weight:700;color:#4b5563;margin-bottom:2px;">Valor recibido</label>
+                                <input id="swal_monto_recibido" type="text" inputmode="numeric" value="" placeholder="0"
+                                    style="display:block;width:100%;height:36px;border:2px solid #a5b4fc;border-radius:8px;padding:4px 10px;text-align:center;font-weight:900;font-size:20px;margin-bottom:4px;" autocomplete="off">
+                                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:4px;">
+                                    <button type="button" data-cash-exact="1"    style="border:0;border-radius:6px;background:#2563eb;color:white;font-weight:800;font-size:11px;padding:5px 2px;">Exacto</button>
+                                    <button type="button" data-cash-add="5000"   style="border:0;border-radius:6px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:5px 2px;">+5.000</button>
+                                    <button type="button" data-cash-add="10000"  style="border:0;border-radius:6px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:5px 2px;">+10.000</button>
+                                    <button type="button" data-cash-add="20000"  style="border:0;border-radius:6px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:5px 2px;">+20.000</button>
+                                    <button type="button" data-cash-add="50000"  style="border:0;border-radius:6px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:5px 2px;">+50.000</button>
+                                    <button type="button" data-cash-add="100000" style="border:0;border-radius:6px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:5px 2px;">+100.000</button>
+                                    <button type="button" data-cash-add="200000" style="border:0;border-radius:6px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:5px 2px;">+200.000</button>
+                                    <button type="button" data-cash-clear="1"   style="border:0;border-radius:6px;background:#f3f4f6;color:#374151;font-weight:800;font-size:11px;padding:5px 2px;">Limpiar</button>
                                 </div>
-                                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:6px 12px;">
+                                <div style="display:flex;justify-content:space-between;align-items:center;background:#f0fdf4;border:1px solid #86efac;border-radius:7px;padding:5px 10px;">
                                     <span style="font-size:12px;font-weight:800;color:#166534;">Vuelto</span>
                                     <b id="swal_vuelto" style="font-size:20px;color:#15803d;">$0</b>
                                 </div>
                             </div>
-
-                            <div id="swal_transfer_wrap" style="display:none;margin-bottom:8px;">
-                                <label style="display:block;font-size:11px;font-weight:800;color:#4b5563;margin-bottom:4px;">Observacion de transferencia</label>
-                                <textarea id="swal_transfer_obs" rows="2" placeholder="Banco, referencia o detalle" style="width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:7px 9px;resize:vertical;"></textarea>
+                            <div id="swal_transfer_wrap" style="display:none;">
+                                <label style="display:block;font-size:10px;font-weight:700;color:#4b5563;margin-bottom:2px;">Observacion de transferencia</label>
+                                <textarea id="swal_transfer_obs" rows="2" placeholder="Banco, referencia o detalle" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:5px 8px;resize:none;font-size:12px;"></textarea>
                             </div>
                         </div>
 
                         <div id="swal_credito_wrap" style="display:none;">
-                            <div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:12px;padding:8px 10px;margin-bottom:8px;color:#3730a3;">
-                                <div style="display:flex;justify-content:space-between;gap:8px;"><span>Cupo disponible</span><b>${formatMoney(cupoDisponible)}</b></div>
-                                <div style="display:flex;justify-content:space-between;gap:8px;"><span>Deuda actual</span><b>${formatMoney(deudaCliente)}</b></div>
-                                <div style="display:flex;justify-content:space-between;gap:8px;"><span>Dias de credito</span><b>${diasCredito}</b></div>
+                            <div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:6px 10px;color:#3730a3;font-size:11px;">
+                                <div style="display:flex;justify-content:space-between;"><span>Cupo disponible</span><b>${formatMoney(cupoDisponible)}</b></div>
+                                <div style="display:flex;justify-content:space-between;"><span>Deuda actual</span><b>${formatMoney(deudaCliente)}</b></div>
+                                <div style="display:flex;justify-content:space-between;"><span>Dias credito</span><b>${diasCredito}</b></div>
                             </div>
-                            <label style="display:block;font-size:11px;font-weight:800;color:#4b5563;margin-bottom:4px;">Fecha vencimiento</label>
-                            <input id="swal_fecha_venc" type="date" value="${fechaVence}" style="width:100%;height:36px;border:1px solid #cbd5e1;border-radius:9px;padding:4px 9px;">
+                            <label style="display:block;font-size:10px;font-weight:700;color:#4b5563;margin:4px 0 2px;">Fecha vencimiento</label>
+                            <input id="swal_fecha_venc" type="date" value="${fechaVence}" style="width:100%;height:30px;border:1px solid #cbd5e1;border-radius:7px;padding:2px 8px;font-size:12px;">
                         </div>
                     </div>
                 `,
@@ -2733,9 +2728,11 @@
                         vuelto.textContent = formatMoney(Math.max(0, recibido - totalNumero));
                     };
 
+                    const medioWrap = document.getElementById('swal_medio_wrap');
                     const sync = () => {
                         const esCredito = tipoPago.value === 'credito';
                         const esTransferencia = medioPago.value === 'transferencia';
+                        if (medioWrap) medioWrap.style.display = esCredito ? 'none' : 'block';
                         contadoWrap.style.display = esCredito ? 'none' : 'block';
                         creditoWrap.style.display = esCredito ? 'block' : 'none';
                         efectivoWrap.style.display = (!esCredito && !esTransferencia) ? 'block' : 'none';
