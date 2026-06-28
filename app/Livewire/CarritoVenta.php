@@ -1174,10 +1174,10 @@ public function guardarPrefacturaConfirmada()
         $prefactura = Prefactura::create([
             'empresa_id'    => $empresaId,
             'cliente_id'    => $this->clienteId,
-             // ðŸ‘¨â€ðŸ’¼ vendedor que creÃ³ prefactura
+             // ðŸ'¨â€ðŸ'¼ vendedor que creÃ³ prefactura
             'vendedor_id'   => auth()->id(),
 
-            // ðŸ’° aÃºn no se factura
+            // ðŸ'° aÃºn no se factura
             'cajero_id'     => null,
             'observaciones' => $this->observacionesPrefactura ?? '',
             'estado'        => 'borrador',
@@ -1228,7 +1228,7 @@ public function guardarPrefacturaConfirmada()
             ->where('estado', 'borrador');
 
 
-        // ðŸ‘¨â€ðŸ’¼ SOLO vendedor
+        // ðŸ'¨â€ðŸ'¼ SOLO vendedor
         if (
             $user->hasRole('vendedor') &&
             ! $user->hasAnyRole(['cajero', 'admin_empresa'])
@@ -1270,7 +1270,7 @@ public function guardarPrefacturaConfirmada()
             ->where('empresa_id', $empresaId);
 
 
-        // ðŸ‘¨â€ðŸ’¼ SOLO vendedor
+        // ðŸ'¨â€ðŸ'¼ SOLO vendedor
         if (
             $user->hasRole('vendedor') &&
             ! $user->hasAnyRole(['cajero', 'admin_empresa'])
@@ -1683,19 +1683,19 @@ public function facturarConfirmada(array $data = [])
             'total'              => 0,
             'saldo'              => 0,
             'estado_pago'        => 'pendiente',
-            ‘observaciones’      => $obs,
-            ‘transferencia_obs’  => $transferObs,
-            ‘tipo_pedido’        => $tipoPedido,
-            ‘costo_empaque’      => $costoEmpaque,
-            ‘cobro_domicilio’    => $cobroDomicilio,
-            ‘dom_nit’            => $data[‘dom_nit’] ?? null,
-            ‘dom_email’          => $data[‘dom_email’] ?? null,
-            ‘dom_razon_social’   => $data[‘dom_razon_social’] ?? null,
+            'observaciones'      => $obs,
+            'transferencia_obs'  => $transferObs,
+            'tipo_pedido'        => $tipoPedido,
+            'costo_empaque'      => $costoEmpaque,
+            'cobro_domicilio'    => $cobroDomicilio,
+            'dom_nit'            => $data['dom_nit'] ?? null,
+            'dom_email'          => $data['dom_email'] ?? null,
+            'dom_razon_social'   => $data['dom_razon_social'] ?? null,
         ]);
 
         // ===== Detalles & stock =====
         foreach ($this->carrito as $item) {
-            $precio = (float)($item[‘nuevo_precio’] ?? $item[‘precio’] ?? 0);
+            $precio = (float)($item['nuevo_precio'] ?? $item['precio'] ?? 0);
             $cant   = $this->normalizarCantidad($item['cantidad'] ?? 1, $this->permiteCantidadDecimal($item));
             $sub    = round($precio * $cant, 2);
 
@@ -2016,7 +2016,7 @@ public function devolverFacturaCompleta()
         $f->observaciones = trim(($f->observaciones ?? '').' | DEVUELTA TOTAL '.now()->toDateTimeString());
         $f->save();
 
-        // ðŸ‘‡ AGREGA ESTA LÃNEA
+        // ðŸ'‡ AGREGA ESTA LÃNEA
         $f->recalcularTotales();
     });
 
@@ -2056,7 +2056,7 @@ public function devolverItemFactura(int $detalleId, $cantidad)
             $f->save();
         }
 
-        // ðŸ‘‡ AGREGA ESTA LÃNEA
+        // ðŸ'‡ AGREGA ESTA LÃNEA
         $f->recalcularTotales();
     });
 
@@ -2159,15 +2159,15 @@ public function facturarEImprimir(array $data = [])
         $tipoPago     = $data['tipo_pago']    ?? 'contado';
         $medioPago    = $tipoPago === 'contado' ? ($data['medio_pago'] ?? 'efectivo') : null;
         $vencRaw      = $data['fecha_vencimiento'] ?? null;
-        $tipoPedido     = $data[‘tipo_pedido’] ?? ‘local’;
-        $costoEmpaque   = (float)($data[‘costo_empaque’] ?? 0);
-        $cobroDomicilio = $data[‘cobro_domicilio’] ?? ‘anticipado’;
+        $tipoPedido     = $data['tipo_pedido'] ?? 'local';
+        $costoEmpaque   = (float)($data['costo_empaque'] ?? 0);
+        $cobroDomicilio = $data['cobro_domicilio'] ?? 'anticipado';
 
-        if ($tipoFactura === ‘electronica’ && ! $this->facturacionElectronicaDisponible($empresaId)) {
-            throw new \Exception(‘La facturacion electronica no esta activa o no tiene rango Factus configurado para esta empresa.’);
+        if ($tipoFactura === 'electronica' && ! $this->facturacionElectronicaDisponible($empresaId)) {
+            throw new \Exception('La facturacion electronica no esta activa o no tiene rango Factus configurado para esta empresa.');
         }
 
-        // ðŸ’‡ ObservaciÃ³n especÃ­fica si es transferencia en contado
+        // ðŸ'‡ ObservaciÃ³n especÃ­fica si es transferencia en contado
         $transferObs = ($tipoPago === 'contado' && $medioPago === 'transferencia')
             ? trim((string)($data['transferencia_obs'] ?? ''))
             : null;
@@ -2198,23 +2198,23 @@ public function facturarEImprimir(array $data = [])
             'factus_validated_at'   => null,
             'tipo_pago'          => $tipoPago,
             'medio_pago'         => $medioPago,
-            ‘transferencia_obs’  => $transferObs,
-            ‘fecha’              => now(),
-            ‘fecha_compra’       => now(),
-            ‘fecha_pago’         => null,
-            ‘fecha_vencimiento’  => ($tipoPago === ‘credito’ && $vencRaw)
+            'transferencia_obs'  => $transferObs,
+            'fecha'              => now(),
+            'fecha_compra'       => now(),
+            'fecha_pago'         => null,
+            'fecha_vencimiento'  => ($tipoPago === 'credito' && $vencRaw)
                                     ? \Carbon\Carbon::parse($vencRaw)->toDateString()
                                     : null,
-            ‘total’              => 0,
-            ‘saldo’              => 0,
-            ‘estado_pago’        => ‘pendiente’,
-            ‘observaciones’      => $obs,
-            ‘tipo_pedido’        => $tipoPedido,
-            ‘costo_empaque’      => $costoEmpaque,
-            ‘cobro_domicilio’    => $cobroDomicilio,
-            ‘dom_nit’            => $data[‘dom_nit’] ?? null,
-            ‘dom_email’          => $data[‘dom_email’] ?? null,
-            ‘dom_razon_social’   => $data[‘dom_razon_social’] ?? null,
+            'total'              => 0,
+            'saldo'              => 0,
+            'estado_pago'        => 'pendiente',
+            'observaciones'      => $obs,
+            'tipo_pedido'        => $tipoPedido,
+            'costo_empaque'      => $costoEmpaque,
+            'cobro_domicilio'    => $cobroDomicilio,
+            'dom_nit'            => $data['dom_nit'] ?? null,
+            'dom_email'          => $data['dom_email'] ?? null,
+            'dom_razon_social'   => $data['dom_razon_social'] ?? null,
         ]);
 
         // ===== Detalles + existencias
@@ -2625,7 +2625,7 @@ if ($producto) {
         $cant,
         $empresaId,
         $dev->id,
-        $stockAnterior // ðŸ‘ˆ CLAVE
+        $stockAnterior // ðŸ'ˆ CLAVE
     );
 }
 
@@ -2822,7 +2822,7 @@ private function cargarClientesConCartera(): void
         $rows[] = [
             'id'       => (int) $cid,
             'nombre'   => $nombre,
-            'saldo'    => (float) $agg['saldo'],      // ðŸ‘ˆ ahora es la suma de VENCE
+            'saldo'    => (float) $agg['saldo'],      // ðŸ'ˆ ahora es la suma de VENCE
             'facturas' => (int) $agg['facturas'],
             'max_venc' => (string) ($agg['max_venc'] ?? 'â€”'),
         ];
@@ -2931,7 +2931,7 @@ public function abrirAbono(int $id): void
     {
         if (!$this->abonoFacturaId) return;
 
-        // Normaliza (2.000, 2,000 â†’ 2000)
+        // Normaliza (2.000, 2,000 â†' 2000)
         $this->abonoMonto = (float) preg_replace('/\D/', '', (string) $this->abonoMonto);
 
         $empresaId = $this->getEmpresaId();
@@ -3086,7 +3086,7 @@ public function abonarEnCartera(int $facturaId, array $data): void
         // Refresca el modelo para obtener el saldo actualizado
         $factura->refresh();
 
-        // ðŸ‘‡ AquÃ­ va tu bloque para actualizar el estado correctamente:
+        // ðŸ'‡ AquÃ­ va tu bloque para actualizar el estado correctamente:
         $totalOriginal = (float) $factura->detalles()->sum(\DB::raw('precio * cantidad'));
         $totalDevuelto = (float) $factura->detalles()->sum(\DB::raw('precio * devuelto_cantidad'));
         $totalPagado   = (float) $factura->pagos()->sum('monto');
@@ -3135,7 +3135,7 @@ public function abrirFacturaLectura(int $id): void
     $f = \App\Models\Factura::where('empresa_id',$empresaId)->findOrFail($id);
 
     $this->verFacturaId    = $f->id;
-    $this->verFacturaSaldo = (float) $f->saldo; // ðŸ‘ˆ saldo disponible para el botÃ³n
+    $this->verFacturaSaldo = (float) $f->saldo; // ðŸ'ˆ saldo disponible para el botÃ³n
     $this->mostrarModalFactura = true;
 }
 
@@ -3660,7 +3660,7 @@ public function calcularResumenCaja(?int $userId = null, ?int $empresaId = null,
     ->whereBetween('fecha', [$inicio, $fin])
     ->whereHas('factura', function ($q) use ($empresaId) {
         $q->where('empresa_id', $empresaId)
-          ->where('tipo_pago', 'credito');   // ðŸ‘ˆ clave para no contar pagos de contado
+          ->where('tipo_pago', 'credito');   // ðŸ'ˆ clave para no contar pagos de contado
     });
 
 $carteraEfectivo      = (clone $qPagosCredito)->where('medio_pago','efectivo')->sum('monto');
@@ -3699,7 +3699,7 @@ $carteraOtro          = (clone $qPagosCredito)->where('medio_pago','otro')->sum(
     ->where('empresa_id', $empresaId)
     ->where('user_id', $userId)
     ->whereBetween('fecha', [$inicio, $fin])
-    ->whereHas('factura.pagos')   // ðŸ‘ˆ la factura tiene pagos (cualquier medio)
+    ->whereHas('factura.pagos')   // ðŸ'ˆ la factura tiene pagos (cualquier medio)
     ->sum('total');
 
 // B) Devoluciones de facturas SIN pagos/abonos (NO afectan efectivo ni contado)
@@ -3707,7 +3707,7 @@ $devolucionesSinPago = \App\Models\Devolucion::query()
     ->where('empresa_id', $empresaId)
     ->where('user_id', $userId)
     ->whereBetween('fecha', [$inicio, $fin])
-    ->whereDoesntHave('factura.pagos')  // ðŸ‘ˆ la factura no tiene pagos
+    ->whereDoesntHave('factura.pagos')  // ðŸ'ˆ la factura no tiene pagos
     ->sum('total');
 
 $devolucionesDia = $devolucionesConPago + $devolucionesSinPago; // informativo
@@ -3744,8 +3744,8 @@ $efectivo = ($ventasContadoEfectivo + $carteraEfectivo + $entradasEfectivo) - $d
         'salidas_transferencia'         => $salidasTransferencia,
 
         // Devoluciones (siempre restadas al efectivo y al contado)
-        'devoluciones_con_pago' => $devolucionesConPago,     // ðŸ‘ˆ restadas al EFECTIVO y al CONTADO
-    'devoluciones_sin_pago' => $devolucionesSinPago,     // ðŸ‘ˆ no afectan flujo
+        'devoluciones_con_pago' => $devolucionesConPago,     // ðŸ'ˆ restadas al EFECTIVO y al CONTADO
+    'devoluciones_sin_pago' => $devolucionesSinPago,     // ðŸ'ˆ no afectan flujo
     'devoluciones'          => $devolucionesDia,     
 
         // Totales de flujo
