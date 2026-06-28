@@ -2155,9 +2155,31 @@
 
     window.posMesaEnviarCocinaModal = function () {
         if (!window.Swal) { Livewire.dispatch('mesa-enviar-cocina'); return; }
+
+        // Cliente actual del POS (viene de Livewire)
+        const clienteNombre = @js($clienteSeleccionadoNombre ?? '');
+        const esConsumidorFinal = !clienteNombre || clienteNombre.toUpperCase().includes('CONSUMIDOR FINAL') || clienteNombre.toUpperCase().includes('CF');
+
+        // Bloque de datos del cliente (solo si es CF)
+        const clienteInfoHtml = esConsumidorFinal
+            ? `<div id="pc_datos_cliente" style="display:none;margin-bottom:8px;">
+                <div style="font-size:10px;font-weight:800;color:#92400e;margin-bottom:4px;">👤 Datos del destinatario</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:5px;">
+                    <div><label style="font-size:10px;font-weight:700;color:#6b7280;">Nombre *</label>
+                        <input id="pc_dom_nombre" type="text" placeholder="Nombre cliente" style="width:100%;height:30px;border:1px solid #cbd5e1;border-radius:7px;padding:3px 7px;font-size:12px;"></div>
+                    <div><label style="font-size:10px;font-weight:700;color:#6b7280;">Teléfono</label>
+                        <input id="pc_dom_tel" type="text" placeholder="3001234567" style="width:100%;height:30px;border:1px solid #cbd5e1;border-radius:7px;padding:3px 7px;font-size:12px;"></div>
+                </div>
+                <div><label style="font-size:10px;font-weight:700;color:#6b7280;">Dirección</label>
+                    <input id="pc_dom_dir" type="text" placeholder="Calle, Carrera, Avenida..." style="width:100%;height:30px;border:1px solid #cbd5e1;border-radius:7px;padding:3px 7px;font-size:12px;"></div>
+               </div>`
+            : `<div id="pc_datos_cliente" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:7px;padding:5px 8px;margin-bottom:6px;font-size:11px;color:#166534;font-weight:700;">
+                👤 Cliente: ${clienteNombre}
+               </div>`;
+
         Swal.fire({
             title: '¿Cómo va el pedido?',
-            width: '380px',
+            width: '390px',
             html: `
                 <div style="display:flex;gap:10px;justify-content:center;margin-bottom:14px;">
                     <label id="pc_lbl_mesa" style="flex:1;cursor:pointer;border:2px solid #2563eb;border-radius:12px;padding:10px 6px;text-align:center;background:#eff6ff;">
@@ -2177,14 +2199,12 @@
                     </label>
                 </div>
                 <div id="pc_dom_wrap" style="display:none;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px;text-align:left;">
+                    ${clienteInfoHtml}
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
                         <div><label style="font-size:10px;font-weight:700;color:#92400e;">Costo domicilio</label>
                             <input id="pc_costo_dom" type="number" min="0" value="0" style="width:100%;height:32px;border:1px solid #fde68a;border-radius:7px;padding:3px 8px;font-size:13px;font-weight:700;"></div>
                         <div><label style="font-size:10px;font-weight:700;color:#92400e;">Costo desechables</label>
                             <input id="pc_costo_dom_desech" type="number" min="0" value="0" style="width:100%;height:32px;border:1px solid #fde68a;border-radius:7px;padding:3px 8px;font-size:13px;font-weight:700;"></div>
-                    </div>
-                    <div style="margin-top:8px;background:#fef9c3;border-radius:7px;padding:5px 8px;font-size:10px;color:#92400e;font-weight:700;">
-                        💡 Los datos del cliente se toman del POS. Se sumarán al total de la factura.
                     </div>
                 </div>
                 <div id="pc_llevar_wrap" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:10px;text-align:left;">
@@ -2203,7 +2223,10 @@
                 const textColors = {mesa:'#1d4ed8', domicilio:'#92400e', para_llevar:'#166534'};
                 const sync = () => {
                     const val = document.querySelector('input[name="pc_tipo"]:checked')?.value || 'mesa';
-                    document.getElementById('pc_dom_wrap').style.display = val === 'domicilio' ? 'block' : 'none';
+                    const domWrap = document.getElementById('pc_dom_wrap');
+                    const datosCliente = document.getElementById('pc_datos_cliente');
+                    if (domWrap) domWrap.style.display = val === 'domicilio' ? 'block' : 'none';
+                    if (datosCliente) datosCliente.style.display = val === 'domicilio' ? 'block' : 'none';
                     document.getElementById('pc_llevar_wrap').style.display = val === 'para_llevar' ? 'block' : 'none';
                     Object.entries(labels).forEach(([k, id]) => {
                         const el = document.getElementById(id); if (!el) return;
@@ -2221,6 +2244,10 @@
             },
             preConfirm: () => {
                 const tipo = document.querySelector('input[name="pc_tipo"]:checked')?.value || 'mesa';
+                if (tipo === 'domicilio' && esConsumidorFinal) {
+                    const nombre = (document.getElementById('pc_dom_nombre')?.value || '').trim();
+                    if (!nombre) { Swal.showValidationMessage('Escriba el nombre del destinatario.'); return false; }
+                }
                 const costoDom = tipo === 'domicilio' ? (parseFloat(document.getElementById('pc_costo_dom')?.value)||0) : 0;
                 const costoDesech = tipo === 'domicilio'
                     ? (parseFloat(document.getElementById('pc_costo_dom_desech')?.value)||0)
@@ -2229,6 +2256,9 @@
                     tipo_pedido: tipo,
                     costo_domicilio: costoDom,
                     costo_empaque: costoDesech,
+                    dom_nombre: esConsumidorFinal ? ((document.getElementById('pc_dom_nombre')?.value||'').trim()||null) : clienteNombre,
+                    dom_telefono: esConsumidorFinal ? ((document.getElementById('pc_dom_tel')?.value||'').trim()||null) : null,
+                    dom_direccion: esConsumidorFinal ? ((document.getElementById('pc_dom_dir')?.value||'').trim()||null) : null,
                 };
             }
         }).then(r => {
