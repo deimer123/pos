@@ -1571,12 +1571,31 @@ public function confirmarFacturar()
         if (!$this->clienteId) { $this->dispatch('error','Falta CONSUMIDOR FINAL.'); return; }
         $totalActual = $this->calcularTotalGeneral();
         $nombreCliente = $this->clienteSeleccionadoNombre ?: 'CONSUMIDOR FINAL';
+
+        // Si hay mesa activa, pasar datos de tipo_pedido ya capturados al enviar a cocina
+        $ordenData = [];
+        if ($this->mesaId) {
+            $orden = \App\Models\OrdenMesa::where('mesa_id', $this->mesaId)
+                ->whereIn('estado', ['abierta', 'en_preparacion'])
+                ->latest()
+                ->first();
+            if ($orden) {
+                $ordenData = [
+                    'mesa_id'        => $this->mesaId,
+                    'tipo_pedido'    => $orden->tipo_pedido ?? 'local',
+                    'costo_empaque'  => (float)($orden->costo_empaque ?? 0),
+                    'cobro_domicilio'=> $orden->cobro_domicilio ?? 'anticipado',
+                ];
+            }
+        }
+
         $this->dispatch(
             'confirmar-facturar',
             clienteNombre: $this->textoUtf8($nombreCliente),
             creditoInfo: $this->clienteCreditoInfo,
             totalVenta: $totalActual,
-            factusHabilitado: $this->facturacionElectronicaDisponible($this->getEmpresaId())
+            factusHabilitado: $this->facturacionElectronicaDisponible($this->getEmpresaId()),
+            ...$ordenData
         );
     }
 
