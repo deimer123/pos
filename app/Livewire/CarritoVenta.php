@@ -1631,10 +1631,12 @@ public function facturarConfirmada(array $data = [])
         }
 
         // ===== Datos de la peticiÃ³n =====
-        $tipoFactura = $data['tipo_factura'] ?? 'salida';
-        $tipoPago    = $data['tipo_pago']    ?? 'contado';
-        $medioPago   = $tipoPago === 'contado' ? ($data['medio_pago'] ?? 'efectivo') : null;
-        $vencRaw     = $data['fecha_vencimiento'] ?? null;
+        $tipoFactura  = $data['tipo_factura'] ?? 'salida';
+        $tipoPago     = $data['tipo_pago']    ?? 'contado';
+        $medioPago    = $tipoPago === 'contado' ? ($data['medio_pago'] ?? 'efectivo') : null;
+        $vencRaw      = $data['fecha_vencimiento'] ?? null;
+        $tipoPedido   = $data['tipo_pedido'] ?? 'local';
+        $costoEmpaque = (float)($data['costo_empaque'] ?? 0);
 
         if ($tipoFactura === 'electronica' && ! $this->facturacionElectronicaDisponible($empresaId)) {
             throw new \Exception('La facturacion electronica no esta activa o no tiene rango Factus configurado para esta empresa.');
@@ -1680,13 +1682,22 @@ public function facturarConfirmada(array $data = [])
             'total'              => 0,
             'saldo'              => 0,
             'estado_pago'        => 'pendiente',
-            'observaciones'      => $obs,            // ðŸ‘ˆ sigue siendo tu campo general
-            'transferencia_obs'  => $transferObs,    // ðŸ‘ˆ NUEVO campo exclusivo
+            ‘observaciones’      => $obs,
+            ‘transferencia_obs’  => $transferObs,
+            ‘tipo_pedido’        => $tipoPedido,
+            ‘costo_empaque’      => $costoEmpaque,
+            ‘dom_nombre’         => $data[‘dom_nombre’] ?? null,
+            ‘dom_telefono’       => $data[‘dom_telefono’] ?? null,
+            ‘dom_direccion’      => $data[‘dom_direccion’] ?? null,
+            ‘dom_ciudad’         => $data[‘dom_ciudad’] ?? null,
+            ‘dom_nit’            => $data[‘dom_nit’] ?? null,
+            ‘dom_email’          => $data[‘dom_email’] ?? null,
+            ‘dom_razon_social’   => $data[‘dom_razon_social’] ?? null,
         ]);
 
         // ===== Detalles & stock =====
         foreach ($this->carrito as $item) {
-            $precio = (float)($item['nuevo_precio'] ?? $item['precio'] ?? 0);
+            $precio = (float)($item[‘nuevo_precio’] ?? $item[‘precio’] ?? 0);
             $cant   = $this->normalizarCantidad($item['cantidad'] ?? 1, $this->permiteCantidadDecimal($item));
             $sub    = round($precio * $cant, 2);
 
@@ -2129,10 +2140,12 @@ public function facturarEImprimir(array $data = [])
         }
 
         // ===== Datos de cabecera
-        $tipoFactura = $data['tipo_factura'] ?? 'salida';
-        $tipoPago    = $data['tipo_pago']    ?? 'contado';
-        $medioPago   = $tipoPago === 'contado' ? ($data['medio_pago'] ?? 'efectivo') : null;
-        $vencRaw     = $data['fecha_vencimiento'] ?? null;
+        $tipoFactura  = $data['tipo_factura'] ?? 'salida';
+        $tipoPago     = $data['tipo_pago']    ?? 'contado';
+        $medioPago    = $tipoPago === 'contado' ? ($data['medio_pago'] ?? 'efectivo') : null;
+        $vencRaw      = $data['fecha_vencimiento'] ?? null;
+        $tipoPedido   = $data['tipo_pedido'] ?? 'local';
+        $costoEmpaque = (float)($data['costo_empaque'] ?? 0);
 
         if ($tipoFactura === 'electronica' && ! $this->facturacionElectronicaDisponible($empresaId)) {
             throw new \Exception('La facturacion electronica no esta activa o no tiene rango Factus configurado para esta empresa.');
@@ -2169,17 +2182,26 @@ public function facturarEImprimir(array $data = [])
             'factus_validated_at'   => null,
             'tipo_pago'          => $tipoPago,
             'medio_pago'         => $medioPago,
-            'transferencia_obs'  => $transferObs, // ðŸ‘ˆ guarda aquÃ­
-            'fecha'              => now(),
-            'fecha_compra'       => now(),
-            'fecha_pago'         => null,
-            'fecha_vencimiento'  => ($tipoPago === 'credito' && $vencRaw)
+            ‘transferencia_obs’  => $transferObs,
+            ‘fecha’              => now(),
+            ‘fecha_compra’       => now(),
+            ‘fecha_pago’         => null,
+            ‘fecha_vencimiento’  => ($tipoPago === ‘credito’ && $vencRaw)
                                     ? \Carbon\Carbon::parse($vencRaw)->toDateString()
                                     : null,
-            'total'              => 0,
-            'saldo'              => 0,
-            'estado_pago'        => 'pendiente',
-            'observaciones'      => $obs,
+            ‘total’              => 0,
+            ‘saldo’              => 0,
+            ‘estado_pago’        => ‘pendiente’,
+            ‘observaciones’      => $obs,
+            ‘tipo_pedido’        => $tipoPedido,
+            ‘costo_empaque’      => $costoEmpaque,
+            ‘dom_nombre’         => $data[‘dom_nombre’] ?? null,
+            ‘dom_telefono’       => $data[‘dom_telefono’] ?? null,
+            ‘dom_direccion’      => $data[‘dom_direccion’] ?? null,
+            ‘dom_ciudad’         => $data[‘dom_ciudad’] ?? null,
+            ‘dom_nit’            => $data[‘dom_nit’] ?? null,
+            ‘dom_email’          => $data[‘dom_email’] ?? null,
+            ‘dom_razon_social’   => $data[‘dom_razon_social’] ?? null,
         ]);
 
         // ===== Detalles + existencias
@@ -3814,7 +3836,18 @@ public function uiCreditoActual(): array
         }
     }
 
-    public function mesaEnviarACocina(): void
+    #[On('mesa-enviar-cocina-confirmado')]
+    public function mesaEnviarCocinaConfirmado(array $data = []): void
+    {
+        $tipoPedido   = $data['tipo_pedido'] ?? 'mesa';
+        $costoEmpaque = (float)($data['costo_empaque'] ?? 0);
+        $domNombre    = $data['dom_nombre'] ?? null;
+        $domTelefono  = $data['dom_telefono'] ?? null;
+        $domDireccion = $data['dom_direccion'] ?? null;
+        $this->mesaEnviarACocina($tipoPedido, $costoEmpaque, $domNombre, $domTelefono, $domDireccion);
+    }
+
+    public function mesaEnviarACocina(string $tipoPedido = 'mesa', float $costoEmpaque = 0, ?string $domNombre = null, ?string $domTelefono = null, ?string $domDireccion = null): void
     {
         if (! $this->mesaId) return;
 
@@ -3855,6 +3888,11 @@ public function uiCreditoActual(): array
             'estado'            => 'en_preparacion',
             'observaciones'     => trim($this->observacionesPrefactura ?? ''),
             'numero_cocina_dia' => $numeroCocina,
+            'tipo_pedido'       => $tipoPedido,
+            'costo_empaque'     => $costoEmpaque,
+            'dom_nombre'        => $domNombre,
+            'dom_telefono'      => $domTelefono,
+            'dom_direccion'     => $domDireccion,
         ]);
 
         // Marcar en el carrito local como enviado

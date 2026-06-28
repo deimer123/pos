@@ -45,7 +45,14 @@
                                         📋 Orden #{{ $orden->numero_cocina_dia }} del día
                                     </div>
                                 @endif
-                                <div style="color:white; font-weight:700; font-size:16px;">{{ $orden->mesa->nombre }}</div>
+                                <div style="display:flex; align-items:center; gap:6px;">
+                                    <span style="color:white; font-weight:700; font-size:16px;">{{ $orden->mesa->nombre }}</span>
+                                    @if(($orden->tipo_pedido ?? 'mesa') === 'domicilio')
+                                        <span style="background:#f59e0b; color:#1c1917; font-size:10px; font-weight:800; padding:2px 7px; border-radius:99px;">🛵 DOMICILIO</span>
+                                    @elseif(($orden->tipo_pedido ?? 'mesa') === 'para_llevar')
+                                        <span style="background:#22c55e; color:#14532d; font-size:10px; font-weight:800; padding:2px 7px; border-radius:99px;">🥡 PARA LLEVAR</span>
+                                    @endif
+                                </div>
                                 <div style="color:#d1d5db; font-size:11px;">Comanda #{{ $orden->id }}</div>
                             </div>
                             <div style="font-size:11px; font-weight:700; padding:4px 10px; border-radius:99px;

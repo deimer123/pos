@@ -25,6 +25,11 @@ class OrdenMesa extends Model
         'descuento',
         'total',
         'observaciones',
+        'tipo_pedido',
+        'costo_empaque',
+        'dom_nombre',
+        'dom_telefono',
+        'dom_direccion',
         'abierta_en',
         'cerrada_en',
     ];

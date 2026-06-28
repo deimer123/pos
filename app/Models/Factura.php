@@ -34,6 +34,15 @@ class Factura extends Model
         'observaciones',
         'devuelta_total',
         'transferencia_obs',
+        'tipo_pedido',
+        'costo_empaque',
+        'dom_nombre',
+        'dom_telefono',
+        'dom_direccion',
+        'dom_ciudad',
+        'dom_nit',
+        'dom_email',
+        'dom_razon_social',
     ];
 
     protected $casts = [
