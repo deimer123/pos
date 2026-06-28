@@ -2571,20 +2571,8 @@
                         <input id="swal_costo_empaque_llevar" type="number" min="0" value="0" style="width:100%;height:30px;border:1px solid #86efac;border-radius:7px;padding:3px 8px;font-size:13px;font-weight:700;margin-top:3px;">
                    </div>`;
 
-            // Datos de facturación electrónica: solo si CF
-            const factElecHtml = esConsumidorFinal
-                ? `<div style="border-top:1px dashed #e2e8f0;padding-top:6px;margin-top:6px;">
-                        <div style="font-size:10px;font-weight:800;color:#6b7280;margin-bottom:4px;">🧾 Facturación electrónica (opcional)</div>
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:4px;">
-                            <div><label style="font-size:10px;color:#6b7280;">NIT / CC</label>
-                                <input id="swal_dom_nit" type="text" placeholder="NIT o Cédula" style="width:100%;height:30px;border:1px solid #cbd5e1;border-radius:7px;padding:3px 7px;font-size:12px;"></div>
-                            <div><label style="font-size:10px;color:#6b7280;">Email</label>
-                                <input id="swal_dom_email" type="email" placeholder="correo@email.com" style="width:100%;height:30px;border:1px solid #cbd5e1;border-radius:7px;padding:3px 7px;font-size:12px;"></div>
-                        </div>
-                        <div><label style="font-size:10px;color:#6b7280;">Razón social</label>
-                            <input id="swal_dom_razon" type="text" placeholder="Nombre empresa" style="width:100%;height:30px;border:1px solid #cbd5e1;border-radius:7px;padding:3px 7px;font-size:12px;"></div>
-                   </div>`
-                : `<input id="swal_dom_nit" type="hidden"><input id="swal_dom_email" type="hidden"><input id="swal_dom_razon" type="hidden">`;
+            // Campos ocultos para compatibilidad (datos de cliente vienen del cliente seleccionado)
+            const factElecHtml = `<input id="swal_dom_nit" type="hidden"><input id="swal_dom_email" type="hidden"><input id="swal_dom_razon" type="hidden">`;
 
             Swal.fire({
                 title: 'Confirmar factura',
@@ -2629,7 +2617,6 @@
                             </div>
                         </div>
 
-                        ${tipoPedidoHtml}
                         ${factElecHtml}
 
                         <div id="swal_contado_wrap">
