@@ -466,6 +466,14 @@
                 }
                 $stockTooltipCarrito = number_format($stockValorCarrito, $stockDecimalesCarrito, ',', '.') . ' ' . $stockUnidadCarrito;
                 $sinStock = $stockValorCarrito <= 0;
+                $precioUnidad = match ($item['vende_por'] ?? 'unidad') {
+                    'peso'    => 'x kg',
+                    'porcion' => 'x porción',
+                    'litro'   => 'x lt',
+                    'metro'   => 'x mt',
+                    'hora'    => 'x hr',
+                    default   => ((bool) ($item['permite_decimal'] ?? false) ? 'x kg' : 'c/u'),
+                };
             @endphp
 
             {{-- CARD --}}
@@ -483,23 +491,20 @@
                         title="{{ $item['nombre'] }} | Stock: {{ $stockTooltipCarrito }}"
                         @click="$dispatch('ver-nombre-carrito-mobile', { nombre: @js($item['nombre']), stock: @js($stockTooltipCarrito) })"
                         style="display:block; width:100%; text-align:left; background:none; border:none; padding:0; cursor:pointer;">
-                        <div style="font-size:13px; font-weight:700; color:{{ $sinStock ? '#dc2626' : '#1e293b' }}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.2;">
+                        <div style="font-size:13px; font-weight:700; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.2;">
                             {{ $item['nombre'] }}
                         </div>
                     </button>
                     <div style="display:flex; gap:4px; flex-wrap:wrap; margin-top:4px; align-items:center;">
-                        {{-- Precio unitario --}}
+                        {{-- Precio unitario con unidad correcta --}}
                         <span style="font-size:10px; color:#64748b; font-weight:600;">
-                            ${{ number_format(round($item['nuevo_precio'] ?? ($item['precio'] ?? 0)), 0, ',', '.') }} c/u
+                            ${{ number_format(round($item['nuevo_precio'] ?? ($item['precio'] ?? 0)), 0, ',', '.') }} {{ $precioUnidad }}
                         </span>
                         @if($enviado)
                             <span style="font-size:9px; background:#16a34a; color:white; border-radius:20px; padding:1px 7px; font-weight:700;">✓ Cocina</span>
                         @endif
                         @if(!empty($item['combo_activo']))
                             <span style="font-size:9px; background:#7c3aed; color:white; border-radius:20px; padding:1px 7px; font-weight:700;">🎁 {{ $item['combo_activo'] }}</span>
-                        @endif
-                        @if($sinStock)
-                            <span style="font-size:9px; background:#dc2626; color:white; border-radius:20px; padding:1px 7px; font-weight:700;">Sin stock</span>
                         @endif
                     </div>
                 </div>
