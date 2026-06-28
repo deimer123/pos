@@ -571,7 +571,7 @@
         @if($mesaId)
             {{-- Enviar cocina y Facturar: visibles siempre (desktop Y móvil) --}}
             <div class="flex gap-2 flex-shrink-0">
-                <button onclick="window.posMesaEnviarCocinaModal()"
+                <button x-on:click="window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '')"
                     class="pos-mesa-total-btn"
                     style="background:#2563eb; color:white; border:none; border-radius:9999px; padding:0 14px; height:34px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">
                     📤 Enviar cocina
@@ -856,7 +856,7 @@
                 @endif
 
                 @if($mesaId)
-                <button type="button" class="pos-cart-menu-item" style="background:#16a34a;color:white;" wire:key="mobile-action-cocina" @click.prevent.stop="open = false; window.posMesaEnviarCocinaModal();">
+                <button type="button" class="pos-cart-menu-item" style="background:#16a34a;color:white;" wire:key="mobile-action-cocina" @click.prevent.stop="open = false; window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '')">
                     📤 Enviar cocina
                 </button>
                 @endif
@@ -2164,12 +2164,12 @@
         Livewire.dispatch('abrir-facturar');
     };
 
-    window.posMesaEnviarCocinaModal = function () {
+    window.posMesaEnviarCocinaModal = function (clienteNombreArg) {
         if (!window.Swal) { Livewire.dispatch('mesa-enviar-cocina'); return; }
 
-        // Cliente actual del POS (viene de Livewire)
-        const clienteNombre = @js($clienteSeleccionadoNombre ?? '');
-        const esConsumidorFinal = !clienteNombre || clienteNombre.toUpperCase().includes('CONSUMIDOR FINAL') || clienteNombre.toUpperCase().includes('CF');
+        // Cliente actual del POS — recibido como argumento al hacer clic
+        const clienteNombre = (clienteNombreArg || '').trim();
+        const esConsumidorFinal = !clienteNombre || clienteNombre.toUpperCase().includes('CONSUMIDOR FINAL') || clienteNombre.trim().toUpperCase() === 'CF';
 
         // Bloque de datos del cliente (solo si es CF)
         const clienteInfoHtml = esConsumidorFinal
