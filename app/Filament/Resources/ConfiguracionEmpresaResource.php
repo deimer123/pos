@@ -121,6 +121,10 @@ class ConfiguracionEmpresaResource extends Resource
                                 ->label('Vende servicios')
                                 ->helperText('Para mano de obra, horas o servicios intangibles.'),
 
+                            Forms\Components\Toggle::make('usa_domicilios')
+                                ->label('Usa domicilios')
+                                ->helperText('Activa el módulo de pedidos a domicilio y repartidores.'),
+
                             Forms\Components\Toggle::make('permite_stock_negativo')
                                 ->label('Permitir stock negativo')
                                 ->helperText('Deja vender aunque no haya inventario suficiente.'),
