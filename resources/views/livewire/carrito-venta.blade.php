@@ -709,6 +709,12 @@
                 wire:click="verPrefacturas">
                 🗒️ Ver facturas
             </button>
+            <button type="button"
+                class="pos-hide-mobile text-white rounded-full shadow"
+                style="background:#0d9488; font-size:10px; font-weight:700; padding:0 8px; height:28px; white-space:nowrap; border:none; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;"
+                wire:click="abrirModalCrearCliente">
+                👤 Crear Cliente
+            </button>
 
             {{-- MÓVIL/IPAD: dropdown Acciones con todos los botones --}}
             <div x-data="{ openAcc: false }" class="pos-show-mobile-only" style="position:relative;">
@@ -758,8 +764,13 @@
                     @endif
                     <button type="button"
                         @click.stop="openAcc = false; $wire.verPrefacturas()"
-                        style="padding:8px 14px; text-align:left; font-size:12px; font-weight:600; background:#475569; color:white; border:none; border-radius:8px; cursor:pointer;">
+                        style="margin-bottom:5px; padding:8px 14px; text-align:left; font-size:12px; font-weight:600; background:#475569; color:white; border:none; border-radius:8px; cursor:pointer;">
                         🗒️ Ver facturas
+                    </button>
+                    <button type="button"
+                        @click.stop="openAcc = false; $wire.abrirModalCrearCliente()"
+                        style="padding:8px 14px; text-align:left; font-size:12px; font-weight:600; background:#0d9488; color:white; border:none; border-radius:8px; cursor:pointer;">
+                        👤 Crear Cliente
                     </button>
                 </div>
             </div>
