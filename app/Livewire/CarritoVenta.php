@@ -1595,7 +1595,10 @@ public function confirmarFacturar()
             creditoInfo: $this->clienteCreditoInfo,
             totalVenta: $totalActual,
             factusHabilitado: $this->facturacionElectronicaDisponible($this->getEmpresaId()),
-            ...$ordenData
+            mesa_id: $ordenData['mesa_id'] ?? null,
+            tipo_pedido: $ordenData['tipo_pedido'] ?? 'local',
+            costo_empaque: $ordenData['costo_empaque'] ?? 0,
+            cobro_domicilio: $ordenData['cobro_domicilio'] ?? 'anticipado'
         );
     }
 
