@@ -89,6 +89,9 @@
     @if($factura->dom_direccion)
       Dir: {{ $factura->dom_direccion }}<br>
     @endif
+    @if($factura->dom_observaciones)
+      Obs domicilio: {{ $factura->dom_observaciones }}<br>
+    @endif
   @endif
 
   <div class="sep">------------------------</div>

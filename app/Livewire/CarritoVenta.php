@@ -400,9 +400,10 @@ private function limpiarUtf8Array(array $datos): array
             $this->ordenEstadoActual  = $ordenActiva->estado ?? 'abierta';
             $this->ordenTipoPedido    = $ordenActiva->tipo_pedido ?? 'mesa';
             $this->ordenCostoEmpaque  = (float)($ordenActiva->costo_empaque ?? 0);
-            $this->ordenDomNombre     = $ordenActiva->dom_nombre ?? null;
-            $this->ordenDomTelefono   = $ordenActiva->dom_telefono ?? null;
-            $this->ordenDomDireccion  = $ordenActiva->dom_direccion ?? null;
+            $this->ordenDomNombre        = $ordenActiva->dom_nombre ?? null;
+            $this->ordenDomTelefono      = $ordenActiva->dom_telefono ?? null;
+            $this->ordenDomDireccion     = $ordenActiva->dom_direccion ?? null;
+            $this->ordenDomObservaciones = $ordenActiva->dom_observaciones ?? '';
         }
         goto fin_carga_carrito;
     }
@@ -1693,12 +1694,7 @@ public function facturarConfirmada(array $data = [])
             ? trim((string)($data['transferencia_obs'] ?? ''))
             : null;
 
-        // Observaciones generales de la prefactura + domicilio observations
         $obs = trim((string)($this->observacionesPrefactura ?? ''));
-        $domObs = trim((string)($data['dom_observaciones'] ?? $this->ordenDomObservaciones ?? ''));
-        if ($domObs) {
-            $obs = $obs ? $obs . ' | ' . $domObs : $domObs;
-        }
 
         $vendedorId = auth()->id();
         if ($this->prefacturaCargadaId) {
@@ -1740,6 +1736,7 @@ public function facturarConfirmada(array $data = [])
             'dom_nombre'         => $data['dom_nombre'] ?? null,
             'dom_telefono'       => $data['dom_telefono'] ?? null,
             'dom_direccion'      => $data['dom_direccion'] ?? null,
+            'dom_observaciones'  => $data['dom_observaciones'] ?? $this->ordenDomObservaciones ?: null,
             'dom_nit'            => $data['dom_nit'] ?? null,
             'dom_email'          => $data['dom_email'] ?? null,
             'dom_razon_social'   => $data['dom_razon_social'] ?? null,
@@ -2224,12 +2221,7 @@ public function facturarEImprimir(array $data = [])
             ? trim((string)($data['transferencia_obs'] ?? ''))
             : null;
 
-        // Observaciones generales de la prefactura + domicilio observations
         $obs = trim((string)($this->observacionesPrefactura ?? ''));
-        $domObs = trim((string)($data['dom_observaciones'] ?? $this->ordenDomObservaciones ?? ''));
-        if ($domObs) {
-            $obs = $obs ? $obs . ' | ' . $domObs : $domObs;
-        }
 
         // ===== Crear factura
         $vendedorId = auth()->id();
@@ -2271,6 +2263,7 @@ public function facturarEImprimir(array $data = [])
             'dom_nombre'         => $data['dom_nombre'] ?? null,
             'dom_telefono'       => $data['dom_telefono'] ?? null,
             'dom_direccion'      => $data['dom_direccion'] ?? null,
+            'dom_observaciones'  => $data['dom_observaciones'] ?? $this->ordenDomObservaciones ?: null,
             'dom_nit'            => $data['dom_nit'] ?? null,
             'dom_email'          => $data['dom_email'] ?? null,
             'dom_razon_social'   => $data['dom_razon_social'] ?? null,
@@ -4000,10 +3993,8 @@ public function uiCreditoActual(): array
             $numeroCocina = ($ultimo ?? 0) + 1;
         }
 
+        // Solo las observaciones de cocina van a la pantalla de cocina
         $obsBase = trim($this->observacionesPrefactura ?? '');
-        if ($domObservaciones) {
-            $obsBase = $obsBase ? $obsBase . ' | ' . $domObservaciones : $domObservaciones;
-        }
         $this->ordenDomObservaciones = $domObservaciones ?? '';
 
         $orden->update([
@@ -4015,6 +4006,7 @@ public function uiCreditoActual(): array
             'dom_nombre'        => $domNombre,
             'dom_telefono'      => $domTelefono,
             'dom_direccion'     => $domDireccion,
+            'dom_observaciones' => $domObservaciones,
         ]);
 
         // Marcar en el carrito local como enviado

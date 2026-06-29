@@ -43,6 +43,7 @@ class Factura extends Model
         'dom_nit',
         'dom_email',
         'dom_razon_social',
+        'dom_observaciones',
         'cobro_domicilio',
     ];
 
