@@ -579,7 +579,7 @@
                         @if($ordenCostoEmpaque > 0) +${{ number_format($ordenCostoEmpaque,0,',','.') }} @endif
                     </span>
                 @endif
-                <button x-on:click="window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '', $wire.get('ordenDomDireccion') || $wire.get('clienteDireccion') || '', $wire.get('ordenDomTelefono') || $wire.get('clienteTelefono') || '', $wire.get('ordenDomNombre') || '', $wire.get('ordenDomObservaciones') || '')"
+                <button x-on:click="window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '', $wire.get('ordenDomDireccion') || $wire.get('clienteDireccion') || '', $wire.get('ordenDomTelefono') || $wire.get('clienteTelefono') || '', $wire.get('ordenDomNombre') || '', $wire.get('ordenDomObservaciones') || '', $wire.get('ordenDomCostoDomicilio') || 0, $wire.get('ordenDomCostoDesechables') || 0)"
                     class="pos-mesa-total-btn"
                     style="background:#2563eb; color:white; border:none; border-radius:9999px; padding:0 14px; height:34px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">
                     📤 Enviar cocina
@@ -864,7 +864,7 @@
                 @endif
 
                 @if($mesaId)
-                <button type="button" class="pos-cart-menu-item" style="background:#16a34a;color:white;" wire:key="mobile-action-cocina" @click.prevent.stop="open = false; window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '', $wire.get('ordenDomDireccion') || $wire.get('clienteDireccion') || '', $wire.get('ordenDomTelefono') || $wire.get('clienteTelefono') || '', $wire.get('ordenDomNombre') || '', $wire.get('ordenDomObservaciones') || '')">
+                <button type="button" class="pos-cart-menu-item" style="background:#16a34a;color:white;" wire:key="mobile-action-cocina" @click.prevent.stop="open = false; window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '', $wire.get('ordenDomDireccion') || $wire.get('clienteDireccion') || '', $wire.get('ordenDomTelefono') || $wire.get('clienteTelefono') || '', $wire.get('ordenDomNombre') || '', $wire.get('ordenDomObservaciones') || '', $wire.get('ordenDomCostoDomicilio') || 0, $wire.get('ordenDomCostoDesechables') || 0)">
                     📤 Enviar cocina
                 </button>
                 @endif
@@ -2182,14 +2182,16 @@
         Livewire.dispatch('abrir-facturar');
     };
 
-    window.posMesaEnviarCocinaModal = function (clienteNombreArg, clienteDireccionArg, clienteTelefonoArg, ordenDomNombreArg, ordenDomObsArg) {
+    window.posMesaEnviarCocinaModal = function (clienteNombreArg, clienteDireccionArg, clienteTelefonoArg, ordenDomNombreArg, ordenDomObsArg, ordenDomCostoDomArg, ordenDomCostoDesechArg) {
         if (!window.Swal) { Livewire.dispatch('mesa-enviar-cocina'); return; }
 
-        const clienteNombre    = (clienteNombreArg || '').trim();
-        const clienteDireccion = (clienteDireccionArg || '').trim();
-        const clienteTelefono  = (clienteTelefonoArg || '').trim();
-        const ordenDomNombre   = (ordenDomNombreArg || '').trim();
-        const ordenDomObs      = (ordenDomObsArg || '').trim();
+        const clienteNombre       = (clienteNombreArg || '').trim();
+        const clienteDireccion    = (clienteDireccionArg || '').trim();
+        const clienteTelefono     = (clienteTelefonoArg || '').trim();
+        const ordenDomNombre      = (ordenDomNombreArg || '').trim();
+        const ordenDomObs         = (ordenDomObsArg || '').trim();
+        const ordenDomCostoDom    = Number(ordenDomCostoDomArg) || 0;
+        const ordenDomCostoDesech = Number(ordenDomCostoDesechArg) || 0;
         const esConsumidorFinal = !clienteNombre || clienteNombre.toUpperCase().includes('CONSUMIDOR FINAL') || clienteNombre.trim().toUpperCase() === 'CF';
 
         // Nombre a mostrar en el encabezado del bloque domicilio
@@ -2246,9 +2248,9 @@
                     ${clienteInfoHtml}
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
                         <div><label style="font-size:10px;font-weight:700;color:#92400e;">Costo domicilio</label>
-                            <input id="pc_costo_dom" type="number" min="0" value="0" style="width:100%;height:32px;border:1px solid #fde68a;border-radius:7px;padding:3px 8px;font-size:13px;font-weight:700;"></div>
+                            <input id="pc_costo_dom" type="number" min="0" value="${ordenDomCostoDom}" style="width:100%;height:32px;border:1px solid #fde68a;border-radius:7px;padding:3px 8px;font-size:13px;font-weight:700;"></div>
                         <div><label style="font-size:10px;font-weight:700;color:#92400e;">Costo desechables</label>
-                            <input id="pc_costo_dom_desech" type="number" min="0" value="0" style="width:100%;height:32px;border:1px solid #fde68a;border-radius:7px;padding:3px 8px;font-size:13px;font-weight:700;"></div>
+                            <input id="pc_costo_dom_desech" type="number" min="0" value="${ordenDomCostoDesech}" style="width:100%;height:32px;border:1px solid #fde68a;border-radius:7px;padding:3px 8px;font-size:13px;font-weight:700;"></div>
                     </div>
                     <div style="text-align:left;">
                         <label style="font-size:10px;font-weight:700;color:#92400e;">Observaciones del pedido</label>

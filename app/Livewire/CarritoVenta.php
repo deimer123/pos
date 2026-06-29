@@ -27,9 +27,11 @@ class CarritoVenta extends Component
     public string $ordenEstadoActual = 'abierta'; // 'abierta' | 'en_preparacion'
     public string $ordenTipoPedido   = 'mesa';    // 'mesa' | 'domicilio' | 'para_llevar'
     public float  $ordenCostoEmpaque = 0;
-    public ?string $ordenDomNombre   = null;
-    public ?string $ordenDomTelefono = null;
-    public ?string $ordenDomDireccion = null;
+    public ?string $ordenDomNombre        = null;
+    public ?string $ordenDomTelefono      = null;
+    public ?string $ordenDomDireccion     = null;
+    public float   $ordenDomCostoDomicilio  = 0;
+    public float   $ordenDomCostoDesechables = 0;
 
     public $preciosBase               = [];
     public $carrito                   = [];
@@ -400,10 +402,12 @@ private function limpiarUtf8Array(array $datos): array
             $this->ordenEstadoActual  = $ordenActiva->estado ?? 'abierta';
             $this->ordenTipoPedido    = $ordenActiva->tipo_pedido ?? 'mesa';
             $this->ordenCostoEmpaque  = (float)($ordenActiva->costo_empaque ?? 0);
-            $this->ordenDomNombre        = $ordenActiva->dom_nombre ?? null;
-            $this->ordenDomTelefono      = $ordenActiva->dom_telefono ?? null;
-            $this->ordenDomDireccion     = $ordenActiva->dom_direccion ?? null;
-            $this->ordenDomObservaciones = $ordenActiva->dom_observaciones ?? '';
+            $this->ordenDomNombre           = $ordenActiva->dom_nombre ?? null;
+            $this->ordenDomTelefono         = $ordenActiva->dom_telefono ?? null;
+            $this->ordenDomDireccion        = $ordenActiva->dom_direccion ?? null;
+            $this->ordenDomObservaciones    = $ordenActiva->dom_observaciones ?? '';
+            $this->ordenDomCostoDomicilio   = (float)($ordenActiva->dom_costo_domicilio ?? 0);
+            $this->ordenDomCostoDesechables = (float)($ordenActiva->dom_costo_desechables ?? 0);
         }
         goto fin_carga_carrito;
     }
@@ -3998,15 +4002,17 @@ public function uiCreditoActual(): array
         $this->ordenDomObservaciones = $domObservaciones ?? '';
 
         $orden->update([
-            'estado'            => 'en_preparacion',
-            'observaciones'     => $obsBase,
-            'numero_cocina_dia' => $numeroCocina,
-            'tipo_pedido'       => $tipoPedido,
-            'costo_empaque'     => $costoDomicilio + $costoEmpaque,
-            'dom_nombre'        => $domNombre,
-            'dom_telefono'      => $domTelefono,
-            'dom_direccion'     => $domDireccion,
-            'dom_observaciones' => $domObservaciones,
+            'estado'               => 'en_preparacion',
+            'observaciones'        => $obsBase,
+            'numero_cocina_dia'    => $numeroCocina,
+            'tipo_pedido'          => $tipoPedido,
+            'costo_empaque'        => $costoDomicilio + $costoEmpaque,
+            'dom_nombre'           => $domNombre,
+            'dom_telefono'         => $domTelefono,
+            'dom_direccion'        => $domDireccion,
+            'dom_observaciones'    => $domObservaciones,
+            'dom_costo_domicilio'  => $costoDomicilio,
+            'dom_costo_desechables'=> $costoEmpaque,
         ]);
 
         // Marcar en el carrito local como enviado
@@ -4022,9 +4028,11 @@ public function uiCreditoActual(): array
         $this->ordenEstadoActual  = 'en_preparacion';
         $this->ordenTipoPedido    = $tipoPedido;
         $this->ordenCostoEmpaque  = $costoDomicilio + $costoEmpaque;
-        $this->ordenDomNombre     = $domNombre;
-        $this->ordenDomTelefono   = $domTelefono;
-        $this->ordenDomDireccion  = $domDireccion;
+        $this->ordenDomNombre           = $domNombre;
+        $this->ordenDomTelefono         = $domTelefono;
+        $this->ordenDomDireccion        = $domDireccion;
+        $this->ordenDomCostoDomicilio   = $costoDomicilio;
+        $this->ordenDomCostoDesechables = $costoEmpaque;
         $this->dispatch('success', '📤 Comanda enviada a cocina');
     }
 
