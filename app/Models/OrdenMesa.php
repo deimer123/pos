@@ -30,6 +30,11 @@ class OrdenMesa extends Model
         'dom_nombre',
         'dom_telefono',
         'dom_direccion',
+        'dom_observaciones',
+        'dom_costo_domicilio',
+        'dom_costo_desechables',
+        'numero_cocina_dia',
+        'entregada',
         'abierta_en',
         'cerrada_en',
     ];
