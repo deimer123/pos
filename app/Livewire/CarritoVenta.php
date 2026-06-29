@@ -43,6 +43,9 @@ class CarritoVenta extends Component
     public $clientes                  = [];
     public $mostrarModalClientes      = false;
     public $clienteSeleccionadoNombre = null;
+    public ?string $clienteDireccion  = null;
+    public ?string $clienteTelefono   = null;
+    public string  $ordenDomObservaciones = '';
     public $buscarCliente             = '';
     public $mostrarModalCrearCliente  = false;
     public $nuevoCliente              = [
@@ -631,6 +634,8 @@ public function asignarConsumidorFinalPorDefecto()
 
     $this->clienteId                 = $cliente->id_clip_pro;
     $this->clienteSeleccionadoNombre = $this->textoUtf8($cliente->nombre);
+    $this->clienteDireccion          = $cliente->direccion ?? null;
+    $this->clienteTelefono           = $cliente->telefono ?? null;
     $this->mostrarModalCrearCliente  = false;
 }
 
@@ -668,6 +673,8 @@ public function asignarConsumidorFinalPorDefecto()
 
     $this->clienteId = $cliente->id; // âœ… ID real
     $this->clienteSeleccionadoNombre = $this->textoUtf8($cliente->nombre);
+    $this->clienteDireccion          = $cliente->direccion ?? null;
+    $this->clienteTelefono           = $cliente->telefono ?? null;
 
     $this->mostrarModalClientes = false;
 
@@ -909,6 +916,9 @@ public function limpiarCarrito()
         'detalleSeleccionado',
         'clienteId', // âœ… LIMPIAR CLIENTE
         'clienteSeleccionadoNombre', // âœ… LIMPIAR NOMBRE
+        'clienteDireccion',
+        'clienteTelefono',
+        'ordenDomObservaciones',
     ]);
 
     $this->observacionKey++; // âœ… Forzar re-render del textarea
@@ -1601,7 +1611,8 @@ public function confirmarFacturar()
             mesa_id: $mesaId,
             tipo_pedido: $tipoPedido,
             costo_empaque: $costoEmpaque,
-            cobro_domicilio: 'anticipado'
+            cobro_domicilio: 'anticipado',
+            dom_observaciones: $this->ordenDomObservaciones
         );
     }
 
@@ -1673,8 +1684,12 @@ public function facturarConfirmada(array $data = [])
             ? trim((string)($data['transferencia_obs'] ?? ''))
             : null;
 
-        // Observaciones generales de la prefactura (se mantienen aparte)
+        // Observaciones generales de la prefactura + domicilio observations
         $obs = trim((string)($this->observacionesPrefactura ?? ''));
+        $domObs = trim((string)($data['dom_observaciones'] ?? $this->ordenDomObservaciones ?? ''));
+        if ($domObs) {
+            $obs = $obs ? $obs . ' | ' . $domObs : $domObs;
+        }
 
         $vendedorId = auth()->id();
         if ($this->prefacturaCargadaId) {
@@ -2197,8 +2212,12 @@ public function facturarEImprimir(array $data = [])
             ? trim((string)($data['transferencia_obs'] ?? ''))
             : null;
 
-        // Observaciones generales de la prefactura
+        // Observaciones generales de la prefactura + domicilio observations
         $obs = trim((string)($this->observacionesPrefactura ?? ''));
+        $domObs = trim((string)($data['dom_observaciones'] ?? $this->ordenDomObservaciones ?? ''));
+        if ($domObs) {
+            $obs = $obs ? $obs . ' | ' . $domObs : $domObs;
+        }
 
         // ===== Crear factura
         $vendedorId = auth()->id();
@@ -3718,6 +3737,18 @@ $carteraOtro          = (clone $qPagosCredito)->where('medio_pago','otro')->sum(
         ->whereIn('metodo_pago', ['Transferencia', 'Nequi'])
         ->sum('monto');
 
+    // ----- DOMICILIOS (fees collected by company, to pay domiciliario) -----
+    $qDom = \App\Models\Factura::query()
+        ->where('empresa_id', $empresaId)
+        ->where('user_id', $userId)
+        ->where('tipo_pedido', 'domicilio')
+        ->where('costo_empaque', '>', 0)
+        ->whereBetween('fecha', [$inicio, $fin]);
+
+    $domCobradoEfectivo      = (clone $qDom)->where('medio_pago', 'efectivo')->sum('costo_empaque');
+    $domCobradoTransferencia = (clone $qDom)->where('medio_pago', 'transferencia')->sum('costo_empaque');
+    $domCobradoTotal         = $domCobradoEfectivo + $domCobradoTransferencia;
+
     // ----- DEVOLUCIONES -----
     // Regla: SIEMPRE restan al EFECTIVO del dÃ­a y al TOTAL CONTADO
     $devolucionesConPago = \App\Models\Devolucion::query()
@@ -3782,7 +3813,12 @@ $efectivo = ($ventasContadoEfectivo + $carteraEfectivo + $entradasEfectivo) - $d
 
         // Totales informativos
         'total_ventas'                  => $totalVentas,
-        'total_ventas_sin_devoluciones'=> $totalVentas - $devolucionesDia, // opcional
+        'total_ventas_sin_devoluciones'=> $totalVentas - $devolucionesDia,
+
+        // Domicilios cobrados por empresa (para liquidar con domiciliario)
+        'dom_cobrado_efectivo'      => $domCobradoEfectivo,
+        'dom_cobrado_transferencia' => $domCobradoTransferencia,
+        'dom_cobrado_total'         => $domCobradoTotal,
     ];
 }
 public function updatedMontoCierre($value)
@@ -3894,13 +3930,25 @@ public function uiCreditoActual(): array
     #[On('mesa-enviar-cocina-confirmado')]
     public function mesaEnviarCocinaConfirmado(array $data = []): void
     {
-        $tipoPedido    = $data['tipo_pedido'] ?? 'mesa';
-        $costoDomicilio= (float)($data['costo_domicilio'] ?? 0);
-        $costoEmpaque  = (float)($data['costo_empaque'] ?? 0);
-        $this->mesaEnviarACocina($tipoPedido, $costoDomicilio, $costoEmpaque);
+        $tipoPedido     = $data['tipo_pedido'] ?? 'mesa';
+        $costoDomicilio = (float)($data['costo_domicilio'] ?? 0);
+        $costoEmpaque   = (float)($data['costo_empaque'] ?? 0);
+        $domNombre      = $data['dom_nombre'] ?? null;
+        $domTelefono    = $data['dom_telefono'] ?? null;
+        $domDireccion   = $data['dom_direccion'] ?? null;
+        $domObs         = $data['dom_observaciones'] ?? null;
+        $this->mesaEnviarACocina($tipoPedido, $costoDomicilio, $costoEmpaque, $domNombre, $domTelefono, $domDireccion, $domObs);
     }
 
-    public function mesaEnviarACocina(string $tipoPedido = 'mesa', float $costoDomicilio = 0, float $costoEmpaque = 0): void
+    public function mesaEnviarACocina(
+        string $tipoPedido = 'mesa',
+        float $costoDomicilio = 0,
+        float $costoEmpaque = 0,
+        ?string $domNombre = null,
+        ?string $domTelefono = null,
+        ?string $domDireccion = null,
+        ?string $domObservaciones = null
+    ): void
     {
         if (! $this->mesaId) return;
 
@@ -3937,12 +3985,21 @@ public function uiCreditoActual(): array
             $numeroCocina = ($ultimo ?? 0) + 1;
         }
 
+        $obsBase = trim($this->observacionesPrefactura ?? '');
+        if ($domObservaciones) {
+            $obsBase = $obsBase ? $obsBase . ' | ' . $domObservaciones : $domObservaciones;
+        }
+        $this->ordenDomObservaciones = $domObservaciones ?? '';
+
         $orden->update([
             'estado'            => 'en_preparacion',
-            'observaciones'     => trim($this->observacionesPrefactura ?? ''),
+            'observaciones'     => $obsBase,
             'numero_cocina_dia' => $numeroCocina,
             'tipo_pedido'       => $tipoPedido,
             'costo_empaque'     => $costoDomicilio + $costoEmpaque,
+            'dom_nombre'        => $domNombre,
+            'dom_telefono'      => $domTelefono,
+            'dom_direccion'     => $domDireccion,
         ]);
 
         // Marcar en el carrito local como enviado

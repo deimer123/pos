@@ -579,7 +579,7 @@
                         @if($ordenCostoEmpaque > 0) +${{ number_format($ordenCostoEmpaque,0,',','.') }} @endif
                     </span>
                 @endif
-                <button x-on:click="window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '')"
+                <button x-on:click="window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '', $wire.get('clienteDireccion') || '', $wire.get('clienteTelefono') || '')"
                     class="pos-mesa-total-btn"
                     style="background:#2563eb; color:white; border:none; border-radius:9999px; padding:0 14px; height:34px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">
                     📤 Enviar cocina
@@ -864,7 +864,7 @@
                 @endif
 
                 @if($mesaId)
-                <button type="button" class="pos-cart-menu-item" style="background:#16a34a;color:white;" wire:key="mobile-action-cocina" @click.prevent.stop="open = false; window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '')">
+                <button type="button" class="pos-cart-menu-item" style="background:#16a34a;color:white;" wire:key="mobile-action-cocina" @click.prevent.stop="open = false; window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '', $wire.get('clienteDireccion') || '', $wire.get('clienteTelefono') || '')">
                     📤 Enviar cocina
                 </button>
                 @endif
@@ -2071,6 +2071,16 @@
                             class="font-semibold">${{ number_format($resumenCaja['cartera_transferencia'], 0, ',', '.') }}</span>
                     </div>
 
+                    @if(($resumenCaja['dom_cobrado_total'] ?? 0) > 0)
+                    <div class="mt-1 text-[11px] text-orange-600 uppercase tracking-wide font-bold">🛵 DOMICILIOS (a pagar al domiciliario)</div>
+                    <div class="flex justify-between"><span>Cobrado en efectivo</span><span
+                            class="font-semibold text-orange-600">${{ number_format($resumenCaja['dom_cobrado_efectivo'] ?? 0, 0, ',', '.') }}</span></div>
+                    <div class="flex justify-between"><span>Cobrado en transferencia</span><span
+                            class="font-semibold text-orange-600">${{ number_format($resumenCaja['dom_cobrado_transferencia'] ?? 0, 0, ',', '.') }}</span></div>
+                    <div class="flex justify-between border-t border-orange-200 mt-1 pt-1"><span class="font-semibold">Total a pagar domiciliario</span><span
+                            class="font-semibold text-orange-700">${{ number_format($resumenCaja['dom_cobrado_total'] ?? 0, 0, ',', '.') }}</span></div>
+                    @endif
+
                     <div class="mt-1 text-[11px] text-gray-500 uppercase tracking-wide">MOVIMIENTOS DE CAJA</div>
                     <div class="flex justify-between"><span>Entradas efectivo</span><span
                             class="font-semibold text-green-700">${{ number_format($resumenCaja['entradas_efectivo'] ?? 0, 0, ',', '.') }}</span>
@@ -2172,28 +2182,39 @@
         Livewire.dispatch('abrir-facturar');
     };
 
-    window.posMesaEnviarCocinaModal = function (clienteNombreArg) {
+    window.posMesaEnviarCocinaModal = function (clienteNombreArg, clienteDireccionArg, clienteTelefonoArg) {
         if (!window.Swal) { Livewire.dispatch('mesa-enviar-cocina'); return; }
 
         // Cliente actual del POS — recibido como argumento al hacer clic
-        const clienteNombre = (clienteNombreArg || '').trim();
+        const clienteNombre    = (clienteNombreArg || '').trim();
+        const clienteDireccion = (clienteDireccionArg || '').trim();
+        const clienteTelefono  = (clienteTelefonoArg || '').trim();
         const esConsumidorFinal = !clienteNombre || clienteNombre.toUpperCase().includes('CONSUMIDOR FINAL') || clienteNombre.trim().toUpperCase() === 'CF';
 
-        // Bloque de datos del cliente (solo si es CF)
+        const inputStyle = 'width:100%;height:30px;border:1px solid #fde68a;border-radius:7px;padding:3px 7px;font-size:12px;';
+
+        // Bloque de datos del cliente (CF: campos vacíos; cliente real: pre-relleno editable)
         const clienteInfoHtml = esConsumidorFinal
             ? `<div id="pc_datos_cliente" style="display:none;margin-bottom:8px;">
                 <div style="font-size:10px;font-weight:800;color:#92400e;margin-bottom:4px;">👤 Datos del destinatario</div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:5px;">
-                    <div><label style="font-size:10px;font-weight:700;color:#6b7280;">Nombre *</label>
-                        <input id="pc_dom_nombre" type="text" placeholder="Nombre cliente" style="width:100%;height:30px;border:1px solid #cbd5e1;border-radius:7px;padding:3px 7px;font-size:12px;"></div>
-                    <div><label style="font-size:10px;font-weight:700;color:#6b7280;">Teléfono</label>
-                        <input id="pc_dom_tel" type="text" placeholder="3001234567" style="width:100%;height:30px;border:1px solid #cbd5e1;border-radius:7px;padding:3px 7px;font-size:12px;"></div>
+                    <div><label style="font-size:10px;font-weight:700;color:#92400e;">Nombre *</label>
+                        <input id="pc_dom_nombre" type="text" placeholder="Nombre cliente" style="${inputStyle}"></div>
+                    <div><label style="font-size:10px;font-weight:700;color:#92400e;">Teléfono</label>
+                        <input id="pc_dom_tel" type="text" placeholder="3001234567" style="${inputStyle}"></div>
                 </div>
-                <div><label style="font-size:10px;font-weight:700;color:#6b7280;">Dirección</label>
-                    <input id="pc_dom_dir" type="text" placeholder="Calle, Carrera, Avenida..." style="width:100%;height:30px;border:1px solid #cbd5e1;border-radius:7px;padding:3px 7px;font-size:12px;"></div>
+                <div><label style="font-size:10px;font-weight:700;color:#92400e;">Dirección</label>
+                    <input id="pc_dom_dir" type="text" placeholder="Calle, Carrera, Avenida..." style="${inputStyle}"></div>
                </div>`
-            : `<div id="pc_datos_cliente" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:7px;padding:5px 8px;margin-bottom:6px;font-size:11px;color:#166534;font-weight:700;">
-                👤 Cliente: ${clienteNombre}
+            : `<div id="pc_datos_cliente" style="display:none;margin-bottom:8px;">
+                <div style="font-size:10px;font-weight:800;color:#92400e;margin-bottom:4px;">👤 ${clienteNombre}</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:5px;">
+                    <div><label style="font-size:10px;font-weight:700;color:#92400e;">Teléfono</label>
+                        <input id="pc_dom_tel" type="text" value="${clienteTelefono}" placeholder="3001234567" style="${inputStyle}"></div>
+                    <div></div>
+                </div>
+                <div><label style="font-size:10px;font-weight:700;color:#92400e;">Dirección de entrega</label>
+                    <input id="pc_dom_dir" type="text" value="${clienteDireccion}" placeholder="Calle, Carrera, Avenida..." style="${inputStyle}"></div>
                </div>`;
 
         Swal.fire({
@@ -2229,6 +2250,10 @@
                 <div id="pc_llevar_wrap" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:10px;text-align:left;">
                     <label style="font-size:11px;font-weight:700;color:#166534;">Costo empaque / desechables</label>
                     <input id="pc_costo_llevar" type="number" min="0" value="0" style="width:100%;height:32px;border:1px solid #86efac;border-radius:7px;padding:3px 10px;font-size:13px;font-weight:700;">
+                </div>
+                <div style="margin-top:10px;text-align:left;">
+                    <label style="font-size:10px;font-weight:700;color:#6b7280;">Observaciones del pedido</label>
+                    <textarea id="pc_observaciones" rows="2" placeholder="Indicaciones especiales, referencias, etc..." style="width:100%;border:1px solid #e2e8f0;border-radius:7px;padding:5px 8px;font-size:12px;resize:none;margin-top:2px;"></textarea>
                 </div>
             `,
             showCancelButton: true,
@@ -2271,13 +2296,15 @@
                 const costoDesech = tipo === 'domicilio'
                     ? (parseFloat(document.getElementById('pc_costo_dom_desech')?.value)||0)
                     : tipo === 'para_llevar' ? (parseFloat(document.getElementById('pc_costo_llevar')?.value)||0) : 0;
+                const domObs = (document.getElementById('pc_observaciones')?.value || '').trim();
                 return {
                     tipo_pedido: tipo,
                     costo_domicilio: costoDom,
                     costo_empaque: costoDesech,
                     dom_nombre: esConsumidorFinal ? ((document.getElementById('pc_dom_nombre')?.value||'').trim()||null) : clienteNombre,
-                    dom_telefono: esConsumidorFinal ? ((document.getElementById('pc_dom_tel')?.value||'').trim()||null) : null,
-                    dom_direccion: esConsumidorFinal ? ((document.getElementById('pc_dom_dir')?.value||'').trim()||null) : null,
+                    dom_telefono: ((document.getElementById('pc_dom_tel')?.value||'').trim()) || clienteTelefono || null,
+                    dom_direccion: ((document.getElementById('pc_dom_dir')?.value||'').trim()) || clienteDireccion || null,
+                    dom_observaciones: domObs || null,
                 };
             }
         }).then(r => {
@@ -2432,6 +2459,7 @@
         });
         Livewire.on('confirmar-facturar', (payload = {}) => {
             const dataEvento = Array.isArray(payload) ? (payload[0] || {}) : (payload || {});
+            const domObservacionesOrden = dataEvento.dom_observaciones || '';
             const totalNumero = Number(dataEvento.totalVenta ?? @js((int) ($totalGeneral ?? 0)) ?? 0);
             const clienteVenta = dataEvento.clienteNombre || @js($clienteSeleccionadoNombre ?? 'CONSUMIDOR FINAL');
             const credito = dataEvento.creditoInfo || @js($creditoInfo ?? ['permite' => false, 'cupo_disponible' => 0, 'limite' => 0, 'deuda' => 0, 'dias' => 0]);
@@ -2513,6 +2541,7 @@
                     dom_nit: esConsumidorFinal ? ((document.getElementById('swal_dom_nit')?.value || '').trim() || null) : null,
                     dom_email: esConsumidorFinal ? ((document.getElementById('swal_dom_email')?.value || '').trim() || null) : null,
                     dom_razon_social: esConsumidorFinal ? ((document.getElementById('swal_dom_razon')?.value || '').trim() || null) : null,
+                    dom_observaciones: domObservacionesOrden || null,
                 };
             };
 
@@ -2772,12 +2801,15 @@
                 preConfirm: collectFacturaData,
                 preDeny: collectFacturaData
             }).then((result) => {
-                if (result.isConfirmed) {
+                // Domicilio orders always print — treat "Facturar" as "Facturar e imprimir"
+                const forzarImpresion = (tipoPedidoOrden === 'domicilio');
+
+                if (result.isConfirmed && !forzarImpresion) {
                     Livewire.dispatch('facturar-confirmada', { data: result.value });
                     return;
                 }
 
-                if (result.isDenied) {
+                if (result.isDenied || (result.isConfirmed && forzarImpresion)) {
                     const componentId = @js($this->getId());
                     const component = componentId && window.Livewire ? Livewire.find(componentId) : null;
                     if (!component) {
