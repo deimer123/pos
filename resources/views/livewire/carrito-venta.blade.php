@@ -579,7 +579,7 @@
                         @if($ordenCostoEmpaque > 0) +${{ number_format($ordenCostoEmpaque,0,',','.') }} @endif
                     </span>
                 @endif
-                <button x-on:click="window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '', $wire.get('clienteDireccion') || '', $wire.get('clienteTelefono') || '')"
+                <button x-on:click="window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '', $wire.get('ordenDomDireccion') || $wire.get('clienteDireccion') || '', $wire.get('ordenDomTelefono') || $wire.get('clienteTelefono') || '', $wire.get('ordenDomNombre') || '', $wire.get('ordenDomObservaciones') || '')"
                     class="pos-mesa-total-btn"
                     style="background:#2563eb; color:white; border:none; border-radius:9999px; padding:0 14px; height:34px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">
                     📤 Enviar cocina
@@ -864,7 +864,7 @@
                 @endif
 
                 @if($mesaId)
-                <button type="button" class="pos-cart-menu-item" style="background:#16a34a;color:white;" wire:key="mobile-action-cocina" @click.prevent.stop="open = false; window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '', $wire.get('clienteDireccion') || '', $wire.get('clienteTelefono') || '')">
+                <button type="button" class="pos-cart-menu-item" style="background:#16a34a;color:white;" wire:key="mobile-action-cocina" @click.prevent.stop="open = false; window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '', $wire.get('ordenDomDireccion') || $wire.get('clienteDireccion') || '', $wire.get('ordenDomTelefono') || $wire.get('clienteTelefono') || '', $wire.get('ordenDomNombre') || '', $wire.get('ordenDomObservaciones') || '')">
                     📤 Enviar cocina
                 </button>
                 @endif
@@ -2182,32 +2182,36 @@
         Livewire.dispatch('abrir-facturar');
     };
 
-    window.posMesaEnviarCocinaModal = function (clienteNombreArg, clienteDireccionArg, clienteTelefonoArg) {
+    window.posMesaEnviarCocinaModal = function (clienteNombreArg, clienteDireccionArg, clienteTelefonoArg, ordenDomNombreArg, ordenDomObsArg) {
         if (!window.Swal) { Livewire.dispatch('mesa-enviar-cocina'); return; }
 
-        // Cliente actual del POS — recibido como argumento al hacer clic
         const clienteNombre    = (clienteNombreArg || '').trim();
         const clienteDireccion = (clienteDireccionArg || '').trim();
         const clienteTelefono  = (clienteTelefonoArg || '').trim();
+        const ordenDomNombre   = (ordenDomNombreArg || '').trim();
+        const ordenDomObs      = (ordenDomObsArg || '').trim();
         const esConsumidorFinal = !clienteNombre || clienteNombre.toUpperCase().includes('CONSUMIDOR FINAL') || clienteNombre.trim().toUpperCase() === 'CF';
+
+        // Nombre a mostrar en el encabezado del bloque domicilio
+        const nombreMostrar = ordenDomNombre || clienteNombre;
 
         const inputStyle = 'width:100%;height:30px;border:1px solid #fde68a;border-radius:7px;padding:3px 7px;font-size:12px;';
 
-        // Bloque de datos del cliente (CF: campos vacíos; cliente real: pre-relleno editable)
+        // Bloque de datos (CF: campos vacíos; cliente real: pre-relleno con datos de la orden o del cliente)
         const clienteInfoHtml = esConsumidorFinal
             ? `<div id="pc_datos_cliente" style="display:none;margin-bottom:8px;">
                 <div style="font-size:10px;font-weight:800;color:#92400e;margin-bottom:4px;">👤 Datos del destinatario</div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:5px;">
                     <div><label style="font-size:10px;font-weight:700;color:#92400e;">Nombre *</label>
-                        <input id="pc_dom_nombre" type="text" placeholder="Nombre cliente" style="${inputStyle}"></div>
+                        <input id="pc_dom_nombre" type="text" value="${ordenDomNombre}" placeholder="Nombre cliente" style="${inputStyle}"></div>
                     <div><label style="font-size:10px;font-weight:700;color:#92400e;">Teléfono</label>
-                        <input id="pc_dom_tel" type="text" placeholder="3001234567" style="${inputStyle}"></div>
+                        <input id="pc_dom_tel" type="text" value="${clienteTelefono}" placeholder="3001234567" style="${inputStyle}"></div>
                 </div>
                 <div><label style="font-size:10px;font-weight:700;color:#92400e;">Dirección</label>
-                    <input id="pc_dom_dir" type="text" placeholder="Calle, Carrera, Avenida..." style="${inputStyle}"></div>
+                    <input id="pc_dom_dir" type="text" value="${clienteDireccion}" placeholder="Calle, Carrera, Avenida..." style="${inputStyle}"></div>
                </div>`
             : `<div id="pc_datos_cliente" style="display:none;margin-bottom:8px;">
-                <div style="font-size:10px;font-weight:800;color:#92400e;margin-bottom:4px;">👤 ${clienteNombre}</div>
+                <div style="font-size:10px;font-weight:800;color:#92400e;margin-bottom:4px;">👤 ${nombreMostrar}</div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:5px;">
                     <div><label style="font-size:10px;font-weight:700;color:#92400e;">Teléfono</label>
                         <input id="pc_dom_tel" type="text" value="${clienteTelefono}" placeholder="3001234567" style="${inputStyle}"></div>
@@ -2240,20 +2244,20 @@
                 </div>
                 <div id="pc_dom_wrap" style="display:none;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px;text-align:left;">
                     ${clienteInfoHtml}
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
                         <div><label style="font-size:10px;font-weight:700;color:#92400e;">Costo domicilio</label>
                             <input id="pc_costo_dom" type="number" min="0" value="0" style="width:100%;height:32px;border:1px solid #fde68a;border-radius:7px;padding:3px 8px;font-size:13px;font-weight:700;"></div>
                         <div><label style="font-size:10px;font-weight:700;color:#92400e;">Costo desechables</label>
                             <input id="pc_costo_dom_desech" type="number" min="0" value="0" style="width:100%;height:32px;border:1px solid #fde68a;border-radius:7px;padding:3px 8px;font-size:13px;font-weight:700;"></div>
                     </div>
+                    <div style="text-align:left;">
+                        <label style="font-size:10px;font-weight:700;color:#92400e;">Observaciones del pedido</label>
+                        <textarea id="pc_observaciones" rows="2" placeholder="Indicaciones especiales, referencias, etc..." style="width:100%;border:1px solid #fde68a;border-radius:7px;padding:5px 8px;font-size:12px;resize:none;margin-top:2px;">${ordenDomObs}</textarea>
+                    </div>
                 </div>
                 <div id="pc_llevar_wrap" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:10px;text-align:left;">
                     <label style="font-size:11px;font-weight:700;color:#166534;">Costo empaque / desechables</label>
                     <input id="pc_costo_llevar" type="number" min="0" value="0" style="width:100%;height:32px;border:1px solid #86efac;border-radius:7px;padding:3px 10px;font-size:13px;font-weight:700;">
-                </div>
-                <div style="margin-top:10px;text-align:left;">
-                    <label style="font-size:10px;font-weight:700;color:#6b7280;">Observaciones del pedido</label>
-                    <textarea id="pc_observaciones" rows="2" placeholder="Indicaciones especiales, referencias, etc..." style="width:100%;border:1px solid #e2e8f0;border-radius:7px;padding:5px 8px;font-size:12px;resize:none;margin-top:2px;"></textarea>
                 </div>
             `,
             showCancelButton: true,
