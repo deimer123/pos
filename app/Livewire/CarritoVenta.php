@@ -414,11 +414,11 @@ private function limpiarUtf8Array(array $datos): array
                 $this->ordenDomCostoDomicilio = $this->ordenCostoEmpaque;
             }
 
-            // Restaurar cliente guardado en la orden
-            if ($ordenActiva->cliente_id && !$this->clienteId) {
+            // Restaurar cliente guardado en la orden (siempre, para sobreescribir el default)
+            if ($ordenActiva->cliente_id) {
                 $cliente = \App\Models\Actor::find($ordenActiva->cliente_id);
                 if ($cliente) {
-                    $this->clienteId                = $cliente->id_clip_pro;
+                    $this->clienteId                = $cliente->id;
                     $this->clienteSeleccionadoNombre = $this->textoUtf8($cliente->nombre);
                     $this->clienteDireccion         = $cliente->direccion ?? null;
                     $this->clienteTelefono          = $cliente->telefono ?? null;
@@ -659,7 +659,7 @@ public function asignarConsumidorFinalPorDefecto()
         'tipo'               => 1,
     ]);
 
-    $this->clienteId                 = $cliente->id_clip_pro;
+    $this->clienteId                 = $cliente->id;
     $this->clienteSeleccionadoNombre = $this->textoUtf8($cliente->nombre);
     $this->clienteDireccion          = $cliente->direccion ?? null;
     $this->clienteTelefono           = $cliente->telefono ?? null;
@@ -4035,7 +4035,7 @@ public function uiCreditoActual(): array
             'numero_cocina_dia'    => $numeroCocina,
             'tipo_pedido'          => $tipoPedido,
             'costo_empaque'        => $costoDomicilio + $costoEmpaque,
-            'cliente_id'           => $this->clienteId ? \App\Models\Actor::where('id_clip_pro', $this->clienteId)->value('id') : null,
+            'cliente_id'           => $this->clienteId ? \App\Models\Actor::where(function($q){ $q->where('id', $this->clienteId)->orWhere('id_clip_pro', $this->clienteId); })->value('id') : null,
             'dom_nombre'           => $domNombre,
             'dom_telefono'         => $domTelefono,
             'dom_direccion'        => $domDireccion,
