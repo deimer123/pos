@@ -24,6 +24,7 @@ use App\Models\ConfiguracionEmpresa;
 class CarritoVenta extends Component
 {
     public ?int $mesaId = null;
+    public bool $usaDomicilios = false;
     public string $ordenEstadoActual = 'abierta'; // 'abierta' | 'en_preparacion'
     public string $ordenTipoPedido   = 'mesa';    // 'mesa' | 'domicilio' | 'para_llevar'
     public float  $ordenCostoEmpaque = 0;
@@ -389,6 +390,9 @@ private function limpiarUtf8Array(array $datos): array
      public function mount()
 {
     $empresaId = $this->getEmpresaId();
+
+    $config = ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();
+    $this->usaDomicilios = (bool)($config?->usa_domicilios ?? false);
 
     // Modo mesa: cargar ítems desde la OrdenMesa activa (ignora caché general)
     if ($this->mesaId) {
