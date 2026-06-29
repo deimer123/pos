@@ -27,6 +27,9 @@ class CarritoVenta extends Component
     public string $ordenEstadoActual = 'abierta'; // 'abierta' | 'en_preparacion'
     public string $ordenTipoPedido   = 'mesa';    // 'mesa' | 'domicilio' | 'para_llevar'
     public float  $ordenCostoEmpaque = 0;
+    public ?string $ordenDomNombre   = null;
+    public ?string $ordenDomTelefono = null;
+    public ?string $ordenDomDireccion = null;
 
     public $preciosBase               = [];
     public $carrito                   = [];
@@ -394,9 +397,12 @@ private function limpiarUtf8Array(array $datos): array
             ->whereIn('estado', ['abierta', 'en_preparacion'])
             ->latest()->first();
         if ($ordenActiva) {
-            $this->ordenEstadoActual = $ordenActiva->estado ?? 'abierta';
-            $this->ordenTipoPedido   = $ordenActiva->tipo_pedido ?? 'mesa';
-            $this->ordenCostoEmpaque = (float)($ordenActiva->costo_empaque ?? 0);
+            $this->ordenEstadoActual  = $ordenActiva->estado ?? 'abierta';
+            $this->ordenTipoPedido    = $ordenActiva->tipo_pedido ?? 'mesa';
+            $this->ordenCostoEmpaque  = (float)($ordenActiva->costo_empaque ?? 0);
+            $this->ordenDomNombre     = $ordenActiva->dom_nombre ?? null;
+            $this->ordenDomTelefono   = $ordenActiva->dom_telefono ?? null;
+            $this->ordenDomDireccion  = $ordenActiva->dom_direccion ?? null;
         }
         goto fin_carga_carrito;
     }
@@ -1612,7 +1618,10 @@ public function confirmarFacturar()
             tipo_pedido: $tipoPedido,
             costo_empaque: $costoEmpaque,
             cobro_domicilio: 'anticipado',
-            dom_observaciones: $this->ordenDomObservaciones
+            dom_observaciones: $this->ordenDomObservaciones,
+            dom_nombre: $mesaId ? $this->ordenDomNombre : null,
+            dom_telefono: $mesaId ? $this->ordenDomTelefono : null,
+            dom_direccion: $mesaId ? $this->ordenDomDireccion : null,
         );
     }
 
@@ -1728,6 +1737,9 @@ public function facturarConfirmada(array $data = [])
             'tipo_pedido'        => $tipoPedido,
             'costo_empaque'      => $costoEmpaque,
             'cobro_domicilio'    => $cobroDomicilio,
+            'dom_nombre'         => $data['dom_nombre'] ?? null,
+            'dom_telefono'       => $data['dom_telefono'] ?? null,
+            'dom_direccion'      => $data['dom_direccion'] ?? null,
             'dom_nit'            => $data['dom_nit'] ?? null,
             'dom_email'          => $data['dom_email'] ?? null,
             'dom_razon_social'   => $data['dom_razon_social'] ?? null,
@@ -2256,6 +2268,9 @@ public function facturarEImprimir(array $data = [])
             'tipo_pedido'        => $tipoPedido,
             'costo_empaque'      => $costoEmpaque,
             'cobro_domicilio'    => $cobroDomicilio,
+            'dom_nombre'         => $data['dom_nombre'] ?? null,
+            'dom_telefono'       => $data['dom_telefono'] ?? null,
+            'dom_direccion'      => $data['dom_direccion'] ?? null,
             'dom_nit'            => $data['dom_nit'] ?? null,
             'dom_email'          => $data['dom_email'] ?? null,
             'dom_razon_social'   => $data['dom_razon_social'] ?? null,
@@ -4012,9 +4027,12 @@ public function uiCreditoActual(): array
         $this->recalcularTotalOrden($orden->id);
         $this->actualizarTotales();
         // Actualizar propiedades reactivas de estado
-        $this->ordenEstadoActual = 'en_preparacion';
-        $this->ordenTipoPedido   = $tipoPedido;
-        $this->ordenCostoEmpaque = $costoDomicilio + $costoEmpaque;
+        $this->ordenEstadoActual  = 'en_preparacion';
+        $this->ordenTipoPedido    = $tipoPedido;
+        $this->ordenCostoEmpaque  = $costoDomicilio + $costoEmpaque;
+        $this->ordenDomNombre     = $domNombre;
+        $this->ordenDomTelefono   = $domTelefono;
+        $this->ordenDomDireccion  = $domDireccion;
         $this->dispatch('success', '📤 Comanda enviada a cocina');
     }
 

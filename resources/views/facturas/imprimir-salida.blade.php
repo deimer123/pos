@@ -26,6 +26,10 @@
   use Carbon\Carbon;
 
   $config = $factura->configuracionEmpresa ?? null;
+  $esDomicilio  = ($factura->tipo_pedido ?? '') === 'domicilio';
+  $esParaLlevar = ($factura->tipo_pedido ?? '') === 'para_llevar';
+  $costoEmpaque = (float)($factura->costo_empaque ?? 0);
+  $subtotalProductos = $factura->detalles->sum('subtotal');
   $logoUrl = $config?->logo ? Storage::disk('public')->url($config->logo) : null;
   $fechaDoc = $factura->fecha ? Carbon::parse($factura->fecha) : $factura->created_at;
   $tipoPago = strtolower($factura->tipo_pago ?? 'contado');
@@ -72,6 +76,21 @@
     Vence: {{ $vencCarbon ? $vencCarbon->format('Y-m-d') : '-' }}<br>
   @endif
 
+  {{-- Datos domicilio --}}
+  @if($esDomicilio)
+    <div class="sep">------------------------</div>
+    <strong>🛵 DOMICILIO</strong><br>
+    @if($factura->dom_nombre)
+      Destinatario: {{ $factura->dom_nombre }}<br>
+    @endif
+    @if($factura->dom_telefono)
+      Tel: {{ $factura->dom_telefono }}<br>
+    @endif
+    @if($factura->dom_direccion)
+      Dir: {{ $factura->dom_direccion }}<br>
+    @endif
+  @endif
+
   <div class="sep">------------------------</div>
 </div>
 
@@ -87,7 +106,18 @@
 
 <br>
 <div style="text-align:right;">
-  <strong>Total: ${{ number_format($factura->total, 0, ',', '.') }}</strong>
+  {{-- Subtotal productos --}}
+  @if($costoEmpaque > 0)
+    Subtotal productos: ${{ number_format($subtotalProductos, 0, ',', '.') }}<br>
+    @if($esDomicilio)
+      Domicilio + desechables: ${{ number_format($costoEmpaque, 0, ',', '.') }}<br>
+    @else
+      Desechables / empaque: ${{ number_format($costoEmpaque, 0, ',', '.') }}<br>
+    @endif
+    <strong>Total: ${{ number_format($factura->total, 0, ',', '.') }}</strong>
+  @else
+    <strong>Total: ${{ number_format($factura->total, 0, ',', '.') }}</strong>
+  @endif
 </div>
 
 @if($factura->observaciones)

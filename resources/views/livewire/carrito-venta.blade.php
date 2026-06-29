@@ -2478,6 +2478,9 @@
             const tipoPedidoOrden = dataEvento.tipo_pedido || 'local';
             const costoEmpaqueOrden = Number(dataEvento.costo_empaque || 0);
             const cobroDomicilioOrden = dataEvento.cobro_domicilio || 'anticipado';
+            const domNombreOrden     = dataEvento.dom_nombre || null;
+            const domTelefonoOrden   = dataEvento.dom_telefono || null;
+            const domDireccionOrden  = dataEvento.dom_direccion || null;
             const tieneMesa = !!(dataEvento.mesa_id || @js($mesaId ?? 0));
             const esConsumidorFinal = !clienteVenta || clienteVenta.toUpperCase().includes('CONSUMIDOR FINAL') || clienteVenta.trim().toUpperCase() === 'CF';
 
@@ -2542,6 +2545,15 @@
                     dom_email: esConsumidorFinal ? ((document.getElementById('swal_dom_email')?.value || '').trim() || null) : null,
                     dom_razon_social: esConsumidorFinal ? ((document.getElementById('swal_dom_razon')?.value || '').trim() || null) : null,
                     dom_observaciones: domObservacionesOrden || null,
+                    dom_nombre: tieneMesa
+                        ? (domNombreOrden || null)
+                        : ((document.getElementById('swal_dom_nombre_dest')?.value || '').trim() || null),
+                    dom_telefono: tieneMesa
+                        ? (domTelefonoOrden || null)
+                        : ((document.getElementById('swal_dom_tel_dest')?.value || '').trim() || null),
+                    dom_direccion: tieneMesa
+                        ? (domDireccionOrden || null)
+                        : ((document.getElementById('swal_dom_dir_dest')?.value || '').trim() || null),
                 };
             };
 
@@ -2584,6 +2596,14 @@
                             <div><label style="font-size:10px;font-weight:700;color:#92400e;">Costo desechables</label>
                                 <input id="swal_costo_desech" type="number" min="0" value="0" style="width:100%;height:30px;border:1px solid #fde68a;border-radius:7px;padding:3px 7px;font-size:13px;font-weight:700;"></div>
                         </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:5px;">
+                            <div><label style="font-size:10px;font-weight:700;color:#92400e;">Nombre destinatario</label>
+                                <input id="swal_dom_nombre_dest" type="text" placeholder="Nombre" style="width:100%;height:30px;border:1px solid #fde68a;border-radius:7px;padding:3px 7px;font-size:12px;"></div>
+                            <div><label style="font-size:10px;font-weight:700;color:#92400e;">Teléfono</label>
+                                <input id="swal_dom_tel_dest" type="text" placeholder="3001234567" style="width:100%;height:30px;border:1px solid #fde68a;border-radius:7px;padding:3px 7px;font-size:12px;"></div>
+                        </div>
+                        <div style="margin-bottom:5px;"><label style="font-size:10px;font-weight:700;color:#92400e;">Dirección de entrega</label>
+                            <input id="swal_dom_dir_dest" type="text" placeholder="Calle, Carrera, Avenida..." style="width:100%;height:30px;border:1px solid #fde68a;border-radius:7px;padding:3px 7px;font-size:12px;"></div>
                         <div style="display:flex;gap:6px;">
                             <label id="lbl_cobro_anticipado" style="flex:1;cursor:pointer;border:2px solid #f59e0b;border-radius:8px;padding:5px;text-align:center;background:#fef3c7;">
                                 <input type="radio" name="swal_cobro" value="anticipado" style="display:none;" checked>
