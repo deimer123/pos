@@ -399,15 +399,31 @@ private function limpiarUtf8Array(array $datos): array
             ->whereIn('estado', ['abierta', 'en_preparacion'])
             ->latest()->first();
         if ($ordenActiva) {
-            $this->ordenEstadoActual  = $ordenActiva->estado ?? 'abierta';
-            $this->ordenTipoPedido    = $ordenActiva->tipo_pedido ?? 'mesa';
-            $this->ordenCostoEmpaque  = (float)($ordenActiva->costo_empaque ?? 0);
+            $this->ordenEstadoActual        = $ordenActiva->estado ?? 'abierta';
+            $this->ordenTipoPedido          = $ordenActiva->tipo_pedido ?? 'mesa';
+            $this->ordenCostoEmpaque        = (float)($ordenActiva->costo_empaque ?? 0);
             $this->ordenDomNombre           = $ordenActiva->dom_nombre ?? null;
             $this->ordenDomTelefono         = $ordenActiva->dom_telefono ?? null;
             $this->ordenDomDireccion        = $ordenActiva->dom_direccion ?? null;
             $this->ordenDomObservaciones    = $ordenActiva->dom_observaciones ?? '';
             $this->ordenDomCostoDomicilio   = (float)($ordenActiva->dom_costo_domicilio ?? 0);
             $this->ordenDomCostoDesechables = (float)($ordenActiva->dom_costo_desechables ?? 0);
+
+            // Fallback: si las nuevas columnas son 0 pero hay costo_empaque, poner todo en domicilio
+            if ($this->ordenDomCostoDomicilio === 0.0 && $this->ordenDomCostoDesechables === 0.0 && $this->ordenCostoEmpaque > 0) {
+                $this->ordenDomCostoDomicilio = $this->ordenCostoEmpaque;
+            }
+
+            // Restaurar cliente guardado en la orden
+            if ($ordenActiva->cliente_id && !$this->clienteId) {
+                $cliente = \App\Models\Actor::find($ordenActiva->cliente_id);
+                if ($cliente) {
+                    $this->clienteId                = $cliente->id_clip_pro;
+                    $this->clienteSeleccionadoNombre = $this->textoUtf8($cliente->nombre);
+                    $this->clienteDireccion         = $cliente->direccion ?? null;
+                    $this->clienteTelefono          = $cliente->telefono ?? null;
+                }
+            }
         }
         goto fin_carga_carrito;
     }
@@ -4007,6 +4023,7 @@ public function uiCreditoActual(): array
             'numero_cocina_dia'    => $numeroCocina,
             'tipo_pedido'          => $tipoPedido,
             'costo_empaque'        => $costoDomicilio + $costoEmpaque,
+            'cliente_id'           => $this->clienteId ? \App\Models\Actor::where('id_clip_pro', $this->clienteId)->value('id') : null,
             'dom_nombre'           => $domNombre,
             'dom_telefono'         => $domTelefono,
             'dom_direccion'        => $domDireccion,
