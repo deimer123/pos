@@ -36,6 +36,8 @@ class Factura extends Model
         'transferencia_obs',
         'tipo_pedido',
         'costo_empaque',
+        'dom_costo_domicilio',
+        'dom_costo_desechables',
         'dom_nombre',
         'dom_telefono',
         'dom_direccion',

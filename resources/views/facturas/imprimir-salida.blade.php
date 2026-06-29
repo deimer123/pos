@@ -26,10 +26,16 @@
   use Carbon\Carbon;
 
   $config = $factura->configuracionEmpresa ?? null;
-  $esDomicilio  = ($factura->tipo_pedido ?? '') === 'domicilio';
-  $esParaLlevar = ($factura->tipo_pedido ?? '') === 'para_llevar';
-  $costoEmpaque = (float)($factura->costo_empaque ?? 0);
-  $subtotalProductos = $factura->detalles->sum('subtotal');
+  $esDomicilio      = ($factura->tipo_pedido ?? '') === 'domicilio';
+  $esParaLlevar     = ($factura->tipo_pedido ?? '') === 'para_llevar';
+  $costoEmpaque     = (float)($factura->costo_empaque ?? 0);
+  $costoDomicilio   = (float)($factura->dom_costo_domicilio ?? 0);
+  $costoDesechables = (float)($factura->dom_costo_desechables ?? 0);
+  // Fallback: si no hay columnas separadas usar costo_empaque completo como domicilio
+  if ($esDomicilio && $costoDomicilio === 0.0 && $costoDesechables === 0.0 && $costoEmpaque > 0) {
+      $costoDomicilio = $costoEmpaque;
+  }
+  $subtotalProductos = $factura->total - $costoEmpaque;
   $logoUrl = $config?->logo ? Storage::disk('public')->url($config->logo) : null;
   $fechaDoc = $factura->fecha ? Carbon::parse($factura->fecha) : $factura->created_at;
   $tipoPago = strtolower($factura->tipo_pago ?? 'contado');
@@ -109,11 +115,13 @@
 
 <br>
 <div style="text-align:right;">
-  {{-- Subtotal productos --}}
   @if($costoEmpaque > 0)
     Subtotal productos: ${{ number_format($subtotalProductos, 0, ',', '.') }}<br>
     @if($esDomicilio)
-      Domicilio + desechables: ${{ number_format($costoEmpaque, 0, ',', '.') }}<br>
+      @if($costoDesechables > 0)
+        Desechables: ${{ number_format($costoDesechables, 0, ',', '.') }}<br>
+      @endif
+      Domicilio: ${{ number_format($costoDomicilio, 0, ',', '.') }}<br>
     @else
       Desechables / empaque: ${{ number_format($costoEmpaque, 0, ',', '.') }}<br>
     @endif
