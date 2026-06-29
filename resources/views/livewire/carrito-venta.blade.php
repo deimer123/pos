@@ -2185,6 +2185,15 @@
     window.posMesaEnviarCocinaModal = function (clienteNombreArg, clienteDireccionArg, clienteTelefonoArg, ordenDomNombreArg, ordenDomObsArg, ordenDomCostoDomArg, ordenDomCostoDesechArg, ordenEstadoArg, ordenTipoArg, usaDomiciliosArg, esMeseroArg) {
         if (!window.Swal) { Livewire.dispatch('mesa-enviar-cocina'); return; }
 
+        // Mesero: solo puede enviar como mesa, no necesita modal
+        if (esMeseroArg) {
+            Livewire.dispatch('mesa-enviar-cocina-confirmado', { data: {
+                tipo_pedido: 'mesa', costo_domicilio: 0, costo_empaque: 0,
+                dom_nombre: null, dom_telefono: null, dom_direccion: null, dom_observaciones: null,
+            }});
+            return;
+        }
+
         // Si ya está en cocina, re-enviar directamente sin preguntar tipo
         if ((ordenEstadoArg || '') === 'en_preparacion') {
             const tipo = ordenTipoArg || 'mesa';
