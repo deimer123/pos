@@ -25,6 +25,7 @@ class CarritoVenta extends Component
 {
     public ?int $mesaId = null;
     public bool $usaDomicilios = false;
+    public bool $esMesero = false;
     public string $ordenEstadoActual = 'abierta'; // 'abierta' | 'en_preparacion'
     public string $ordenTipoPedido   = 'mesa';    // 'mesa' | 'domicilio' | 'para_llevar'
     public float  $ordenCostoEmpaque = 0;
@@ -393,6 +394,8 @@ private function limpiarUtf8Array(array $datos): array
 
     $config = ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();
     $this->usaDomicilios = (bool)($config?->usa_domicilios ?? false);
+    $user = auth()->user();
+    $this->esMesero = $user->hasRole('mesero') && !$user->hasAnyRole(['cajero', 'admin_empresa']);
 
     // Modo mesa: cargar ítems desde la OrdenMesa activa (ignora caché general)
     if ($this->mesaId) {

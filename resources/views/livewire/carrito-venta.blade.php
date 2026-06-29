@@ -579,7 +579,7 @@
                         @if($ordenCostoEmpaque > 0) +${{ number_format($ordenCostoEmpaque,0,',','.') }} @endif
                     </span>
                 @endif
-                <button x-on:click="window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '', $wire.get('ordenDomDireccion') || $wire.get('clienteDireccion') || '', $wire.get('ordenDomTelefono') || $wire.get('clienteTelefono') || '', $wire.get('ordenDomNombre') || '', $wire.get('ordenDomObservaciones') || '', $wire.get('ordenDomCostoDomicilio') || 0, $wire.get('ordenDomCostoDesechables') || 0, $wire.get('ordenEstadoActual') || 'abierta', $wire.get('ordenTipoPedido') || 'mesa', $wire.get('usaDomicilios') || false)"
+                <button x-on:click="window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '', $wire.get('ordenDomDireccion') || $wire.get('clienteDireccion') || '', $wire.get('ordenDomTelefono') || $wire.get('clienteTelefono') || '', $wire.get('ordenDomNombre') || '', $wire.get('ordenDomObservaciones') || '', $wire.get('ordenDomCostoDomicilio') || 0, $wire.get('ordenDomCostoDesechables') || 0, $wire.get('ordenEstadoActual') || 'abierta', $wire.get('ordenTipoPedido') || 'mesa', $wire.get('usaDomicilios') || false, $wire.get('esMesero') || false)"
                     class="pos-mesa-total-btn"
                     style="background:#2563eb; color:white; border:none; border-radius:9999px; padding:0 14px; height:34px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">
                     📤 Enviar cocina
@@ -864,7 +864,7 @@
                 @endif
 
                 @if($mesaId)
-                <button type="button" class="pos-cart-menu-item" style="background:#16a34a;color:white;" wire:key="mobile-action-cocina" @click.prevent.stop="open = false; window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '', $wire.get('ordenDomDireccion') || $wire.get('clienteDireccion') || '', $wire.get('ordenDomTelefono') || $wire.get('clienteTelefono') || '', $wire.get('ordenDomNombre') || '', $wire.get('ordenDomObservaciones') || '', $wire.get('ordenDomCostoDomicilio') || 0, $wire.get('ordenDomCostoDesechables') || 0, $wire.get('ordenEstadoActual') || 'abierta', $wire.get('ordenTipoPedido') || 'mesa', $wire.get('usaDomicilios') || false)">
+                <button type="button" class="pos-cart-menu-item" style="background:#16a34a;color:white;" wire:key="mobile-action-cocina" @click.prevent.stop="open = false; window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '', $wire.get('ordenDomDireccion') || $wire.get('clienteDireccion') || '', $wire.get('ordenDomTelefono') || $wire.get('clienteTelefono') || '', $wire.get('ordenDomNombre') || '', $wire.get('ordenDomObservaciones') || '', $wire.get('ordenDomCostoDomicilio') || 0, $wire.get('ordenDomCostoDesechables') || 0, $wire.get('ordenEstadoActual') || 'abierta', $wire.get('ordenTipoPedido') || 'mesa', $wire.get('usaDomicilios') || false, $wire.get('esMesero') || false)">
                     📤 Enviar cocina
                 </button>
                 @endif
@@ -2182,7 +2182,7 @@
         Livewire.dispatch('abrir-facturar');
     };
 
-    window.posMesaEnviarCocinaModal = function (clienteNombreArg, clienteDireccionArg, clienteTelefonoArg, ordenDomNombreArg, ordenDomObsArg, ordenDomCostoDomArg, ordenDomCostoDesechArg, ordenEstadoArg, ordenTipoArg, usaDomiciliosArg) {
+    window.posMesaEnviarCocinaModal = function (clienteNombreArg, clienteDireccionArg, clienteTelefonoArg, ordenDomNombreArg, ordenDomObsArg, ordenDomCostoDomArg, ordenDomCostoDesechArg, ordenEstadoArg, ordenTipoArg, usaDomiciliosArg, esMeseroArg) {
         if (!window.Swal) { Livewire.dispatch('mesa-enviar-cocina'); return; }
 
         // Si ya está en cocina, re-enviar directamente sin preguntar tipo
@@ -2248,16 +2248,16 @@
                         <div style="font-size:24px;">🪑</div>
                         <div style="font-size:11px;font-weight:800;color:#1d4ed8;">Mesa</div>
                     </label>
-                    ${usaDomiciliosArg ? `<label id="pc_lbl_domicilio" style="flex:1;cursor:pointer;border:2px solid #e2e8f0;border-radius:12px;padding:10px 6px;text-align:center;background:white;">
+                    ${(!esMeseroArg && usaDomiciliosArg) ? `<label id="pc_lbl_domicilio" style="flex:1;cursor:pointer;border:2px solid #e2e8f0;border-radius:12px;padding:10px 6px;text-align:center;background:white;">
                         <input type="radio" name="pc_tipo" value="domicilio" style="display:none;">
                         <div style="font-size:24px;">🛵</div>
                         <div style="font-size:11px;font-weight:800;color:#6b7280;">Domicilio</div>
                     </label>` : ''}
-                    <label id="pc_lbl_para_llevar" style="flex:1;cursor:pointer;border:2px solid #e2e8f0;border-radius:12px;padding:10px 6px;text-align:center;background:white;">
+                    ${!esMeseroArg ? `<label id="pc_lbl_para_llevar" style="flex:1;cursor:pointer;border:2px solid #e2e8f0;border-radius:12px;padding:10px 6px;text-align:center;background:white;">
                         <input type="radio" name="pc_tipo" value="para_llevar" style="display:none;">
                         <div style="font-size:24px;">🥡</div>
                         <div style="font-size:11px;font-weight:800;color:#6b7280;">Para llevar</div>
-                    </label>
+                    </label>` : ''}
                 </div>
                 <div id="pc_dom_wrap" style="display:none;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px;text-align:left;">
                     ${clienteInfoHtml}
