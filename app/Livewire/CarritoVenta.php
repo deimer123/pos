@@ -664,6 +664,13 @@ public function asignarConsumidorFinalPorDefecto()
     $this->clienteDireccion          = $cliente->direccion ?? null;
     $this->clienteTelefono           = $cliente->telefono ?? null;
     $this->mostrarModalCrearCliente  = false;
+
+    // Persist client to active mesa orden immediately
+    if ($this->mesaId) {
+        \App\Models\OrdenMesa::where('mesa_id', $this->mesaId)
+            ->whereIn('estado', ['abierta', 'en_preparacion'])
+            ->update(['cliente_id' => $cliente->id]);
+    }
 }
 
 
@@ -703,9 +710,14 @@ public function asignarConsumidorFinalPorDefecto()
     $this->clienteDireccion          = $cliente->direccion ?? null;
     $this->clienteTelefono           = $cliente->telefono ?? null;
 
-    $this->mostrarModalClientes = false;
+    // Persist client to active mesa orden immediately
+    if ($this->mesaId) {
+        \App\Models\OrdenMesa::where('mesa_id', $this->mesaId)
+            ->whereIn('estado', ['abierta', 'en_preparacion'])
+            ->update(['cliente_id' => $cliente->id]);
+    }
 
-    
+    $this->mostrarModalClientes = false;
 
 }
 
