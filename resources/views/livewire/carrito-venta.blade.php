@@ -2253,7 +2253,7 @@
                             <input id="pc_costo_dom_desech" type="number" min="0" value="${ordenDomCostoDesech}" style="width:100%;height:32px;border:1px solid #fde68a;border-radius:7px;padding:3px 8px;font-size:13px;font-weight:700;"></div>
                     </div>
                     <div style="text-align:left;">
-                        <label style="font-size:10px;font-weight:700;color:#92400e;">Observaciones del pedido</label>
+                        <label style="font-size:10px;font-weight:700;color:#92400e;">Observaciones del domicilio</label>
                         <textarea id="pc_observaciones" rows="2" placeholder="Indicaciones especiales, referencias, etc..." style="width:100%;border:1px solid #fde68a;border-radius:7px;padding:5px 8px;font-size:12px;resize:none;margin-top:2px;">${ordenDomObs}</textarea>
                     </div>
                 </div>
