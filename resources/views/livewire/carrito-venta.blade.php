@@ -579,7 +579,7 @@
                         @if($ordenCostoEmpaque > 0) +${{ number_format($ordenCostoEmpaque,0,',','.') }} @endif
                     </span>
                 @endif
-                <button x-on:click="window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '', $wire.get('ordenDomDireccion') || $wire.get('clienteDireccion') || '', $wire.get('ordenDomTelefono') || $wire.get('clienteTelefono') || '', $wire.get('ordenDomNombre') || '', $wire.get('ordenDomObservaciones') || '', $wire.get('ordenDomCostoDomicilio') || 0, $wire.get('ordenDomCostoDesechables') || 0)"
+                <button x-on:click="window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '', $wire.get('ordenDomDireccion') || $wire.get('clienteDireccion') || '', $wire.get('ordenDomTelefono') || $wire.get('clienteTelefono') || '', $wire.get('ordenDomNombre') || '', $wire.get('ordenDomObservaciones') || '', $wire.get('ordenDomCostoDomicilio') || 0, $wire.get('ordenDomCostoDesechables') || 0, $wire.get('ordenEstadoActual') || 'abierta', $wire.get('ordenTipoPedido') || 'mesa')"
                     class="pos-mesa-total-btn"
                     style="background:#2563eb; color:white; border:none; border-radius:9999px; padding:0 14px; height:34px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">
                     📤 Enviar cocina
@@ -864,7 +864,7 @@
                 @endif
 
                 @if($mesaId)
-                <button type="button" class="pos-cart-menu-item" style="background:#16a34a;color:white;" wire:key="mobile-action-cocina" @click.prevent.stop="open = false; window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '', $wire.get('ordenDomDireccion') || $wire.get('clienteDireccion') || '', $wire.get('ordenDomTelefono') || $wire.get('clienteTelefono') || '', $wire.get('ordenDomNombre') || '', $wire.get('ordenDomObservaciones') || '', $wire.get('ordenDomCostoDomicilio') || 0, $wire.get('ordenDomCostoDesechables') || 0)">
+                <button type="button" class="pos-cart-menu-item" style="background:#16a34a;color:white;" wire:key="mobile-action-cocina" @click.prevent.stop="open = false; window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '', $wire.get('ordenDomDireccion') || $wire.get('clienteDireccion') || '', $wire.get('ordenDomTelefono') || $wire.get('clienteTelefono') || '', $wire.get('ordenDomNombre') || '', $wire.get('ordenDomObservaciones') || '', $wire.get('ordenDomCostoDomicilio') || 0, $wire.get('ordenDomCostoDesechables') || 0, $wire.get('ordenEstadoActual') || 'abierta', $wire.get('ordenTipoPedido') || 'mesa')">
                     📤 Enviar cocina
                 </button>
                 @endif
@@ -2182,8 +2182,23 @@
         Livewire.dispatch('abrir-facturar');
     };
 
-    window.posMesaEnviarCocinaModal = function (clienteNombreArg, clienteDireccionArg, clienteTelefonoArg, ordenDomNombreArg, ordenDomObsArg, ordenDomCostoDomArg, ordenDomCostoDesechArg) {
+    window.posMesaEnviarCocinaModal = function (clienteNombreArg, clienteDireccionArg, clienteTelefonoArg, ordenDomNombreArg, ordenDomObsArg, ordenDomCostoDomArg, ordenDomCostoDesechArg, ordenEstadoArg, ordenTipoArg) {
         if (!window.Swal) { Livewire.dispatch('mesa-enviar-cocina'); return; }
+
+        // Si ya está en cocina, re-enviar directamente sin preguntar tipo
+        if ((ordenEstadoArg || '') === 'en_preparacion') {
+            const tipo = ordenTipoArg || 'mesa';
+            Livewire.dispatch('mesa-enviar-cocina-confirmado', { data: {
+                tipo_pedido: tipo,
+                costo_domicilio: tipo === 'domicilio' ? (parseFloat(ordenDomCostoDomArg)||0) : 0,
+                costo_empaque: tipo === 'domicilio' ? (parseFloat(ordenDomCostoDesechArg)||0) : 0,
+                dom_nombre: (ordenDomNombreArg || '').trim() || null,
+                dom_telefono: (clienteTelefonoArg || '').trim() || null,
+                dom_direccion: (clienteDireccionArg || '').trim() || null,
+                dom_observaciones: (ordenDomObsArg || '').trim() || null,
+            }});
+            return;
+        }
 
         const clienteNombre       = (clienteNombreArg || '').trim();
         const clienteDireccion    = (clienteDireccionArg || '').trim();

@@ -1635,7 +1635,10 @@ public function confirmarFacturar()
 
         // Si hay mesa, usar los datos ya cargados en las propiedades reactivas
         $mesaId       = $this->mesaId ?? null;
-        $tipoPedido   = $mesaId ? $this->ordenTipoPedido   : 'local';
+        $tipoPedidoOrden = $mesaId ? $this->ordenTipoPedido : 'local';
+        // facturas.tipo_pedido ENUM: local | domicilio | para_llevar ('mesa' no es válido)
+        $tipoPedidoFactura = $tipoPedidoOrden === 'mesa' ? 'local' : $tipoPedidoOrden;
+        $esDomicilio  = $tipoPedidoOrden === 'domicilio';
         $costoEmpaque = $mesaId ? $this->ordenCostoEmpaque : 0;
         // El total que ve el cajero debe incluir los extras
         $totalConExtras = $totalActual + $costoEmpaque;
@@ -1648,13 +1651,13 @@ public function confirmarFacturar()
             totalProductos: $totalActual,
             factusHabilitado: $this->facturacionElectronicaDisponible($this->getEmpresaId()),
             mesa_id: $mesaId,
-            tipo_pedido: $tipoPedido,
+            tipo_pedido: $tipoPedidoFactura,
             costo_empaque: $costoEmpaque,
-            cobro_domicilio: 'anticipado',
-            dom_observaciones: $this->ordenDomObservaciones,
-            dom_nombre: $mesaId ? $this->ordenDomNombre : null,
-            dom_telefono: $mesaId ? $this->ordenDomTelefono : null,
-            dom_direccion: $mesaId ? $this->ordenDomDireccion : null,
+            cobro_domicilio: $esDomicilio ? 'anticipado' : null,
+            dom_observaciones: $esDomicilio ? $this->ordenDomObservaciones : null,
+            dom_nombre: ($mesaId && $esDomicilio) ? $this->ordenDomNombre : null,
+            dom_telefono: ($mesaId && $esDomicilio) ? $this->ordenDomTelefono : null,
+            dom_direccion: ($mesaId && $esDomicilio) ? $this->ordenDomDireccion : null,
         );
     }
 
@@ -1715,7 +1718,7 @@ public function facturarConfirmada(array $data = [])
         $vencRaw      = $data['fecha_vencimiento'] ?? null;
         $tipoPedido     = $data['tipo_pedido'] ?? 'local';
         $costoEmpaque   = (float)($data['costo_empaque'] ?? 0);
-        $cobroDomicilio = $data['cobro_domicilio'] ?? 'anticipado';
+        $cobroDomicilio = $data['cobro_domicilio'] ?? null;
 
         if ($tipoFactura === 'electronica' && ! $this->facturacionElectronicaDisponible($empresaId)) {
             throw new \Exception('La facturacion electronica no esta activa o no tiene rango Factus configurado para esta empresa.');
@@ -2242,7 +2245,7 @@ public function facturarEImprimir(array $data = [])
         $vencRaw      = $data['fecha_vencimiento'] ?? null;
         $tipoPedido     = $data['tipo_pedido'] ?? 'local';
         $costoEmpaque   = (float)($data['costo_empaque'] ?? 0);
-        $cobroDomicilio = $data['cobro_domicilio'] ?? 'anticipado';
+        $cobroDomicilio = $data['cobro_domicilio'] ?? null;
 
         if ($tipoFactura === 'electronica' && ! $this->facturacionElectronicaDisponible($empresaId)) {
             throw new \Exception('La facturacion electronica no esta activa o no tiene rango Factus configurado para esta empresa.');
