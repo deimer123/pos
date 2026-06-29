@@ -2263,9 +2263,9 @@
                     ${clienteInfoHtml}
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
                         <div><label style="font-size:10px;font-weight:700;color:#92400e;">Costo domicilio</label>
-                            <input id="pc_costo_dom" type="number" min="0" value="${ordenDomCostoDom}" style="width:100%;height:32px;border:1px solid #fde68a;border-radius:7px;padding:3px 8px;font-size:13px;font-weight:700;"></div>
+                            <input id="pc_costo_dom" type="text" inputmode="numeric" value="${ordenDomCostoDom ? Number(ordenDomCostoDom).toLocaleString('es-CO') : ''}" style="width:100%;height:32px;border:1px solid #fde68a;border-radius:7px;padding:3px 8px;font-size:13px;font-weight:700;"></div>
                         <div><label style="font-size:10px;font-weight:700;color:#92400e;">Costo desechables</label>
-                            <input id="pc_costo_dom_desech" type="number" min="0" value="${ordenDomCostoDesech}" style="width:100%;height:32px;border:1px solid #fde68a;border-radius:7px;padding:3px 8px;font-size:13px;font-weight:700;"></div>
+                            <input id="pc_costo_dom_desech" type="text" inputmode="numeric" value="${ordenDomCostoDesech ? Number(ordenDomCostoDesech).toLocaleString('es-CO') : ''}" style="width:100%;height:32px;border:1px solid #fde68a;border-radius:7px;padding:3px 8px;font-size:13px;font-weight:700;"></div>
                     </div>
                     <div style="text-align:left;">
                         <label style="font-size:10px;font-weight:700;color:#92400e;">Observaciones del domicilio</label>
@@ -2274,7 +2274,7 @@
                 </div>
                 <div id="pc_llevar_wrap" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:10px;text-align:left;">
                     <label style="font-size:11px;font-weight:700;color:#166534;">Costo empaque / desechables</label>
-                    <input id="pc_costo_llevar" type="number" min="0" value="0" style="width:100%;height:32px;border:1px solid #86efac;border-radius:7px;padding:3px 10px;font-size:13px;font-weight:700;">
+                    <input id="pc_costo_llevar" type="text" inputmode="numeric" value="" style="width:100%;height:32px;border:1px solid #86efac;border-radius:7px;padding:3px 10px;font-size:13px;font-weight:700;">
                 </div>
             `,
             showCancelButton: true,
@@ -2306,17 +2306,29 @@
                     const r = lbl.querySelector('input[type="radio"]'); if (r) { r.checked = true; sync(); }
                 }));
                 sync();
+                // Formato de miles al digitar en inputs de costo
+                const fmtMiles = (input) => {
+                    input.addEventListener('input', () => {
+                        const raw = input.value.replace(/\./g, '').replace(/\D/g, '');
+                        if (raw) input.value = Number(raw).toLocaleString('es-CO');
+                        else input.value = '';
+                    });
+                };
+                ['pc_costo_dom','pc_costo_dom_desech','pc_costo_llevar'].forEach(id => {
+                    const el = document.getElementById(id); if (el) fmtMiles(el);
+                });
             },
             preConfirm: () => {
+                const parseMiles = id => parseInt((document.getElementById(id)?.value || '0').replace(/\./g,'').replace(/\D/g,'')) || 0;
                 const tipo = document.querySelector('input[name="pc_tipo"]:checked')?.value || 'mesa';
                 if (tipo === 'domicilio' && esConsumidorFinal) {
                     const nombre = (document.getElementById('pc_dom_nombre')?.value || '').trim();
                     if (!nombre) { Swal.showValidationMessage('Escriba el nombre del destinatario.'); return false; }
                 }
-                const costoDom = tipo === 'domicilio' ? (parseFloat(document.getElementById('pc_costo_dom')?.value)||0) : 0;
+                const costoDom = tipo === 'domicilio' ? parseMiles('pc_costo_dom') : 0;
                 const costoDesech = tipo === 'domicilio'
-                    ? (parseFloat(document.getElementById('pc_costo_dom_desech')?.value)||0)
-                    : tipo === 'para_llevar' ? (parseFloat(document.getElementById('pc_costo_llevar')?.value)||0) : 0;
+                    ? parseMiles('pc_costo_dom_desech')
+                    : tipo === 'para_llevar' ? parseMiles('pc_costo_llevar') : 0;
                 const domObs = (document.getElementById('pc_observaciones')?.value || '').trim();
                 return {
                     tipo_pedido: tipo,
