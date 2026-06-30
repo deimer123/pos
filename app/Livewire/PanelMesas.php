@@ -92,6 +92,7 @@ class PanelMesas extends Component
                 'dom_costo' => (float) ($f->dom_costo_domicilio ?? 0),
                 'desechables' => (float) ($f->dom_costo_desechables ?? 0),
                 'hora'      => $f->fecha instanceof \Carbon\Carbon ? $f->fecha->format('h:i A') : \Carbon\Carbon::parse($f->fecha)->format('h:i A'),
+                'observaciones' => $f->dom_observaciones ?? null,
                 'repartidor' => null,
                 'numero_cocina' => null,
                 'items'     => $f->detalles->map(fn($d) => [
@@ -120,6 +121,7 @@ class PanelMesas extends Component
                 'dom_costo' => (float) $d->valor_domicilio,
                 'desechables' => 0.0,
                 'hora'      => $d->created_at->format('h:i A'),
+                'observaciones' => $d->observaciones ?? null,
                 'repartidor' => $d->repartidor?->name,
                 'numero_cocina' => null,
                 'items'     => [],
