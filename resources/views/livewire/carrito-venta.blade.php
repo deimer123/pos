@@ -2633,15 +2633,19 @@
                             <label style="display:block;font-size:10px;font-weight:700;color:#4b5563;margin:4px 0 2px;">Fecha vencimiento</label>
                             <input id="swal_fecha_venc" type="date" value="${fechaVence}" style="width:100%;height:30px;border:1px solid #cbd5e1;border-radius:7px;padding:2px 8px;font-size:12px;">
                         </div>
+
+                        <label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:${tipoPedidoOrden === 'domicilio' ? 'default' : 'pointer'};user-select:none;font-size:13px;color:#374151;font-weight:600;">
+                            <input type="checkbox" id="swal_imprimir" ${tipoPedidoOrden === 'domicilio' ? 'checked disabled' : ''}
+                                style="width:16px;height:16px;accent-color:#4f46e5;cursor:${tipoPedidoOrden === 'domicilio' ? 'not-allowed' : 'pointer'};">
+                            🖨️ Imprimir comprobante${tipoPedidoOrden === 'domicilio' ? ' <span style="font-size:10px;color:#f59e0b;font-weight:700;">(obligatorio para domicilio)</span>' : ''}
+                        </label>
                     </div>
                 `,
                 showCancelButton: true,
-                showDenyButton: true,
+                showDenyButton: false,
                 confirmButtonText: 'Facturar',
-                denyButtonText: 'Facturar e imprimir',
                 cancelButtonText: 'Cancelar',
                 confirmButtonColor: '#4f46e5',
-                denyButtonColor: '#2563eb',
                 cancelButtonColor: '#ef4444',
                 reverseButtons: true,
                 didOpen: () => {
@@ -2748,17 +2752,18 @@
                     sync();
                 },
                 preConfirm: collectFacturaData,
-                preDeny: collectFacturaData
             }).then((result) => {
-                // Domicilio orders always print — treat "Facturar" as "Facturar e imprimir"
-                const forzarImpresion = (tipoPedidoOrden === 'domicilio');
+                if (!result.isConfirmed) return;
 
-                if (result.isConfirmed && !forzarImpresion) {
+                const imprimirEl = document.getElementById('swal_imprimir');
+                const imprimir = imprimirEl ? (imprimirEl.checked || imprimirEl.disabled) : false;
+
+                if (!imprimir) {
                     Livewire.dispatch('facturar-confirmada', { data: result.value });
                     return;
                 }
 
-                if (result.isDenied || (result.isConfirmed && forzarImpresion)) {
+                if (imprimir) {
                     const componentId = @js($this->getId());
                     const component = componentId && window.Livewire ? Livewire.find(componentId) : null;
                     if (!component) {
