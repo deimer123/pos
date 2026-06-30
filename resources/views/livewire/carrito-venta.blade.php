@@ -2118,29 +2118,12 @@
     window.posMesaEnviarCocinaModal = function (clienteNombreArg, clienteDireccionArg, clienteTelefonoArg, ordenDomNombreArg, ordenDomObsArg, ordenDomCostoDomArg, ordenDomCostoDesechArg, ordenEstadoArg, ordenTipoArg, usaDomiciliosArg, esMeseroArg) {
         if (!window.Swal) { Livewire.dispatch('mesa-enviar-cocina'); return; }
 
-        // Mesero: solo puede enviar como mesa, no necesita modal
-        if (esMeseroArg) {
-            Livewire.dispatch('mesa-enviar-cocina-confirmado', { data: {
-                tipo_pedido: 'mesa', costo_domicilio: 0, costo_empaque: 0,
-                dom_nombre: null, dom_telefono: null, dom_direccion: null, dom_observaciones: null,
-            }});
-            return;
-        }
-
-        // Si ya está en cocina, re-enviar directamente sin preguntar tipo
-        if ((ordenEstadoArg || '') === 'en_preparacion') {
-            const tipo = ordenTipoArg || 'mesa';
-            Livewire.dispatch('mesa-enviar-cocina-confirmado', { data: {
-                tipo_pedido: tipo,
-                costo_domicilio: tipo === 'domicilio' ? (parseFloat(ordenDomCostoDomArg)||0) : 0,
-                costo_empaque: tipo === 'domicilio' ? (parseFloat(ordenDomCostoDesechArg)||0) : 0,
-                dom_nombre: (ordenDomNombreArg || '').trim() || null,
-                dom_telefono: (clienteTelefonoArg || '').trim() || null,
-                dom_direccion: (clienteDireccionArg || '').trim() || null,
-                dom_observaciones: (ordenDomObsArg || '').trim() || null,
-            }});
-            return;
-        }
+        // En mesa siempre se envía directo como 'mesa', sin preguntar tipo
+        Livewire.dispatch('mesa-enviar-cocina-confirmado', { data: {
+            tipo_pedido: 'mesa', costo_domicilio: 0, costo_empaque: 0,
+            dom_nombre: null, dom_telefono: null, dom_direccion: null, dom_observaciones: null,
+        }});
+        return;
 
         const clienteNombre       = (clienteNombreArg || '').trim();
         const clienteDireccion    = (clienteDireccionArg || '').trim();
