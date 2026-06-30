@@ -579,7 +579,7 @@
                         @if($ordenCostoEmpaque > 0) +${{ number_format($ordenCostoEmpaque,0,',','.') }} @endif
                     </span>
                 @endif
-                <button x-on:click="window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '', $wire.get('ordenDomDireccion') || $wire.get('clienteDireccion') || '', $wire.get('ordenDomTelefono') || $wire.get('clienteTelefono') || '', $wire.get('ordenDomNombre') || '', $wire.get('ordenDomObservaciones') || '', $wire.get('ordenDomCostoDomicilio') || 0, $wire.get('ordenDomCostoDesechables') || 0, $wire.get('ordenEstadoActual') || 'abierta', $wire.get('ordenTipoPedido') || 'mesa', $wire.get('usaDomicilios') || false, $wire.get('esMesero') || false)"
+                <button x-on:click="window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '', $wire.get('ordenDomDireccion') || $wire.get('clienteDireccion') || '', $wire.get('ordenDomTelefono') || $wire.get('clienteTelefono') || '', $wire.get('ordenDomNombre') || '', $wire.get('ordenDomObservaciones') || '', $wire.get('ordenDomCostoDomicilio') || 0, $wire.get('ordenDomCostoDesechables') || 0, $wire.get('ordenEstadoActual') || 'abierta', $wire.get('ordenTipoPedido') || 'mesa', $wire.get('usaDomicilios') || false, $wire.get('esMesero') || false, $wire.get('esMesaDomicilio') || false)"
                     class="pos-mesa-total-btn"
                     style="background:#2563eb; color:white; border:none; border-radius:9999px; padding:0 14px; height:34px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">
                     📤 Enviar cocina
@@ -797,7 +797,7 @@
                 @endif
 
                 @if($mesaId)
-                <button type="button" class="pos-cart-menu-item" style="background:#16a34a;color:white;" wire:key="mobile-action-cocina" @click.prevent.stop="open = false; window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '', $wire.get('ordenDomDireccion') || $wire.get('clienteDireccion') || '', $wire.get('ordenDomTelefono') || $wire.get('clienteTelefono') || '', $wire.get('ordenDomNombre') || '', $wire.get('ordenDomObservaciones') || '', $wire.get('ordenDomCostoDomicilio') || 0, $wire.get('ordenDomCostoDesechables') || 0, $wire.get('ordenEstadoActual') || 'abierta', $wire.get('ordenTipoPedido') || 'mesa', $wire.get('usaDomicilios') || false, $wire.get('esMesero') || false)">
+                <button type="button" class="pos-cart-menu-item" style="background:#16a34a;color:white;" wire:key="mobile-action-cocina" @click.prevent.stop="open = false; window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '', $wire.get('ordenDomDireccion') || $wire.get('clienteDireccion') || '', $wire.get('ordenDomTelefono') || $wire.get('clienteTelefono') || '', $wire.get('ordenDomNombre') || '', $wire.get('ordenDomObservaciones') || '', $wire.get('ordenDomCostoDomicilio') || 0, $wire.get('ordenDomCostoDesechables') || 0, $wire.get('ordenEstadoActual') || 'abierta', $wire.get('ordenTipoPedido') || 'mesa', $wire.get('usaDomicilios') || false, $wire.get('esMesero') || false, $wire.get('esMesaDomicilio') || false)">
                     📤 Enviar cocina
                 </button>
                 @endif
@@ -2115,15 +2115,31 @@
         Livewire.dispatch('abrir-facturar');
     };
 
-    window.posMesaEnviarCocinaModal = function (clienteNombreArg, clienteDireccionArg, clienteTelefonoArg, ordenDomNombreArg, ordenDomObsArg, ordenDomCostoDomArg, ordenDomCostoDesechArg, ordenEstadoArg, ordenTipoArg, usaDomiciliosArg, esMeseroArg) {
+    window.posMesaEnviarCocinaModal = function (clienteNombreArg, clienteDireccionArg, clienteTelefonoArg, ordenDomNombreArg, ordenDomObsArg, ordenDomCostoDomArg, ordenDomCostoDesechArg, ordenEstadoArg, ordenTipoArg, usaDomiciliosArg, esMeseroArg, esMesaDomicilioArg) {
         if (!window.Swal) { Livewire.dispatch('mesa-enviar-cocina'); return; }
 
-        // En mesa siempre se envía directo como 'mesa', sin preguntar tipo
-        Livewire.dispatch('mesa-enviar-cocina-confirmado', { data: {
-            tipo_pedido: 'mesa', costo_domicilio: 0, costo_empaque: 0,
-            dom_nombre: null, dom_telefono: null, dom_direccion: null, dom_observaciones: null,
-        }});
-        return;
+        // Mesa normal (no domicilio): enviar directo sin modal
+        if (!esMesaDomicilioArg) {
+            Livewire.dispatch('mesa-enviar-cocina-confirmado', { data: {
+                tipo_pedido: 'mesa', costo_domicilio: 0, costo_empaque: 0,
+                dom_nombre: null, dom_telefono: null, dom_direccion: null, dom_observaciones: null,
+            }});
+            return;
+        }
+
+        // Si ya está en cocina como domicilio, re-enviar directo con los datos guardados
+        if ((ordenEstadoArg || '') === 'en_preparacion') {
+            Livewire.dispatch('mesa-enviar-cocina-confirmado', { data: {
+                tipo_pedido: 'domicilio',
+                costo_domicilio: parseFloat(ordenDomCostoDomArg) || 0,
+                costo_empaque: parseFloat(ordenDomCostoDesechArg) || 0,
+                dom_nombre: (ordenDomNombreArg || '').trim() || null,
+                dom_telefono: (clienteTelefonoArg || '').trim() || null,
+                dom_direccion: (clienteDireccionArg || '').trim() || null,
+                dom_observaciones: (ordenDomObsArg || '').trim() || null,
+            }});
+            return;
+        }
 
         const clienteNombre       = (clienteNombreArg || '').trim();
         const clienteDireccion    = (clienteDireccionArg || '').trim();
@@ -2163,28 +2179,13 @@
                     <input id="pc_dom_dir" type="text" value="${clienteDireccion}" placeholder="Calle, Carrera, Avenida..." style="${inputStyle}"></div>
                </div>`;
 
+        // Mesa de domicilio: mostrar solo el formulario domicilio sin tabs
         Swal.fire({
-            title: '¿Cómo va el pedido?',
+            title: '🛵 Datos del domicilio',
             width: '390px',
             html: `
-                <div style="display:flex;gap:10px;justify-content:center;margin-bottom:14px;">
-                    <label id="pc_lbl_mesa" style="flex:1;cursor:pointer;border:2px solid #2563eb;border-radius:12px;padding:10px 6px;text-align:center;background:#eff6ff;">
-                        <input type="radio" name="pc_tipo" value="mesa" style="display:none;" checked>
-                        <div style="font-size:24px;">🪑</div>
-                        <div style="font-size:11px;font-weight:800;color:#1d4ed8;">Mesa</div>
-                    </label>
-                    ${(!esMeseroArg && usaDomiciliosArg) ? `<label id="pc_lbl_domicilio" style="flex:1;cursor:pointer;border:2px solid #e2e8f0;border-radius:12px;padding:10px 6px;text-align:center;background:white;">
-                        <input type="radio" name="pc_tipo" value="domicilio" style="display:none;">
-                        <div style="font-size:24px;">🛵</div>
-                        <div style="font-size:11px;font-weight:800;color:#6b7280;">Domicilio</div>
-                    </label>` : ''}
-                    ${!esMeseroArg ? `<label id="pc_lbl_para_llevar" style="flex:1;cursor:pointer;border:2px solid #e2e8f0;border-radius:12px;padding:10px 6px;text-align:center;background:white;">
-                        <input type="radio" name="pc_tipo" value="para_llevar" style="display:none;">
-                        <div style="font-size:24px;">🥡</div>
-                        <div style="font-size:11px;font-weight:800;color:#6b7280;">Para llevar</div>
-                    </label>` : ''}
-                </div>
-                <div id="pc_dom_wrap" style="display:none;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px;text-align:left;">
+                <input type="hidden" name="pc_tipo" value="domicilio">
+                <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px;text-align:left;">
                     ${clienteInfoHtml}
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
                         <div><label style="font-size:10px;font-weight:700;color:#92400e;">Costo domicilio</label>
@@ -2197,40 +2198,15 @@
                         <textarea id="pc_observaciones" rows="2" placeholder="Indicaciones especiales, referencias, etc..." style="width:100%;border:1px solid #fde68a;border-radius:7px;padding:5px 8px;font-size:12px;resize:none;margin-top:2px;">${ordenDomObs}</textarea>
                     </div>
                 </div>
-                <div id="pc_llevar_wrap" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:10px;text-align:left;">
-                    <label style="font-size:11px;font-weight:700;color:#166534;">Costo empaque / desechables</label>
-                    <input id="pc_costo_llevar" type="text" inputmode="numeric" value="" style="width:100%;height:32px;border:1px solid #86efac;border-radius:7px;padding:3px 10px;font-size:13px;font-weight:700;">
-                </div>
             `,
             showCancelButton: true,
             confirmButtonText: '📤 Enviar a cocina',
             cancelButtonText: 'Cancelar',
             confirmButtonColor: '#2563eb',
             didOpen: () => {
-                const labels = {mesa:'pc_lbl_mesa', domicilio:'pc_lbl_domicilio', para_llevar:'pc_lbl_para_llevar'};
-                const colors = {mesa:'#2563eb', domicilio:'#f59e0b', para_llevar:'#22c55e'};
-                const bgs = {mesa:'#eff6ff', domicilio:'#fffbeb', para_llevar:'#f0fdf4'};
-                const textColors = {mesa:'#1d4ed8', domicilio:'#92400e', para_llevar:'#166534'};
-                const sync = () => {
-                    const val = document.querySelector('input[name="pc_tipo"]:checked')?.value || 'mesa';
-                    const domWrap = document.getElementById('pc_dom_wrap');
-                    const datosCliente = document.getElementById('pc_datos_cliente');
-                    if (domWrap) domWrap.style.display = val === 'domicilio' ? 'block' : 'none';
-                    if (datosCliente) datosCliente.style.display = val === 'domicilio' ? 'block' : 'none';
-                    document.getElementById('pc_llevar_wrap').style.display = val === 'para_llevar' ? 'block' : 'none';
-                    Object.entries(labels).forEach(([k, id]) => {
-                        const el = document.getElementById(id); if (!el) return;
-                        const a = k === val;
-                        el.style.borderColor = a ? colors[k] : '#e2e8f0';
-                        el.style.background = a ? bgs[k] : 'white';
-                        el.querySelector('div:last-child').style.color = a ? textColors[k] : '#6b7280';
-                    });
-                };
-                document.querySelectorAll('input[name="pc_tipo"]').forEach(r => r.addEventListener('change', sync));
-                document.querySelectorAll('label[id^="pc_lbl_"]').forEach(lbl => lbl.addEventListener('click', () => {
-                    const r = lbl.querySelector('input[type="radio"]'); if (r) { r.checked = true; sync(); }
-                }));
-                sync();
+                // Mostrar datos del cliente
+                const datosCliente = document.getElementById('pc_datos_cliente');
+                if (datosCliente) datosCliente.style.display = 'block';
                 // Formato de miles al digitar en inputs de costo
                 const fmtMiles = (input) => {
                     input.addEventListener('input', () => {
@@ -2239,26 +2215,21 @@
                         else input.value = '';
                     });
                 };
-                ['pc_costo_dom','pc_costo_dom_desech','pc_costo_llevar'].forEach(id => {
+                ['pc_costo_dom','pc_costo_dom_desech'].forEach(id => {
                     const el = document.getElementById(id); if (el) fmtMiles(el);
                 });
             },
             preConfirm: () => {
                 const parseMiles = id => parseInt((document.getElementById(id)?.value || '0').replace(/\./g,'').replace(/\D/g,'')) || 0;
-                const tipo = document.querySelector('input[name="pc_tipo"]:checked')?.value || 'mesa';
-                if (tipo === 'domicilio' && esConsumidorFinal) {
+                if (esConsumidorFinal) {
                     const nombre = (document.getElementById('pc_dom_nombre')?.value || '').trim();
                     if (!nombre) { Swal.showValidationMessage('Escriba el nombre del destinatario.'); return false; }
                 }
-                const costoDom = tipo === 'domicilio' ? parseMiles('pc_costo_dom') : 0;
-                const costoDesech = tipo === 'domicilio'
-                    ? parseMiles('pc_costo_dom_desech')
-                    : tipo === 'para_llevar' ? parseMiles('pc_costo_llevar') : 0;
                 const domObs = (document.getElementById('pc_observaciones')?.value || '').trim();
                 return {
-                    tipo_pedido: tipo,
-                    costo_domicilio: costoDom,
-                    costo_empaque: costoDesech,
+                    tipo_pedido: 'domicilio',
+                    costo_domicilio: parseMiles('pc_costo_dom'),
+                    costo_empaque: parseMiles('pc_costo_dom_desech'),
                     dom_nombre: esConsumidorFinal ? ((document.getElementById('pc_dom_nombre')?.value||'').trim()||null) : clienteNombre,
                     dom_telefono: ((document.getElementById('pc_dom_tel')?.value||'').trim()) || clienteTelefono || null,
                     dom_direccion: ((document.getElementById('pc_dom_dir')?.value||'').trim()) || clienteDireccion || null,

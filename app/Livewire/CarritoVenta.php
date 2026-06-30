@@ -26,6 +26,7 @@ class CarritoVenta extends Component
     public ?int $mesaId = null;
     public bool $usaDomicilios = false;
     public bool $esMesero = false;
+    public bool $esMesaDomicilio = false;
     public string $ordenEstadoActual = 'abierta'; // 'abierta' | 'en_preparacion'
     public string $ordenTipoPedido   = 'mesa';    // 'mesa' | 'domicilio' | 'para_llevar'
     public float  $ordenCostoEmpaque = 0;
@@ -396,6 +397,16 @@ private function limpiarUtf8Array(array $datos): array
     $this->usaDomicilios = (bool)($config?->usa_domicilios ?? false);
     $user = auth()->user();
     $this->esMesero = $user->hasRole('mesero') && !$user->hasAnyRole(['cajero', 'admin_empresa']);
+
+    // Detectar si la mesa actual es una mesa virtual de domicilios (código DOMV)
+    if ($this->mesaId) {
+        $mesa = \App\Models\Mesa::find($this->mesaId);
+        if ($mesa) {
+            $codigo = strtoupper($mesa->codigo ?? '');
+            $nombre = strtoupper($mesa->nombre ?? '');
+            $this->esMesaDomicilio = str_starts_with($codigo, 'DOMV') || str_contains($nombre, 'DOMICILIO');
+        }
+    }
 
     // Modo mesa: cargar ítems desde la OrdenMesa activa (ignora caché general)
     if ($this->mesaId) {
