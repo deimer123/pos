@@ -292,6 +292,7 @@
                 + '<div style="font-size:15px;font-weight:700;">🛵 Pedido #' + pedidoNum + '</div>'
                 + '<div style="font-size:12px;opacity:.8;margin-top:2px;">' + d.cliente + (d.telefono ? ' · 📞 ' + d.telefono : '') + '</div>'
                 + '<div style="font-size:11px;opacity:.7;margin-top:2px;">📍 ' + d.direccion + '</div>'
+                + (d.observaciones ? '<div style="font-size:11px;opacity:.85;margin-top:3px;background:rgba(255,255,255,.15);border-radius:5px;padding:2px 6px;">📝 ' + d.observaciones + '</div>' : '')
                 + '</div>'
                 + itemsHtml
                 + '<div style="margin-top:12px;padding-top:10px;border-top:1px solid #e5e7eb;">' + totalesHtml + '</div>'

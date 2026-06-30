@@ -60,6 +60,7 @@ class PanelMesas extends Component
                     'dom_costo' => (float) ($o->dom_costo_domicilio ?? 0),
                     'desechables' => (float) ($o->dom_costo_desechables ?? 0),
                     'hora'      => $o->created_at->format('h:i A'),
+                    'observaciones' => $o->dom_observaciones ?? null,
                     'repartidor' => null,
                     'numero_cocina' => $o->numero_cocina_dia,
                     'items'     => $o->items->map(fn($i) => [
