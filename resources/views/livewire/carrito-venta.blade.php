@@ -2221,18 +2221,20 @@
             },
             preConfirm: () => {
                 const parseMiles = id => parseInt((document.getElementById(id)?.value || '0').replace(/\./g,'').replace(/\D/g,'')) || 0;
-                if (esConsumidorFinal) {
-                    const nombre = (document.getElementById('pc_dom_nombre')?.value || '').trim();
-                    if (!nombre) { Swal.showValidationMessage('Escriba el nombre del destinatario.'); return false; }
-                }
+                const nombre   = esConsumidorFinal ? (document.getElementById('pc_dom_nombre')?.value || '').trim() : clienteNombre;
+                const telefono = ((document.getElementById('pc_dom_tel')?.value || '').trim()) || clienteTelefono;
+                const direccion = ((document.getElementById('pc_dom_dir')?.value || '').trim()) || clienteDireccion;
+                if (!nombre)    { Swal.showValidationMessage('El nombre del destinatario es obligatorio.'); return false; }
+                if (!telefono)  { Swal.showValidationMessage('El teléfono es obligatorio.'); return false; }
+                if (!direccion) { Swal.showValidationMessage('La dirección de entrega es obligatoria.'); return false; }
                 const domObs = (document.getElementById('pc_observaciones')?.value || '').trim();
                 return {
                     tipo_pedido: 'domicilio',
                     costo_domicilio: parseMiles('pc_costo_dom'),
                     costo_empaque: parseMiles('pc_costo_dom_desech'),
-                    dom_nombre: esConsumidorFinal ? ((document.getElementById('pc_dom_nombre')?.value||'').trim()||null) : clienteNombre,
-                    dom_telefono: ((document.getElementById('pc_dom_tel')?.value||'').trim()) || clienteTelefono || null,
-                    dom_direccion: ((document.getElementById('pc_dom_dir')?.value||'').trim()) || clienteDireccion || null,
+                    dom_nombre: nombre,
+                    dom_telefono: telefono,
+                    dom_direccion: direccion,
                     dom_observaciones: domObs || null,
                 };
             }
