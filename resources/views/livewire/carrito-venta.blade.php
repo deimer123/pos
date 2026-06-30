@@ -656,132 +656,65 @@
 
             @if($mesaId)
             @php $esMesero = auth()->user()->hasRole('mesero') && ! auth()->user()->hasAnyRole(['cajero','admin_empresa','vendedor']); @endphp
+            {{-- En modo mesa: botones visibles en desktop e iPad, ocultos en móvil (menú ☰) --}}
             @if(! $esMesero)
-            {{-- AFUERA: Editar, Liberar, Espera, Cuenta --}}
             <button
                 x-on:click="
                     if (($wire.get('carrito') ?? []).length === 0) {
                       Swal.fire({icon:'warning', title:'Carrito vacio', text:'Debe agregar productos antes de editar.'});
                     } else { $wire.abrirModalEditar(); }
                 "
-                class="pos-hide-mobile text-white rounded-full shadow"
-                style="background:#4f46e5; font-size:10px; font-weight:700; padding:0 8px; height:28px; white-space:nowrap; border:none; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">
+                class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
                 Editar
             </button>
-            {{-- ESCRITORIO: botones directos visibles en línea --}}
-            <button type="button"
-                class="pos-hide-mobile text-white rounded-full shadow"
-                style="background:#dc2626; font-size:10px; font-weight:700; padding:0 8px; height:28px; white-space:nowrap; border:none; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;"
-                x-on:click="Swal.fire({
-                    title: '¿Liberar mesa?', text: 'Se cancelará la comanda y se liberará la mesa.',
-                    icon: 'warning', showCancelButton: true,
-                    confirmButtonColor: '#dc2626', confirmButtonText: 'Sí, liberar', cancelButtonText: 'Cancelar'
-                }).then(r=>{ if(r.isConfirmed){ $wire.dispatch('mesa-liberar'); }})">
-                🔓 Liberar
-            </button>
-            <button type="button"
-                class="pos-hide-mobile text-white rounded-full shadow"
-                style="background:#d97706; font-size:10px; font-weight:700; padding:0 8px; height:28px; white-space:nowrap; border:none; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;"
-                x-on:click="Swal.fire({
-                    title: '¿Poner en espera?', text: 'La cuenta se guarda y la mesa queda libre.',
-                    icon: 'question', showCancelButton: true,
-                    confirmButtonColor: '#d97706', confirmButtonText: 'Sí, en espera', cancelButtonText: 'Cancelar'
-                }).then(r=>{ if(r.isConfirmed){ $wire.dispatch('mesa-en-espera'); }})">
-                ⏸ Espera
-            </button>
-            <button type="button"
-                class="pos-hide-mobile text-white rounded-full shadow"
-                style="background:#374151; font-size:10px; font-weight:700; padding:0 8px; height:28px; white-space:nowrap; border:none; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;"
-                onclick="window.open('/pos/mesa/{{ $mesaId }}/cuenta', '_blank', 'width=420,height=680')">
-                🖨️ Cuenta
+            <button wire:click="abrirModalCrearCliente"
+                class="pos-cart-secondary-action pos-btn-texto-doble bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
+                + Crear Cliente
             </button>
             @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
-                @if ($cajaEstado === 'abierta')
-                <button type="button"
-                    class="pos-hide-mobile text-white rounded-full shadow"
-                    style="background:#0ea5e9; font-size:10px; font-weight:700; padding:0 8px; height:28px; white-space:nowrap; border:none; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;"
-                    wire:click="abrirMovimientoCajaModal('salida')">
-                    📥 Entrada/salida
-                </button>
-                @endif
-                <button type="button"
-                    class="pos-hide-mobile text-white rounded-full shadow"
-                    style="background:#8b5cf6; font-size:10px; font-weight:700; padding:0 8px; height:28px; white-space:nowrap; border:none; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;"
-                    wire:click="abrirModalCartera">
-                    💼 Cartera
-                </button>
+            @if ($cajaEstado === 'abierta')
+            <button type="button"
+                class="pos-cart-secondary-action pos-btn-texto-doble bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow"
+                wire:click="abrirMovimientoCajaModal('salida')">
+                Entrada / salida
+            </button>
             @endif
             <button type="button"
-                class="pos-hide-mobile text-white rounded-full shadow"
-                style="background:#475569; font-size:10px; font-weight:700; padding:0 8px; height:28px; white-space:nowrap; border:none; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;"
-                wire:click="verPrefacturas">
-                🗒️ Ver facturas
+                class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow"
+                wire:click="abrirModalCartera">
+                Cartera
             </button>
-            <button type="button"
-                class="pos-hide-mobile text-white rounded-full shadow"
-                style="background:#0d9488; font-size:10px; font-weight:700; padding:0 8px; height:28px; white-space:nowrap; border:none; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;"
-                wire:click="abrirModalCrearCliente">
-                👤 Crear Cliente
-            </button>
-
-            {{-- MÓVIL/IPAD: dropdown Acciones con todos los botones --}}
-            <div x-data="{ openAcc: false }" class="pos-show-mobile-only" style="position:relative;">
-                <button type="button"
-                    @click="openAcc = !openAcc"
-                    class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow flex items-center gap-1">
-                    Acciones ▾
-                </button>
-                <div x-show="openAcc" x-cloak @click.outside="openAcc = false"
-                    style="position:absolute; bottom:calc(100% + 6px); right:0; background:white; border:1px solid #e2e8f0; border-radius:10px; box-shadow:0 4px 16px rgba(0,0,0,.12); min-width:170px; z-index:9999; display:flex; flex-direction:column; overflow:hidden; padding:6px;">
-                    <button type="button"
-                        @click.stop="openAcc = false; Swal.fire({
-                            title: '¿Liberar mesa?', text: 'Se cancelará la comanda y se liberará la mesa.',
-                            icon: 'warning', showCancelButton: true,
-                            confirmButtonColor: '#dc2626', confirmButtonText: 'Sí, liberar', cancelButtonText: 'Cancelar'
+            @endif
+            <button
+                x-on:click="Swal.fire({
+                          title: '¿Liberar mesa?', text: 'Se cancelará la comanda y se liberará la mesa.',
+                          icon: 'warning', showCancelButton: true,
+                          confirmButtonColor: '#dc2626', confirmButtonText: 'Sí, liberar', cancelButtonText: 'Cancelar'
                         }).then(r=>{ if(r.isConfirmed){ $wire.dispatch('mesa-liberar'); }})"
-                        style="margin-bottom:5px; padding:8px 14px; text-align:left; font-size:12px; font-weight:600; background:#dc2626; color:white; border:none; border-radius:8px; cursor:pointer;">
-                        🔓 Liberar
-                    </button>
-                    <button type="button"
-                        @click.stop="openAcc = false; Swal.fire({
-                            title: '¿Poner en espera?', text: 'La cuenta se guarda y la mesa queda libre.',
-                            icon: 'question', showCancelButton: true,
-                            confirmButtonColor: '#d97706', confirmButtonText: 'Sí, en espera', cancelButtonText: 'Cancelar'
+                class="pos-cart-main-action text-white text-xs px-3 h-8 rounded-full"
+                style="background:#dc2626;">
+                🔓 Liberar
+            </button>
+            <button
+                x-on:click="Swal.fire({
+                          title: '¿Poner en espera?', text: 'La cuenta se guarda y la mesa queda libre.',
+                          icon: 'question', showCancelButton: true,
+                          confirmButtonColor: '#d97706', confirmButtonText: 'Sí, en espera', cancelButtonText: 'Cancelar'
                         }).then(r=>{ if(r.isConfirmed){ $wire.dispatch('mesa-en-espera'); }})"
-                        style="margin-bottom:5px; padding:8px 14px; text-align:left; font-size:12px; font-weight:600; background:#d97706; color:white; border:none; border-radius:8px; cursor:pointer;">
-                        ⏸ Espera
-                    </button>
-                    <button type="button"
-                        @click.stop="openAcc = false; window.open('/pos/mesa/{{ $mesaId }}/cuenta', '_blank', 'width=420,height=680')"
-                        style="margin-bottom:5px; padding:8px 14px; text-align:left; font-size:12px; font-weight:600; background:#374151; color:white; border:none; border-radius:8px; cursor:pointer;">
-                        🖨️ Cuenta
-                    </button>
-                    @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
-                        @if ($cajaEstado === 'abierta')
-                        <button type="button"
-                            @click.stop="openAcc = false; $wire.abrirMovimientoCajaModal('salida')"
-                            style="margin-bottom:5px; padding:8px 14px; text-align:left; font-size:12px; font-weight:600; background:#0ea5e9; color:white; border:none; border-radius:8px; cursor:pointer;">
-                            📥 Entrada / salida
-                        </button>
-                        @endif
-                        <button type="button"
-                            @click.stop="openAcc = false; $wire.abrirModalCartera()"
-                            style="margin-bottom:5px; padding:8px 14px; text-align:left; font-size:12px; font-weight:600; background:#8b5cf6; color:white; border:none; border-radius:8px; cursor:pointer;">
-                            💼 Cartera
-                        </button>
-                    @endif
-                    <button type="button"
-                        @click.stop="openAcc = false; $wire.verPrefacturas()"
-                        style="margin-bottom:5px; padding:8px 14px; text-align:left; font-size:12px; font-weight:600; background:#475569; color:white; border:none; border-radius:8px; cursor:pointer;">
-                        🗒️ Ver facturas
-                    </button>
-                    <button type="button"
-                        @click.stop="openAcc = false; $wire.abrirModalCrearCliente()"
-                        style="padding:8px 14px; text-align:left; font-size:12px; font-weight:600; background:#0d9488; color:white; border:none; border-radius:8px; cursor:pointer;">
-                        👤 Crear Cliente
-                    </button>
-                </div>
-            </div>
+                class="pos-cart-main-action text-white text-xs px-3 h-8 rounded-full"
+                style="background:#d97706;">
+                ⏸ Espera
+            </button>
+            <button
+                onclick="window.open('/pos/mesa/{{ $mesaId }}/cuenta', '_blank', 'width=420,height=680')"
+                class="pos-cart-main-action text-white text-xs px-3 h-8 rounded-full"
+                style="background:#374151;">
+                🖨️ Cuenta
+            </button>
+            <button wire:click="verPrefacturas"
+                class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
+                Ver
+            </button>
             @endif {{-- fin !$esMesero --}}
             @else
             <button
