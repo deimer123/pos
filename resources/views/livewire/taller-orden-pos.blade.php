@@ -182,6 +182,15 @@
                     </label>
                 </div>
             </div>
+
+            {{-- ─ Nota de trabajo realizado (editable en cualquier momento) ─ --}}
+            <div x-data="{ nota: @js($orden->nota_trabajo ?? '') }" style="border-top:2px solid #d1fae5;padding:12px 14px;flex-shrink:0;background:#f8fafc;">
+                <div style="font-size:11px;font-weight:700;color:#0f766e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">📝 Nota de trabajo realizado</div>
+                <textarea x-model="nota" @blur="$wire.guardarNotaTrabajo(nota)"
+                    placeholder="Describe lo que se le hizo a la moto/carro durante la orden..."
+                    rows="3"
+                    style="width:100%;border:1px solid #99f6e4;border-radius:8px;padding:8px 10px;font-size:12px;box-sizing:border-box;resize:vertical;"></textarea>
+            </div>
         </div>
 
         {{-- ─ Derecha: ítems de la orden ─ --}}

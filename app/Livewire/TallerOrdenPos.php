@@ -150,6 +150,13 @@ class TallerOrdenPos extends Component
         }
     }
 
+    public function guardarNotaTrabajo(string $nota): void
+    {
+        TallerOrden::where('empresa_id', $this->empresaId())
+            ->where('id', $this->ordenId)
+            ->update(['nota_trabajo' => trim($nota) ?: null]);
+    }
+
     // ─── Estado de la orden ──────────────────────────────────────────────────
 
     public function cambiarEstado(string $estado): void
@@ -272,7 +279,7 @@ class TallerOrdenPos extends Component
 
         $this->modalFacturar = false;
 
-        $this->dispatch('open-print', ['url' => route('ticket.factura', $factura->id)]);
+        $this->dispatch('open-print', ['url' => route('factura.ver', $factura->id)]);
 
         $this->redirect(route('taller'));
     }

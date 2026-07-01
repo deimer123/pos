@@ -121,6 +121,13 @@
     @endif
 </div>
 
+@if($orden->nota_trabajo)
+<div class="seccion">
+    <div class="seccion-titulo">📝 Nota de trabajo realizado</div>
+    <div class="diagnostico">{{ $orden->nota_trabajo }}</div>
+</div>
+@endif
+
 @if($orden->entregado_at)
 <div style="margin-top:10px; font-size:11px; color:#16a34a; font-weight:700;">
     💰 Cobrada el {{ \Carbon\Carbon::parse($orden->entregado_at)->format('d/m/Y h:i A') }}

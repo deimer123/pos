@@ -30,6 +30,7 @@ class TallerOrden extends Model
         'fecha_entrega_estimada',
         'entregado_at',
         'fotos',
+        'nota_trabajo',
     ];
 
     protected $casts = [

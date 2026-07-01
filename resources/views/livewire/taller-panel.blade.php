@@ -117,6 +117,15 @@
                     </div>
                     @endif
 
+                    {{-- Nota de trabajo realizado (editable en cualquier momento) --}}
+                    <div x-data="{ nota: @js($orden->nota_trabajo ?? '') }" style="margin-top:8px;">
+                        <label style="font-size:10px; font-weight:700; color:#0f766e; text-transform:uppercase; display:block; margin-bottom:3px;">📝 Nota de trabajo realizado</label>
+                        <textarea x-model="nota" @blur="$wire.guardarNotaTrabajo({{ $orden->id }}, nota)"
+                            placeholder="Describe lo que se le hizo a la moto/carro durante la orden..."
+                            rows="2"
+                            style="width:100%; border:1px solid #99f6e4; border-radius:8px; padding:6px 8px; font-size:12px; box-sizing:border-box; resize:vertical; background:#f0fdfa;"></textarea>
+                    </div>
+
                     {{-- Repuestos / Servicios detalle --}}
                     @if($orden->repuestos->isNotEmpty())
                     <div style="margin-top:10px; border-top:1px solid rgba(0,0,0,.07); padding-top:8px;">

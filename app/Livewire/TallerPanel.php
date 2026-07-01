@@ -247,6 +247,13 @@ class TallerPanel extends Component
         $orden->update($update);
     }
 
+    public function guardarNotaTrabajo(int $id, string $nota): void
+    {
+        TallerOrden::where('empresa_id', $this->empresaId())
+            ->where('id', $id)
+            ->update(['nota_trabajo' => trim($nota) ?: null]);
+    }
+
     public function abrirOrden(int $id): void
     {
         $this->redirect(route('pos') . '?taller=' . $id);
