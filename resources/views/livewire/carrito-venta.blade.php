@@ -2930,28 +2930,65 @@ function abrirIngresoTaller(nombreCliente) {
   </div>
   <input type="hidden" id="t_nombre" value="${nombreCliente}">
 
-  <div style="font-size:11px;font-weight:700;color:#0f766e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;border-bottom:2px solid #ccfbf1;padding-bottom:4px;">🚗 Datos del vehículo</div>
+  <datalist id="dl_marcas">
+    <!-- Motos -->
+    <option value="Yamaha"><option value="Honda"><option value="Suzuki"><option value="Kawasaki">
+    <option value="AKT"><option value="TVS"><option value="Bajaj"><option value="Hero">
+    <option value="Royal Enfield"><option value="KTM"><option value="Benelli"><option value="Ducati">
+    <option value="BMW Motorrad"><option value="Harley-Davidson"><option value="Triumph">
+    <!-- Carros -->
+    <option value="Chevrolet"><option value="Renault"><option value="Toyota"><option value="Mazda">
+    <option value="Kia"><option value="Hyundai"><option value="Ford"><option value="Volkswagen">
+    <option value="Nissan"><option value="Mitsubishi"><option value="Jeep"><option value="Dodge">
+    <option value="Ram"><option value="Volvo"><option value="Peugeot"><option value="Citroën">
+    <option value="Mercedes-Benz"><option value="Audi"><option value="BMW"><option value="BYD">
+    <option value="Chery"><option value="DFSK"><option value="JAC"><option value="Haval">
+  </datalist>
+  <datalist id="dl_modelos">
+    <!-- Motos frecuentes -->
+    <option value="XTZ 150"><option value="XTZ 125"><option value="FZ 16"><option value="FZ25">
+    <option value="R15 V3"><option value="MT-03"><option value="NMAX 155"><option value="PCX 150">
+    <option value="CB 190R"><option value="CB 125F"><option value="Wave 110"><option value="Biz 125">
+    <option value="Titan 150"><option value="CG 150"><option value="Gixxer 150"><option value="GN 125">
+    <option value="AX 100"><option value="EN 125"><option value="GS 150"><option value="Pulsar NS 200">
+    <option value="Pulsar 200 NS"><option value="Discover 125"><option value="Platina 100">
+    <option value="Apache RTR 160"><option value="Duke 200"><option value="Duke 390">
+    <option value="Leoncino 250"><option value="TNT 300"><option value="CB650R">
+    <!-- Carros frecuentes -->
+    <option value="Spark"><option value="Sail"><option value="Onix"><option value="Tracker">
+    <option value="Captiva"><option value="Duster"><option value="Logan"><option value="Sandero">
+    <option value="Kwid"><option value="Stepway"><option value="Corolla"><option value="Hilux">
+    <option value="Land Cruiser"><option value="Fortuner"><option value="Mazda 3"><option value="CX-5">
+    <option value="Rio"><option value="Picanto"><option value="Sportage"><option value="Tucson">
+    <option value="Accent"><option value="Santa Fe"><option value="EcoSport"><option value="Ranger">
+    <option value="Jetta"><option value="Golf"><option value="Tiguan"><option value="Frontier">
+    <option value="Sentra"><option value="Kicks"><option value="Lancer"><option value="Outlander">
+  </datalist>
+
+  <div style="font-size:11px;font-weight:700;color:#0f766e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;border-bottom:2px solid #ccfbf1;padding-bottom:4px;">🏍️🚗 Datos del vehículo</div>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
     <div>
-      <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">Placa *</label>
-      <input id="t_placa" type="text" placeholder="ABC-123"
-        style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:15px;font-weight:800;text-transform:uppercase;box-sizing:border-box;letter-spacing:.1em;">
+      <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">Placa * <span style="font-weight:400;color:#9ca3af;">(sin guion)</span></label>
+      <input id="t_placa" type="text" placeholder="ABC123 / ABC12"
+        maxlength="7"
+        oninput="this.value=this.value.replace(/-/g,'').toUpperCase()"
+        style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:15px;font-weight:800;text-transform:uppercase;box-sizing:border-box;letter-spacing:.12em;">
     </div>
     <div>
-      <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">Marca</label>
-      <input id="t_marca" type="text" placeholder="Yamaha, Honda..."
+      <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">Marca <span style="font-weight:400;color:#9ca3af;">(moto o carro)</span></label>
+      <input id="t_marca" type="text" list="dl_marcas" placeholder="Yamaha, Honda, Chevrolet..."
         style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box;">
     </div>
     <div>
-      <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">Modelo</label>
-      <input id="t_modelo" type="text" placeholder="XTZ-150, CB190..."
+      <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">Modelo <span style="font-weight:400;color:#9ca3af;">(moto o carro)</span></label>
+      <input id="t_modelo" type="text" list="dl_modelos" placeholder="XTZ 150, Onix, Duster..."
         style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box;">
     </div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
     <div>
       <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">Color</label>
-      <input id="t_color" type="text" placeholder="Blanco, Rojo..."
+      <input id="t_color" type="text" placeholder="Blanco, Rojo, Negro..."
         style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box;">
     </div>
     <div>
@@ -2961,7 +2998,7 @@ function abrirIngresoTaller(nombreCliente) {
     </div>
     <div>
       <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">Año</label>
-      <input id="t_anio" type="number" placeholder="2020"
+      <input id="t_anio" type="number" placeholder="2020" min="1980" max="2030"
         style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box;">
     </div>
   </div>
