@@ -238,7 +238,18 @@ return \App\Models\Familia::create($data)->id;
                             'combo' => 'Combo / Paquete',
                         ])
                         ->default('producto')
-                        ->required(),
+                        ->required()
+                        ->live(),
+
+                    Select::make('tipo_servicio')
+                        ->label('Tipo de servicio')
+                        ->options([
+                            'propio'  => 'Propio (lo hace la empresa / sus mecánicos)',
+                            'tercero' => 'Servicio de tercero (no es ganancia de la empresa)',
+                        ])
+                        ->helperText('Propio: la empresa se queda con el % configurado en Configuración de Empresa. Tercero: el dinero no pertenece a la empresa, solo se cobra y se contabiliza aparte.')
+                        ->visible(fn (Get $get) => $get('tipo_producto') === 'servicio')
+                        ->required(fn (Get $get) => $get('tipo_producto') === 'servicio'),
 
                     Select::make('vende_por')
                         ->label('Vende por')

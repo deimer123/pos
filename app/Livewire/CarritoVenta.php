@@ -1989,10 +1989,23 @@ public function confirmarFacturar()
     }
 
 
+protected function datosServicioFactura(?Product $producto, float $porcentajeEmpresaServicios): array
+{
+    if (! $producto || $producto->tipo_producto !== 'servicio' || ! $producto->tipo_servicio) {
+        return ['tipo_servicio' => null, 'porcentaje_empresa' => null];
+    }
+
+    return [
+        'tipo_servicio'      => $producto->tipo_servicio,
+        'porcentaje_empresa' => $producto->tipo_servicio === 'propio' ? $porcentajeEmpresaServicios : 0,
+    ];
+}
+
 #[On('facturar-confirmada')]
 public function facturarConfirmada(array $data = [])
 {
     $empresaId = $this->getEmpresaId();
+    $porcentajeEmpresaServicios = (float) (ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('porcentaje_empresa_servicios') ?? 0);
 
      if (! $this->verificarCajaAbierta()) {
         Log::warning('POS facturarConfirmada detenido por caja cerrada', [
@@ -2112,21 +2125,25 @@ public function facturarConfirmada(array $data = [])
             $cant   = $this->normalizarCantidad($item['cantidad'] ?? 1, $this->permiteCantidadDecimal($item));
             $sub    = round($precio * $cant, 2);
 
+            $producto = Product::where('empresa_id', $empresaId)
+                ->where('id_producto', $item['id_producto'])
+                ->lockForUpdate()
+                ->first();
+
+            $datosServicio = $this->datosServicioFactura($producto, $porcentajeEmpresaServicios);
+
             $factura->detalles()->create([
-                'producto_id'       => $item['id_producto'],
-                'descripcion_larga' => $item['nombre'],
-                'cantidad'          => $cant,
-                'precio'            => $precio,
-                'subtotal'          => $sub,
-                'descuento'         => (float)($item['descuento'] ?? 0),
+                'producto_id'        => $item['id_producto'],
+                'descripcion_larga'  => $item['nombre'],
+                'cantidad'           => $cant,
+                'precio'             => $precio,
+                'subtotal'           => $sub,
+                'descuento'          => (float)($item['descuento'] ?? 0),
+                'tipo_servicio'      => $datosServicio['tipo_servicio'],
+                'porcentaje_empresa' => $datosServicio['porcentaje_empresa'],
             ]);
 
-           $producto = Product::where('empresa_id', $empresaId)
-    ->where('id_producto', $item['id_producto'])
-    ->lockForUpdate()
-    ->first();
-
-if ($producto) {
+if ($producto && $producto->tipo_producto !== 'servicio') {
 
     $stockAnterior = (float)$producto->existencias;
 
@@ -2534,6 +2551,7 @@ public function onCloseModalPrefacturas(): void
 public function facturarEImprimir(array $data = [])
 {
     $empresaId = $this->getEmpresaId();
+    $porcentajeEmpresaServicios = (float) (ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('porcentaje_empresa_servicios') ?? 0);
     if (! $this->verificarCajaAbierta()) {
             return ['ok' => false, 'error' => 'Caja cerrada.'];
         }
@@ -2642,21 +2660,25 @@ public function facturarEImprimir(array $data = [])
             $cant   = $this->normalizarCantidad($item['cantidad'] ?? 1, $this->permiteCantidadDecimal($item));
             $sub    = round($precio * $cant, 2);
 
+            $producto = Product::where('empresa_id', $empresaId)
+                ->where('id_producto', $item['id_producto'])
+                ->lockForUpdate()
+                ->first();
+
+            $datosServicio = $this->datosServicioFactura($producto, $porcentajeEmpresaServicios);
+
             $factura->detalles()->create([
-                'producto_id'       => $item['id_producto'],
-                'descripcion_larga' => $item['nombre'],
-                'cantidad'          => $cant,
-                'precio'            => $precio,
-                'subtotal'          => $sub,
-                'descuento'         => (float)($item['descuento'] ?? 0),
+                'producto_id'        => $item['id_producto'],
+                'descripcion_larga'  => $item['nombre'],
+                'cantidad'           => $cant,
+                'precio'             => $precio,
+                'subtotal'           => $sub,
+                'descuento'          => (float)($item['descuento'] ?? 0),
+                'tipo_servicio'      => $datosServicio['tipo_servicio'],
+                'porcentaje_empresa' => $datosServicio['porcentaje_empresa'],
             ]);
 
-            $producto = Product::where('empresa_id', $empresaId)
-    ->where('id_producto', $item['id_producto'])
-    ->lockForUpdate()
-    ->first();
-
-if ($producto) {
+if ($producto && $producto->tipo_producto !== 'servicio') {
 
     $stockAnterior = (float)$producto->existencias;
 
@@ -3030,7 +3052,7 @@ public function confirmarDevolucion()
     ->where('id_producto', $row['producto_id'])
     ->first();
 
-if ($producto) {
+if ($producto && $producto->tipo_producto !== 'servicio') {
 
     $stockAnterior = $producto->existencias;
 

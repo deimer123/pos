@@ -44,6 +44,7 @@ class Product extends Model
         'cuenta_contable_id',
         'descripcion_larga',
         'tipo_producto',
+        'tipo_servicio',
         'vende_por',
         'maneja_inventario',
         'permite_fraccion',
