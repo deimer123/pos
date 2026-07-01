@@ -16,12 +16,15 @@ class TallerRepuesto extends Model
         'cantidad',
         'precio_unitario',
         'subtotal',
+        'tipo',
+        'costo_proveedor',
     ];
 
     protected $casts = [
-        'cantidad'       => 'float',
-        'precio_unitario'=> 'float',
-        'subtotal'       => 'float',
+        'cantidad'        => 'float',
+        'precio_unitario' => 'float',
+        'subtotal'        => 'float',
+        'costo_proveedor' => 'float',
     ];
 
     public function orden(): BelongsTo

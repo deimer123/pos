@@ -100,6 +100,10 @@ Route::middleware(['auth'])->get('/taller', function () {
     return view('taller');
 })->name('taller');
 
+Route::middleware(['auth'])->get('/taller/orden/{ordenId}', function ($ordenId) {
+    return view('taller-orden', ['ordenId' => (int) $ordenId]);
+})->name('taller.orden');
+
 
 Route::middleware(['auth'])->get('/prefactura/imprimir/{id}', [\App\Http\Controllers\PrefacturaController::class, 'imprimir'])->name('prefactura.imprimir');
 Route::middleware(['auth'])->get('/salida/imprimir/{id}', function ($id) {

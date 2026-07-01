@@ -232,40 +232,9 @@ class TallerPanel extends Component
         $orden->update($update);
     }
 
-    public function facturarOrden(int $id): void
+    public function abrirOrden(int $id): void
     {
-        $empresaId = $this->empresaId();
-        $orden = TallerOrden::where('empresa_id', $empresaId)->with('repuestos')->findOrFail($id);
-
-        // Buscar o crear mesa virtual TALL-
-        $mesa = Mesa::where('empresa_id', $empresaId)
-            ->where('codigo', 'like', 'TALL-%')
-            ->whereDoesntHave('ordenes', fn($q) => $q->whereIn('estado', ['abierta', 'en_preparacion']))
-            ->first();
-
-        if (! $mesa) {
-            $siguiente = Mesa::where('empresa_id', $empresaId)
-                ->where('codigo', 'like', 'TALL-%')
-                ->count() + 1;
-
-            $mesa = Mesa::create([
-                'empresa_id' => $empresaId,
-                'codigo'     => 'TALL-' . $siguiente,
-                'nombre'     => 'Taller ' . $siguiente,
-                'zona'       => null,
-                'capacidad'  => null,
-                'estado'     => 'libre',
-                'activo'     => true,
-            ]);
-        }
-
-        // Vincular la orden con esta mesa y marcarla en proceso si aún no lo está
-        $orden->update([
-            'mesa_id' => $mesa->id,
-            'estado'  => in_array($orden->estado, ['pendiente', 'en_proceso', 'listo']) ? $orden->estado : $orden->estado,
-        ]);
-
-        $this->redirect(route('pos.mesa', $mesa->id) . '?taller_orden=' . $orden->id);
+        $this->redirect(route('taller.orden', $id));
     }
 
     public function eliminarOrden(int $id): void

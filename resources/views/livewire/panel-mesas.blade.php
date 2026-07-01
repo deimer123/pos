@@ -363,10 +363,10 @@
                     @endif
                     <div style="margin-top:8px; display:flex; gap:5px; flex-wrap:wrap;">
                         @if($to->estado !== 'entregado')
-                        <button wire:click="facturarOrdenTaller({{ $to->id }})"
-                            style="flex:1; border:none; border-radius:7px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#4f46e5; color:white;">
-                            💵 Ir a facturar
-                        </button>
+                        <a href="{{ route('taller.orden', $to->id) }}"
+                            style="flex:1; border:none; border-radius:7px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#4f46e5; color:white; text-align:center; text-decoration:none; display:block;">
+                            🔧 Abrir orden
+                        </a>
                         @endif
                     </div>
                 </div>

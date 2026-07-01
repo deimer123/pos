@@ -29,12 +29,14 @@ class TallerOrden extends Model
         'creado_por',
         'fecha_entrega_estimada',
         'entregado_at',
+        'fotos',
     ];
 
     protected $casts = [
         'km_ingreso'             => 'integer',
         'fecha_entrega_estimada' => 'datetime',
         'entregado_at'           => 'datetime',
+        'fotos'                  => 'array',
     ];
 
     protected static function booted(): void

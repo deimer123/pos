@@ -100,13 +100,12 @@
 
                     {{-- Acciones --}}
                     <div style="display:flex; gap:6px; margin-top:10px; flex-wrap:wrap;">
-                        <button wire:click="editarOrden({{ $orden->id }})"
-                            style="flex:1; border:none; border-radius:8px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#0f766e; color:white;">
-                            ✏️ Editar
-                        </button>
+                        <a href="{{ route('taller.orden', $orden->id) }}"
+                            style="flex:1; border:none; border-radius:8px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#0f766e; color:white; text-align:center; text-decoration:none; display:block;">
+                            🔧 Abrir orden
+                        </a>
 
                         @if(in_array($orden->estado, ['pendiente','en_proceso','listo']))
-                            {{-- Cambio rápido de estado --}}
                             @if($orden->estado === 'pendiente')
                             <button wire:click="cambiarEstado({{ $orden->id }},'en_proceso')"
                                 style="flex:1; border:none; border-radius:8px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#3b82f6; color:white;">
@@ -115,18 +114,14 @@
                             @elseif($orden->estado === 'en_proceso')
                             <button wire:click="cambiarEstado({{ $orden->id }},'listo')"
                                 style="flex:1; border:none; border-radius:8px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#16a34a; color:white;">
-                                ✅ Marcar listo
+                                ✅ Listo
                             </button>
                             @endif
-
-                            <button wire:click="facturarOrden({{ $orden->id }})"
-                                style="flex:1; border:none; border-radius:8px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#4f46e5; color:white;">
-                                💵 Facturar
-                            </button>
                         @endif
 
                         @if($orden->estado === 'entregado' && $orden->factura_id)
-                        <span style="font-size:10px; color:#16a34a; font-weight:700; padding:6px;">✅ Factura #{{ $orden->factura_id }}</span>
+                        <a href="{{ route('ticket.factura', $orden->factura_id) }}" target="_blank"
+                           style="font-size:10px; color:#16a34a; font-weight:700; padding:6px; text-decoration:none; display:block;">✅ Ver comprobante</a>
                         @endif
                     </div>
                 </div>
