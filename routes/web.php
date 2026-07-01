@@ -96,6 +96,10 @@ Route::middleware(['auth', 'no_digitadores_en_pos', 'no.cocina.en.pos'])->get('/
     return view('pos');
 })->name('pos');
 
+Route::middleware(['auth'])->get('/taller', function () {
+    return view('taller');
+})->name('taller');
+
 
 Route::middleware(['auth'])->get('/prefactura/imprimir/{id}', [\App\Http\Controllers\PrefacturaController::class, 'imprimir'])->name('prefactura.imprimir');
 Route::middleware(['auth'])->get('/salida/imprimir/{id}', function ($id) {

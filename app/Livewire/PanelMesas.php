@@ -138,6 +138,7 @@ class PanelMesas extends Component
         return Mesa::where('empresa_id', $this->empresaId())
             ->where('activo', true)
             ->where('codigo', 'not like', 'DOMV-%')
+            ->where('codigo', 'not like', 'TALL-%')
             ->when($this->zonaFiltro, fn ($q) => $q->where('zona', $this->zonaFiltro))
             ->with(['ordenes' => fn ($q) => $q->whereIn('estado', ['abierta', 'en_preparacion'])->with('items')->latest()])
             ->orderBy('codigo')
