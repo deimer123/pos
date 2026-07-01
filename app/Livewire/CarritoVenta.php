@@ -754,10 +754,18 @@ public function asignarConsumidorFinalPorDefecto()
   public function agregarProducto($idProducto)
 {
     $empresaId = $this->getEmpresaId();
+
+    // Si usa_taller, exigir que haya una orden activa antes de agregar productos
+    $usaTaller = (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_taller');
+    if ($usaTaller && ! $this->tallerOrdenId) {
+        $this->dispatch('error', 'Debes crear un ingreso de taller primero (botón "Ingresar").');
+        return;
+    }
+
     $producto = Product::where('id_producto', $idProducto)
         ->where('empresa_id', $empresaId)
         ->first();
-        
+
     if (!$producto) {
         return;
     }
@@ -812,6 +820,11 @@ public function asignarConsumidorFinalPorDefecto()
     // En modo mesa: guardar inmediatamente en OrdenMesa
     if ($this->mesaId) {
         $this->guardarProductoEnOrdenMesa($producto, $this->carrito[$key]['cantidad']);
+    }
+
+    // Auto-sync con orden de taller activa
+    if ($this->tallerOrdenId) {
+        $this->sincronizarCarritoConOrdenTaller();
     }
 }
     public function agregarProductoAlCarrito($idProducto)
@@ -971,6 +984,16 @@ public function updatedCarrito($value, $key)
 
 public function limpiarCarrito()
 {
+    // Si hay orden taller activa, cancelarla y eliminarla del lobby
+    if ($this->tallerOrdenId) {
+        \App\Models\TallerRepuesto::where('orden_id', $this->tallerOrdenId)->delete();
+        \App\Models\TallerOrden::where('id', $this->tallerOrdenId)
+            ->where('empresa_id', $this->getEmpresaId())
+            ->delete();
+        $this->tallerOrdenId  = null;
+        $this->tallerFotoTemp = null;
+    }
+
     $this->eliminarPrefacturaCargada();
 
     $this->carrito = [];
@@ -1385,7 +1408,7 @@ public function guardarPrefacturaConfirmada()
         $this->tallerOrdenId = null;
     }
 
-    public function guardarOrdenTaller(): void
+    public function sincronizarCarritoConOrdenTaller(): void
     {
         if (! $this->tallerOrdenId) return;
 
@@ -1395,7 +1418,6 @@ public function guardarPrefacturaConfirmada()
 
         if (! $orden) return;
 
-        // Sincronizar repuestos desde el carrito
         \App\Models\TallerRepuesto::where('orden_id', $orden->id)->delete();
 
         foreach ($this->carrito as $item) {
@@ -1410,17 +1432,48 @@ public function guardarPrefacturaConfirmada()
                 'subtotal'        => round($precio * $cant, 2),
             ]);
         }
+    }
 
+    public function guardarOrdenTaller(): void
+    {
+        if (! $this->tallerOrdenId) return;
+
+        $orden = \App\Models\TallerOrden::where('id', $this->tallerOrdenId)
+            ->where('empresa_id', $this->getEmpresaId())
+            ->first();
+
+        if (! $orden) return;
+
+        $this->sincronizarCarritoConOrdenTaller();
         $orden->update(['estado' => 'en_proceso']);
 
-        $this->carrito       = [];
-        $this->totalGeneral  = 0;
-        $this->tallerOrdenId = null;
+        $this->carrito        = [];
+        $this->totalGeneral   = 0;
+        $this->tallerOrdenId  = null;
         $this->tallerFotoTemp = null;
 
         $this->olvidarCarritoPersistente();
+        $this->forzarConsumidorFinal();
 
         $this->dispatch('success', 'Orden #' . str_pad($orden->numero_orden, 4, '0', STR_PAD_LEFT) . ' guardada. Puedes volver a abrirla desde el panel Taller.');
+    }
+
+    public function salirALobbyTaller(): void
+    {
+        if ($this->tallerOrdenId) {
+            $this->sincronizarCarritoConOrdenTaller();
+            $orden = \App\Models\TallerOrden::find($this->tallerOrdenId);
+            if ($orden) $orden->update(['estado' => 'en_proceso']);
+        }
+
+        $this->carrito        = [];
+        $this->totalGeneral   = 0;
+        $this->tallerOrdenId  = null;
+        $this->tallerFotoTemp = null;
+        $this->olvidarCarritoPersistente();
+        $this->forzarConsumidorFinal();
+
+        $this->redirect(route('taller'));
     }
 
     public function cargarOrdenTaller(int $ordenId): void

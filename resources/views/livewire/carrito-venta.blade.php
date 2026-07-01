@@ -675,10 +675,20 @@
             </button>
 
             @if($usaTallerPos)
-            <button onclick="abrirFormTallerDesdePos()"
-                style="background:{{ $tallerOrdenId ? '#0d9488' : '#0f766e' }};color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
-                🔧 {{ $tallerOrdenId ? 'Ver taller' : 'Taller' }}
+            @if($tallerOrdenId)
+            {{-- Ya hay orden activa: ir al lobby guardando primero --}}
+            <button
+                x-on:click="Swal.fire({title:'¿Ir al lobby?',text:'Se guardarán los productos actuales en la orden antes de salir.',icon:'question',showCancelButton:true,confirmButtonText:'Guardar y salir',cancelButtonText:'Cancelar',confirmButtonColor:'#0f766e'}).then(r=>{if(r.isConfirmed){$wire.salirALobbyTaller();}})"
+                style="background:#0d9488;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                🔧 Ver lobby
             </button>
+            @else
+            {{-- Sin orden activa: botón de ingreso --}}
+            <button onclick="abrirIngresoTaller()"
+                style="background:#0f766e;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                🔧 Ingresar
+            </button>
+            @endif
             @endif
 
             <button wire:click="abrirModalCrearCliente"
@@ -696,7 +706,15 @@
             @endif
 
             <button
-                x-on:click="Swal.fire({title:'¿Vaciar carrito?',text:'Se eliminarán todos los productos.',icon:'warning',showCancelButton:true,confirmButtonText:'Sí, vaciar',cancelButtonText:'Cancelar'}).then(r=>{if(r.isConfirmed){$wire.limpiarCarrito();}})"
+                x-on:click="
+                    const hayTaller = !! $wire.get('tallerOrdenId');
+                    Swal.fire({
+                        title: hayTaller ? '¿Cancelar orden de taller?' : '¿Vaciar carrito?',
+                        text: hayTaller ? 'Se eliminarán los productos Y la orden del lobby.' : 'Se eliminarán todos los productos.',
+                        icon:'warning', showCancelButton:true,
+                        confirmButtonText:'Sí, eliminar', cancelButtonText:'Cancelar',
+                        confirmButtonColor:'#dc2626'
+                    }).then(r=>{ if(r.isConfirmed){ $wire.limpiarCarrito(); } })"
                 style="background:#dc2626;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 Limpiar
             </button>
@@ -2883,42 +2901,52 @@
 </script>
 
 <script>
-function abrirFormTallerDesdePos() {
+async function abrirIngresoTaller() {
+    // Verificar que haya un cliente seleccionado (distinto de Consumidor Final)
+    const nombreCliente = await Livewire.find(document.querySelector('[wire\\:id]').getAttribute('wire:id'))
+        ?.get('clienteSeleccionadoNombre') ?? '';
+
+    if (!nombreCliente || nombreCliente.toUpperCase().includes('CONSUMIDOR FINAL') || nombreCliente.trim() === '') {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Selecciona un cliente primero',
+            text: 'Debes buscar y seleccionar el cliente antes de crear un ingreso al taller.',
+            confirmButtonColor: '#0f766e',
+        });
+        return;
+    }
+
     Swal.fire({
-        title: '🔧 Orden de taller',
+        title: '🔧 Ingreso al taller',
         width: '600px',
         html: `
 <div style="text-align:left;padding:4px 0;">
 
-  <div style="font-size:11px;font-weight:700;color:#0f766e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;border-bottom:2px solid #ccfbf1;padding-bottom:4px;">👤 Datos del cliente</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+  <div style="font-size:11px;font-weight:700;color:#0f766e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;border-bottom:2px solid #ccfbf1;padding-bottom:4px;">👤 Cliente seleccionado</div>
+  <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+    <span style="font-size:18px;">👤</span>
     <div>
-      <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">Nombre *</label>
-      <input id="t_nombre" type="text" placeholder="Nombre del cliente"
-        style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box;">
-    </div>
-    <div>
-      <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">Teléfono</label>
-      <input id="t_tel" type="text" placeholder="3001234567"
-        style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box;">
+      <div style="font-size:13px;font-weight:700;color:#166534;" id="t_nombre_display">${nombreCliente}</div>
+      <div style="font-size:11px;color:#4b7a5e;">Cliente ya registrado en el sistema</div>
     </div>
   </div>
+  <input type="hidden" id="t_nombre" value="${nombreCliente}">
 
   <div style="font-size:11px;font-weight:700;color:#0f766e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;border-bottom:2px solid #ccfbf1;padding-bottom:4px;">🚗 Datos del vehículo</div>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
     <div>
       <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">Placa *</label>
       <input id="t_placa" type="text" placeholder="ABC-123"
-        style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:14px;font-weight:700;text-transform:uppercase;box-sizing:border-box;letter-spacing:.08em;">
+        style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:15px;font-weight:800;text-transform:uppercase;box-sizing:border-box;letter-spacing:.1em;">
     </div>
     <div>
       <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">Marca</label>
-      <input id="t_marca" type="text" placeholder="Toyota, Renault..."
+      <input id="t_marca" type="text" placeholder="Yamaha, Honda..."
         style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box;">
     </div>
     <div>
       <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">Modelo</label>
-      <input id="t_modelo" type="text" placeholder="Corolla, Logan..."
+      <input id="t_modelo" type="text" placeholder="XTZ-150, CB190..."
         style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box;">
     </div>
   </div>
@@ -2940,34 +2968,31 @@ function abrirFormTallerDesdePos() {
     </div>
   </div>
 
-  <div style="font-size:11px;font-weight:700;color:#0f766e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;border-bottom:2px solid #ccfbf1;padding-bottom:4px;">🔍 Diagnóstico y observaciones</div>
-  <textarea id="t_diag" placeholder="Describe el problema, síntomas, trabajo solicitado..." rows="3"
+  <div style="font-size:11px;font-weight:700;color:#0f766e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;border-bottom:2px solid #ccfbf1;padding-bottom:4px;">🔍 Diagnóstico / trabajo solicitado</div>
+  <textarea id="t_diag" placeholder="Describe el problema, síntomas, trabajo a realizar..." rows="3"
     style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;resize:vertical;box-sizing:border-box;margin-bottom:8px;"></textarea>
-  <textarea id="t_obs" placeholder="Observaciones adicionales, accesorios del vehículo, estado de entrega..." rows="2"
+  <textarea id="t_obs" placeholder="Observaciones: accesorios, estado de entrega, condición del vehículo..." rows="2"
     style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
 
 </div>`,
         showCancelButton: true,
-        confirmButtonText: '🔧 Guardar y agregar productos',
+        confirmButtonText: '✅ Crear ingreso y agregar productos',
         cancelButtonText: 'Cancelar',
         confirmButtonColor: '#0f766e',
         cancelButtonColor: '#6b7280',
         reverseButtons: true,
         focusConfirm: false,
+        didOpen: () => { document.getElementById('t_placa')?.focus(); },
         preConfirm: () => {
-            const nombre = (document.getElementById('t_nombre').value || '').trim();
-            const placa  = (document.getElementById('t_placa').value || '').trim();
-            if (!nombre) { Swal.showValidationMessage('El nombre del cliente es obligatorio.'); return false; }
-            if (!placa)  { Swal.showValidationMessage('La placa del vehículo es obligatoria.'); return false; }
+            const placa = (document.getElementById('t_placa').value || '').trim();
+            if (!placa) { Swal.showValidationMessage('La placa del vehículo es obligatoria.'); return false; }
             return {
-                nombre,
-                telefono:      (document.getElementById('t_tel').value   || '').trim(),
+                nombre:        nombreCliente,
                 placa:         placa.toUpperCase(),
                 marca:         (document.getElementById('t_marca').value  || '').trim(),
                 modelo:        (document.getElementById('t_modelo').value || '').trim(),
                 color:         (document.getElementById('t_color').value  || '').trim(),
                 km:            (document.getElementById('t_km').value     || '').trim(),
-                anio:          (document.getElementById('t_anio').value   || '').trim(),
                 diagnostico:   (document.getElementById('t_diag').value   || '').trim(),
                 observaciones: (document.getElementById('t_obs').value    || '').trim(),
             };
@@ -2977,7 +3002,7 @@ function abrirFormTallerDesdePos() {
             const d = result.value;
             Livewire.dispatch('crear-orden-taller', {
                 clienteNombre:   d.nombre,
-                clienteTelefono: d.telefono,
+                clienteTelefono: '',
                 placa:           d.placa,
                 marca:           d.marca,
                 modelo:          d.modelo,
