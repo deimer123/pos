@@ -2921,7 +2921,7 @@ function abrirIngresoTaller(nombreCliente) {
 <div style="text-align:left;padding:4px 0;">
 
   <div style="font-size:11px;font-weight:700;color:#0f766e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;border-bottom:2px solid #ccfbf1;padding-bottom:4px;">👤 Cliente seleccionado</div>
-  <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+  <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;">
     <span style="font-size:18px;">👤</span>
     <div>
       <div style="font-size:13px;font-weight:700;color:#166534;" id="t_nombre_display">${nombreCliente}</div>
@@ -2929,6 +2929,11 @@ function abrirIngresoTaller(nombreCliente) {
     </div>
   </div>
   <input type="hidden" id="t_nombre" value="${nombreCliente}">
+  <div style="margin-bottom:14px;">
+    <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">📞 Teléfono del cliente</label>
+    <input id="t_telefono" type="text" placeholder="3001234567"
+      style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box;">
+  </div>
 
   <datalist id="dl_marcas">
     <!-- Motos -->
@@ -3023,6 +3028,7 @@ function abrirIngresoTaller(nombreCliente) {
             if (!placa) { Swal.showValidationMessage('La placa del vehículo es obligatoria.'); return false; }
             return {
                 nombre:        nombreCliente,
+                telefono:      (document.getElementById('t_telefono').value || '').trim(),
                 placa:         placa.toUpperCase(),
                 marca:         (document.getElementById('t_marca').value  || '').trim(),
                 modelo:        (document.getElementById('t_modelo').value || '').trim(),
@@ -3037,7 +3043,7 @@ function abrirIngresoTaller(nombreCliente) {
             const d = result.value;
             Livewire.dispatch('crear-orden-taller', {
                 clienteNombre:   d.nombre,
-                clienteTelefono: '',
+                clienteTelefono: d.telefono,
                 placa:           d.placa,
                 marca:           d.marca,
                 modelo:          d.modelo,
