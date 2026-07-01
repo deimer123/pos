@@ -86,7 +86,8 @@
                                 ->whereIn('estado', ['pendiente','en_proceso','listo'])->count();
                         @endphp
                         @if(!request()->routeIs('taller'))
-                        <a href="{{ route('taller') }}"
+                        <a href="{{ route('taller') }}" id="btn-ir-taller"
+                           onclick="irAlTallerConGuardado(event, '{{ route('taller') }}')"
                            style="border:none; border-radius:20px; padding:5px 14px; font-size:12px; font-weight:700; cursor:pointer;
                                background:rgba(255,255,255,.2); color:white; display:flex; align-items:center; gap:5px; text-decoration:none;">
                             🔧 Taller
@@ -126,6 +127,40 @@
        @livewireScripts
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+    function irAlTallerConGuardado(event, urlTaller) {
+        // Buscar el componente carrito-venta
+        const carritoEl = document.querySelector('[wire\\:id]');
+        if (!carritoEl) { window.location.href = urlTaller; return; }
+
+        const wire = Livewire.find(carritoEl.getAttribute('wire:id'));
+        if (!wire) { window.location.href = urlTaller; return; }
+
+        const tallerOrdenId = wire.get('tallerOrdenId');
+        if (!tallerOrdenId) {
+            // No hay orden activa, navegar directo
+            window.location.href = urlTaller;
+            return;
+        }
+
+        // Hay orden activa: prevenir navegación y guardar primero
+        event.preventDefault();
+        Swal.fire({
+            title: '¿Ir al lobby?',
+            text: 'Los productos del carrito se guardarán en la orden antes de salir.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: '💾 Guardar y salir',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#0f766e',
+            cancelButtonColor: '#6b7280',
+        }).then(r => {
+            if (r.isConfirmed) {
+                wire.call('salirALobbyTaller');
+            }
+        });
+    }
+    </script>
     <script src="{{ asset('js/pos-responsive-actions.js') }}?v={{ filemtime(public_path('js/pos-responsive-actions.js')) }}"></script>
 
     <script>
