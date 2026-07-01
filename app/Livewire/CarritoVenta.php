@@ -1306,13 +1306,14 @@ public function guardarPrefacturaConfirmada()
     #[On('crear-orden-taller')]
     public function crearOrdenTallerDesdePos(
         string $clienteNombre,
-        string $clienteTelefono,
-        string $placa,
-        string $marca,
-        string $modelo,
-        string $color,
-        string $km,
-        string $diagnostico
+        string $clienteTelefono = '',
+        string $placa = '',
+        string $marca = '',
+        string $modelo = '',
+        string $color = '',
+        string $km = '',
+        string $diagnostico = '',
+        string $observaciones = ''
     ): void {
         $orden = \App\Models\TallerOrden::create([
             'empresa_id'      => $this->getEmpresaId(),
@@ -1324,6 +1325,7 @@ public function guardarPrefacturaConfirmada()
             'color'           => trim($color) ?: null,
             'km_ingreso'      => $km ? (int) $km : null,
             'diagnostico'     => trim($diagnostico) ?: null,
+            'observaciones'   => trim($observaciones) ?: null,
             'estado'          => 'en_proceso',
             'creado_por'      => auth()->id(),
         ]);
