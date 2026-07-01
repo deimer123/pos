@@ -2902,6 +2902,16 @@
 
 <script>
 function abrirIngresoTaller(nombreCliente, telefonoCliente) {
+    if (!document.getElementById('taller-modal-style')) {
+        const style = document.createElement('style');
+        style.id = 'taller-modal-style';
+        style.textContent = `
+            .swal-taller-popup { display:flex !important; flex-direction:column; max-height:92vh !important; }
+            .swal-taller-html { overflow-y:auto; max-height:calc(92vh - 160px); margin:0 !important; }
+        `;
+        document.head.appendChild(style);
+    }
+
     nombreCliente = (nombreCliente || '').trim();
     telefonoCliente = (telefonoCliente || '').trim();
 
@@ -2918,6 +2928,8 @@ function abrirIngresoTaller(nombreCliente, telefonoCliente) {
     Swal.fire({
         title: '🔧 Ingreso al taller',
         width: '600px',
+        heightAuto: false,
+        customClass: { popup: 'swal-taller-popup', htmlContainer: 'swal-taller-html' },
         html: `
 <div style="text-align:left;padding:4px 0;">
 
