@@ -11,7 +11,7 @@ use Livewire\Component;
 class TallerPanel extends Component
 {
     // Lista
-    public string $filtroEstado = '';
+    public string $filtroEstado = 'activas';
     public string $busqueda     = '';
     public string $fechaDesde   = '';
     public string $fechaHasta   = '';
@@ -51,7 +51,8 @@ class TallerPanel extends Component
             )
             ->when($this->fechaDesde, fn($q) => $q->whereDate('created_at', '>=', $this->fechaDesde))
             ->when($this->fechaHasta, fn($q) => $q->whereDate('created_at', '<=', $this->fechaHasta))
-            ->when($this->filtroEstado, fn($q) => $q->where('estado', $this->filtroEstado))
+            ->when($this->filtroEstado === 'activas', fn($q) => $q->where('estado', '!=', 'entregado'))
+            ->when($this->filtroEstado && $this->filtroEstado !== 'activas', fn($q) => $q->where('estado', $this->filtroEstado))
             ->when($this->busqueda, fn($q) => $q->where(function($q2) {
                 $q2->where('placa', 'like', '%'.$this->busqueda.'%')
                    ->orWhere('cliente_nombre', 'like', '%'.$this->busqueda.'%')

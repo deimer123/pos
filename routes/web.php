@@ -123,7 +123,8 @@ Route::middleware(['auth'])->get('/taller/pdf/reporte', function (\Illuminate\Ht
     $busqueda = $request->get('busqueda');
 
     $query = \App\Models\TallerOrden::where('empresa_id', $empresaId)->with('repuestos')
-        ->when($estado !== 'todos', fn($q) => $q->where('estado', $estado))
+        ->when($estado === 'activas', fn($q) => $q->where('estado', '!=', 'entregado'))
+        ->when($estado !== 'todos' && $estado !== 'activas', fn($q) => $q->where('estado', $estado))
         ->when($desde,    fn($q) => $q->whereDate('created_at', '>=', $desde))
         ->when($hasta,    fn($q) => $q->whereDate('created_at', '<=', $hasta))
         ->when($busqueda, fn($q) => $q->where(fn($q2) =>

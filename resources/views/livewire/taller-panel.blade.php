@@ -26,14 +26,14 @@
             <span style="width:1px; height:20px; background:rgba(255,255,255,.3); display:inline-block;"></span>
 
             {{-- Filtros estado --}}
-            @foreach([''=>'📋 Todas','pendiente'=>'⏳ Pendientes','entregado'=>'💰 Cobradas'] as $val => $lbl)
+            @foreach(['activas'=>'🔧 En ejecución','entregado'=>'💰 Cobradas',''=>'📋 Todas'] as $val => $lbl)
             <button wire:click="$set('filtroEstado','{{ $val }}')"
                 style="border:none; border-radius:20px; padding:5px 14px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap;
                     background:{{ $filtroEstado === $val ? 'white' : 'rgba(255,255,255,.2)' }};
                     color:{{ $filtroEstado === $val ? '#0f766e' : 'white' }};">
                 {{ $lbl }}
-                @if($val === 'pendiente')
-                    @php $nPend = \App\Models\TallerOrden::where('empresa_id', auth()->user()->getEmpresaActualId())->where('estado','pendiente')->count(); @endphp
+                @if($val === 'activas')
+                    @php $nPend = \App\Models\TallerOrden::where('empresa_id', auth()->user()->getEmpresaActualId())->where('estado','!=','entregado')->count(); @endphp
                     @if($nPend > 0)<span style="background:#ef4444; border-radius:99px; padding:1px 6px; font-size:10px; color:white; margin-left:3px;">{{ $nPend }}</span>@endif
                 @endif
             </button>
@@ -54,7 +54,7 @@
             <div style="text-align:center; padding:60px 20px; color:#94a3b8;">
                 <div style="font-size:48px;">🔧</div>
                 <div style="margin-top:12px; font-size:15px; font-weight:600;">
-                    @if($filtroEstado === 'pendiente') No hay órdenes pendientes.
+                    @if($filtroEstado === 'activas') No hay órdenes en ejecución.
                     @elseif($filtroEstado === 'entregado') No hay órdenes cobradas en este período.
                     @else No hay órdenes de taller.
                     @endif

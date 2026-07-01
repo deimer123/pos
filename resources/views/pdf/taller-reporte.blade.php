@@ -28,7 +28,7 @@
     <div style="font-size:14px; font-weight:700; color:#374151; margin-top:4px;">Reporte de Órdenes de Taller</div>
     <div class="sub">
         @if($estado && $estado !== 'todos')
-            Estado: {{ ['pendiente'=>'Pendientes','entregado'=>'Cobradas'][$estado] ?? $estado }}
+            Estado: {{ ['pendiente'=>'Pendientes','activas'=>'En ejecución','entregado'=>'Cobradas'][$estado] ?? $estado }}
         @else
             Todas las órdenes
         @endif
