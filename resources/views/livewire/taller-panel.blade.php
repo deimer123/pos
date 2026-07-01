@@ -163,7 +163,7 @@
                         </a>
 
                         @if($esCobrada && $orden->factura_id)
-                        <a href="{{ route('ticket.factura', $orden->factura_id) }}" target="_blank"
+                        <a href="{{ route('factura.ver', $orden->factura_id) }}" target="_blank"
                            style="flex:1; border:none; border-radius:8px; padding:8px 6px; font-size:12px; font-weight:700; cursor:pointer; background:#16a34a; color:white; text-decoration:none; text-align:center;">
                             🧾 Factura
                         </a>

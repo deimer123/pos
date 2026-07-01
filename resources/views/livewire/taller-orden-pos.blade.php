@@ -308,7 +308,7 @@
                 <div style="text-align:center;background:#f0fdf4;border-radius:10px;padding:10px;font-size:13px;color:#16a34a;font-weight:700;">
                     ✅ Orden {{ $orden->estado === 'entregado' ? 'entregada y facturada' : 'cancelada' }}
                     @if($orden->factura_id)
-                        · <a href="{{ route('ticket.factura', $orden->factura_id) }}" target="_blank" style="color:#0f766e;">Ver comprobante</a>
+                        · <a href="{{ route('factura.ver', $orden->factura_id) }}" target="_blank" style="color:#0f766e;">Ver comprobante</a>
                     @endif
                 </div>
                 @endif
