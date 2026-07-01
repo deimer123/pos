@@ -715,6 +715,15 @@
                 class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
                 Ver
             </button>
+            @php $usaTallerPos = (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_taller'); @endphp
+            @if($usaTallerPos)
+            <button
+                onclick="abrirFormTallerDesdePos()"
+                class="pos-cart-secondary-action text-white text-xs px-3 h-8 rounded-full shadow"
+                style="background:#0f766e;">
+                🔧 Taller
+            </button>
+            @endif
             @endif {{-- fin !$esMesero --}}
             @else
             <button
@@ -2844,4 +2853,99 @@
         });
 
     });
+</script>
+
+<script>
+function abrirFormTallerDesdePos() {
+    Swal.fire({
+        title: '🔧 Nueva orden de taller',
+        width: '560px',
+        html: `
+<div style="text-align:left; padding:4px 0;">
+  <div style="font-size:11px;font-weight:700;color:#0f766e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">👤 Cliente</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+    <div>
+      <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">Nombre *</label>
+      <input id="t_nombre" type="text" placeholder="Nombre del cliente"
+        style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">Teléfono</label>
+      <input id="t_tel" type="text" placeholder="3001234567"
+        style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box;">
+    </div>
+  </div>
+  <div style="font-size:11px;font-weight:700;color:#0f766e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">🚗 Vehículo</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
+    <div>
+      <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">Placa *</label>
+      <input id="t_placa" type="text" placeholder="ABC-123"
+        style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;text-transform:uppercase;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">Marca</label>
+      <input id="t_marca" type="text" placeholder="Toyota, Renault..."
+        style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">Modelo</label>
+      <input id="t_modelo" type="text" placeholder="Corolla, Logan..."
+        style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box;">
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+    <div>
+      <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">Color</label>
+      <input id="t_color" type="text" placeholder="Blanco, Negro..."
+        style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">Kilometraje</label>
+      <input id="t_km" type="number" placeholder="45000"
+        style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box;">
+    </div>
+  </div>
+  <div style="font-size:11px;font-weight:700;color:#0f766e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">🔍 Diagnóstico</div>
+  <textarea id="t_diag" placeholder="Describe el problema o el trabajo a realizar..." rows="3"
+    style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+</div>`,
+        showCancelButton: true,
+        confirmButtonText: '🔧 Crear orden',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#0f766e',
+        cancelButtonColor: '#6b7280',
+        reverseButtons: true,
+        focusConfirm: false,
+        preConfirm: () => {
+            const nombre = (document.getElementById('t_nombre').value || '').trim();
+            const placa  = (document.getElementById('t_placa').value || '').trim();
+            if (!nombre) { Swal.showValidationMessage('El nombre del cliente es obligatorio.'); return false; }
+            if (!placa)  { Swal.showValidationMessage('La placa del vehículo es obligatoria.'); return false; }
+            return {
+                nombre,
+                telefono:    (document.getElementById('t_tel').value   || '').trim(),
+                placa:       placa.toUpperCase(),
+                marca:       (document.getElementById('t_marca').value  || '').trim(),
+                modelo:      (document.getElementById('t_modelo').value || '').trim(),
+                color:       (document.getElementById('t_color').value  || '').trim(),
+                km:          (document.getElementById('t_km').value     || '').trim(),
+                diagnostico: (document.getElementById('t_diag').value   || '').trim(),
+            };
+        }
+    }).then(result => {
+        if (result.isConfirmed && result.value) {
+            const d = result.value;
+            Livewire.dispatch('crear-orden-taller', {
+                clienteNombre:   d.nombre,
+                clienteTelefono: d.telefono,
+                placa:           d.placa,
+                marca:           d.marca,
+                modelo:          d.modelo,
+                color:           d.color,
+                km:              d.km,
+                diagnostico:     d.diagnostico,
+            });
+        }
+    });
+}
 </script>

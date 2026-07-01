@@ -1296,6 +1296,36 @@ public function guardarPrefacturaConfirmada()
     }
 }
 
+    #[On('crear-orden-taller')]
+    public function crearOrdenTallerDesdePos(
+        string $clienteNombre,
+        string $clienteTelefono,
+        string $placa,
+        string $marca,
+        string $modelo,
+        string $color,
+        string $km,
+        string $diagnostico
+    ): void {
+        $empresaId = $this->getEmpresaId();
+
+        $orden = \App\Models\TallerOrden::create([
+            'empresa_id'      => $empresaId,
+            'cliente_nombre'  => trim($clienteNombre),
+            'cliente_telefono'=> trim($clienteTelefono) ?: null,
+            'placa'           => strtoupper(trim($placa)),
+            'marca'           => trim($marca) ?: null,
+            'modelo'          => trim($modelo) ?: null,
+            'color'           => trim($color) ?: null,
+            'km_ingreso'      => $km ? (int) $km : null,
+            'diagnostico'     => trim($diagnostico) ?: null,
+            'estado'          => 'pendiente',
+            'creado_por'      => auth()->id(),
+        ]);
+
+        $this->redirect(route('taller.orden', $orden->id));
+    }
+
     public function verPrefacturas()
     {
         $empresaId = $this->getEmpresaId();
