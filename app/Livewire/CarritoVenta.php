@@ -1474,6 +1474,8 @@ public function guardarPrefacturaConfirmada()
         $this->tallerOrdenId  = null;
         $this->tallerFotoTemp = null;
 
+        session()->forget('carrito_guardado');
+        session()->forget('observaciones_guardadas');
         $this->olvidarCarritoPersistente();
         $this->forzarConsumidorFinal();
 
@@ -1492,6 +1494,8 @@ public function guardarPrefacturaConfirmada()
         $this->totalGeneral   = 0;
         $this->tallerOrdenId  = null;
         $this->tallerFotoTemp = null;
+        session()->forget('carrito_guardado');
+        session()->forget('observaciones_guardadas');
         $this->olvidarCarritoPersistente();
         $this->forzarConsumidorFinal();
 

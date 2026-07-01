@@ -62,7 +62,7 @@
                 <div style="font-size:12px; color:#cbd5e1; margin-top:6px;">Las órdenes se crean desde el POS con el botón "Ingresar".</div>
             </div>
         @else
-        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:14px;">
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:10px;">
             @foreach($ordenes as $orden)
                 @php
                     $esCobrada  = $orden->estado === 'entregado';
@@ -76,104 +76,103 @@
                     $c        = $colores[$orden->estado] ?? $colores['pendiente'];
                     $totalRep = $orden->repuestos->sum('subtotal');
                 @endphp
-                <div style="background:{{ $c['bg'] }}; border:2px solid {{ $c['border'] }}; border-radius:14px; padding:16px; position:relative;">
+                <div style="background:{{ $c['bg'] }}; border:2px solid {{ $c['border'] }}; border-radius:12px; padding:10px; position:relative;">
 
                     {{-- Badge estado + número --}}
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <span style="font-size:11px; font-weight:700; background:{{ $c['badge'] }}; color:white; border-radius:99px; padding:3px 12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <span style="font-size:10px; font-weight:700; background:{{ $c['badge'] }}; color:white; border-radius:99px; padding:2px 10px;">
                             {{ $c['icon'] }} {{ $c['label'] }}
                         </span>
-                        <span style="font-size:13px; font-weight:800; color:{{ $c['text'] }};">
+                        <span style="font-size:12px; font-weight:800; color:{{ $c['text'] }};">
                             # {{ str_pad($orden->numero_orden, 4, '0', STR_PAD_LEFT) }}
                         </span>
                     </div>
 
                     {{-- Vehículo --}}
-                    <div style="font-size:22px; font-weight:900; color:#0f766e; letter-spacing:.05em;">{{ $orden->placa }}</div>
-                    <div style="font-size:12px; color:#374151; font-weight:600; margin-top:2px;">
+                    <div style="font-size:18px; font-weight:900; color:#0f766e; letter-spacing:.05em;">{{ $orden->placa }}</div>
+                    <div style="font-size:11px; color:#374151; font-weight:600; margin-top:1px;">
                         {{ trim(($orden->marca ?? '') . ' ' . ($orden->modelo ?? '')) ?: '—' }}
-                        @if($orden->color) · <span style="color:#6b7280;">{{ $orden->color }}</span> @endif
-                        @if($orden->km_ingreso) · <span style="color:#6b7280;">{{ number_format($orden->km_ingreso) }} km</span> @endif
                     </div>
 
                     {{-- Cliente --}}
-                    <div style="margin-top:8px; font-size:13px; color:#1f2937; font-weight:600;">
+                    <div style="margin-top:5px; font-size:12px; color:#1f2937; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                         👤 {{ $orden->cliente_nombre }}
-                        @if($orden->cliente_telefono)
-                            <span style="font-size:11px; color:#6b7280; font-weight:400;"> · 📞 {{ $orden->cliente_telefono }}</span>
-                        @endif
                     </div>
 
-                    {{-- Diagnóstico --}}
-                    @if($orden->diagnostico)
-                    <div style="margin-top:8px; font-size:12px; color:#4b5563; background:rgba(0,0,0,.04); border-radius:8px; padding:7px 10px; line-height:1.5;">
-                        📋 {{ $orden->diagnostico }}
+                    {{-- Total --}}
+                    <div style="margin-top:5px; font-size:12px; font-weight:800; color:#0f766e;">
+                        💰 Total: ${{ number_format($totalRep, 0, ',', '.') }}
                     </div>
-                    @endif
-
-                    @if($orden->observaciones)
-                    <div style="margin-top:4px; font-size:11px; color:#6b7280; font-style:italic; padding:0 4px;">
-                        {{ $orden->observaciones }}
-                    </div>
-                    @endif
-
-                    {{-- Nota de trabajo realizado (editable en cualquier momento) --}}
-                    <div x-data="{ nota: @js($orden->nota_trabajo ?? '') }" style="margin-top:8px;">
-                        <label style="font-size:10px; font-weight:700; color:#0f766e; text-transform:uppercase; display:block; margin-bottom:3px;">📝 Nota de trabajo realizado</label>
-                        <textarea x-model="nota" @blur="$wire.guardarNotaTrabajo({{ $orden->id }}, nota)"
-                            placeholder="Describe lo que se le hizo a la moto/carro durante la orden..."
-                            rows="2"
-                            style="width:100%; border:1px solid #99f6e4; border-radius:8px; padding:6px 8px; font-size:12px; box-sizing:border-box; resize:vertical; background:#f0fdfa;"></textarea>
-                    </div>
-
-                    {{-- Repuestos / Servicios detalle --}}
-                    @if($orden->repuestos->isNotEmpty())
-                    <div style="margin-top:10px; border-top:1px solid rgba(0,0,0,.07); padding-top:8px;">
-                        <div style="font-size:10px; font-weight:700; color:#6b7280; text-transform:uppercase; margin-bottom:5px;">Repuestos / Servicios</div>
-                        @foreach($orden->repuestos as $rep)
-                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#374151; padding:2px 0;">
-                            <span>🔩 {{ $rep->descripcion }} <span style="color:#9ca3af;">× {{ $rep->cantidad }}</span></span>
-                            <span style="font-weight:700; color:#0f766e;">${{ number_format($rep->subtotal, 0, ',', '.') }}</span>
-                        </div>
-                        @endforeach
-                        <div style="display:flex; justify-content:flex-end; margin-top:6px; padding-top:6px; border-top:1px solid rgba(0,0,0,.07);">
-                            <span style="font-size:14px; font-weight:800; color:#0f766e;">Total: ${{ number_format($totalRep, 0, ',', '.') }}</span>
-                        </div>
-                    </div>
-                    @endif
 
                     {{-- Fecha --}}
-                    <div style="font-size:10px; color:#9ca3af; margin-top:8px;">
-                        Ingresó: {{ $orden->created_at->format('d/m/Y h:i A') }}
+                    <div style="font-size:9px; color:#9ca3af; margin-top:4px;">
+                        {{ $orden->created_at->format('d/m/Y h:i A') }}
                         @if($orden->entregado_at)
-                            · Cobrada: {{ \Carbon\Carbon::parse($orden->entregado_at)->format('d/m/Y h:i A') }}
+                            · Cobrada {{ \Carbon\Carbon::parse($orden->entregado_at)->format('d/m/Y h:i A') }}
                         @endif
+                    </div>
+
+                    {{-- Detalle expandible: diagnóstico, nota de trabajo y repuestos --}}
+                    <div x-data="{ abierto: false, nota: @js($orden->nota_trabajo ?? '') }" style="margin-top:6px;">
+                        <button type="button" @click="abierto = !abierto"
+                            style="width:100%; border:none; background:rgba(0,0,0,.05); color:#374151; border-radius:6px; padding:4px 8px; font-size:10px; font-weight:700; cursor:pointer; text-align:left;">
+                            <span x-text="abierto ? '▾ Ocultar detalle' : '▸ Ver detalle / nota de trabajo'"></span>
+                        </button>
+                        <div x-show="abierto" style="margin-top:6px;">
+                            @if($orden->diagnostico)
+                            <div style="font-size:11px; color:#4b5563; background:rgba(0,0,0,.04); border-radius:8px; padding:6px 8px; line-height:1.4; margin-bottom:4px;">
+                                📋 {{ $orden->diagnostico }}
+                            </div>
+                            @endif
+
+                            @if($orden->observaciones)
+                            <div style="font-size:10px; color:#6b7280; font-style:italic; padding:0 2px; margin-bottom:4px;">
+                                {{ $orden->observaciones }}
+                            </div>
+                            @endif
+
+                            <label style="font-size:9px; font-weight:700; color:#0f766e; text-transform:uppercase; display:block; margin-bottom:2px;">📝 Nota de trabajo realizado</label>
+                            <textarea x-model="nota" @blur="$wire.guardarNotaTrabajo({{ $orden->id }}, nota)"
+                                placeholder="Describe lo que se le hizo a la moto/carro durante la orden..."
+                                rows="2"
+                                style="width:100%; border:1px solid #99f6e4; border-radius:8px; padding:5px 7px; font-size:11px; box-sizing:border-box; resize:vertical; background:#f0fdfa; margin-bottom:6px;"></textarea>
+
+                            @if($orden->repuestos->isNotEmpty())
+                            <div style="font-size:9px; font-weight:700; color:#6b7280; text-transform:uppercase; margin-bottom:3px;">Repuestos / Servicios</div>
+                            @foreach($orden->repuestos as $rep)
+                            <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#374151; padding:1px 0;">
+                                <span>🔩 {{ $rep->descripcion }} <span style="color:#9ca3af;">× {{ $rep->cantidad }}</span></span>
+                                <span style="font-weight:700; color:#0f766e;">${{ number_format($rep->subtotal, 0, ',', '.') }}</span>
+                            </div>
+                            @endforeach
+                            @endif
+                        </div>
                     </div>
 
                     {{-- Acciones --}}
-                    <div style="display:flex; gap:6px; margin-top:12px; flex-wrap:wrap;">
+                    <div style="display:flex; gap:4px; margin-top:8px; flex-wrap:wrap;">
                         @if(!$esCobrada)
                         <button wire:click="abrirOrden({{ $orden->id }})"
-                            style="flex:1; border:none; border-radius:8px; padding:8px 6px; font-size:12px; font-weight:700; cursor:pointer; background:#0f766e; color:white;">
-                            🛒 Abrir en POS
+                            style="flex:1; border:none; border-radius:8px; padding:6px 4px; font-size:11px; font-weight:700; cursor:pointer; background:#0f766e; color:white;">
+                            🛒 POS
                         </button>
                         @if($orden->estado === 'pendiente')
                         <button wire:click="cambiarEstado({{ $orden->id }},'en_proceso')"
-                            style="flex:1; border:none; border-radius:8px; padding:8px 6px; font-size:12px; font-weight:700; cursor:pointer; background:#3b82f6; color:white;">
+                            style="flex:1; border:none; border-radius:8px; padding:6px 4px; font-size:11px; font-weight:700; cursor:pointer; background:#3b82f6; color:white;">
                             🔧 Iniciar
                         </button>
                         @endif
                         @endif
 
-                        {{-- PDF de esta orden --}}
+                        {{-- PDF de esta orden (incluye diagnóstico, nota y repuestos completos) --}}
                         <a href="{{ route('taller.orden.pdf', $orden->id) }}" target="_blank"
-                           style="flex:1; border:none; border-radius:8px; padding:8px 6px; font-size:12px; font-weight:700; cursor:pointer; background:#7c3aed; color:white; text-decoration:none; text-align:center;">
+                           style="flex:1; border:none; border-radius:8px; padding:6px 4px; font-size:11px; font-weight:700; cursor:pointer; background:#7c3aed; color:white; text-decoration:none; text-align:center;">
                             📄 PDF
                         </a>
 
                         @if($esCobrada && $orden->factura_id)
                         <a href="{{ route('factura.ver', $orden->factura_id) }}" target="_blank"
-                           style="flex:1; border:none; border-radius:8px; padding:8px 6px; font-size:12px; font-weight:700; cursor:pointer; background:#16a34a; color:white; text-decoration:none; text-align:center;">
+                           style="flex:1; border:none; border-radius:8px; padding:6px 4px; font-size:11px; font-weight:700; cursor:pointer; background:#16a34a; color:white; text-decoration:none; text-align:center;">
                             🧾 Factura
                         </a>
                         @endif
