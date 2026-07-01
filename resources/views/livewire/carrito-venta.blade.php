@@ -684,7 +684,7 @@
             </button>
             @else
             {{-- Sin orden activa: botón de ingreso --}}
-            <button onclick="abrirIngresoTaller(@js($clienteSeleccionadoNombre ?? ''))"
+            <button onclick="abrirIngresoTaller(@js($clienteSeleccionadoNombre ?? ''), @js($clienteTelefono ?? ''))"
                 style="background:#0f766e;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 🔧 Ingresar
             </button>
@@ -2901,8 +2901,9 @@
 </script>
 
 <script>
-function abrirIngresoTaller(nombreCliente) {
+function abrirIngresoTaller(nombreCliente, telefonoCliente) {
     nombreCliente = (nombreCliente || '').trim();
+    telefonoCliente = (telefonoCliente || '').trim();
 
     if (!nombreCliente || nombreCliente.toUpperCase().includes('CONSUMIDOR FINAL')) {
         Swal.fire({
@@ -2929,11 +2930,7 @@ function abrirIngresoTaller(nombreCliente) {
     </div>
   </div>
   <input type="hidden" id="t_nombre" value="${nombreCliente}">
-  <div style="margin-bottom:14px;">
-    <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">📞 Teléfono del cliente</label>
-    <input id="t_telefono" type="text" placeholder="3001234567"
-      style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box;">
-  </div>
+  <input type="hidden" id="t_telefono" value="${telefonoCliente.replace(/"/g, '&quot;')}">
 
   <datalist id="dl_marcas">
     <!-- Motos -->
