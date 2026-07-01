@@ -1512,6 +1512,23 @@ public function guardarPrefacturaConfirmada()
         $this->tallerOrdenId = $orden->id;
         $this->carrito       = [];
 
+        // Asignar el cliente de la orden de taller (en vez de dejar CONSUMIDOR FINAL)
+        if ($orden->cliente_nombre) {
+            $cliente = Actor::where('empresa_id', $empresaId)
+                ->whereRaw('LOWER(TRIM(nombre)) = ?', [mb_strtolower(trim($orden->cliente_nombre))])
+                ->first();
+
+            if ($cliente) {
+                $this->clienteId = $cliente->id;
+                $this->clienteDireccion = $cliente->direccion ?? null;
+                $this->clienteTelefono  = $cliente->telefono ?? $orden->cliente_telefono ?? null;
+            } else {
+                $this->clienteTelefono = $orden->cliente_telefono ?? null;
+            }
+
+            $this->clienteSeleccionadoNombre = $this->textoUtf8($orden->cliente_nombre);
+        }
+
         foreach ($orden->repuestos as $rep) {
             $precio = (float) $rep->precio_unitario;
             $cant   = (float) $rep->cantidad;
