@@ -3,13 +3,28 @@
     {{-- Header --}}
     <div style="padding:10px 16px; background:#0f766e; color:white; flex-shrink:0;">
         <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-            <div style="display:flex; align-items:center; gap:12px;">
+            {{-- Izquierda: búsqueda --}}
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                 <span style="font-size:16px; font-weight:700;">🔧 Taller</span>
                 <input wire:model.live.debounce.300ms="busqueda" type="text" placeholder="Buscar placa, cliente..."
-                    style="border:none; border-radius:20px; padding:5px 14px; font-size:12px; width:200px; outline:none; color:#1f2937;">
+                    style="border:none; border-radius:20px; padding:5px 14px; font-size:12px; width:190px; outline:none; color:#1f2937;">
+                {{-- Rango de fechas --}}
+                <div style="display:flex; align-items:center; gap:4px;">
+                    <input wire:model.live="fechaDesde" type="date"
+                        style="border:none; border-radius:10px; padding:4px 8px; font-size:11px; outline:none; color:#1f2937; height:28px;">
+                    <span style="font-size:11px;">→</span>
+                    <input wire:model.live="fechaHasta" type="date"
+                        style="border:none; border-radius:10px; padding:4px 8px; font-size:11px; outline:none; color:#1f2937; height:28px;">
+                    @if($fechaDesde || $fechaHasta)
+                    <button wire:click="limpiarFechas"
+                        style="border:none; border-radius:99px; background:rgba(255,255,255,.25); color:white; font-size:12px; width:22px; height:22px; cursor:pointer; padding:0; line-height:1;">×</button>
+                    @endif
+                </div>
             </div>
+            {{-- Derecha: filtros + botón --}}
             <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                {{-- Filtros fecha --}}
+                {{-- Filtros período (solo si no hay rango manual) --}}
+                @if(!$fechaDesde && !$fechaHasta)
                 @foreach(['hoy'=>'Hoy','semana'=>'Esta semana','mes'=>'Este mes','todos'=>'Todos'] as $fv => $fl)
                 <button wire:click="$set('filtroFecha','{{ $fv }}')"
                     style="border:none; border-radius:20px; padding:4px 11px; font-size:11px; font-weight:700; cursor:pointer;
@@ -19,8 +34,9 @@
                 </button>
                 @endforeach
                 <span style="width:1px; height:18px; background:rgba(255,255,255,.3); display:inline-block;"></span>
+                @endif
                 {{-- Filtros estado --}}
-                @foreach([''=>'Todas','pendiente'=>'⏳ Pendiente','en_proceso'=>'🔧 En proceso','listo'=>'✅ Listo','entregado'=>'📦 Entregado'] as $val => $lbl)
+                @foreach([''=>'Todas','pendiente'=>'⏳ Pendiente','en_proceso'=>'🔧 Ejecutada','entregado'=>'💰 Cobrada','cancelado'=>'❌ Cancelada'] as $val => $lbl)
                 <button wire:click="$set('filtroEstado','{{ $val }}')"
                     style="border:none; border-radius:20px; padding:4px 12px; font-size:11px; font-weight:700; cursor:pointer;
                         background:{{ $filtroEstado === $val ? 'white' : 'rgba(255,255,255,.2)' }};
@@ -51,11 +67,11 @@
             @foreach($ordenes as $orden)
                 @php
                     $colores = [
-                        'pendiente'  => ['bg'=>'#fef3c7','border'=>'#fbbf24','badge'=>'#f59e0b','text'=>'#78350f','icon'=>'⏳'],
-                        'en_proceso' => ['bg'=>'#eff6ff','border'=>'#93c5fd','badge'=>'#3b82f6','text'=>'#1e40af','icon'=>'🔧'],
-                        'listo'      => ['bg'=>'#f0fdf4','border'=>'#86efac','badge'=>'#16a34a','text'=>'#14532d','icon'=>'✅'],
-                        'entregado'  => ['bg'=>'#f8fafc','border'=>'#cbd5e1','badge'=>'#64748b','text'=>'#475569','icon'=>'📦'],
-                        'cancelado'  => ['bg'=>'#fef2f2','border'=>'#fca5a5','badge'=>'#ef4444','text'=>'#7f1d1d','icon'=>'❌'],
+                        'pendiente'  => ['bg'=>'#fef3c7','border'=>'#fbbf24','badge'=>'#f59e0b','text'=>'#78350f','icon'=>'⏳','label'=>'Pendiente'],
+                        'en_proceso' => ['bg'=>'#eff6ff','border'=>'#93c5fd','badge'=>'#3b82f6','text'=>'#1e40af','icon'=>'🔧','label'=>'Ejecutada'],
+                        'listo'      => ['bg'=>'#eff6ff','border'=>'#93c5fd','badge'=>'#3b82f6','text'=>'#1e40af','icon'=>'🔧','label'=>'Ejecutada'],
+                        'entregado'  => ['bg'=>'#f0fdf4','border'=>'#86efac','badge'=>'#16a34a','text'=>'#14532d','icon'=>'💰','label'=>'Cobrada'],
+                        'cancelado'  => ['bg'=>'#fef2f2','border'=>'#fca5a5','badge'=>'#ef4444','text'=>'#7f1d1d','icon'=>'❌','label'=>'Cancelada'],
                     ];
                     $c = $colores[$orden->estado] ?? $colores['pendiente'];
                     $totalRep = $orden->repuestos->sum('subtotal');
@@ -66,7 +82,7 @@
                     {{-- Badge estado + número --}}
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                         <span style="font-size:11px; font-weight:700; background:{{ $c['badge'] }}; color:white; border-radius:99px; padding:2px 10px;">
-                            {{ $c['icon'] }} {{ ucfirst(str_replace('_',' ',$orden->estado)) }}
+                            {{ $c['icon'] }} {{ $c['label'] }}
                         </span>
                         <span style="font-size:11px; font-weight:700; color:{{ $c['text'] }};">
                             # {{ str_pad($orden->numero_orden, 4, '0', STR_PAD_LEFT) }}
@@ -115,18 +131,11 @@
                             🔧 Abrir en POS
                         </button>
 
-                        @if(in_array($orden->estado, ['pendiente','en_proceso','listo']))
-                            @if($orden->estado === 'pendiente')
-                            <button wire:click="cambiarEstado({{ $orden->id }},'en_proceso')"
-                                style="flex:1; border:none; border-radius:8px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#3b82f6; color:white;">
-                                🔧 Iniciar
-                            </button>
-                            @elseif($orden->estado === 'en_proceso')
-                            <button wire:click="cambiarEstado({{ $orden->id }},'listo')"
-                                style="flex:1; border:none; border-radius:8px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#16a34a; color:white;">
-                                ✅ Listo
-                            </button>
-                            @endif
+                        @if($orden->estado === 'pendiente')
+                        <button wire:click="cambiarEstado({{ $orden->id }},'en_proceso')"
+                            style="flex:1; border:none; border-radius:8px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#3b82f6; color:white;">
+                            🔧 Iniciar
+                        </button>
                         @endif
 
                         @if($orden->estado === 'entregado' && $orden->factura_id)

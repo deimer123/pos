@@ -14,6 +14,8 @@ class TallerPanel extends Component
     public string $filtroEstado = '';
     public string $filtroFecha  = 'semana';
     public string $busqueda     = '';
+    public string $fechaDesde   = '';
+    public string $fechaHasta   = '';
 
     // Modal nueva/editar orden
     public bool $modalOrden = false;
@@ -44,9 +46,13 @@ class TallerPanel extends Component
     public function getOrdenesProperty()
     {
         return TallerOrden::where('empresa_id', $this->empresaId())
-            ->when($this->filtroFecha === 'hoy',    fn($q) => $q->whereDate('created_at', today()))
-            ->when($this->filtroFecha === 'semana', fn($q) => $q->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]))
-            ->when($this->filtroFecha === 'mes',    fn($q) => $q->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year))
+            ->when($this->fechaDesde, fn($q) => $q->whereDate('created_at', '>=', $this->fechaDesde))
+            ->when($this->fechaHasta, fn($q) => $q->whereDate('created_at', '<=', $this->fechaHasta))
+            ->when(!$this->fechaDesde && !$this->fechaHasta, function($q) {
+                $q->when($this->filtroFecha === 'hoy',    fn($q2) => $q2->whereDate('created_at', today()))
+                  ->when($this->filtroFecha === 'semana', fn($q2) => $q2->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]))
+                  ->when($this->filtroFecha === 'mes',    fn($q2) => $q2->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year));
+            })
             ->when($this->filtroEstado, fn($q) => $q->where('estado', $this->filtroEstado))
             ->when($this->busqueda, fn($q) => $q->where(function($q2) {
                 $q2->where('placa', 'like', '%'.$this->busqueda.'%')
@@ -67,6 +73,12 @@ class TallerPanel extends Component
                                 ->orWhere('codigo', 'like', '%'.$this->buscarProducto.'%'))
             ->limit(8)
             ->get(['id','nombre','precio_venta','codigo']);
+    }
+
+    public function limpiarFechas(): void
+    {
+        $this->fechaDesde = '';
+        $this->fechaHasta = '';
     }
 
     public function nuevaOrden(): void
