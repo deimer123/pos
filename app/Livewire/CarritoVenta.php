@@ -984,12 +984,9 @@ public function updatedCarrito($value, $key)
 
 public function limpiarCarrito()
 {
-    // Si hay orden taller activa, cancelarla y eliminarla del lobby
+    // Si hay orden taller activa, solo limpiar el carrito y desasociarla (NO eliminar del lobby)
     if ($this->tallerOrdenId) {
-        \App\Models\TallerRepuesto::where('orden_id', $this->tallerOrdenId)->delete();
-        \App\Models\TallerOrden::where('id', $this->tallerOrdenId)
-            ->where('empresa_id', $this->getEmpresaId())
-            ->delete();
+        $this->sincronizarCarritoConOrdenTaller(); // deja repuestos en sync antes de limpiar
         $this->tallerOrdenId  = null;
         $this->tallerFotoTemp = null;
     }

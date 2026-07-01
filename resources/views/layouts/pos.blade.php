@@ -53,16 +53,8 @@
 @else
 
 <div class="pos-actions-list" :class="{ 'is-open': menuOpen }">
-    @if(request()->routeIs('taller'))
-    <a href="{{ route('pos') }}"
-        class="inline-block text-white px-4 py-2 text-sm rounded shadow"
-        style="background:#4338ca;">
-        🛒 Ir al POS
-    </a>
-    @endif
 <form method="POST" action="{{ route('cerrar.sesion') }}">
     @csrf
-
     <button type="submit"
         class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-sm rounded shadow">
         Cerrar sesion

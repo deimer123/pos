@@ -12,6 +12,7 @@ class TallerPanel extends Component
 {
     // Lista
     public string $filtroEstado = '';
+    public string $filtroFecha  = 'semana';
     public string $busqueda     = '';
 
     // Modal nueva/editar orden
@@ -43,6 +44,9 @@ class TallerPanel extends Component
     public function getOrdenesProperty()
     {
         return TallerOrden::where('empresa_id', $this->empresaId())
+            ->when($this->filtroFecha === 'hoy',    fn($q) => $q->whereDate('created_at', today()))
+            ->when($this->filtroFecha === 'semana', fn($q) => $q->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]))
+            ->when($this->filtroFecha === 'mes',    fn($q) => $q->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year))
             ->when($this->filtroEstado, fn($q) => $q->where('estado', $this->filtroEstado))
             ->when($this->busqueda, fn($q) => $q->where(function($q2) {
                 $q2->where('placa', 'like', '%'.$this->busqueda.'%')

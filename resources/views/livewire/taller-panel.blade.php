@@ -8,7 +8,17 @@
                 <input wire:model.live.debounce.300ms="busqueda" type="text" placeholder="Buscar placa, cliente..."
                     style="border:none; border-radius:20px; padding:5px 14px; font-size:12px; width:200px; outline:none; color:#1f2937;">
             </div>
-            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                {{-- Filtros fecha --}}
+                @foreach(['hoy'=>'Hoy','semana'=>'Esta semana','mes'=>'Este mes','todos'=>'Todos'] as $fv => $fl)
+                <button wire:click="$set('filtroFecha','{{ $fv }}')"
+                    style="border:none; border-radius:20px; padding:4px 11px; font-size:11px; font-weight:700; cursor:pointer;
+                        background:{{ $filtroFecha === $fv ? '#fbbf24' : 'rgba(255,255,255,.15)' }};
+                        color:{{ $filtroFecha === $fv ? '#78350f' : 'white' }};">
+                    {{ $fl }}
+                </button>
+                @endforeach
+                <span style="width:1px; height:18px; background:rgba(255,255,255,.3); display:inline-block;"></span>
                 {{-- Filtros estado --}}
                 @foreach([''=>'Todas','pendiente'=>'⏳ Pendiente','en_proceso'=>'🔧 En proceso','listo'=>'✅ Listo','entregado'=>'📦 Entregado'] as $val => $lbl)
                 <button wire:click="$set('filtroEstado','{{ $val }}')"
