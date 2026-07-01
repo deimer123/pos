@@ -684,7 +684,7 @@
             </button>
             @else
             {{-- Sin orden activa: botón de ingreso --}}
-            <button onclick="abrirIngresoTaller()"
+            <button onclick="abrirIngresoTaller(@js($clienteSeleccionadoNombre ?? ''))"
                 style="background:#0f766e;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 🔧 Ingresar
             </button>
@@ -2901,12 +2901,10 @@
 </script>
 
 <script>
-async function abrirIngresoTaller() {
-    // Verificar que haya un cliente seleccionado (distinto de Consumidor Final)
-    const nombreCliente = await Livewire.find(document.querySelector('[wire\\:id]').getAttribute('wire:id'))
-        ?.get('clienteSeleccionadoNombre') ?? '';
+function abrirIngresoTaller(nombreCliente) {
+    nombreCliente = (nombreCliente || '').trim();
 
-    if (!nombreCliente || nombreCliente.toUpperCase().includes('CONSUMIDOR FINAL') || nombreCliente.trim() === '') {
+    if (!nombreCliente || nombreCliente.toUpperCase().includes('CONSUMIDOR FINAL')) {
         Swal.fire({
             icon: 'warning',
             title: 'Selecciona un cliente primero',
