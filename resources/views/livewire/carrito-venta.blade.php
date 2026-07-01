@@ -663,52 +663,72 @@
             rows="1"></textarea>
     </div>
 
+    @php
+        $btnBase = 'text-white text-xs font-semibold rounded-full shadow flex-1 h-8 px-3 min-w-0 text-center';
+        $btnIndigo = $btnBase . ' bg-indigo-600 hover:bg-indigo-700';
+        $btnRed    = $btnBase . ' bg-red-600 hover:bg-red-700';
+        $btnTeal   = $btnBase . ' bg-teal-700 hover:bg-teal-800';
+    @endphp
     <div class="pos-desktop-cart-actions flex items-center justify-between">
         @if(! $mesaId)
-        <div class="flex gap-2 items-center">
-        <button
-            x-on:click="
-                        if (($wire.get('carrito') ?? []).length === 0) {
-                          Swal.fire({icon:'warning', title:'Carrito vacio', text:'Debe agregar productos antes de editar.'});
-                        } else { $wire.abrirModalEditar(); }
-                      "
-            class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
-            Editar
-        </button>
         @php $usaTallerPos = (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_taller'); @endphp
-        @if($usaTallerPos)
-        <button
-            onclick="abrirFormTallerDesdePos()"
-            class="pos-cart-secondary-action text-white text-xs px-3 h-8 rounded-full shadow"
-            style="background: {{ $tallerOrdenId ? '#0d9488' : '#0f766e' }};">
-            🔧 {{ $tallerOrdenId ? 'Ver orden taller' : 'Taller' }}
-        </button>
-        @endif
+        <div class="flex gap-2 items-center w-full">
+
+            {{-- Editar --}}
+            <button
+                x-on:click="if(Object.keys($wire.get('carrito') ?? {}).length===0){Swal.fire({icon:'warning',title:'Carrito vacío',text:'Agregue productos primero.'});}else{$wire.abrirModalEditar();}"
+                class="{{ $btnIndigo }}">
+                Editar
+            </button>
+
+            {{-- Taller (solo si usa_taller) --}}
+            @if($usaTallerPos)
+            <button onclick="abrirFormTallerDesdePos()"
+                class="{{ $btnTeal }}"
+                style="{{ $tallerOrdenId ? 'background:#0d9488;' : '' }}">
+                🔧 {{ $tallerOrdenId ? 'Ver taller' : 'Taller' }}
+            </button>
+            @endif
+
+            {{-- Crear cliente --}}
+            <button wire:click="abrirModalCrearCliente" class="{{ $btnIndigo }}">
+                + Cliente
+            </button>
+
+            {{-- Entrada / salida (solo cajero/admin con caja abierta) --}}
+            @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
+                @if ($cajaEstado === 'abierta')
+                <button type="button" wire:click="abrirMovimientoCajaModal('salida')" class="{{ $btnIndigo }}">
+                    Entrada/salida
+                </button>
+                @endif
+            @endif
+
+            {{-- Limpiar --}}
+            <button
+                x-on:click="Swal.fire({title:'¿Vaciar carrito?',text:'Se eliminarán todos los productos.',icon:'warning',showCancelButton:true,confirmButtonText:'Sí, vaciar',cancelButtonText:'Cancelar'}).then(r=>{if(r.isConfirmed){$wire.limpiarCarrito();}})"
+                class="{{ $btnRed }}">
+                Limpiar
+            </button>
+
+            {{-- Guardar: si hay orden taller → guardar orden; si no → prefactura --}}
+            @if($tallerOrdenId)
+            <button
+                x-on:click="Swal.fire({title:'💾 Guardar orden taller',text:'Se guardan los productos en la orden. Puedes reabrirla desde el panel Taller.',icon:'question',showCancelButton:true,confirmButtonText:'Guardar',cancelButtonText:'Cancelar',confirmButtonColor:'#0f766e'}).then(r=>{if(r.isConfirmed){$wire.guardarOrdenTaller();}})"
+                class="{{ $btnBase }}" style="background:#0f766e;">
+                💾 Guardar orden
+            </button>
+            @endif
+
+            {{-- Ver prefacturas --}}
+            <button wire:click="verPrefacturas" class="{{ $btnIndigo }}">
+                Ver
+            </button>
+
         </div>
         @endif
 
         <div class="flex gap-2">
-
-            @if(! $mesaId)
-            <button wire:click="abrirModalCrearCliente"
-                class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
-                + Crear Cliente
-            </button>
-            @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
-                @if ($cajaEstado === 'abierta')
-                    <button type="button"
-                        class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow"
-                        wire:click="abrirMovimientoCajaModal('salida')">
-                        Entrada / salida
-                    </button>
-                @endif
-                <button type="button"
-                    class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow"
-                    wire:click="abrirModalCartera">
-                    Cartera
-                </button>
-            @endif
-            @endif
 
             @if($mesaId)
             @php $esMesero = auth()->user()->hasRole('mesero') && ! auth()->user()->hasAnyRole(['cajero','admin_empresa','vendedor']); @endphp
@@ -773,53 +793,7 @@
             </button>
             @endif {{-- fin !$esMesero --}}
             @else
-            <button
-                x-on:click="Swal.fire({
-                          title:'Vaciar carrito?', text:'Se eliminaran todos los productos.',
-                          icon:'warning', showCancelButton:true, confirmButtonText:'Si, vaciar', cancelButtonText:'Cancelar'
-                        }).then(r=>{ if(r.isConfirmed){ $wire.limpiarCarrito(); }})"
-                class="pos-cart-main-action bg-red-600 hover:bg-red-700 text-white text-xs px-3 h-8 rounded-full">
-                Limpiar
-            </button>
-            @endif
-
-            @if(! $mesaId)
-            @if($tallerOrdenId)
-            <button
-                x-on:click="Swal.fire({
-                    title: '💾 Guardar orden taller',
-                    text: 'Se guardan los productos actuales en la orden de taller. Podrás volver a abrirla desde el panel Taller para agregar más o facturar.',
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonText: 'Guardar orden',
-                    cancelButtonText: 'Cancelar',
-                    confirmButtonColor: '#0f766e',
-                }).then(r=>{ if(r.isConfirmed){ $wire.guardarOrdenTaller(); } })"
-                class="pos-cart-main-action text-white text-xs px-3 h-8 rounded-full shadow"
-                style="background:#0f766e;">
-                💾 Guardar orden
-            </button>
-            @else
-            <button
-                x-on:click="
-                          if (($wire.get('carrito') ?? []).length === 0) {
-                            Swal.fire({icon:'warning', title:'Carrito vacio', text:'Debe agregar productos antes de guardar.'});
-                          } else {
-                            Swal.fire({
-                              title:'Guardar prefactura?', icon:'question', showCancelButton:true,
-                              confirmButtonText:'Si, guardar', cancelButtonText:'Cancelar'
-                            }).then(r=>{ if(r.isConfirmed){ $wire.guardarPrefacturaConfirmada(); }});
-                          }
-                        "
-                class="pos-cart-main-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
-                Guardar
-            </button>
-            @endif
-
-            <button wire:click="verPrefacturas"
-                class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
-                Ver
-            </button>
+            {{-- Sin mesa y sin taller: Limpiar --}}
             @endif
         </div>
 
