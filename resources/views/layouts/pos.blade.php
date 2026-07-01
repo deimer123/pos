@@ -30,6 +30,15 @@
         Administracion
     </a>
 
+    @php $usaTaller = (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_taller'); @endphp
+    @if($usaTaller)
+    <a href="{{ route('taller') }}"
+        class="inline-block text-white px-4 py-2 text-sm rounded shadow"
+        style="background:#0f766e;">
+        🔧 Taller
+    </a>
+    @endif
+
     <form method="POST" action="{{ route('cerrar.sesion') }}">
         @csrf
 
@@ -44,6 +53,13 @@
 @else
 
 <div class="pos-actions-list" :class="{ 'is-open': menuOpen }">
+    @if(request()->routeIs('taller'))
+    <a href="{{ route('pos') }}"
+        class="inline-block text-white px-4 py-2 text-sm rounded shadow"
+        style="background:#4338ca;">
+        🛒 Ir al POS
+    </a>
+    @endif
 <form method="POST" action="{{ route('cerrar.sesion') }}">
     @csrf
 

@@ -125,6 +125,10 @@ class ConfiguracionEmpresaResource extends Resource
                                 ->label('Usa domicilios')
                                 ->helperText('Activa el módulo de pedidos a domicilio y repartidores.'),
 
+                            Forms\Components\Toggle::make('usa_taller')
+                                ->label('Usa taller')
+                                ->helperText('Activa el módulo de taller: órdenes de trabajo, vehículos y repuestos.'),
+
                             Forms\Components\Toggle::make('permite_stock_negativo')
                                 ->label('Permitir stock negativo')
                                 ->helperText('Deja vender aunque no haya inventario suficiente.'),
