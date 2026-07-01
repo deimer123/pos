@@ -38,6 +38,11 @@
                     @endif
                 </button>
                 @if($vistaActual === 'taller')
+                <button wire:click="abrirFormTaller"
+                    style="border:none; border-radius:20px; padding:5px 14px; font-size:12px; font-weight:700; cursor:pointer;
+                        background:#16a34a; color:white; display:flex; align-items:center; gap:5px;">
+                    ➕ Nueva Orden
+                </button>
                 <button wire:click="$set('vistaActual','mesas')"
                     style="border:none; border-radius:20px; padding:5px 14px; font-size:12px; font-weight:700; cursor:pointer;
                         background:rgba(255,255,255,.2); color:white;">
@@ -215,6 +220,97 @@
         @endif
     </div>
     @elseif($vistaActual === 'taller')
+    {{-- Modal formulario nueva orden de taller --}}
+    @if($mostrarFormTaller)
+    <div style="position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9999; display:flex; align-items:center; justify-content:center; padding:16px;">
+        <div style="background:white; border-radius:16px; width:100%; max-width:520px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.3);">
+            {{-- Header modal --}}
+            <div style="background:#0f766e; color:white; padding:16px 20px; border-radius:16px 16px 0 0; display:flex; justify-content:space-between; align-items:center;">
+                <div style="font-size:16px; font-weight:700;">🔧 Nueva orden de taller</div>
+                <button wire:click="$set('mostrarFormTaller', false)"
+                    style="background:rgba(255,255,255,.2); border:none; color:white; border-radius:50%; width:28px; height:28px; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center;">✕</button>
+            </div>
+            <div style="padding:20px;">
+                @error('tallerNombre') <div style="background:#fef2f2; border:1px solid #fca5a5; color:#dc2626; border-radius:8px; padding:8px 12px; margin-bottom:12px; font-size:13px;">{{ $message }}</div> @enderror
+                @error('tallerPlaca')  <div style="background:#fef2f2; border:1px solid #fca5a5; color:#dc2626; border-radius:8px; padding:8px 12px; margin-bottom:12px; font-size:13px;">{{ $message }}</div> @enderror
+
+                {{-- Cliente --}}
+                <div style="font-size:11px; font-weight:700; color:#0f766e; text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px;">👤 Cliente</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;">
+                    <div>
+                        <label style="font-size:11px; color:#6b7280; font-weight:600; display:block; margin-bottom:4px;">Nombre *</label>
+                        <input wire:model="tallerNombre" type="text" placeholder="Nombre del cliente"
+                            style="width:100%; border:1.5px solid #d1d5db; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;"
+                            onfocus="this.style.borderColor='#0f766e'" onblur="this.style.borderColor='#d1d5db'">
+                    </div>
+                    <div>
+                        <label style="font-size:11px; color:#6b7280; font-weight:600; display:block; margin-bottom:4px;">Teléfono</label>
+                        <input wire:model="tallerTelefono" type="text" placeholder="3001234567"
+                            style="width:100%; border:1.5px solid #d1d5db; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;"
+                            onfocus="this.style.borderColor='#0f766e'" onblur="this.style.borderColor='#d1d5db'">
+                    </div>
+                </div>
+
+                {{-- Vehículo --}}
+                <div style="font-size:11px; font-weight:700; color:#0f766e; text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px;">🚗 Vehículo</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:10px;">
+                    <div>
+                        <label style="font-size:11px; color:#6b7280; font-weight:600; display:block; margin-bottom:4px;">Placa *</label>
+                        <input wire:model="tallerPlaca" type="text" placeholder="ABC-123"
+                            style="width:100%; border:1.5px solid #d1d5db; border-radius:8px; padding:8px 10px; font-size:13px; font-weight:700; text-transform:uppercase; box-sizing:border-box;"
+                            onfocus="this.style.borderColor='#0f766e'" onblur="this.style.borderColor='#d1d5db'">
+                    </div>
+                    <div>
+                        <label style="font-size:11px; color:#6b7280; font-weight:600; display:block; margin-bottom:4px;">Marca</label>
+                        <input wire:model="tallerMarca" type="text" placeholder="Toyota, Renault..."
+                            style="width:100%; border:1.5px solid #d1d5db; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;"
+                            onfocus="this.style.borderColor='#0f766e'" onblur="this.style.borderColor='#d1d5db'">
+                    </div>
+                    <div>
+                        <label style="font-size:11px; color:#6b7280; font-weight:600; display:block; margin-bottom:4px;">Modelo</label>
+                        <input wire:model="tallerModelo" type="text" placeholder="Corolla, Logan..."
+                            style="width:100%; border:1.5px solid #d1d5db; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;"
+                            onfocus="this.style.borderColor='#0f766e'" onblur="this.style.borderColor='#d1d5db'">
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;">
+                    <div>
+                        <label style="font-size:11px; color:#6b7280; font-weight:600; display:block; margin-bottom:4px;">Color</label>
+                        <input wire:model="tallerColor" type="text" placeholder="Blanco, Negro..."
+                            style="width:100%; border:1.5px solid #d1d5db; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;"
+                            onfocus="this.style.borderColor='#0f766e'" onblur="this.style.borderColor='#d1d5db'">
+                    </div>
+                    <div>
+                        <label style="font-size:11px; color:#6b7280; font-weight:600; display:block; margin-bottom:4px;">Kilometraje</label>
+                        <input wire:model="tallerKm" type="number" placeholder="45000"
+                            style="width:100%; border:1.5px solid #d1d5db; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;"
+                            onfocus="this.style.borderColor='#0f766e'" onblur="this.style.borderColor='#d1d5db'">
+                    </div>
+                </div>
+
+                {{-- Diagnóstico --}}
+                <div style="font-size:11px; font-weight:700; color:#0f766e; text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px;">🔍 Diagnóstico</div>
+                <textarea wire:model="tallerDiagnostico" placeholder="Describe el problema o el trabajo a realizar..."
+                    rows="3"
+                    style="width:100%; border:1.5px solid #d1d5db; border-radius:8px; padding:8px 10px; font-size:13px; resize:vertical; box-sizing:border-box;"
+                    onfocus="this.style.borderColor='#0f766e'" onblur="this.style.borderColor='#d1d5db'"></textarea>
+
+                {{-- Botones --}}
+                <div style="display:flex; gap:10px; margin-top:16px;">
+                    <button wire:click="guardarOrdenTaller"
+                        style="flex:1; background:#0f766e; color:white; border:none; border-radius:10px; padding:12px; font-size:14px; font-weight:700; cursor:pointer;">
+                        🔧 Guardar orden
+                    </button>
+                    <button wire:click="$set('mostrarFormTaller', false)"
+                        style="flex:1; background:#e5e7eb; color:#374151; border:none; border-radius:10px; padding:12px; font-size:14px; font-weight:700; cursor:pointer;">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
     {{-- Panel taller integrado --}}
     <div style="flex:1; overflow-y:auto; padding:16px;">
         @php
@@ -229,17 +325,14 @@
             $tallerHistorial = $ordenesTaller->whereIn('estado', ['entregado','cancelado']);
         @endphp
 
-        <div style="display:flex; justify-content:flex-end; margin-bottom:12px;">
-            <a href="{{ route('taller') }}" target="_blank"
-               style="border:none; border-radius:20px; padding:5px 14px; font-size:12px; font-weight:700; cursor:pointer; background:#0f766e; color:white; text-decoration:none;">
-                🔧 Abrir panel completo
-            </a>
-        </div>
-
         @if($ordenesTaller->isEmpty())
             <div style="text-align:center; padding:60px 20px; color:#94a3b8;">
                 <div style="font-size:48px;">🔧</div>
                 <div style="margin-top:12px; font-size:15px;">No hay órdenes de taller.</div>
+                <button wire:click="abrirFormTaller"
+                    style="margin-top:16px; background:#0f766e; color:white; border:none; border-radius:10px; padding:10px 24px; font-size:14px; font-weight:700; cursor:pointer;">
+                    ➕ Crear primera orden
+                </button>
             </div>
         @else
 
@@ -262,18 +355,17 @@
                     <div style="font-size:18px; font-weight:900; color:#0f766e;">{{ $to->placa }}</div>
                     <div style="font-size:12px; color:#374151; font-weight:600;">{{ trim($to->marca . ' ' . $to->modelo) ?: '—' }}</div>
                     <div style="font-size:11px; color:#6b7280; margin-top:4px;">👤 {{ $to->cliente_nombre }}</div>
+                    @if($to->cliente_telefono)
+                        <div style="font-size:11px; color:#6b7280; margin-top:2px;">📞 {{ $to->cliente_telefono }}</div>
+                    @endif
                     @if($to->diagnostico)
                         <div style="font-size:11px; color:#6b7280; margin-top:4px; background:rgba(0,0,0,.04); border-radius:6px; padding:4px 7px;">{{ Str::limit($to->diagnostico, 80) }}</div>
                     @endif
                     <div style="margin-top:8px; display:flex; gap:5px; flex-wrap:wrap;">
-                        <a href="{{ route('taller') }}" target="_blank"
-                           style="flex:1; border:none; border-radius:7px; padding:5px; font-size:11px; font-weight:700; cursor:pointer; background:#0f766e; color:white; text-align:center; text-decoration:none;">
-                            ✏️ Ver orden
-                        </a>
                         @if($to->estado !== 'entregado')
                         <button wire:click="facturarOrdenTaller({{ $to->id }})"
-                            style="flex:1; border:none; border-radius:7px; padding:5px; font-size:11px; font-weight:700; cursor:pointer; background:#4f46e5; color:white;">
-                            💵 Facturar
+                            style="flex:1; border:none; border-radius:7px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#4f46e5; color:white;">
+                            💵 Ir a facturar
                         </button>
                         @endif
                     </div>

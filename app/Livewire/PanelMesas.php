@@ -15,6 +15,17 @@ class PanelMesas extends Component
     public bool $mostrarDomicilios = false;
     public string $vistaActual = 'mesas'; // mesas | taller
 
+    // Formulario nueva orden de taller
+    public bool $mostrarFormTaller = false;
+    public string $tallerNombre     = '';
+    public string $tallerTelefono   = '';
+    public string $tallerPlaca      = '';
+    public string $tallerMarca      = '';
+    public string $tallerModelo     = '';
+    public string $tallerColor      = '';
+    public string $tallerKm         = '';
+    public string $tallerDiagnostico = '';
+
     protected $listeners = [
         'orden-guardada' => '$refresh',
         'mesa-liberada'  => '$refresh',
@@ -232,6 +243,46 @@ class PanelMesas extends Component
     public function abrirMesa(int $mesaId): void
     {
         $this->redirect(route('pos.mesa', $mesaId));
+    }
+
+    public function abrirFormTaller(): void
+    {
+        $this->tallerNombre      = '';
+        $this->tallerTelefono    = '';
+        $this->tallerPlaca       = '';
+        $this->tallerMarca       = '';
+        $this->tallerModelo      = '';
+        $this->tallerColor       = '';
+        $this->tallerKm          = '';
+        $this->tallerDiagnostico = '';
+        $this->mostrarFormTaller = true;
+    }
+
+    public function guardarOrdenTaller(): void
+    {
+        $this->validate([
+            'tallerNombre' => 'required|string|max:150',
+            'tallerPlaca'  => 'required|string|max:20',
+        ], [
+            'tallerNombre.required' => 'El nombre del cliente es obligatorio.',
+            'tallerPlaca.required'  => 'La placa del vehículo es obligatoria.',
+        ]);
+
+        \App\Models\TallerOrden::create([
+            'empresa_id'     => $this->empresaId(),
+            'cliente_nombre' => $this->tallerNombre,
+            'cliente_telefono' => $this->tallerTelefono ?: null,
+            'placa'          => strtoupper($this->tallerPlaca),
+            'marca'          => $this->tallerMarca ?: null,
+            'modelo'         => $this->tallerModelo ?: null,
+            'color'          => $this->tallerColor ?: null,
+            'km'             => $this->tallerKm ? (int) $this->tallerKm : null,
+            'diagnostico'    => $this->tallerDiagnostico ?: null,
+            'estado'         => 'pendiente',
+        ]);
+
+        $this->mostrarFormTaller = false;
+        $this->vistaActual = 'taller';
     }
 
     public function facturarOrdenTaller(int $id): void
