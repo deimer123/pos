@@ -333,6 +333,12 @@ private function limpiarUtf8Array(array $datos): array
         $sufijo = $this->mesaId ? '_mesa_' . $this->mesaId : '';
         return 'pos_observaciones_' . $empresaId . '_' . auth()->id() . $sufijo;
     }
+
+    protected function tallerOrdenCacheKey(?int $empresaId = null): string
+    {
+        $empresaId = $empresaId ?: $this->getEmpresaId();
+        return 'pos_taller_orden_' . $empresaId . '_' . auth()->id();
+    }
     protected function permiteCantidadDecimal(array $item): bool
     {
         if (array_key_exists('permite_decimal', $item)) {
@@ -383,6 +389,13 @@ private function limpiarUtf8Array(array $datos): array
         if (trim((string) $this->observacionesPrefactura) !== '') {
             Cache::put($this->observacionesCacheKey($empresaId), $this->observacionesPrefactura, now()->addDays(7));
         }
+
+        // Guardar/borrar la asociación con orden taller
+        if ($this->tallerOrdenId) {
+            Cache::put($this->tallerOrdenCacheKey($empresaId), $this->tallerOrdenId, now()->addDays(7));
+        } else {
+            Cache::forget($this->tallerOrdenCacheKey($empresaId));
+        }
     }
 
     protected function olvidarCarritoPersistente(): void
@@ -394,6 +407,7 @@ private function limpiarUtf8Array(array $datos): array
         $empresaId = $this->getEmpresaId();
         Cache::forget($this->carritoCacheKey($empresaId));
         Cache::forget($this->observacionesCacheKey($empresaId));
+        Cache::forget($this->tallerOrdenCacheKey($empresaId));
     }
 
      public function mount()
@@ -454,6 +468,17 @@ private function limpiarUtf8Array(array $datos): array
     }
 
    $carritoGuardado = [];
+
+   // Si el cache tiene productos de una orden taller y no hay ?taller= en URL → limpiar ese cache
+   if (auth()->check() && !(int) request()->get('taller')) {
+       $tallerOrdenEnCache = Cache::get($this->tallerOrdenCacheKey($empresaId));
+       if ($tallerOrdenEnCache) {
+           // El usuario salió sin guardar correctamente; los productos ya están en TallerRepuesto → limpiar cache
+           $this->olvidarCarritoPersistente();
+           session()->forget('carrito_guardado');
+           session()->forget('observaciones_guardadas');
+       }
+   }
 
    if (request()->hasSession()) {
        $carritoGuardado = session('carrito_guardado', []);
@@ -1554,6 +1579,8 @@ public function guardarPrefacturaConfirmada()
         }
 
         $this->actualizarTotales();
+        // Guardar asociación en cache para detectar si el usuario sale sin guardar
+        Cache::put($this->tallerOrdenCacheKey(), $this->tallerOrdenId, now()->addDays(7));
         $this->dispatch('success', 'Orden #' . str_pad($orden->numero_orden, 4, '0', STR_PAD_LEFT) . ' cargada en el POS.');
     }
 
