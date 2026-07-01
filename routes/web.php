@@ -104,6 +104,41 @@ Route::middleware(['auth'])->get('/taller/orden/{ordenId}', function ($ordenId) 
     return view('taller-orden', ['ordenId' => (int) $ordenId]);
 })->name('taller.orden');
 
+// PDF de una sola orden
+Route::middleware(['auth'])->get('/taller/pdf/orden/{id}', function ($id) {
+    $empresaId = auth()->user()->getEmpresaActualId();
+    $orden  = \App\Models\TallerOrden::where('empresa_id', $empresaId)->with('repuestos')->findOrFail($id);
+    $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();
+    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.taller-orden', compact('orden', 'config'))
+        ->setPaper([0, 0, 612, 792]);
+    return $pdf->stream('orden-' . str_pad($orden->numero_orden, 4, '0', STR_PAD_LEFT) . '.pdf');
+})->name('taller.orden.pdf');
+
+// PDF del listado (reporte)
+Route::middleware(['auth'])->get('/taller/pdf/reporte', function (\Illuminate\Http\Request $request) {
+    $empresaId = auth()->user()->getEmpresaActualId();
+    $estado   = $request->get('estado', 'todos');
+    $desde    = $request->get('desde');
+    $hasta    = $request->get('hasta');
+    $busqueda = $request->get('busqueda');
+
+    $query = \App\Models\TallerOrden::where('empresa_id', $empresaId)->with('repuestos')
+        ->when($estado !== 'todos', fn($q) => $q->where('estado', $estado))
+        ->when($desde,    fn($q) => $q->whereDate('created_at', '>=', $desde))
+        ->when($hasta,    fn($q) => $q->whereDate('created_at', '<=', $hasta))
+        ->when($busqueda, fn($q) => $q->where(fn($q2) =>
+            $q2->where('placa', 'like', "%$busqueda%")
+               ->orWhere('cliente_nombre', 'like', "%$busqueda%")
+        ))
+        ->orderByDesc('created_at')
+        ->get();
+
+    $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();
+    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.taller-reporte', compact('query', 'config', 'estado', 'desde', 'hasta'))
+        ->setPaper('letter', 'portrait');
+    return $pdf->stream('reporte-taller-' . now()->format('Ymd') . '.pdf');
+})->name('taller.reporte.pdf');
+
 
 Route::middleware(['auth'])->get('/prefactura/imprimir/{id}', [\App\Http\Controllers\PrefacturaController::class, 'imprimir'])->name('prefactura.imprimir');
 Route::middleware(['auth'])->get('/salida/imprimir/{id}', function ($id) {

@@ -14,8 +14,7 @@
     {{-- Boton de logout --}}
     <div class="pos-top-actions" x-data="{ menuOpen: false }" style="position: fixed; top: 10px; right: 20px; z-index: 50; display:flex; align-items:center; gap:8px;">
 
-      <button type="button" class="pos-mobile-menu-button" @click="menuOpen = !menuOpen" aria-label="Menu POS">
-        Menu
+      <button type="button" class="pos-mobile-menu-button" @click="menuOpen = !menuOpen" aria-label="Menu POS" style="display:none;">
       </button>
 
       @if(
@@ -86,16 +85,16 @@
                             $ordenesActivasTaller = \App\Models\TallerOrden::where('empresa_id', $u->getEmpresaActualId())
                                 ->whereIn('estado', ['pendiente','en_proceso','listo'])->count();
                         @endphp
+                        @if(!request()->routeIs('taller'))
                         <a href="{{ route('taller') }}"
                            style="border:none; border-radius:20px; padding:5px 14px; font-size:12px; font-weight:700; cursor:pointer;
-                               background:{{ request()->routeIs('taller') ? '#0f766e' : 'rgba(255,255,255,.2)' }};
-                               color:white; display:flex; align-items:center; gap:5px; text-decoration:none;">
+                               background:rgba(255,255,255,.2); color:white; display:flex; align-items:center; gap:5px; text-decoration:none;">
                             🔧 Taller
-                            @if($ordenesActivasTaller > 0 && !request()->routeIs('taller'))
+                            @if($ordenesActivasTaller > 0)
                                 <span style="background:#ef4444; border-radius:99px; padding:1px 6px; font-size:10px;">{{ $ordenesActivasTaller }}</span>
                             @endif
                         </a>
-                        @if(request()->routeIs('taller'))
+                        @else
                         <a href="{{ route('pos') }}"
                            style="border:none; border-radius:20px; padding:5px 14px; font-size:12px; font-weight:700; cursor:pointer;
                                background:rgba(255,255,255,.2); color:white; text-decoration:none;">
