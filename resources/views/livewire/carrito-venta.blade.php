@@ -663,65 +663,54 @@
             rows="1"></textarea>
     </div>
 
-    @php
-        $btnBase = 'text-white text-xs font-semibold rounded-full shadow flex-1 h-8 px-3 min-w-0 text-center';
-        $btnIndigo = $btnBase . ' bg-indigo-600 hover:bg-indigo-700';
-        $btnRed    = $btnBase . ' bg-red-600 hover:bg-red-700';
-        $btnTeal   = $btnBase . ' bg-teal-700 hover:bg-teal-800';
-    @endphp
     <div class="pos-desktop-cart-actions flex items-center justify-between">
         @if(! $mesaId)
         @php $usaTallerPos = (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_taller'); @endphp
-        <div class="flex gap-2 items-center w-full">
+        <div style="display:flex; flex-wrap:wrap; gap:4px; width:100%; align-items:center;">
 
-            {{-- Editar --}}
             <button
                 x-on:click="if(Object.keys($wire.get('carrito') ?? {}).length===0){Swal.fire({icon:'warning',title:'Carrito vacío',text:'Agregue productos primero.'});}else{$wire.abrirModalEditar();}"
-                class="{{ $btnIndigo }}">
+                style="background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 Editar
             </button>
 
-            {{-- Taller (solo si usa_taller) --}}
             @if($usaTallerPos)
             <button onclick="abrirFormTallerDesdePos()"
-                class="{{ $btnTeal }}"
-                style="{{ $tallerOrdenId ? 'background:#0d9488;' : '' }}">
+                style="background:{{ $tallerOrdenId ? '#0d9488' : '#0f766e' }};color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 🔧 {{ $tallerOrdenId ? 'Ver taller' : 'Taller' }}
             </button>
             @endif
 
-            {{-- Crear cliente --}}
-            <button wire:click="abrirModalCrearCliente" class="{{ $btnIndigo }}">
+            <button wire:click="abrirModalCrearCliente"
+                style="background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 + Cliente
             </button>
 
-            {{-- Entrada / salida (solo cajero/admin con caja abierta) --}}
             @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
                 @if ($cajaEstado === 'abierta')
-                <button type="button" wire:click="abrirMovimientoCajaModal('salida')" class="{{ $btnIndigo }}">
-                    Entrada/salida
+                <button type="button" wire:click="abrirMovimientoCajaModal('salida')"
+                    style="background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                    Entrada/Salida
                 </button>
                 @endif
             @endif
 
-            {{-- Limpiar --}}
             <button
                 x-on:click="Swal.fire({title:'¿Vaciar carrito?',text:'Se eliminarán todos los productos.',icon:'warning',showCancelButton:true,confirmButtonText:'Sí, vaciar',cancelButtonText:'Cancelar'}).then(r=>{if(r.isConfirmed){$wire.limpiarCarrito();}})"
-                class="{{ $btnRed }}">
+                style="background:#dc2626;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 Limpiar
             </button>
 
-            {{-- Guardar: si hay orden taller → guardar orden; si no → prefactura --}}
             @if($tallerOrdenId)
             <button
                 x-on:click="Swal.fire({title:'💾 Guardar orden taller',text:'Se guardan los productos en la orden. Puedes reabrirla desde el panel Taller.',icon:'question',showCancelButton:true,confirmButtonText:'Guardar',cancelButtonText:'Cancelar',confirmButtonColor:'#0f766e'}).then(r=>{if(r.isConfirmed){$wire.guardarOrdenTaller();}})"
-                class="{{ $btnBase }}" style="background:#0f766e;">
+                style="background:#0f766e;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 💾 Guardar orden
             </button>
             @endif
 
-            {{-- Ver prefacturas --}}
-            <button wire:click="verPrefacturas" class="{{ $btnIndigo }}">
+            <button wire:click="verPrefacturas"
+                style="background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 Ver
             </button>
 
