@@ -445,6 +445,51 @@
 
 
     
+    {{-- TALLER BANNER --}}
+    @if($tallerOrdenId)
+        @php
+            $tallerOrden = \App\Models\TallerOrden::find($tallerOrdenId);
+        @endphp
+        @if($tallerOrden)
+        <div style="background:linear-gradient(135deg,#0f766e,#0d9488);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap;">
+            <div style="font-size:20px;">🔧</div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:11px;font-weight:800;letter-spacing:.06em;opacity:.8;">ORDEN TALLER #{{ str_pad($tallerOrden->numero_orden,4,'0',STR_PAD_LEFT) }}</div>
+                <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                    {{ $tallerOrden->placa }} · {{ $tallerOrden->cliente_nombre }}
+                </div>
+                @if($tallerOrden->marca || $tallerOrden->modelo)
+                <div style="font-size:11px;opacity:.85;">{{ $tallerOrden->marca }} {{ $tallerOrden->modelo }}</div>
+                @endif
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+                <label x-data style="display:flex;align-items:center;gap:4px;cursor:pointer;background:rgba(255,255,255,.15);border-radius:8px;padding:4px 8px;font-size:11px;font-weight:700;"
+                    x-on:livewire-upload-finish="$wire.subirFotoTaller()">
+                    📷
+                    <input type="file" wire:model="tallerFotoTemp" accept="image/*" style="display:none;">
+                    <span>Foto</span>
+                </label>
+                <button wire:click="limpiarTaller" onclick="return confirm('¿Desvincular orden de taller del carrito?')"
+                    style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;">
+                    ✕ Desvincular
+                </button>
+            </div>
+            @if($tallerOrden->fotos && count($tallerOrden->fotos))
+            <div style="width:100%;display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
+                @foreach($tallerOrden->fotos as $fi => $foto)
+                <div style="position:relative;">
+                    <img src="{{ Storage::url($foto) }}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:2px solid rgba(255,255,255,.4);">
+                    <button wire:click="eliminarFotoTaller({{ $fi }})"
+                        style="position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border:none;border-radius:50%;width:16px;height:16px;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+                </div>
+                @endforeach
+            </div>
+            @endif
+            <div wire:loading wire:target="tallerFotoTemp" style="width:100%;font-size:11px;opacity:.8;">Subiendo foto...</div>
+        </div>
+        @endif
+    @endif
+
     {{-- CARRITO CARDS --}}
     <div class="pos-cart-table-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden" style="background:#f1f5f9; padding:8px 6px; display:flex; flex-direction:column; gap:6px;">
 

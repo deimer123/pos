@@ -230,7 +230,7 @@ public function updatedSearch($value)
             'usa_peso' => (bool) $config->usa_peso,
             'usa_variantes' => (bool) $config->usa_variantes,
             'usa_recetas' => (bool) $config->usa_recetas,
-            'usa_servicios' => (bool) $config->usa_servicios,
+            'usa_servicios' => (bool) $config->usa_servicios || (bool) $config->usa_taller,
             'nombre_empresa' => $this->textoUtf8($config->nombre_empresa),
         ];
     }

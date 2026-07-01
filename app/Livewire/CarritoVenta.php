@@ -19,10 +19,13 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use App\Models\Caja;
 use App\Models\ConfiguracionEmpresa;
+use Livewire\WithFileUploads;
 class CarritoVenta extends Component
 {
+    use WithFileUploads;
     public ?int $mesaId = null;
     public bool $usaDomicilios = false;
     public bool $esMesero = false;
@@ -48,6 +51,10 @@ class CarritoVenta extends Component
     public $detalleSeleccionado       = [];
     public $observacionesPrefactura   = '';
     public $search                    = '';
+
+    // ── Taller ──────────────────────────────────────────────────────────────
+    public ?int $tallerOrdenId    = null;
+    public $tallerFotoTemp        = null;
     public $clientes                  = [];
     public $mostrarModalClientes      = false;
     public $clienteSeleccionadoNombre = null;
@@ -1307,10 +1314,8 @@ public function guardarPrefacturaConfirmada()
         string $km,
         string $diagnostico
     ): void {
-        $empresaId = $this->getEmpresaId();
-
         $orden = \App\Models\TallerOrden::create([
-            'empresa_id'      => $empresaId,
+            'empresa_id'      => $this->getEmpresaId(),
             'cliente_nombre'  => trim($clienteNombre),
             'cliente_telefono'=> trim($clienteTelefono) ?: null,
             'placa'           => strtoupper(trim($placa)),
@@ -1319,11 +1324,59 @@ public function guardarPrefacturaConfirmada()
             'color'           => trim($color) ?: null,
             'km_ingreso'      => $km ? (int) $km : null,
             'diagnostico'     => trim($diagnostico) ?: null,
-            'estado'          => 'pendiente',
+            'estado'          => 'en_proceso',
             'creado_por'      => auth()->id(),
         ]);
 
-        $this->redirect(route('taller.orden', $orden->id));
+        $this->tallerOrdenId = $orden->id;
+        $this->dispatch('success', 'Orden de taller #'.str_pad($orden->numero_orden,4,'0',STR_PAD_LEFT).' creada. Ahora agrega los productos.');
+    }
+
+    public function limpiarTaller(): void
+    {
+        $this->tallerOrdenId = null;
+        $this->tallerFotoTemp = null;
+    }
+
+    public function subirFotoTaller(): void
+    {
+        $this->validate(['tallerFotoTemp' => 'image|max:5120']);
+
+        $path  = $this->tallerFotoTemp->store('taller', 'public');
+        $orden = \App\Models\TallerOrden::find($this->tallerOrdenId);
+        if ($orden) {
+            $fotos   = $orden->fotos ?? [];
+            $fotos[] = $path;
+            $orden->update(['fotos' => $fotos]);
+        }
+        $this->tallerFotoTemp = null;
+    }
+
+    public function eliminarFotoTaller(int $index): void
+    {
+        $orden = \App\Models\TallerOrden::find($this->tallerOrdenId);
+        if (! $orden) return;
+        $fotos = $orden->fotos ?? [];
+        if (isset($fotos[$index])) {
+            Storage::disk('public')->delete($fotos[$index]);
+            array_splice($fotos, $index, 1);
+            $orden->update(['fotos' => array_values($fotos)]);
+        }
+    }
+
+    protected function vincularFacturaTaller(int $facturaId): void
+    {
+        if (! $this->tallerOrdenId) return;
+
+        \App\Models\TallerOrden::where('id', $this->tallerOrdenId)
+            ->where('empresa_id', $this->getEmpresaId())
+            ->update([
+                'factura_id'   => $facturaId,
+                'estado'       => 'entregado',
+                'entregado_at' => now(),
+            ]);
+
+        $this->tallerOrdenId = null;
     }
 
     public function verPrefacturas()
@@ -1957,6 +2010,7 @@ if ($producto) {
         DB::commit();
 
         $this->eliminarPrefacturaCargada();
+        $this->vincularFacturaTaller($factura->id);
 
         // ===== Limpiar UI =====
         $this->carrito = [];
@@ -2480,6 +2534,7 @@ if ($producto) {
         DB::commit();
 
         $this->eliminarPrefacturaCargada();
+        $this->vincularFacturaTaller($factura->id);
 
         // ===== Limpiar UI
         $this->carrito = [];
