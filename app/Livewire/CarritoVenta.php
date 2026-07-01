@@ -577,6 +577,10 @@ if (request()->hasSession() && session()->has('observaciones_guardadas')) {
             $this->mostrarModalAbrirCaja = true;
         }
 
+    // Cargar orden de taller desde query param ?taller={id}
+    if (!$this->mesaId && ($tallerQs = (int) request()->get('taller'))) {
+        $this->cargarOrdenTaller($tallerQs);
+    }
 
 }
 
@@ -1379,6 +1383,128 @@ public function guardarPrefacturaConfirmada()
             ]);
 
         $this->tallerOrdenId = null;
+    }
+
+    public function guardarOrdenTaller(): void
+    {
+        if (! $this->tallerOrdenId) return;
+
+        $orden = \App\Models\TallerOrden::where('id', $this->tallerOrdenId)
+            ->where('empresa_id', $this->getEmpresaId())
+            ->first();
+
+        if (! $orden) return;
+
+        // Sincronizar repuestos desde el carrito
+        \App\Models\TallerRepuesto::where('orden_id', $orden->id)->delete();
+
+        foreach ($this->carrito as $item) {
+            $precio = (float) ($item['nuevo_precio'] ?? $item['precio'] ?? 0);
+            $cant   = (float) ($item['cantidad'] ?? 1);
+            \App\Models\TallerRepuesto::create([
+                'orden_id'        => $orden->id,
+                'producto_id'     => is_numeric($item['id_producto']) ? (int) $item['id_producto'] : null,
+                'descripcion'     => $item['nombre'] ?? 'Sin descripción',
+                'cantidad'        => $cant,
+                'precio_unitario' => $precio,
+                'subtotal'        => round($precio * $cant, 2),
+            ]);
+        }
+
+        $orden->update(['estado' => 'en_proceso']);
+
+        $this->carrito       = [];
+        $this->totalGeneral  = 0;
+        $this->tallerOrdenId = null;
+        $this->tallerFotoTemp = null;
+
+        $this->olvidarCarritoPersistente();
+
+        $this->dispatch('success', 'Orden #' . str_pad($orden->numero_orden, 4, '0', STR_PAD_LEFT) . ' guardada. Puedes volver a abrirla desde el panel Taller.');
+    }
+
+    public function cargarOrdenTaller(int $ordenId): void
+    {
+        $empresaId = $this->getEmpresaId();
+
+        $orden = \App\Models\TallerOrden::where('id', $ordenId)
+            ->where('empresa_id', $empresaId)
+            ->with('repuestos')
+            ->first();
+
+        if (! $orden) return;
+
+        $this->tallerOrdenId = $orden->id;
+        $this->carrito       = [];
+
+        foreach ($orden->repuestos as $rep) {
+            $precio = (float) $rep->precio_unitario;
+            $cant   = (float) $rep->cantidad;
+
+            if ($rep->producto_id) {
+                $producto = Product::where('id_producto', $rep->producto_id)
+                    ->where('empresa_id', $empresaId)
+                    ->first();
+
+                if ($producto) {
+                    $key = (string) $rep->producto_id;
+                    $costoConIva = $this->costoConIvaProducto($producto);
+                    $this->carrito[$key] = [
+                        'uuid'               => $key,
+                        'id_producto'        => $producto->id_producto,
+                        'nombre'             => $this->textoUtf8($rep->descripcion ?: $producto->descripcion_larga),
+                        'cantidad'           => $cant,
+                        'precio'             => $precio,
+                        'nuevo_precio'       => $precio,
+                        'descuento'          => 0,
+                        'iva_venta'          => (float) ($producto->iva_venta ?? 0),
+                        'utilidad1'          => $this->utilidadSobreVenta($precio, $costoConIva),
+                        'costo'              => (float) ($producto->precio_costo ?? 0),
+                        'costo_iva'          => $costoConIva,
+                        'utilidad_nueva'     => $this->utilidadSobreVenta($precio, $costoConIva),
+                        'total'              => round($precio * $cant, 2),
+                        'existencias'        => (float) ($producto->existencias ?? 0),
+                        'porciones_receta'   => null,
+                        'id_unidad_de_medida'=> (int) ($producto->id_unidad_de_medida ?? 1),
+                        'vende_por'          => (string) ($producto->vende_por ?? 'unidad'),
+                        'permite_fraccion'   => (bool) ($producto->permite_fraccion ?? false),
+                        'permite_decimal'    => $producto->permiteCantidadDecimal(),
+                        'combo_activo'       => null,
+                        'precio_editado_manual' => false,
+                    ];
+                    continue;
+                }
+            }
+
+            // Item manual (sin producto_id o producto no encontrado)
+            $uuid = (string) \Illuminate\Support\Str::uuid();
+            $this->carrito[$uuid] = [
+                'uuid'               => $uuid,
+                'id_producto'        => $uuid,
+                'nombre'             => $rep->descripcion ?: 'Sin descripción',
+                'cantidad'           => $cant,
+                'precio'             => $precio,
+                'nuevo_precio'       => $precio,
+                'descuento'          => 0,
+                'iva_venta'          => 0,
+                'utilidad1'          => 0,
+                'costo'              => 0,
+                'costo_iva'          => 0,
+                'utilidad_nueva'     => 0,
+                'total'              => round($precio * $cant, 2),
+                'existencias'        => 0,
+                'porciones_receta'   => null,
+                'id_unidad_de_medida'=> 1,
+                'vende_por'          => 'unidad',
+                'permite_fraccion'   => false,
+                'permite_decimal'    => false,
+                'combo_activo'       => null,
+                'precio_editado_manual' => true,
+            ];
+        }
+
+        $this->actualizarTotales();
+        $this->dispatch('success', 'Orden #' . str_pad($orden->numero_orden, 4, '0', STR_PAD_LEFT) . ' cargada en el POS.');
     }
 
     public function verPrefacturas()

@@ -784,6 +784,22 @@
             @endif
 
             @if(! $mesaId)
+            @if($tallerOrdenId)
+            <button
+                x-on:click="Swal.fire({
+                    title: '💾 Guardar orden taller',
+                    text: 'Se guardan los productos actuales en la orden de taller. Podrás volver a abrirla desde el panel Taller para agregar más o facturar.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Guardar orden',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: '#0f766e',
+                }).then(r=>{ if(r.isConfirmed){ $wire.guardarOrdenTaller(); } })"
+                class="pos-cart-main-action text-white text-xs px-3 h-8 rounded-full shadow"
+                style="background:#0f766e;">
+                💾 Guardar orden
+            </button>
+            @else
             <button
                 x-on:click="
                           if (($wire.get('carrito') ?? []).length === 0) {
@@ -798,6 +814,7 @@
                 class="pos-cart-main-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
                 Guardar
             </button>
+            @endif
 
             <button wire:click="verPrefacturas"
                 class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">

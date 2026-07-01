@@ -234,7 +234,7 @@ class TallerPanel extends Component
 
     public function abrirOrden(int $id): void
     {
-        $this->redirect(route('taller.orden', $id));
+        $this->redirect(route('pos') . '?taller=' . $id);
     }
 
     public function eliminarOrden(int $id): void

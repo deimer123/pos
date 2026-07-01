@@ -100,10 +100,10 @@
 
                     {{-- Acciones --}}
                     <div style="display:flex; gap:6px; margin-top:10px; flex-wrap:wrap;">
-                        <a href="{{ route('taller.orden', $orden->id) }}"
-                            style="flex:1; border:none; border-radius:8px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#0f766e; color:white; text-align:center; text-decoration:none; display:block;">
-                            🔧 Abrir orden
-                        </a>
+                        <button wire:click="abrirOrden({{ $orden->id }})"
+                            style="flex:1; border:none; border-radius:8px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#0f766e; color:white;">
+                            🔧 Abrir en POS
+                        </button>
 
                         @if(in_array($orden->estado, ['pendiente','en_proceso','listo']))
                             @if($orden->estado === 'pendiente')
