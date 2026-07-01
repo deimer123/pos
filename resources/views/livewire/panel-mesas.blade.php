@@ -24,8 +24,29 @@
                     ➕ Nuevo Domicilio
                 </button>
                 @endif
+                @if($usaTaller)
+                <button wire:click="$set('vistaActual','taller')"
+                    style="border:none; border-radius:20px; padding:5px 14px; font-size:12px; font-weight:700; cursor:pointer;
+                        background:{{ $vistaActual === 'taller' ? '#0f766e' : 'rgba(255,255,255,.2)' }};
+                        color:white; display:flex; align-items:center; gap:5px;">
+                    🔧 Taller
+                    @if($vistaActual !== 'taller')
+                        @php $activosTaller = \App\Models\TallerOrden::where('empresa_id', auth()->user()->getEmpresaActualId())->whereIn('estado',['pendiente','en_proceso','listo'])->count(); @endphp
+                        @if($activosTaller > 0)
+                            <span style="background:#ef4444; border-radius:99px; padding:1px 6px; font-size:10px;">{{ $activosTaller }}</span>
+                        @endif
+                    @endif
+                </button>
+                @if($vistaActual === 'taller')
+                <button wire:click="$set('vistaActual','mesas')"
+                    style="border:none; border-radius:20px; padding:5px 14px; font-size:12px; font-weight:700; cursor:pointer;
+                        background:rgba(255,255,255,.2); color:white;">
+                    🪑 Mesas
+                </button>
+                @endif
+                @endif
             </div>
-            @if(!$mostrarDomicilios && $zonas->isNotEmpty())
+            @if($vistaActual === 'mesas' && !$mostrarDomicilios && $zonas->isNotEmpty())
             <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
                 <button wire:click="$set('zonaFiltro','')"
                     style="border:none; border-radius:20px; padding:4px 12px; font-size:12px; font-weight:700; cursor:pointer;
@@ -186,6 +207,98 @@
                         <div style="font-size:11px; color:#3b82f6; white-space:nowrap;">🛵 {{ $d['repartidor'] }}</div>
                     @endif
                     <div style="font-size:13px; font-weight:800; color:#374151; white-space:nowrap;">${{ number_format($d['total'], 0, ',', '.') }}</div>
+                </div>
+            @endforeach
+        </div>
+        @endif
+
+        @endif
+    </div>
+    @elseif($vistaActual === 'taller')
+    {{-- Panel taller integrado --}}
+    <div style="flex:1; overflow-y:auto; padding:16px;">
+        @php
+            $coloresTaller = [
+                'pendiente'  => ['bg'=>'#fef3c7','border'=>'#fbbf24','badge'=>'#f59e0b','text'=>'#78350f','icon'=>'⏳'],
+                'en_proceso' => ['bg'=>'#eff6ff','border'=>'#93c5fd','badge'=>'#3b82f6','text'=>'#1e40af','icon'=>'🔧'],
+                'listo'      => ['bg'=>'#f0fdf4','border'=>'#86efac','badge'=>'#16a34a','text'=>'#14532d','icon'=>'✅'],
+                'entregado'  => ['bg'=>'#f8fafc','border'=>'#cbd5e1','badge'=>'#64748b','text'=>'#475569','icon'=>'📦'],
+                'cancelado'  => ['bg'=>'#fef2f2','border'=>'#fca5a5','badge'=>'#ef4444','text'=>'#7f1d1d','icon'=>'❌'],
+            ];
+            $tallerActivos  = $ordenesTaller->whereIn('estado', ['pendiente','en_proceso','listo']);
+            $tallerHistorial = $ordenesTaller->whereIn('estado', ['entregado','cancelado']);
+        @endphp
+
+        <div style="display:flex; justify-content:flex-end; margin-bottom:12px;">
+            <a href="{{ route('taller') }}" target="_blank"
+               style="border:none; border-radius:20px; padding:5px 14px; font-size:12px; font-weight:700; cursor:pointer; background:#0f766e; color:white; text-decoration:none;">
+                🔧 Abrir panel completo
+            </a>
+        </div>
+
+        @if($ordenesTaller->isEmpty())
+            <div style="text-align:center; padding:60px 20px; color:#94a3b8;">
+                <div style="font-size:48px;">🔧</div>
+                <div style="margin-top:12px; font-size:15px;">No hay órdenes de taller.</div>
+            </div>
+        @else
+
+        {{-- Activas --}}
+        @if($tallerActivos->isNotEmpty())
+        <div style="font-size:11px; font-weight:700; color:#0f766e; text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px;">
+            🔧 En taller ({{ $tallerActivos->count() }})
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:10px; margin-bottom:20px;">
+            @foreach($tallerActivos as $to)
+                @php $ct = $coloresTaller[$to->estado] ?? $coloresTaller['pendiente']; @endphp
+                <div style="background:{{ $ct['bg'] }}; border:2px solid {{ $ct['border'] }}; border-radius:12px; padding:12px 14px;
+                    {{ $to->estado === 'listo' ? 'box-shadow:0 0 0 3px #16a34a, 0 0 14px #16a34a55;' : '' }}">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <span style="font-size:10px; font-weight:700; background:{{ $ct['badge'] }}; color:white; border-radius:99px; padding:2px 10px;">
+                            {{ $ct['icon'] }} {{ ucfirst(str_replace('_',' ',$to->estado)) }}
+                        </span>
+                        <span style="font-size:10px; font-weight:700; color:{{ $ct['text'] }};"># {{ str_pad($to->numero_orden, 4, '0', STR_PAD_LEFT) }}</span>
+                    </div>
+                    <div style="font-size:18px; font-weight:900; color:#0f766e;">{{ $to->placa }}</div>
+                    <div style="font-size:12px; color:#374151; font-weight:600;">{{ trim($to->marca . ' ' . $to->modelo) ?: '—' }}</div>
+                    <div style="font-size:11px; color:#6b7280; margin-top:4px;">👤 {{ $to->cliente_nombre }}</div>
+                    @if($to->diagnostico)
+                        <div style="font-size:11px; color:#6b7280; margin-top:4px; background:rgba(0,0,0,.04); border-radius:6px; padding:4px 7px;">{{ Str::limit($to->diagnostico, 80) }}</div>
+                    @endif
+                    <div style="margin-top:8px; display:flex; gap:5px; flex-wrap:wrap;">
+                        <a href="{{ route('taller') }}" target="_blank"
+                           style="flex:1; border:none; border-radius:7px; padding:5px; font-size:11px; font-weight:700; cursor:pointer; background:#0f766e; color:white; text-align:center; text-decoration:none;">
+                            ✏️ Ver orden
+                        </a>
+                        @if($to->estado !== 'entregado')
+                        <button wire:click="facturarOrdenTaller({{ $to->id }})"
+                            style="flex:1; border:none; border-radius:7px; padding:5px; font-size:11px; font-weight:700; cursor:pointer; background:#4f46e5; color:white;">
+                            💵 Facturar
+                        </button>
+                        @endif
+                    </div>
+                </div>
+            @endforeach
+        </div>
+        @endif
+
+        {{-- Historial --}}
+        @if($tallerHistorial->isNotEmpty())
+        <div style="font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px;">
+            📦 Historial ({{ $tallerHistorial->count() }})
+        </div>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+            @foreach($tallerHistorial as $to)
+                @php $ct = $coloresTaller[$to->estado] ?? $coloresTaller['entregado']; @endphp
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 14px; display:flex; align-items:center; gap:12px;">
+                    <span style="font-size:10px; font-weight:700; background:{{ $ct['badge'] }}22; color:{{ $ct['badge'] }}; border-radius:99px; padding:2px 8px; white-space:nowrap;">
+                        {{ $ct['icon'] }} {{ ucfirst(str_replace('_',' ',$to->estado)) }}
+                    </span>
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-size:13px; font-weight:800; color:#0f766e;">{{ $to->placa }}</div>
+                        <div style="font-size:11px; color:#374151;">{{ $to->cliente_nombre }} · {{ trim($to->marca . ' ' . $to->modelo) }}</div>
+                    </div>
+                    <div style="font-size:10px; color:#94a3b8; white-space:nowrap;">{{ $to->created_at->format('d/m/Y') }}</div>
                 </div>
             @endforeach
         </div>

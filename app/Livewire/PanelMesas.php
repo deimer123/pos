@@ -13,6 +13,7 @@ class PanelMesas extends Component
 {
     public string $zonaFiltro = '';
     public bool $mostrarDomicilios = false;
+    public string $vistaActual = 'mesas'; // mesas | taller
 
     protected $listeners = [
         'orden-guardada' => '$refresh',
@@ -22,6 +23,21 @@ class PanelMesas extends Component
     private function empresaId(): int
     {
         return auth()->user()->getEmpresaActualId();
+    }
+
+    public function getUsaTallerProperty(): bool
+    {
+        return (bool) ConfiguracionEmpresa::where('empresa_id', $this->empresaId())
+            ->value('usa_taller');
+    }
+
+    public function getOrdenestallerProperty()
+    {
+        return \App\Models\TallerOrden::where('empresa_id', $this->empresaId())
+            ->with('repuestos')
+            ->orderByRaw("FIELD(estado,'listo','en_proceso','pendiente','entregado','cancelado')")
+            ->orderByDesc('created_at')
+            ->get();
     }
 
     public function getUsaDomiciliosProperty(): bool
@@ -218,6 +234,37 @@ class PanelMesas extends Component
         $this->redirect(route('pos.mesa', $mesaId));
     }
 
+    public function facturarOrdenTaller(int $id): void
+    {
+        $empresaId = $this->empresaId();
+
+        $orden = \App\Models\TallerOrden::where('empresa_id', $empresaId)
+            ->findOrFail($id);
+
+        $mesaLibre = Mesa::where('empresa_id', $empresaId)
+            ->where('codigo', 'like', 'TALL-%')
+            ->whereDoesntHave('ordenes', fn ($q) => $q->whereIn('estado', ['abierta', 'en_preparacion']))
+            ->first();
+
+        if (! $mesaLibre) {
+            $siguiente = Mesa::where('empresa_id', $empresaId)
+                ->where('codigo', 'like', 'TALL-%')
+                ->count() + 1;
+
+            $mesaLibre = Mesa::create([
+                'empresa_id' => $empresaId,
+                'codigo'     => 'TALL-' . $siguiente,
+                'nombre'     => 'Taller ' . $siguiente,
+                'zona'       => null,
+                'capacidad'  => null,
+                'estado'     => 'libre',
+                'activo'     => true,
+            ]);
+        }
+
+        $this->redirect(route('pos.mesa', $mesaLibre->id) . '?taller_orden=' . $orden->id);
+    }
+
     public function render()
     {
         return view('livewire.panel-mesas', [
@@ -225,7 +272,9 @@ class PanelMesas extends Component
             'zonas'             => $this->zonas,
             'cuentasPendientes' => $this->cuentasPendientes,
             'usaDomicilios'     => $this->usaDomicilios,
+            'usaTaller'         => $this->usaTaller,
             'domiciliosHoy'     => $this->mostrarDomicilios ? $this->domiciliosHoy : [],
+            'ordenesTaller'     => $this->vistaActual === 'taller' ? $this->ordenesTaller : collect(),
         ]);
     }
 }

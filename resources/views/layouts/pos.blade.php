@@ -86,9 +86,41 @@
                     $roleLabels = ['admin_empresa'=>'Admin','cajero'=>'Cajero','vendedor'=>'Vendedor','mesero'=>'Mesero','digitador'=>'Digitador'];
                     $rolActual = collect($roleLabels)->first(fn($l,$r) => $u->hasRole($r));
                 @endphp
-                <span style="background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.3); border-radius:20px; padding:3px 12px; font-size:12px; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;">
+                <span style="background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.3); border-radius:20px; padding:3px 12px; font-size:12px; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px;">
                     👤 {{ $u->name }}@if($rolActual) · {{ $rolActual }}@endif
                 </span>
+                @php
+                    $cfgEmpresa = \App\Models\ConfiguracionEmpresa::where('empresa_id', $u->getEmpresaActualId())->first();
+                    $usaTallerLayout = (bool) ($cfgEmpresa?->usa_taller ?? false);
+                    $usaMesasLayout  = (bool) ($cfgEmpresa?->usa_mesas ?? false);
+                @endphp
+                @if($usaTallerLayout)
+                    @if($usaMesasLayout)
+                        {{-- En modo mesas: el toggle está dentro de panel-mesas --}}
+                    @else
+                        {{-- En modo tienda: botón directo al panel taller --}}
+                        @php
+                            $ordenesActivasTaller = \App\Models\TallerOrden::where('empresa_id', $u->getEmpresaActualId())
+                                ->whereIn('estado', ['pendiente','en_proceso','listo'])->count();
+                        @endphp
+                        <a href="{{ route('taller') }}"
+                           style="border:none; border-radius:20px; padding:5px 14px; font-size:12px; font-weight:700; cursor:pointer;
+                               background:{{ request()->routeIs('taller') ? '#0f766e' : 'rgba(255,255,255,.2)' }};
+                               color:white; display:flex; align-items:center; gap:5px; text-decoration:none;">
+                            🔧 Taller
+                            @if($ordenesActivasTaller > 0 && !request()->routeIs('taller'))
+                                <span style="background:#ef4444; border-radius:99px; padding:1px 6px; font-size:10px;">{{ $ordenesActivasTaller }}</span>
+                            @endif
+                        </a>
+                        @if(request()->routeIs('taller'))
+                        <a href="{{ route('pos') }}"
+                           style="border:none; border-radius:20px; padding:5px 14px; font-size:12px; font-weight:700; cursor:pointer;
+                               background:rgba(255,255,255,.2); color:white; text-decoration:none;">
+                            🛒 POS
+                        </a>
+                        @endif
+                    @endif
+                @endif
                 @endauth
             @endif
         </div>
