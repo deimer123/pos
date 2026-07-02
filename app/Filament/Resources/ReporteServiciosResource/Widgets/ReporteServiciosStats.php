@@ -6,6 +6,7 @@ use App\Filament\Resources\ReporteServiciosResource\Pages\ListReporteServicios;
 use Filament\Widgets\Concerns\InteractsWithPageTable;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Illuminate\Support\Facades\DB;
 
 class ReporteServiciosStats extends BaseWidget
 {
@@ -24,6 +25,19 @@ class ReporteServiciosStats extends BaseWidget
         $totalEmpresa   = (float) $registros->sum(fn ($r) => $r->valor_empresa);
         $totalTercero   = (float) $registros->sum(fn ($r) => $r->valor_tercero);
 
+        // Cuáles líneas de servicio "propio" ya fueron pagadas al mecánico (liquidadas)
+        $idsPropio = $registros->where('tipo_servicio', 'propio')->pluck('id');
+        $idsLiquidados = $idsPropio->isEmpty()
+            ? collect()
+            : DB::table('liquidacion_mecanico_detalles')
+                ->whereIn('factura_detalle_id', $idsPropio)
+                ->pluck('factura_detalle_id')
+                ->unique();
+
+        $registrosPropio = $registros->where('tipo_servicio', 'propio');
+        $montoLiquidado  = (float) $registrosPropio->whereIn('id', $idsLiquidados)->sum(fn ($r) => $r->valor_tercero);
+        $montoPendiente  = (float) $registrosPropio->whereNotIn('id', $idsLiquidados)->sum(fn ($r) => $r->valor_tercero);
+
         return [
             Stat::make('Total facturado en servicios', $this->money($totalFacturado))
                 ->icon('heroicon-o-wrench-screwdriver')
@@ -38,6 +52,16 @@ class ReporteServiciosStats extends BaseWidget
                 ->description('No es ganancia de la empresa')
                 ->icon('heroicon-o-arrow-uturn-right')
                 ->color('warning'),
+
+            Stat::make('Ya liquidado a mecánicos', $this->money($montoLiquidado))
+                ->description('Servicios propios ya pagados')
+                ->icon('heroicon-o-check-circle')
+                ->color('success'),
+
+            Stat::make('Falta por liquidar', $this->money($montoPendiente))
+                ->description('Servicios propios pendientes de pago')
+                ->icon('heroicon-o-clock')
+                ->color('danger'),
         ];
     }
 

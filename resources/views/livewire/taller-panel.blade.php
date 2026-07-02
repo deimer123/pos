@@ -65,6 +65,26 @@
         <div style="max-width:900px; margin:0 auto;">
             <h2 style="font-size:16px; font-weight:700; color:#0f766e; margin-bottom:12px;">👨‍🔧 Mecánicos y Liquidaciones</h2>
 
+            {{-- Resumen combinado de todos los mecánicos --}}
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:16px;">
+                <div style="background:white; border-radius:12px; border:1px solid #e5e7eb; padding:12px 14px;">
+                    <div style="font-size:10px; color:#6b7280; text-transform:uppercase; font-weight:700;">Servicios pendientes</div>
+                    <div style="font-size:18px; font-weight:900; color:#1f2937; margin-top:2px;">${{ number_format($resumenMecanicos['total_pendiente'], 0, ',', '.') }}</div>
+                </div>
+                <div style="background:white; border-radius:12px; border:1px solid #e5e7eb; padding:12px 14px;">
+                    <div style="font-size:10px; color:#6b7280; text-transform:uppercase; font-weight:700;">Falta por liquidar</div>
+                    <div style="font-size:18px; font-weight:900; color:#dc2626; margin-top:2px;">${{ number_format($resumenMecanicos['a_liquidar'], 0, ',', '.') }}</div>
+                </div>
+                <div style="background:white; border-radius:12px; border:1px solid #e5e7eb; padding:12px 14px;">
+                    <div style="font-size:10px; color:#6b7280; text-transform:uppercase; font-weight:700;">Ganancia empresa (pendiente)</div>
+                    <div style="font-size:18px; font-weight:900; color:#16a34a; margin-top:2px;">${{ number_format($resumenMecanicos['ganancia_pendiente'], 0, ',', '.') }}</div>
+                </div>
+                <div style="background:white; border-radius:12px; border:1px solid #e5e7eb; padding:12px 14px;">
+                    <div style="font-size:10px; color:#6b7280; text-transform:uppercase; font-weight:700;">Ya liquidado (histórico)</div>
+                    <div style="font-size:18px; font-weight:900; color:#0f766e; margin-top:2px;">${{ number_format($resumenMecanicos['liquidado_historico'], 0, ',', '.') }}</div>
+                </div>
+            </div>
+
             @if($mecanicos->isEmpty())
                 <div style="text-align:center; padding:40px; color:#94a3b8; background:white; border-radius:12px;">
                     <div style="font-size:40px;">👨‍🔧</div>

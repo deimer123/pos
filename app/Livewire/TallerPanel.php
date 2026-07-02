@@ -314,6 +314,40 @@ class TallerPanel extends Component
         });
     }
 
+    public function getResumenMecanicosProperty(): array
+    {
+        $empresaId = $this->empresaId();
+
+        $pendiente = DB::table('factura_detalles as fd')
+            ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
+            ->leftJoin('liquidacion_mecanico_detalles as lmd', 'lmd.factura_detalle_id', '=', 'fd.id')
+            ->where('f.empresa_id', $empresaId)
+            ->where('fd.tipo_servicio', 'propio')
+            ->whereNotNull('fd.mecanico_id')
+            ->whereNull('lmd.id')
+            ->select(DB::raw('
+                COALESCE(SUM(fd.subtotal), 0) as total_servicios,
+                COALESCE(SUM(fd.subtotal * (100 - COALESCE(fd.porcentaje_empresa, 0)) / 100), 0) as monto_mecanicos
+            '))
+            ->first();
+
+        $totalPendiente    = (float) ($pendiente->total_servicios ?? 0);
+        $aLiquidar         = (float) ($pendiente->monto_mecanicos ?? 0);
+        $gananciaPendiente = $totalPendiente - $aLiquidar;
+
+        $liquidadoHistorico       = (float) LiquidacionMecanico::where('empresa_id', $empresaId)->sum('monto_mecanico');
+        $totalServiciosLiquidados = (float) LiquidacionMecanico::where('empresa_id', $empresaId)->sum('total_servicios');
+        $gananciaLiquidada        = $totalServiciosLiquidados - $liquidadoHistorico;
+
+        return [
+            'total_pendiente'     => $totalPendiente,
+            'a_liquidar'          => $aLiquidar,
+            'ganancia_pendiente'  => $gananciaPendiente,
+            'liquidado_historico' => $liquidadoHistorico,
+            'ganancia_liquidada'  => $gananciaLiquidada,
+        ];
+    }
+
     private function pendienteMecanico(int $mecanicoId, int $empresaId): array
     {
         $rows = DB::table('factura_detalles as fd')
@@ -564,6 +598,7 @@ class TallerPanel extends Component
             'ordenes'            => $this->ordenes,
             'productosSugeridos' => $this->productosSugeridos,
             'mecanicos'          => $this->mecanicos,
+            'resumenMecanicos'   => $this->resumenMecanicos,
         ]);
     }
 }
