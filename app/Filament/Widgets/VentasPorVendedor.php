@@ -40,6 +40,21 @@ class VentasPorVendedor extends BaseWidget
 
             ->join('users', 'facturas.vendedor_id', '=', 'users.id')
 
+            ->leftJoinSub(
+                DB::table('factura_detalles as fd')
+                    ->join('products as p', function ($j) use ($empresaId) {
+                        $j->on('p.id_producto', '=', 'fd.producto_id')
+                          ->where('p.empresa_id', $empresaId)
+                          ->where('p.tipo_producto', 'servicio');
+                    })
+                    ->select('fd.factura_id', DB::raw('SUM(fd.subtotal) as servicios_total'))
+                    ->groupBy('fd.factura_id'),
+                'svc',
+                'svc.factura_id',
+                '=',
+                'facturas.id'
+            )
+
             ->select([
                 'facturas.vendedor_id',
 
@@ -47,7 +62,7 @@ class VentasPorVendedor extends BaseWidget
 
                 DB::raw('COUNT(facturas.id) as total_facturas'),
 
-                DB::raw('SUM(facturas.total) as total_ventas'),
+                DB::raw('SUM(facturas.total - COALESCE(svc.servicios_total, 0)) as total_ventas'),
             ])
 
             ->where('facturas.empresa_id', $empresaId)
