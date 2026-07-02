@@ -152,6 +152,64 @@
 
             </a>
 
+            {{-- BOTÓN POS CON TALLER (solo admin_empresa con el módulo activo) --}}
+            @if($user->hasRole('admin_empresa') && $config?->usa_taller)
+            <a href="{{ route('taller') }}"
+                style="
+                    text-decoration:none;
+                    display:block;
+                    margin-bottom:25px;
+                ">
+
+                <div style="
+                    background:linear-gradient(135deg,#0f766e,#0d9488);
+                    border-radius:25px;
+                    padding:25px;
+                    color:white;
+                    display:flex;
+                    align-items:center;
+                    gap:20px;
+                    box-shadow:0 8px 20px rgba(15,118,110,.3);
+                    transition:.2s;
+                ">
+
+                    <div style="
+                        width:70px;
+                        height:70px;
+                        border-radius:20px;
+                        background:rgba(255,255,255,.2);
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        font-size:35px;
+                    ">
+                        🔧
+                    </div>
+
+                    <div>
+
+                        <div style="
+                            font-size:24px;
+                            font-weight:bold;
+                            margin-bottom:5px;
+                        ">
+                            POS con Taller
+                        </div>
+
+                        <div style="
+                            opacity:.9;
+                            font-size:14px;
+                        ">
+                            Órdenes de trabajo y mecánicos
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </a>
+            @endif
+
             {{-- BOTÓN ADMIN --}}
             <a href="{{ route('filament.admin.pages.dashboard') }}"
                 style="
