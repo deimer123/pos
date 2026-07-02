@@ -506,15 +506,20 @@ class TallerPanel extends Component
             'iva_compra'        => 0,
         ];
 
-        if ($this->servicioId) {
-            Product::where('empresa_id', $empresaId)->where('id_producto', $this->servicioId)->update($data);
-        } else {
-            $maxId = Product::where('empresa_id', $empresaId)->max('id_producto') ?? 0;
-            $data['id_producto'] = $maxId + 1;
-            Product::create($data);
+        try {
+            if ($this->servicioId) {
+                Product::where('empresa_id', $empresaId)->where('id_producto', $this->servicioId)->update($data);
+            } else {
+                $maxId = Product::where('empresa_id', $empresaId)->max('id_producto') ?? 0;
+                $data['id_producto'] = $maxId + 1;
+                Product::create($data);
+            }
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            $this->addError('svcNombre', 'Ya existe un servicio con ese nombre en esta empresa.');
+            return;
         }
 
-        $this->modalServicio    = false;
+        $this->modalServicio     = false;
         $this->svcExpandMecanico = $this->svcMecanicoId;
         $this->dispatch('notify', type: 'success', message: $this->servicioId ? 'Servicio actualizado.' : 'Servicio creado y asignado al mecánico.');
     }
