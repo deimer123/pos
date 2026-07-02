@@ -45,6 +45,7 @@ class Product extends Model
         'descripcion_larga',
         'tipo_producto',
         'tipo_servicio',
+        'porcentaje_empresa',
         'vende_por',
         'maneja_inventario',
         'permite_fraccion',
@@ -73,6 +74,7 @@ class Product extends Model
         'permite_fraccion' => 'boolean',
         'requiere_cocina' => 'boolean',
         'peso_base' => 'decimal:3',
+        'porcentaje_empresa' => 'decimal:2',
     ];
 
     public function proveedor()

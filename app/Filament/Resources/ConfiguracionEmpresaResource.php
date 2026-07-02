@@ -7,7 +7,6 @@ use App\Filament\Resources\ConfiguracionEmpresaResource\Pages;
 use App\Models\ConfiguracionEmpresa;
 use Filament\Forms;
 use Filament\Forms\Form;
-use Filament\Forms\Get;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -120,18 +119,7 @@ class ConfiguracionEmpresaResource extends Resource
 
                             Forms\Components\Toggle::make('usa_servicios')
                                 ->label('Vende servicios')
-                                ->helperText('Para mano de obra, horas o servicios intangibles.')
-                                ->live(),
-
-                            Forms\Components\TextInput::make('porcentaje_empresa_servicios')
-                                ->label('% que se queda la empresa (servicios propios)')
-                                ->numeric()
-                                ->minValue(0)
-                                ->maxValue(100)
-                                ->suffix('%')
-                                ->default(0)
-                                ->visible(fn (Get $get) => (bool) $get('usa_servicios'))
-                                ->helperText('Aplica a los servicios marcados como "Propio". El resto queda para el tercero/mecánico y no se contabiliza como ganancia de la empresa.'),
+                                ->helperText('Para mano de obra, horas o servicios intangibles. El % de ganancia se configura en cada servicio, en el menú Servicios.'),
 
                             Forms\Components\Toggle::make('usa_domicilios')
                                 ->label('Usa domicilios')

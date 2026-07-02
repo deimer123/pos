@@ -1989,7 +1989,7 @@ public function confirmarFacturar()
     }
 
 
-protected function datosServicioFactura(?Product $producto, float $porcentajeEmpresaServicios): array
+protected function datosServicioFactura(?Product $producto): array
 {
     if (! $producto || $producto->tipo_producto !== 'servicio' || ! $producto->tipo_servicio) {
         return ['tipo_servicio' => null, 'porcentaje_empresa' => null];
@@ -1997,7 +1997,7 @@ protected function datosServicioFactura(?Product $producto, float $porcentajeEmp
 
     return [
         'tipo_servicio'      => $producto->tipo_servicio,
-        'porcentaje_empresa' => $producto->tipo_servicio === 'propio' ? $porcentajeEmpresaServicios : 0,
+        'porcentaje_empresa' => $producto->tipo_servicio === 'propio' ? (float) ($producto->porcentaje_empresa ?? 0) : 0,
     ];
 }
 
@@ -2005,7 +2005,6 @@ protected function datosServicioFactura(?Product $producto, float $porcentajeEmp
 public function facturarConfirmada(array $data = [])
 {
     $empresaId = $this->getEmpresaId();
-    $porcentajeEmpresaServicios = (float) (ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('porcentaje_empresa_servicios') ?? 0);
 
      if (! $this->verificarCajaAbierta()) {
         Log::warning('POS facturarConfirmada detenido por caja cerrada', [
@@ -2130,7 +2129,7 @@ public function facturarConfirmada(array $data = [])
                 ->lockForUpdate()
                 ->first();
 
-            $datosServicio = $this->datosServicioFactura($producto, $porcentajeEmpresaServicios);
+            $datosServicio = $this->datosServicioFactura($producto);
 
             $factura->detalles()->create([
                 'producto_id'        => $item['id_producto'],
@@ -2551,7 +2550,6 @@ public function onCloseModalPrefacturas(): void
 public function facturarEImprimir(array $data = [])
 {
     $empresaId = $this->getEmpresaId();
-    $porcentajeEmpresaServicios = (float) (ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('porcentaje_empresa_servicios') ?? 0);
     if (! $this->verificarCajaAbierta()) {
             return ['ok' => false, 'error' => 'Caja cerrada.'];
         }
@@ -2665,7 +2663,7 @@ public function facturarEImprimir(array $data = [])
                 ->lockForUpdate()
                 ->first();
 
-            $datosServicio = $this->datosServicioFactura($producto, $porcentajeEmpresaServicios);
+            $datosServicio = $this->datosServicioFactura($producto);
 
             $factura->detalles()->create([
                 'producto_id'        => $item['id_producto'],

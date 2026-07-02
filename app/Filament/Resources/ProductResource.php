@@ -247,9 +247,20 @@ return \App\Models\Familia::create($data)->id;
                             'propio'  => 'Propio (lo hace la empresa / sus mecánicos)',
                             'tercero' => 'Servicio de tercero (no es ganancia de la empresa)',
                         ])
-                        ->helperText('Propio: la empresa se queda con el % configurado en Configuración de Empresa. Tercero: el dinero no pertenece a la empresa, solo se cobra y se contabiliza aparte.')
+                        ->helperText('Propio: la empresa se queda con el % de ganancia de este servicio. Tercero: el dinero no pertenece a la empresa, solo se cobra y se contabiliza aparte.')
                         ->visible(fn (Get $get) => $get('tipo_producto') === 'servicio')
-                        ->required(fn (Get $get) => $get('tipo_producto') === 'servicio'),
+                        ->required(fn (Get $get) => $get('tipo_producto') === 'servicio')
+                        ->live(),
+
+                    TextInput::make('porcentaje_empresa')
+                        ->label('% de ganancia para la empresa')
+                        ->numeric()
+                        ->minValue(0)
+                        ->maxValue(100)
+                        ->suffix('%')
+                        ->visible(fn (Get $get) => $get('tipo_producto') === 'servicio' && $get('tipo_servicio') === 'propio')
+                        ->required(fn (Get $get) => $get('tipo_producto') === 'servicio' && $get('tipo_servicio') === 'propio')
+                        ->helperText('Este porcentaje es propio de este servicio, puede variar de un servicio a otro.'),
 
                     Select::make('vende_por')
                         ->label('Vende por')
