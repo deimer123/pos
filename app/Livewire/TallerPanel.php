@@ -446,7 +446,7 @@ class TallerPanel extends Component
         return Product::where('empresa_id', $this->empresaId())
             ->where('tipo_producto', 'servicio')
             ->where('mecanico_id', $mecanicoId)
-            ->get(['id_producto', 'nombre', 'precio_venta1', 'tipo_servicio', 'porcentaje_empresa', 'tercero_nombre']);
+            ->get(['id_producto', 'descripcion_larga as nombre', 'precio_venta1', 'tipo_servicio', 'porcentaje_empresa', 'tercero_nombre']);
     }
 
     public function abrirNuevoServicio(int $mecanicoId): void
@@ -466,7 +466,7 @@ class TallerPanel extends Component
         $p = Product::where('empresa_id', $this->empresaId())->where('id_producto', $productoId)->firstOrFail();
         $this->servicioId       = $productoId;
         $this->svcMecanicoId    = $p->mecanico_id;
-        $this->svcNombre        = $p->nombre;
+        $this->svcNombre        = $p->descripcion_larga;
         $this->svcPrecio        = (string) $p->precio_venta1;
         $this->svcPctEmpresa    = (string) ($p->porcentaje_empresa ?? 0);
         $this->svcTipoServicio  = $p->tipo_servicio ?? 'propio';
@@ -491,7 +491,7 @@ class TallerPanel extends Component
 
         $data = [
             'empresa_id'       => $empresaId,
-            'nombre'           => trim($this->svcNombre),
+            'descripcion_larga' => trim($this->svcNombre),
             'tipo_producto'    => 'servicio',
             'tipo_servicio'    => $this->svcTipoServicio,
             'precio_venta1'    => (float) $this->svcPrecio,
