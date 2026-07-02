@@ -505,7 +505,8 @@ class TallerPanel extends Component
         if ($this->servicioId) {
             Product::where('empresa_id', $empresaId)->where('id_producto', $this->servicioId)->update($data);
         } else {
-            $data['id_producto'] = 'SVC-' . strtoupper(substr(str_replace(' ', '', $this->svcNombre), 0, 6)) . '-' . rand(100, 999);
+            $maxId = Product::where('empresa_id', $empresaId)->max('id_producto') ?? 0;
+            $data['id_producto'] = $maxId + 1;
             Product::create($data);
         }
 
