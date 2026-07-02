@@ -82,7 +82,9 @@ class EmpleadoResource extends Resource
                             ->label('Roles del Empleado')
                             ->options(function () {
                                 $empresaId = auth()->user()->getEmpresaActualId();
-                                $usaMesas = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_mesas');
+                                $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();
+                                $usaMesas  = $config?->usa_mesas;
+                                $usaTaller = $config?->usa_taller;
 
                                 $opciones = [];
 
@@ -98,11 +100,17 @@ class EmpleadoResource extends Resource
                                     $opciones['cocina'] = 'Cocina';
                                 }
 
+                                if ($usaTaller) {
+                                    $opciones['taller'] = 'Taller';
+                                }
+
                                 return $opciones;
                             })
                             ->descriptions(function () {
                                 $empresaId = auth()->user()->getEmpresaActualId();
-                                $usaMesas = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_mesas');
+                                $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();
+                                $usaMesas  = $config?->usa_mesas;
+                                $usaTaller = $config?->usa_taller;
 
                                 $desc = [];
 
@@ -116,6 +124,10 @@ class EmpleadoResource extends Resource
                                 if ($usaMesas) {
                                     $desc['mesero'] = 'Puede tomar órdenes en mesas y enviar a cocina';
                                     $desc['cocina'] = 'Solo accede a la pantalla de cocina para ver órdenes';
+                                }
+
+                                if ($usaTaller) {
+                                    $desc['taller'] = 'Entra directo al panel de taller (órdenes de trabajo y mecánicos)';
                                 }
 
                                 return $desc;
@@ -256,7 +268,7 @@ class EmpleadoResource extends Resource
         return parent::getEloquentQuery()
             ->where('tipo_usuario', 'empleado')
             ->where('empresa_id', auth()->user()->getEmpresaActualId())
-            ->role(['vendedor', 'digitador', 'cajero', 'mesero', 'cocina']);
+            ->role(['vendedor', 'digitador', 'cajero', 'mesero', 'cocina', 'taller']);
     }
 
     // Solo ADMIN_EMPRESA puede acceder

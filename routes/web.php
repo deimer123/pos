@@ -83,6 +83,13 @@ Route::middleware(['auth', 'no.cocina.en.pos'])->get('/eleccion', function () {
 
     }
 
+    // TALLER PURO
+    if ($user->hasRole('taller')) {
+
+        return redirect()->route('taller');
+
+    }
+
     abort(403, 'No autorizado');
 })->name('eleccion');
 

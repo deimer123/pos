@@ -49,6 +49,11 @@ class LoginResponse implements FilamentLoginResponseContract, FortifyLoginRespon
             return redirect()->to('/pos');
         }
 
+        // Rol taller puro: va directo al panel de taller
+        if ($user?->hasRole('taller') && ! $user->hasAnyRole(['admin_empresa', 'cajero', 'vendedor', 'digitador', 'mesero', 'cocina'])) {
+            return redirect()->to('/taller');
+        }
+
         if ($user?->hasRole('super_admin')) {
             return redirect()->intended(route('filament.admin.pages.dashboard'));
         }
