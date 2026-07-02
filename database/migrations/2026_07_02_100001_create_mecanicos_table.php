@@ -10,13 +10,12 @@ return new class extends Migration
     {
         Schema::create('mecanicos', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('empresa_id');
+            $table->unsignedBigInteger('empresa_id')->index();
             $table->string('nombre');
             $table->string('cedula')->nullable();
             $table->string('telefono')->nullable();
             $table->boolean('activo')->default(true);
             $table->timestamps();
-            $table->foreign('empresa_id')->references('id')->on('empresas')->cascadeOnDelete();
         });
 
         Schema::table('products', function (Blueprint $table) {
@@ -32,20 +31,19 @@ return new class extends Migration
 
         Schema::create('liquidaciones_mecanico', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('empresa_id');
+            $table->unsignedBigInteger('empresa_id')->index();
             $table->unsignedBigInteger('mecanico_id');
             $table->date('fecha_desde');
             $table->date('fecha_hasta');
             $table->decimal('total_servicios', 14, 2)->default(0);
             $table->decimal('porcentaje_mecanico', 5, 2)->default(0);
             $table->decimal('monto_mecanico', 14, 2)->default(0);
-            $table->string('estado', 20)->default('pendiente'); // pendiente | pagado
+            $table->string('estado', 20)->default('pendiente');
             $table->date('fecha_pago')->nullable();
             $table->string('medio_pago', 50)->nullable();
             $table->text('notas')->nullable();
             $table->unsignedBigInteger('user_id');
             $table->timestamps();
-            $table->foreign('empresa_id')->references('id')->on('empresas')->cascadeOnDelete();
             $table->foreign('mecanico_id')->references('id')->on('mecanicos')->cascadeOnDelete();
             $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
         });
