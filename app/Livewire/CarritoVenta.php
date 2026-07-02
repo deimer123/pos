@@ -1629,7 +1629,8 @@ public function guardarPrefacturaConfirmada()
             ->get();
 
         $this->mostrarModalPrefacturas = true;
-        if ($this->mesaId) {
+        $esTaller = (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', $this->getEmpresaId())->value('usa_taller');
+        if ($this->mesaId || $esTaller) {
             $this->tab = 'facturas';
         }
     }
