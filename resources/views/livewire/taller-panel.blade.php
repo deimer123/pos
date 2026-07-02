@@ -71,34 +71,96 @@
                     <div style="margin-top:8px;">No hay mecánicos registrados. Créalos en <strong>Administración → Taller → Mecánicos</strong>.</div>
                 </div>
             @else
-                <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px;">
+                <div style="display:flex; flex-direction:column; gap:12px;">
                     @foreach($mecanicos as $mec)
-                    <div style="background:white; border-radius:12px; padding:16px; border:1px solid #e5e7eb; box-shadow:0 1px 4px rgba(0,0,0,.06);">
-                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
-                            <div>
-                                <div style="font-weight:700; font-size:15px; color:#1f2937;">{{ $mec->nombre }}</div>
-                                @if($mec->cedula)<div style="font-size:11px; color:#6b7280;">CC: {{ $mec->cedula }}</div>@endif
-                                @if($mec->telefono)<div style="font-size:11px; color:#6b7280;">📞 {{ $mec->telefono }}</div>@endif
+                    <div style="background:white; border-radius:12px; border:1px solid #e5e7eb; box-shadow:0 1px 4px rgba(0,0,0,.06); overflow:hidden;">
+
+                        {{-- Fila principal del mecánico --}}
+                        <div style="display:flex; align-items:stretch; gap:0;">
+
+                            {{-- Info mecánico --}}
+                            <div style="flex:1; padding:14px 16px; display:flex; align-items:center; gap:14px;">
+                                <div style="font-size:30px;">🔧</div>
+                                <div style="flex:1;">
+                                    <div style="font-weight:700; font-size:15px; color:#1f2937;">{{ $mec->nombre }}</div>
+                                    @if($mec->cedula)<span style="font-size:11px; color:#6b7280; margin-right:8px;">CC: {{ $mec->cedula }}</span>@endif
+                                    @if($mec->telefono)<span style="font-size:11px; color:#6b7280;">📞 {{ $mec->telefono }}</span>@endif
+                                </div>
+                                {{-- Pendiente --}}
+                                <div style="text-align:right;">
+                                    <div style="font-size:10px; color:#6b7280;">Pendiente</div>
+                                    <div style="font-size:18px; font-weight:900; color:#16a34a;">${{ number_format($mec->monto_pendiente, 0, ',', '.') }}</div>
+                                    <div style="font-size:10px; color:#9ca3af;">{{ $mec->servicios_pending }} serv.</div>
+                                </div>
                             </div>
-                            <div style="font-size:28px;">🔧</div>
+
+                            {{-- Acciones --}}
+                            <div style="display:flex; flex-direction:column; border-left:1px solid #f3f4f6;">
+                                <button wire:click="toggleServicios({{ $mec->id }})"
+                                    style="flex:1; border:none; border-bottom:1px solid #f3f4f6; padding:8px 16px; font-size:11px; font-weight:700; cursor:pointer;
+                                        background:{{ $svcExpandMecanico === $mec->id ? '#eff6ff' : 'white' }};
+                                        color:{{ $svcExpandMecanico === $mec->id ? '#2563eb' : '#374151' }}; white-space:nowrap;">
+                                    🛠️ Servicios
+                                </button>
+                                @if($mec->servicios_pending > 0)
+                                <button wire:click="abrirLiquidacion({{ $mec->id }})"
+                                    style="flex:1; border:none; padding:8px 16px; font-size:11px; font-weight:700; cursor:pointer; background:#0f766e; color:white; white-space:nowrap;">
+                                    💰 Liquidar
+                                </button>
+                                @else
+                                <div style="flex:1; padding:8px 16px; font-size:10px; color:#94a3b8; text-align:center; display:flex; align-items:center; white-space:nowrap;">Sin pendientes</div>
+                                @endif
+                            </div>
                         </div>
 
-                        <div style="background:#f0fdf4; border-radius:8px; padding:10px; margin-bottom:10px;">
-                            <div style="font-size:11px; color:#6b7280; margin-bottom:3px;">Pendiente por liquidar</div>
-                            <div style="font-size:20px; font-weight:900; color:#16a34a;">${{ number_format($mec->monto_pendiente, 0, ',', '.') }}</div>
-                            <div style="font-size:11px; color:#6b7280;">
-                                {{ $mec->servicios_pending }} servicio(s) · Total cobrado ${{ number_format($mec->total_pendiente, 0, ',', '.') }}
+                        {{-- Panel de servicios expandido --}}
+                        @if($svcExpandMecanico === $mec->id)
+                        <div style="border-top:2px solid #eff6ff; background:#f8fafc; padding:12px 16px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                                <span style="font-size:12px; font-weight:700; color:#2563eb;">🛠️ Servicios asignados a {{ $mec->nombre }}</span>
+                                <button wire:click="abrirNuevoServicio({{ $mec->id }})"
+                                    style="border:none; border-radius:8px; padding:5px 12px; font-size:11px; font-weight:700; cursor:pointer; background:#2563eb; color:white;">
+                                    ➕ Nuevo servicio
+                                </button>
                             </div>
-                        </div>
 
-                        @if($mec->servicios_pending > 0)
-                        <button wire:click="abrirLiquidacion({{ $mec->id }})"
-                            style="width:100%; border:none; border-radius:8px; padding:8px; font-size:13px; font-weight:700; cursor:pointer; background:#0f766e; color:white;">
-                            💰 Liquidar
-                        </button>
-                        @else
-                        <div style="text-align:center; font-size:12px; color:#94a3b8; padding:6px;">Sin servicios pendientes</div>
+                            @php $serviciosMec = $this->serviciosDelMecanico($mec->id); @endphp
+                            @if($serviciosMec->isEmpty())
+                                <div style="text-align:center; padding:16px; color:#94a3b8; font-size:12px;">
+                                    No hay servicios asignados. Crea el primero con "➕ Nuevo servicio".
+                                </div>
+                            @else
+                                <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:8px;">
+                                    @foreach($serviciosMec as $svc)
+                                    <div style="background:white; border:1px solid #dbeafe; border-radius:8px; padding:10px;">
+                                        <div style="font-weight:700; font-size:13px; color:#1f2937; margin-bottom:4px;">{{ $svc->nombre }}</div>
+                                        <div style="font-size:12px; color:#16a34a; font-weight:700;">${{ number_format($svc->precio_venta1, 0, ',', '.') }}</div>
+                                        @if($svc->tipo_servicio === 'tercero')
+                                            <div style="font-size:10px; color:#f59e0b; margin-top:2px;">🤝 Tercero: {{ $svc->tercero_nombre }}</div>
+                                        @else
+                                            <div style="font-size:10px; color:#6b7280; margin-top:2px;">
+                                                🏢 Empresa: {{ $svc->porcentaje_empresa ?? 0 }}%
+                                                · 🔧 Mecánico: {{ 100 - ($svc->porcentaje_empresa ?? 0) }}%
+                                            </div>
+                                        @endif
+                                        <div style="display:flex; gap:6px; margin-top:8px;">
+                                            <button wire:click="abrirEditarServicio({{ $svc->id_producto ?? $svc->id }})"
+                                                style="flex:1; border:none; border-radius:6px; padding:4px; font-size:10px; font-weight:700; cursor:pointer; background:#eff6ff; color:#2563eb;">
+                                                ✏️ Editar
+                                            </button>
+                                            <button wire:click="eliminarServicio({{ $svc->id_producto ?? $svc->id }})"
+                                                onclick="return confirm('¿Eliminar este servicio?')"
+                                                style="flex:1; border:none; border-radius:6px; padding:4px; font-size:10px; font-weight:700; cursor:pointer; background:#fef2f2; color:#ef4444;">
+                                                🗑️ Eliminar
+                                            </button>
+                                        </div>
+                                    </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
                         @endif
+
                     </div>
                     @endforeach
                 </div>
@@ -243,6 +305,106 @@
         @endif
     </div>
     @endif {{-- fin @if($vistaActiva === 'ordenes') --}}
+
+    {{-- Modal Crear/Editar Servicio --}}
+    @if($modalServicio)
+    <div style="position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1200; display:flex; align-items:center; justify-content:center; padding:16px;">
+        <div style="background:white; border-radius:16px; width:100%; max-width:480px; max-height:90vh; overflow-y:auto;">
+            <div style="background:#2563eb; color:white; padding:14px 18px; border-radius:16px 16px 0 0; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:1;">
+                <span style="font-size:15px; font-weight:700;">{{ $servicioId ? '✏️ Editar servicio' : '➕ Nuevo servicio' }}</span>
+                <button wire:click="$set('modalServicio',false)" style="background:rgba(255,255,255,.2); border:none; color:white; border-radius:99px; width:28px; height:28px; cursor:pointer; font-size:16px; line-height:1;">×</button>
+            </div>
+            <div style="padding:18px;">
+
+                {{-- Nombre --}}
+                <div style="margin-bottom:12px;">
+                    <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Nombre del servicio *</label>
+                    <input wire:model="svcNombre" type="text" placeholder="Ej: Cambio de aceite, Afinación..."
+                        style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
+                    @error('svcNombre') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
+                </div>
+
+                {{-- Precio --}}
+                <div style="margin-bottom:12px;">
+                    <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Precio de venta *</label>
+                    <input wire:model="svcPrecio" type="number" min="0" placeholder="0"
+                        style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
+                    @error('svcPrecio') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
+                </div>
+
+                {{-- Tipo de servicio --}}
+                <div style="margin-bottom:12px;">
+                    <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Tipo de servicio *</label>
+                    <div style="display:flex; gap:8px;">
+                        <button type="button" wire:click="$set('svcTipoServicio','propio')"
+                            style="flex:1; border:2px solid {{ $svcTipoServicio === 'propio' ? '#2563eb' : '#e5e7eb' }}; border-radius:8px; padding:8px; font-size:12px; font-weight:700; cursor:pointer;
+                                background:{{ $svcTipoServicio === 'propio' ? '#eff6ff' : 'white' }}; color:{{ $svcTipoServicio === 'propio' ? '#2563eb' : '#6b7280' }};">
+                            🔧 Propio (mecánico asignado)
+                        </button>
+                        <button type="button" wire:click="$set('svcTipoServicio','tercero')"
+                            style="flex:1; border:2px solid {{ $svcTipoServicio === 'tercero' ? '#f59e0b' : '#e5e7eb' }}; border-radius:8px; padding:8px; font-size:12px; font-weight:700; cursor:pointer;
+                                background:{{ $svcTipoServicio === 'tercero' ? '#fffbeb' : 'white' }}; color:{{ $svcTipoServicio === 'tercero' ? '#d97706' : '#6b7280' }};">
+                            🤝 Tercero (externo)
+                        </button>
+                    </div>
+                </div>
+
+                @if($svcTipoServicio === 'propio')
+                {{-- % Empresa (propio) --}}
+                <div style="margin-bottom:12px; background:#eff6ff; border-radius:8px; padding:12px;">
+                    <label style="font-size:11px; font-weight:700; color:#2563eb; display:block; margin-bottom:4px;">% que queda para la empresa</label>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <input wire:model.live="svcPctEmpresa" type="range" min="0" max="100" step="5"
+                            style="flex:1; accent-color:#2563eb;">
+                        <span style="font-size:16px; font-weight:900; color:#2563eb; min-width:40px; text-align:right;">{{ $svcPctEmpresa }}%</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:11px; color:#6b7280; margin-top:4px;">
+                        <span>🏢 Empresa: {{ $svcPctEmpresa }}%</span>
+                        <span>🔧 Mecánico: {{ 100 - (int)$svcPctEmpresa }}%</span>
+                    </div>
+                    @if($svcPrecio)
+                    <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:700; margin-top:6px; padding-top:6px; border-top:1px solid #bfdbfe;">
+                        <span style="color:#2563eb;">🏢 ${{ number_format((float)$svcPrecio * (int)$svcPctEmpresa / 100, 0, ',', '.') }}</span>
+                        <span style="color:#16a34a;">🔧 ${{ number_format((float)$svcPrecio * (100 - (int)$svcPctEmpresa) / 100, 0, ',', '.') }}</span>
+                    </div>
+                    @endif
+                </div>
+                @else
+                {{-- Nombre del tercero --}}
+                <div style="margin-bottom:12px;">
+                    <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Nombre del tercero / proveedor</label>
+                    <input wire:model="svcTerceroNombre" type="text" placeholder="Nombre de quien presta el servicio..."
+                        style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
+                </div>
+                {{-- % Empresa para tercero --}}
+                <div style="margin-bottom:12px; background:#fffbeb; border-radius:8px; padding:12px;">
+                    <label style="font-size:11px; font-weight:700; color:#d97706; display:block; margin-bottom:4px;">% que queda para la empresa (comisión)</label>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <input wire:model.live="svcPctEmpresa" type="range" min="0" max="100" step="5"
+                            style="flex:1; accent-color:#f59e0b;">
+                        <span style="font-size:16px; font-weight:900; color:#d97706; min-width:40px; text-align:right;">{{ $svcPctEmpresa }}%</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:11px; color:#6b7280; margin-top:4px;">
+                        <span>🏢 Empresa: {{ $svcPctEmpresa }}%</span>
+                        <span>🤝 Tercero recibe: {{ 100 - (int)$svcPctEmpresa }}%</span>
+                    </div>
+                </div>
+                @endif
+
+                <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:6px;">
+                    <button wire:click="$set('modalServicio',false)"
+                        style="border:1px solid #d1d5db; background:white; border-radius:8px; padding:8px 18px; font-size:13px; cursor:pointer; color:#6b7280;">
+                        Cancelar
+                    </button>
+                    <button wire:click="guardarServicio" wire:loading.attr="disabled"
+                        style="border:none; background:#2563eb; color:white; border-radius:8px; padding:8px 20px; font-size:13px; font-weight:700; cursor:pointer;">
+                        💾 Guardar servicio
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
 
     {{-- Modal Liquidación Mecánico --}}
     @if($modalLiquidacion)

@@ -45,6 +45,17 @@ class TallerPanel extends Component
     // ── Vista activa: 'ordenes' | 'mecanicos'
     public string $vistaActiva = 'ordenes';
 
+    // ── Modal Servicio (crear/editar servicio de mecánico)
+    public bool   $modalServicio      = false;
+    public ?int   $servicioId         = null;   // null = crear, int = editar
+    public ?int   $svcMecanicoId      = null;
+    public string $svcNombre          = '';
+    public string $svcPrecio          = '';
+    public string $svcPctEmpresa      = '0';
+    public string $svcTipoServicio    = 'propio';
+    public string $svcTerceroNombre   = '';
+    public ?int   $svcExpandMecanico  = null;   // mecánico cuya lista de servicios está expandida
+
     // ── Liquidación
     public bool  $modalLiquidacion    = false;
     public ?int  $liquidarMecanicoId  = null;
@@ -421,6 +432,92 @@ class TallerPanel extends Component
         if (! $this->liquidarMecanicoId) return collect();
         return LiquidacionMecanico::where('mecanico_id', $this->liquidarMecanicoId)
             ->orderByDesc('created_at')->limit(10)->get();
+    }
+
+    // ── Gestión de Servicios ─────────────────────────────────────────────────
+
+    public function toggleServicios(int $mecanicoId): void
+    {
+        $this->svcExpandMecanico = $this->svcExpandMecanico === $mecanicoId ? null : $mecanicoId;
+    }
+
+    public function serviciosDelMecanico(int $mecanicoId): \Illuminate\Support\Collection
+    {
+        return Product::where('empresa_id', $this->empresaId())
+            ->where('tipo_producto', 'servicio')
+            ->where('mecanico_id', $mecanicoId)
+            ->get(['id_producto', 'nombre', 'precio_venta1', 'tipo_servicio', 'porcentaje_empresa', 'tercero_nombre']);
+    }
+
+    public function abrirNuevoServicio(int $mecanicoId): void
+    {
+        $this->servicioId       = null;
+        $this->svcMecanicoId    = $mecanicoId;
+        $this->svcNombre        = '';
+        $this->svcPrecio        = '';
+        $this->svcPctEmpresa    = '0';
+        $this->svcTipoServicio  = 'propio';
+        $this->svcTerceroNombre = '';
+        $this->modalServicio    = true;
+    }
+
+    public function abrirEditarServicio(int $productoId): void
+    {
+        $p = Product::where('empresa_id', $this->empresaId())->where('id_producto', $productoId)->firstOrFail();
+        $this->servicioId       = $productoId;
+        $this->svcMecanicoId    = $p->mecanico_id;
+        $this->svcNombre        = $p->nombre;
+        $this->svcPrecio        = (string) $p->precio_venta1;
+        $this->svcPctEmpresa    = (string) ($p->porcentaje_empresa ?? 0);
+        $this->svcTipoServicio  = $p->tipo_servicio ?? 'propio';
+        $this->svcTerceroNombre = $p->tercero_nombre ?? '';
+        $this->modalServicio    = true;
+    }
+
+    public function guardarServicio(): void
+    {
+        $this->validate([
+            'svcNombre'  => 'required|min:2',
+            'svcPrecio'  => 'required|numeric|min:0',
+            'svcPctEmpresa' => 'required|numeric|min:0|max:100',
+        ], [
+            'svcNombre.required'  => 'El nombre es obligatorio.',
+            'svcPrecio.required'  => 'El precio es obligatorio.',
+            'svcPrecio.numeric'   => 'El precio debe ser un número.',
+            'svcPctEmpresa.max'   => 'El porcentaje no puede superar 100%.',
+        ]);
+
+        $empresaId = $this->empresaId();
+
+        $data = [
+            'empresa_id'       => $empresaId,
+            'nombre'           => trim($this->svcNombre),
+            'tipo_producto'    => 'servicio',
+            'tipo_servicio'    => $this->svcTipoServicio,
+            'precio_venta1'    => (float) $this->svcPrecio,
+            'porcentaje_empresa' => (float) $this->svcPctEmpresa,
+            'mecanico_id'      => $this->svcTipoServicio === 'propio' ? $this->svcMecanicoId : null,
+            'tercero_nombre'   => $this->svcTipoServicio === 'tercero' ? trim($this->svcTerceroNombre) : null,
+            'maneja_inventario' => false,
+            'activo'           => true,
+        ];
+
+        if ($this->servicioId) {
+            Product::where('empresa_id', $empresaId)->where('id_producto', $this->servicioId)->update($data);
+        } else {
+            $data['id_producto'] = 'SVC-' . strtoupper(substr(str_replace(' ', '', $this->svcNombre), 0, 6)) . '-' . rand(100, 999);
+            Product::create($data);
+        }
+
+        $this->modalServicio    = false;
+        $this->svcExpandMecanico = $this->svcMecanicoId;
+        $this->dispatch('notify', type: 'success', message: $this->servicioId ? 'Servicio actualizado.' : 'Servicio creado y asignado al mecánico.');
+    }
+
+    public function eliminarServicio(int $productoId): void
+    {
+        Product::where('empresa_id', $this->empresaId())->where('id_producto', $productoId)->delete();
+        $this->dispatch('notify', type: 'success', message: 'Servicio eliminado.');
     }
 
     public function render()
