@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\ServicioResource\Pages;
+use App\Models\Mecanico;
 use App\Models\Product;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Section;
@@ -108,6 +109,23 @@ class ServicioResource extends Resource
                         ->required(fn (Get $get) => $get('tipo_servicio') === 'propio')
                         ->helperText('Propio de este servicio, puede variar de un servicio a otro.'),
 
+                    Select::make('mecanico_id')
+                        ->label('Mecánico')
+                        ->options(fn () => Mecanico::where('empresa_id', auth()->user()->getEmpresaActualId())
+                            ->where('activo', true)
+                            ->pluck('nombre', 'id'))
+                        ->searchable()
+                        ->visible(fn (Get $get) => $get('tipo_servicio') === 'propio')
+                        ->required(fn (Get $get) => $get('tipo_servicio') === 'propio')
+                        ->helperText('El mecánico que ejecuta este servicio, para poder liquidarle su parte.'),
+
+                    TextInput::make('tercero_nombre')
+                        ->label('Nombre del tercero')
+                        ->maxLength(255)
+                        ->visible(fn (Get $get) => $get('tipo_servicio') === 'tercero')
+                        ->required(fn (Get $get) => $get('tipo_servicio') === 'tercero')
+                        ->helperText('A quién se le paga este servicio (no es ganancia de la empresa).'),
+
                     TextInput::make('precio_venta1')
                         ->label('Valor del servicio')
                         ->numeric()
@@ -144,6 +162,10 @@ class ServicioResource extends Resource
                     ->badge()
                     ->formatStateUsing(fn ($state) => $state === 'propio' ? 'Propio' : 'Tercero')
                     ->color(fn ($state) => $state === 'propio' ? 'success' : 'warning'),
+
+                Tables\Columns\TextColumn::make('mecanico.nombre')
+                    ->label('Mecánico / Tercero')
+                    ->formatStateUsing(fn ($state, $record) => $record->tipo_servicio === 'tercero' ? ($record->tercero_nombre ?: '-') : ($state ?: '-')),
 
                 Tables\Columns\TextColumn::make('porcentaje_empresa')
                     ->label('% Empresa')
