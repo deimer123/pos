@@ -331,9 +331,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/cocina', \App\Livewire\PantallaCocina::class)
         ->middleware('solo.cocina')
         ->name('cocina');
-
-    Route::get('/domicilios', \App\Livewire\PanelDomicilios::class)
-        ->name('domicilios');
 });
 
 // Logout de cocina (redirige al login del admin)

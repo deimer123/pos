@@ -152,50 +152,6 @@
 
             </a>
 
-            {{-- BOTÓN DOMICILIOS --}}
-            @php $cfg = \App\Models\ConfiguracionEmpresa::where('empresa_id', Auth::id())->first(); @endphp
-            @if($cfg && $cfg->usa_domicilios)
-            <a href="{{ route('domicilios') }}"
-                style="
-                    text-decoration:none;
-                    display:block;
-                    margin-bottom:25px;
-                ">
-                <div style="
-                    background:linear-gradient(135deg,#f59e0b,#d97706);
-                    border-radius:25px;
-                    padding:25px;
-                    color:white;
-                    display:flex;
-                    align-items:center;
-                    gap:20px;
-                    box-shadow:0 8px 20px rgba(245,158,11,.3);
-                    transition:.2s;
-                ">
-                    <div style="
-                        width:70px;
-                        height:70px;
-                        border-radius:20px;
-                        background:rgba(255,255,255,.2);
-                        display:flex;
-                        align-items:center;
-                        justify-content:center;
-                        font-size:35px;
-                    ">
-                        🛵
-                    </div>
-                    <div>
-                        <div style="font-size:24px;font-weight:bold;margin-bottom:5px;">
-                            Domicilios
-                        </div>
-                        <div style="opacity:.9;font-size:14px;">
-                            Pedidos y repartidores
-                        </div>
-                    </div>
-                </div>
-            </a>
-            @endif
-
             {{-- BOTÓN ADMIN --}}
             <a href="{{ route('filament.admin.pages.dashboard') }}"
                 style="
