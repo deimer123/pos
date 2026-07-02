@@ -4205,6 +4205,21 @@ $efectivo = ($ventasContadoEfectivo + $carteraEfectivo + $entradasEfectivo) - $d
     // Total de ventas (informativo: contado + crÃ©dito)
     $totalVentas = $ventasContadoEfectivo + $ventasContadoTransferencia + $ventasCredito;
 
+    // ----- VENTAS: SERVICIOS vs PRODUCTOS -----
+    $ventasServiciosTotal = (float) \Illuminate\Support\Facades\DB::table('factura_detalles as fd')
+        ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
+        ->join('products as p', function ($j) use ($empresaId) {
+            $j->on('p.id_producto', '=', 'fd.producto_id')
+              ->where('p.empresa_id', '=', $empresaId);
+        })
+        ->where('f.empresa_id', $empresaId)
+        ->where('f.user_id', $userId)
+        ->whereBetween('f.fecha', [$inicio, $fin])
+        ->where('p.tipo_producto', 'servicio')
+        ->sum('fd.subtotal');
+
+    $ventasProductosTotal = $totalVentas - $ventasServiciosTotal;
+
     return [
         // Desglose ventas contado
         'ventas_contado_efectivo'       => $ventasContadoEfectivo,
@@ -4236,6 +4251,10 @@ $efectivo = ($ventasContadoEfectivo + $carteraEfectivo + $entradasEfectivo) - $d
         // Totales informativos
         'total_ventas'                  => $totalVentas,
         'total_ventas_sin_devoluciones'=> $totalVentas - $devolucionesDia,
+
+        // Ventas por tipo: servicios vs productos
+        'ventas_servicios'              => $ventasServiciosTotal,
+        'ventas_productos'              => $ventasProductosTotal,
 
         // Domicilios cobrados por empresa (para liquidar con domiciliario)
         'dom_cobrado_efectivo'      => $domCobradoEfectivo,

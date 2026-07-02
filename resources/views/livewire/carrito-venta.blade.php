@@ -2050,7 +2050,15 @@
                             class="font-semibold">${{ number_format($resumenCaja['ventas_credito'], 0, ',', '.') }}</span>
                     </div>
 
-                    
+                    <div class="mt-1 text-[11px] text-gray-500 uppercase tracking-wide">VENTAS POR TIPO</div>
+                    <div class="flex justify-between"><span>🔩 Productos</span><span
+                            class="font-semibold">${{ number_format($resumenCaja['ventas_productos'], 0, ',', '.') }}</span>
+                    </div>
+                    <div class="flex justify-between"><span>🔧 Servicios</span><span
+                            class="font-semibold">${{ number_format($resumenCaja['ventas_servicios'], 0, ',', '.') }}</span>
+                    </div>
+
+
                     <div class="mt-1 text-[11px] text-gray-500 uppercase tracking-wide">CARTERA</div>
                     <div class="flex justify-between"><span>Efectivo</span><span
                             class="font-semibold">${{ number_format($resumenCaja['cartera_efectivo'], 0, ',', '.') }}</span>
