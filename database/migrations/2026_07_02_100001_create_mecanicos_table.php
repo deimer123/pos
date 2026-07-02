@@ -8,6 +8,23 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Limpiar tablas parciales de intentos anteriores fallidos
+        Schema::dropIfExists('liquidacion_mecanico_detalles');
+        Schema::dropIfExists('liquidaciones_mecanico');
+        if (Schema::hasColumn('factura_detalles', 'mecanico_id')) {
+            Schema::table('factura_detalles', function (Blueprint $table) {
+                $table->dropForeign(['mecanico_id']);
+                $table->dropColumn('mecanico_id');
+            });
+        }
+        if (Schema::hasColumn('products', 'mecanico_id')) {
+            Schema::table('products', function (Blueprint $table) {
+                $table->dropForeign(['mecanico_id']);
+                $table->dropColumn(['mecanico_id', 'tercero_nombre']);
+            });
+        }
+        Schema::dropIfExists('mecanicos');
+
         Schema::create('mecanicos', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('empresa_id')->index();
