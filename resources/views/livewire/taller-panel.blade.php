@@ -76,6 +76,14 @@
                     <div style="font-size:18px; font-weight:900; color:#dc2626; margin-top:2px;">${{ number_format($resumenMecanicos['a_liquidar'], 0, ',', '.') }}</div>
                 </div>
                 <div style="background:white; border-radius:12px; border:1px solid #e5e7eb; padding:12px 14px;">
+                    <div style="font-size:10px; color:#6b7280; text-transform:uppercase; font-weight:700;">Préstamos pendientes</div>
+                    <div style="font-size:18px; font-weight:900; color:#d97706; margin-top:2px;">${{ number_format($resumenMecanicos['prestamos_pendientes'], 0, ',', '.') }}</div>
+                </div>
+                <div style="background:white; border-radius:12px; border:1px solid #e5e7eb; padding:12px 14px;">
+                    <div style="font-size:10px; color:#6b7280; text-transform:uppercase; font-weight:700;">Neto a liquidar</div>
+                    <div style="font-size:18px; font-weight:900; color:#7c3aed; margin-top:2px;">${{ number_format($resumenMecanicos['a_liquidar_neto'], 0, ',', '.') }}</div>
+                </div>
+                <div style="background:white; border-radius:12px; border:1px solid #e5e7eb; padding:12px 14px;">
                     <div style="font-size:10px; color:#6b7280; text-transform:uppercase; font-weight:700;">Ganancia empresa (pendiente)</div>
                     <div style="font-size:18px; font-weight:900; color:#16a34a; margin-top:2px;">${{ number_format($resumenMecanicos['ganancia_pendiente'], 0, ',', '.') }}</div>
                 </div>
@@ -108,9 +116,12 @@
                                 </div>
                                 {{-- Pendiente --}}
                                 <div style="text-align:right;">
-                                    <div style="font-size:10px; color:#6b7280;">Pendiente</div>
-                                    <div style="font-size:18px; font-weight:900; color:#16a34a;">${{ number_format($mec->monto_pendiente, 0, ',', '.') }}</div>
+                                    <div style="font-size:10px; color:#6b7280;">Neto a liquidar</div>
+                                    <div style="font-size:18px; font-weight:900; color:{{ $mec->monto_neto < 0 ? '#dc2626' : '#16a34a' }};">${{ number_format($mec->monto_neto, 0, ',', '.') }}</div>
                                     <div style="font-size:10px; color:#9ca3af;">{{ $mec->servicios_pending }} serv.</div>
+                                    @if($mec->prestamos_pendientes > 0)
+                                    <div style="font-size:10px; color:#dc2626; margin-top:2px;">💸 Préstamo: ${{ number_format($mec->prestamos_pendientes, 0, ',', '.') }}</div>
+                                    @endif
                                 </div>
                             </div>
 
@@ -121,6 +132,10 @@
                                         background:{{ $svcExpandMecanico === $mec->id ? '#eff6ff' : 'white' }};
                                         color:{{ $svcExpandMecanico === $mec->id ? '#2563eb' : '#374151' }}; white-space:nowrap;">
                                     🛠️ Servicios
+                                </button>
+                                <button wire:click="abrirPrestamo({{ $mec->id }})"
+                                    style="flex:1; border:none; border-bottom:1px solid #f3f4f6; padding:8px 16px; font-size:11px; font-weight:700; cursor:pointer; background:white; color:#d97706; white-space:nowrap;">
+                                    💸 Préstamo
                                 </button>
                                 @if($mec->servicios_pending > 0)
                                 <button wire:click="abrirLiquidacion({{ $mec->id }})"
@@ -493,6 +508,19 @@
                         <div style="font-size:20px; font-weight:900; color:#16a34a;">${{ number_format($liqMontoMecanico, 0, ',', '.') }}</div>
                     </div>
                 </div>
+
+                @if($liqPrestamosPendientes > 0)
+                <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:12px; margin-bottom:14px; display:grid; grid-template-columns:1fr 1fr; gap:8px; text-align:center;">
+                    <div>
+                        <div style="font-size:10px; color:#991b1b;">💸 Préstamo pendiente (se descuenta)</div>
+                        <div style="font-size:16px; font-weight:700; color:#dc2626;">- ${{ number_format($liqPrestamosPendientes, 0, ',', '.') }}</div>
+                    </div>
+                    <div>
+                        <div style="font-size:10px; color:#991b1b;">Neto a pagar al mecánico</div>
+                        <div style="font-size:20px; font-weight:900; color:{{ $liqMontoNeto < 0 ? '#dc2626' : '#16a34a' }};">${{ number_format($liqMontoNeto, 0, ',', '.') }}</div>
+                    </div>
+                </div>
+                @endif
                 @endif
 
                 {{-- Medio de pago y notas --}}
@@ -522,9 +550,47 @@
                     @if(!empty($liqServicios))
                     <button wire:click="confirmarLiquidacion" wire:loading.attr="disabled"
                         style="border:none; background:#16a34a; color:white; border-radius:8px; padding:8px 20px; font-size:13px; font-weight:700; cursor:pointer;">
-                        💰 Confirmar liquidación (${{ number_format($liqMontoMecanico, 0, ',', '.') }})
+                        💰 Confirmar liquidación (${{ number_format($liqPrestamosPendientes > 0 ? $liqMontoNeto : $liqMontoMecanico, 0, ',', '.') }})
                     </button>
                     @endif
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Modal Préstamo a mecánico --}}
+    @if($modalPrestamo)
+    <div style="position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1100; display:flex; align-items:center; justify-content:center; padding:16px;">
+        <div style="background:white; border-radius:16px; width:100%; max-width:420px;">
+            <div style="background:#d97706; color:white; padding:14px 18px; border-radius:16px 16px 0 0; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:15px; font-weight:700;">💸 Registrar préstamo</span>
+                <button wire:click="$set('modalPrestamo',false)" style="background:rgba(255,255,255,.2); border:none; color:white; border-radius:99px; width:28px; height:28px; cursor:pointer; font-size:16px; line-height:1;">×</button>
+            </div>
+            <div style="padding:18px;">
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:11px; font-weight:700; color:#4b5563;">Monto prestado *</label>
+                    <input wire:model="prestamoMonto" type="number" step="0.01" min="0" placeholder="0"
+                        style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:14px; margin-top:3px;">
+                    @error('prestamoMonto') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
+                </div>
+                <div style="margin-bottom:16px;">
+                    <label style="font-size:11px; font-weight:700; color:#4b5563;">Nota (opcional)</label>
+                    <input wire:model="prestamoNota" type="text" placeholder="Motivo del préstamo..."
+                        style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; margin-top:3px;">
+                </div>
+                <div style="font-size:11px; color:#92400e; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:8px 10px; margin-bottom:16px;">
+                    Este préstamo se descontará automáticamente del monto que le corresponde al mecánico cuando se liquide.
+                </div>
+                <div style="display:flex; gap:8px; justify-content:flex-end;">
+                    <button wire:click="$set('modalPrestamo',false)"
+                        style="border:1px solid #d1d5db; background:white; border-radius:8px; padding:8px 18px; font-size:13px; cursor:pointer; color:#6b7280;">
+                        Cancelar
+                    </button>
+                    <button wire:click="guardarPrestamo" wire:loading.attr="disabled"
+                        style="border:none; background:#d97706; color:white; border-radius:8px; padding:8px 20px; font-size:13px; font-weight:700; cursor:pointer;">
+                        💸 Registrar préstamo
+                    </button>
                 </div>
             </div>
         </div>

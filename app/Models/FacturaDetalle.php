@@ -49,4 +49,9 @@ class FacturaDetalle extends Model
     {
         return $this->belongsTo(Product::class, 'producto_id', 'id_producto');
     }
+
+    public function mecanico(): BelongsTo
+    {
+        return $this->belongsTo(Mecanico::class);
+    }
 }

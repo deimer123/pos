@@ -13,6 +13,7 @@ class LiquidacionMecanico extends Model
     protected $fillable = [
         'empresa_id', 'mecanico_id', 'fecha_desde', 'fecha_hasta',
         'total_servicios', 'porcentaje_mecanico', 'monto_mecanico',
+        'prestamos_descontados', 'monto_neto',
         'estado', 'fecha_pago', 'medio_pago', 'notas', 'user_id',
     ];
 
@@ -23,6 +24,8 @@ class LiquidacionMecanico extends Model
         'total_servicios'  => 'decimal:2',
         'porcentaje_mecanico' => 'decimal:2',
         'monto_mecanico'   => 'decimal:2',
+        'prestamos_descontados' => 'decimal:2',
+        'monto_neto'       => 'decimal:2',
     ];
 
     public function mecanico(): BelongsTo
@@ -38,5 +41,10 @@ class LiquidacionMecanico extends Model
     public function detalles(): HasMany
     {
         return $this->hasMany(LiquidacionMecanicoDetalle::class, 'liquidacion_id');
+    }
+
+    public function prestamosDescontados(): HasMany
+    {
+        return $this->hasMany(MecanicoPrestamo::class, 'liquidacion_id');
     }
 }

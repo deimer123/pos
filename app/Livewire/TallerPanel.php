@@ -8,6 +8,7 @@ use App\Models\Gasto;
 use App\Models\LiquidacionMecanico;
 use App\Models\LiquidacionMecanicoDetalle;
 use App\Models\Mecanico;
+use App\Models\MecanicoPrestamo;
 use App\Models\Mesa;
 use App\Models\Product;
 use App\Models\TallerOrden;
@@ -69,6 +70,14 @@ class TallerPanel extends Component
     public float  $liqTotalServicios  = 0;
     public float  $liqMontoMecanico   = 0;
     public float  $liqPorcentajeMecanico = 0;
+    public float  $liqPrestamosPendientes = 0;
+    public float  $liqMontoNeto          = 0;
+
+    // ── Préstamos a mecánicos
+    public bool   $modalPrestamo      = false;
+    public ?int   $prestamoMecanicoId = null;
+    public string $prestamoMonto      = '';
+    public string $prestamoNota       = '';
 
     private function empresaId(): int
     {
@@ -306,10 +315,12 @@ class TallerPanel extends Component
 
         return $mecanicos->map(function (Mecanico $m) use ($empresaId) {
             $pendiente = $this->pendienteMecanico($m->id, $empresaId);
-            $m->total_pendiente   = $pendiente['total_servicios'];
-            $m->monto_pendiente   = $pendiente['monto_mecanico'];
-            $m->porcentaje_prom   = $pendiente['porcentaje'];
-            $m->servicios_pending = $pendiente['count'];
+            $m->total_pendiente     = $pendiente['total_servicios'];
+            $m->monto_pendiente     = $pendiente['monto_mecanico'];
+            $m->porcentaje_prom     = $pendiente['porcentaje'];
+            $m->servicios_pending   = $pendiente['count'];
+            $m->prestamos_pendientes = $this->prestamosPendientesMecanico($m->id);
+            $m->monto_neto          = $m->monto_pendiente - $m->prestamos_pendientes;
             return $m;
         });
     }
@@ -339,13 +350,26 @@ class TallerPanel extends Component
         $totalServiciosLiquidados = (float) LiquidacionMecanico::where('empresa_id', $empresaId)->sum('total_servicios');
         $gananciaLiquidada        = $totalServiciosLiquidados - $liquidadoHistorico;
 
+        $prestamosPendientes = (float) MecanicoPrestamo::whereHas('mecanico', fn ($q) => $q->where('empresa_id', $empresaId))
+            ->where('estado', 'pendiente')
+            ->sum('monto');
+
         return [
-            'total_pendiente'     => $totalPendiente,
-            'a_liquidar'          => $aLiquidar,
-            'ganancia_pendiente'  => $gananciaPendiente,
-            'liquidado_historico' => $liquidadoHistorico,
-            'ganancia_liquidada'  => $gananciaLiquidada,
+            'total_pendiente'      => $totalPendiente,
+            'a_liquidar'           => $aLiquidar,
+            'ganancia_pendiente'   => $gananciaPendiente,
+            'liquidado_historico'  => $liquidadoHistorico,
+            'ganancia_liquidada'   => $gananciaLiquidada,
+            'prestamos_pendientes' => $prestamosPendientes,
+            'a_liquidar_neto'      => $aLiquidar - $prestamosPendientes,
         ];
+    }
+
+    private function prestamosPendientesMecanico(int $mecanicoId): float
+    {
+        return (float) MecanicoPrestamo::where('mecanico_id', $mecanicoId)
+            ->where('estado', 'pendiente')
+            ->sum('monto');
     }
 
     private function pendienteMecanico(int $mecanicoId, int $empresaId): array
@@ -422,6 +446,9 @@ class TallerPanel extends Component
         $this->liqPorcentajeMecanico = $this->liqTotalServicios > 0
             ? round($this->liqMontoMecanico / $this->liqTotalServicios * 100, 2)
             : 0;
+
+        $this->liqPrestamosPendientes = $this->prestamosPendientesMecanico($this->liquidarMecanicoId);
+        $this->liqMontoNeto            = $this->liqMontoMecanico - $this->liqPrestamosPendientes;
     }
 
     public function confirmarLiquidacion(): void
@@ -432,6 +459,13 @@ class TallerPanel extends Component
         }
 
         DB::transaction(function () {
+            // Préstamos pendientes del mecánico: se descuentan de esta liquidación
+            $prestamosPendientes = MecanicoPrestamo::where('mecanico_id', $this->liquidarMecanicoId)
+                ->where('estado', 'pendiente')
+                ->get();
+            $prestamosDescontados = (float) $prestamosPendientes->sum('monto');
+            $montoNeto = max(0, $this->liqMontoMecanico - $prestamosDescontados);
+
             $liquidacion = LiquidacionMecanico::create([
                 'empresa_id'          => $this->empresaId(),
                 'mecanico_id'         => $this->liquidarMecanicoId,
@@ -440,6 +474,8 @@ class TallerPanel extends Component
                 'total_servicios'     => $this->liqTotalServicios,
                 'porcentaje_mecanico' => $this->liqPorcentajeMecanico,
                 'monto_mecanico'      => $this->liqMontoMecanico,
+                'prestamos_descontados' => $prestamosDescontados,
+                'monto_neto'          => $montoNeto,
                 'estado'              => 'pagado',
                 'fecha_pago'          => today()->toDateString(),
                 'medio_pago'          => $this->liqMedioPago,
@@ -456,7 +492,11 @@ class TallerPanel extends Component
                 ]);
             }
 
-            // Registrar salida de caja automática
+            // Marcar préstamos pendientes como descontados en esta liquidación
+            MecanicoPrestamo::whereIn('id', $prestamosPendientes->pluck('id'))
+                ->update(['estado' => 'descontado', 'liquidacion_id' => $liquidacion->id]);
+
+            // Registrar salida de caja automática (neta, después de descontar préstamos)
             $mecanicoNombre = Mecanico::find($this->liquidarMecanicoId)?->nombre ?? 'Mecánico';
             $cajaActiva = Caja::where('empresa_id', $this->empresaId())
                 ->where('estado', 'abierta')
@@ -468,19 +508,22 @@ class TallerPanel extends Component
                 default => 'Efectivo',
             };
 
-            Gasto::create([
-                'id_gasto'    => Gasto::where('empresa_id', $this->empresaId())->max('id_gasto') + 1,
-                'empresa_id'  => $this->empresaId(),
-                'tipo'        => 'salida',
-                'categoria'   => 'liquidacion_mecanico',
-                'descripcion' => 'Liquidación mecánico: ' . $mecanicoNombre,
-                'monto'       => $this->liqMontoMecanico,
-                'fecha'       => today()->toDateString(),
-                'metodo_pago' => $medioPagoGasto,
-                'observacion' => $this->liqNotas ?: null,
-                'created_by'  => auth()->id(),
-                'caja_id'     => $cajaActiva?->id,
-            ]);
+            if ($montoNeto > 0) {
+                Gasto::create([
+                    'id_gasto'    => Gasto::where('empresa_id', $this->empresaId())->max('id_gasto') + 1,
+                    'empresa_id'  => $this->empresaId(),
+                    'tipo'        => 'salida',
+                    'categoria'   => 'liquidacion_mecanico',
+                    'descripcion' => 'Liquidación mecánico: ' . $mecanicoNombre
+                        . ($prestamosDescontados > 0 ? ' (descontado préstamo de $' . number_format($prestamosDescontados, 0, ',', '.') . ')' : ''),
+                    'monto'       => $montoNeto,
+                    'fecha'       => today()->toDateString(),
+                    'metodo_pago' => $medioPagoGasto,
+                    'observacion' => $this->liqNotas ?: null,
+                    'created_by'  => auth()->id(),
+                    'caja_id'     => $cajaActiva?->id,
+                ]);
+            }
         });
 
         $this->modalLiquidacion = false;
@@ -494,6 +537,67 @@ class TallerPanel extends Component
         if (! $this->liquidarMecanicoId) return collect();
         return LiquidacionMecanico::where('mecanico_id', $this->liquidarMecanicoId)
             ->orderByDesc('created_at')->limit(10)->get();
+    }
+
+    // ── Préstamos a mecánicos ────────────────────────────────────────────────
+
+    public function abrirPrestamo(int $mecanicoId): void
+    {
+        $this->prestamoMecanicoId = $mecanicoId;
+        $this->prestamoMonto      = '';
+        $this->prestamoNota       = '';
+        $this->modalPrestamo      = true;
+    }
+
+    public function guardarPrestamo(): void
+    {
+        $this->validate([
+            'prestamoMonto' => 'required|numeric|min:0.01',
+        ], [
+            'prestamoMonto.required' => 'El monto del préstamo es obligatorio.',
+            'prestamoMonto.min'      => 'El monto debe ser mayor a 0.',
+        ]);
+
+        if (! $this->prestamoMecanicoId) return;
+
+        DB::transaction(function () {
+            $mecanico = Mecanico::find($this->prestamoMecanicoId);
+            $monto    = (float) $this->prestamoMonto;
+
+            MecanicoPrestamo::create([
+                'empresa_id'  => $this->empresaId(),
+                'mecanico_id' => $this->prestamoMecanicoId,
+                'monto'       => $monto,
+                'fecha'       => today()->toDateString(),
+                'nota'        => $this->prestamoNota ?: null,
+                'estado'      => 'pendiente',
+                'user_id'     => auth()->id(),
+            ]);
+
+            // Registrar salida de caja automática
+            $cajaActiva = Caja::where('empresa_id', $this->empresaId())
+                ->where('estado', 'abierta')
+                ->latest('opened_at')
+                ->first();
+
+            Gasto::create([
+                'id_gasto'    => Gasto::where('empresa_id', $this->empresaId())->max('id_gasto') + 1,
+                'empresa_id'  => $this->empresaId(),
+                'tipo'        => 'salida',
+                'categoria'   => 'prestamo_mecanico',
+                'descripcion' => 'Préstamo a mecánico: ' . ($mecanico?->nombre ?? ''),
+                'monto'       => $monto,
+                'fecha'       => today()->toDateString(),
+                'metodo_pago' => 'Efectivo',
+                'observacion' => $this->prestamoNota ?: null,
+                'created_by'  => auth()->id(),
+                'caja_id'     => $cajaActiva?->id,
+            ]);
+        });
+
+        $this->modalPrestamo = false;
+        $this->prestamoMecanicoId = null;
+        $this->dispatch('notify', type: 'success', message: 'Préstamo registrado. Se descontará al liquidar.');
     }
 
     // ── Gestión de Servicios ─────────────────────────────────────────────────

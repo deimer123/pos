@@ -32,4 +32,9 @@ class Mecanico extends Model
     {
         return $this->hasMany(LiquidacionMecanico::class, 'mecanico_id');
     }
+
+    public function prestamos(): HasMany
+    {
+        return $this->hasMany(MecanicoPrestamo::class, 'mecanico_id');
+    }
 }
