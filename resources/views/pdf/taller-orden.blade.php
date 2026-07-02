@@ -28,6 +28,9 @@
     .badge-cancelada { background:#ef4444; }
     .diagnostico { background:#f8fafc; border:1px solid #e5e7eb; border-radius:6px; padding:8px 10px; font-size:12px; line-height:1.5; margin-top:4px; }
     .footer { margin-top:30px; border-top:1px solid #e5e7eb; padding-top:12px; font-size:10px; color:#9ca3af; text-align:center; }
+    .fotos-grid { width:100%; }
+    .foto-item { display:inline-block; width:31%; margin:0 1% 10px 0; vertical-align:top; }
+    .foto-item img { width:100%; height:150px; object-fit:cover; border:1px solid #e5e7eb; border-radius:6px; }
 </style>
 </head>
 <body>
@@ -125,6 +128,22 @@
 <div class="seccion">
     <div class="seccion-titulo">📝 Nota de trabajo realizado</div>
     <div class="diagnostico">{{ $orden->nota_trabajo }}</div>
+</div>
+@endif
+
+@if(!empty($orden->fotos))
+<div class="seccion" style="page-break-inside:avoid;">
+    <div class="seccion-titulo">📸 Anexos - Fotos</div>
+    <div class="fotos-grid">
+        @foreach($orden->fotos as $foto)
+            @php $rutaFoto = \Illuminate\Support\Facades\Storage::disk('public')->path($foto); @endphp
+            @if(file_exists($rutaFoto))
+            <div class="foto-item">
+                <img src="{{ $rutaFoto }}" alt="Foto">
+            </div>
+            @endif
+        @endforeach
+    </div>
 </div>
 @endif
 
