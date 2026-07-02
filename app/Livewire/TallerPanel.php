@@ -490,16 +490,20 @@ class TallerPanel extends Component
         $empresaId = $this->empresaId();
 
         $data = [
-            'empresa_id'       => $empresaId,
+            'empresa_id'        => $empresaId,
             'descripcion_larga' => trim($this->svcNombre),
-            'tipo_producto'    => 'servicio',
-            'tipo_servicio'    => $this->svcTipoServicio,
-            'precio_venta1'    => (float) $this->svcPrecio,
-            'porcentaje_empresa' => (float) $this->svcPctEmpresa,
-            'mecanico_id'      => $this->svcTipoServicio === 'propio' ? $this->svcMecanicoId : null,
-            'tercero_nombre'   => $this->svcTipoServicio === 'tercero' ? trim($this->svcTerceroNombre) : null,
+            'id_familia1'       => 0,
+            'id_familia2'       => 0,
+            'tipo_producto'     => 'servicio',
+            'tipo_servicio'     => $this->svcTipoServicio,
+            'precio_venta1'     => (float) $this->svcPrecio,
+            'precio_costo'      => 0,
+            'porcentaje_empresa'=> (float) $this->svcPctEmpresa,
+            'mecanico_id'       => $this->svcTipoServicio === 'propio' ? $this->svcMecanicoId : null,
+            'tercero_nombre'    => $this->svcTipoServicio === 'tercero' ? trim($this->svcTerceroNombre) : null,
             'maneja_inventario' => false,
-            'activo'           => true,
+            'iva_venta'         => 0,
+            'iva_compra'        => 0,
         ];
 
         if ($this->servicioId) {
