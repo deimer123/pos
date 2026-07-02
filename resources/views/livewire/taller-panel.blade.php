@@ -87,10 +87,6 @@
                     <div style="font-size:10px; color:#6b7280; text-transform:uppercase; font-weight:700;">Ganancia empresa (pendiente)</div>
                     <div style="font-size:18px; font-weight:900; color:#16a34a; margin-top:2px;">${{ number_format($resumenMecanicos['ganancia_pendiente'], 0, ',', '.') }}</div>
                 </div>
-                <div style="background:white; border-radius:12px; border:1px solid #e5e7eb; padding:12px 14px;">
-                    <div style="font-size:10px; color:#6b7280; text-transform:uppercase; font-weight:700;">Ya liquidado (histórico)</div>
-                    <div style="font-size:18px; font-weight:900; color:#0f766e; margin-top:2px;">${{ number_format($resumenMecanicos['liquidado_historico'], 0, ',', '.') }}</div>
-                </div>
             </div>
 
             @if($mecanicos->isEmpty())
