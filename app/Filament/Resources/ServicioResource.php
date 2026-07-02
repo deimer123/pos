@@ -68,12 +68,17 @@ class ServicioResource extends Resource
             Hidden::make('existencias')->default(0)->dehydrated(),
 
             Section::make('Datos del servicio')
+                ->icon('heroicon-o-wrench-screwdriver')
+                ->description('Define el servicio, quién lo ejecuta y cuánto cuesta.')
+                ->columns(2)
                 ->schema([
                     TextInput::make('descripcion_larga')
                         ->label('Nombre del servicio')
+                        ->prefixIcon('heroicon-o-tag')
                         ->required()
                         ->maxLength(255)
                         ->lazy()
+                        ->columnSpanFull()
                         ->rule(function (callable $get) {
                             return function ($attribute, $value, $fail) use ($get) {
                                 $idProducto = $get('id_producto');
@@ -91,13 +96,22 @@ class ServicioResource extends Resource
 
                     Select::make('tipo_servicio')
                         ->label('Tipo de servicio')
+                        ->native(false)
                         ->options([
-                            'propio'  => 'Propio (lo hace la empresa / sus mecánicos)',
-                            'tercero' => 'Servicio de tercero (no es ganancia de la empresa)',
+                            'propio'  => '🔧 Propio (lo hace la empresa / sus mecánicos)',
+                            'tercero' => '🤝 De tercero (no es ganancia de la empresa)',
                         ])
                         ->required()
                         ->live()
-                        ->helperText('Propio: la empresa se queda con el % de ganancia de este servicio. Tercero: el dinero no pertenece a la empresa, solo se cobra y se contabiliza aparte.'),
+                        ->helperText('Propio: la empresa se queda con un % de ganancia. Tercero: solo se cobra y se contabiliza aparte.'),
+
+                    TextInput::make('precio_venta1')
+                        ->label('Valor del servicio')
+                        ->numeric()
+                        ->minValue(0)
+                        ->required()
+                        ->prefix('$')
+                        ->helperText('Valor sugerido. Se puede editar al facturar en el POS.'),
 
                     TextInput::make('porcentaje_empresa')
                         ->label('% de ganancia para la empresa')
@@ -107,32 +121,27 @@ class ServicioResource extends Resource
                         ->suffix('%')
                         ->visible(fn (Get $get) => $get('tipo_servicio') === 'propio')
                         ->required(fn (Get $get) => $get('tipo_servicio') === 'propio')
-                        ->helperText('Propio de este servicio, puede variar de un servicio a otro.'),
+                        ->helperText('Puede variar de un servicio a otro.'),
 
                     Select::make('mecanico_id')
                         ->label('Mecánico')
+                        ->native(false)
                         ->options(fn () => Mecanico::where('empresa_id', auth()->user()->getEmpresaActualId())
                             ->where('activo', true)
                             ->pluck('nombre', 'id'))
                         ->searchable()
                         ->visible(fn (Get $get) => $get('tipo_servicio') === 'propio')
                         ->required(fn (Get $get) => $get('tipo_servicio') === 'propio')
-                        ->helperText('El mecánico que ejecuta este servicio, para poder liquidarle su parte.'),
+                        ->helperText('Quién lo ejecuta, para poder liquidarle su parte.'),
 
                     TextInput::make('tercero_nombre')
                         ->label('Nombre del tercero')
+                        ->prefixIcon('heroicon-o-user')
                         ->maxLength(255)
+                        ->columnSpanFull()
                         ->visible(fn (Get $get) => $get('tipo_servicio') === 'tercero')
                         ->required(fn (Get $get) => $get('tipo_servicio') === 'tercero')
                         ->helperText('A quién se le paga este servicio (no es ganancia de la empresa).'),
-
-                    TextInput::make('precio_venta1')
-                        ->label('Valor del servicio')
-                        ->numeric()
-                        ->minValue(0)
-                        ->required()
-                        ->prefix('$')
-                        ->helperText('Valor sugerido. Se puede editar al momento de facturar en el POS.'),
 
                     TextInput::make('iva_venta')
                         ->label('IVA venta (%)')
