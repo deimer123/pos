@@ -94,7 +94,7 @@ class PosProductos extends Component
             })
             ->orderByRaw('existencias > 0 DESC') // 🟢 primero los que tienen stock
             ->orderByDesc('existencias')         // 🔽 luego por mayor cantidad
-            ->with('alternateCodes')
+            ->with(['alternateCodes', 'mecanico'])
             ->withCount('variantes')
             ->take(40)
             ->get()

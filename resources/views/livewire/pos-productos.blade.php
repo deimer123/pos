@@ -115,9 +115,20 @@
 
                     {{-- Columna nombre: flexible, centrado verticalmente --}}
                     <div style="flex:1; min-width:0; display:flex; align-items:center; padding:10px 12px 10px 8px;">
-                        <div title="{{ $product->descripcion_larga }}"
-                             style="font-size:11px; font-weight:600; line-height:1.3; color:#334155; word-break:break-word; display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden;">
-                            {{ $product->descripcion_larga }}
+                        <div>
+                            <div title="{{ $product->descripcion_larga }}"
+                                 style="font-size:11px; font-weight:600; line-height:1.3; color:#334155; word-break:break-word; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">
+                                {{ $product->descripcion_larga }}
+                            </div>
+                            @if($product->tipo_producto === 'servicio' && $product->mecanico)
+                            <div style="font-size:10px; color:#7c3aed; font-weight:700; margin-top:3px;">
+                                🔧 {{ $product->mecanico->nombre }}
+                            </div>
+                            @elseif($product->tipo_producto === 'servicio' && $product->tercero_nombre)
+                            <div style="font-size:10px; color:#d97706; font-weight:700; margin-top:3px;">
+                                🤝 {{ $product->tercero_nombre }}
+                            </div>
+                            @endif
                         </div>
                     </div>
 
@@ -159,12 +170,19 @@
 
                     {{-- Columna nombre: flexible, centrado verticalmente --}}
                     <div style="flex:1; min-width:0; display:flex; align-items:center; padding:8px 8px 8px 6px;">
-                        <button type="button"
-                            title="{{ $product->descripcion_larga }}"
-                            @click="$dispatch('ver-nombre-producto-mobile', { nombre: @js($product->descripcion_larga), stock: @js($stockTexto) })"
-                            style="width:100%; text-align:left; font-size:9px; font-weight:600; line-height:1.2; color:#334155; word-break:break-word; display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; background:none; border:none; padding:0; cursor:pointer;">
-                            {{ $product->descripcion_larga }}
-                        </button>
+                        <div style="width:100%;">
+                            <button type="button"
+                                title="{{ $product->descripcion_larga }}"
+                                @click="$dispatch('ver-nombre-producto-mobile', { nombre: @js($product->descripcion_larga), stock: @js($stockTexto) })"
+                                style="width:100%; text-align:left; font-size:9px; font-weight:600; line-height:1.2; color:#334155; word-break:break-word; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; background:none; border:none; padding:0; cursor:pointer;">
+                                {{ $product->descripcion_larga }}
+                            </button>
+                            @if($product->tipo_producto === 'servicio' && $product->mecanico)
+                            <div style="font-size:9px; color:#7c3aed; font-weight:700; margin-top:2px;">🔧 {{ $product->mecanico->nombre }}</div>
+                            @elseif($product->tipo_producto === 'servicio' && $product->tercero_nombre)
+                            <div style="font-size:9px; color:#d97706; font-weight:700; margin-top:2px;">🤝 {{ $product->tercero_nombre }}</div>
+                            @endif
+                        </div>
                     </div>
 
                     {{-- Columna derecha: precio + stock + botón, alineados al fondo --}}
