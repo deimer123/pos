@@ -28,13 +28,47 @@ class VentasReportStats extends BaseWidget
     {
         $query = $this->getPageTableQuery();
         $facturas = (clone $query)->count();
-        $ventas = (float) (clone $query)->sum('total');
-        $contado = (float) (clone $query)->where('tipo_pago', 'contado')->sum('total');
-        $credito = (float) (clone $query)->where('tipo_pago', 'credito')->sum('total');
+
+        $facturaIds = (clone $query)->pluck('id');
+
+        // Total servicios (separado de productos)
+        $totalServicios = $facturaIds->isEmpty() ? 0.0 : (float) DB::table('factura_detalles as fd')
+            ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
+            ->join('products as p', function ($join) {
+                $join->on('p.id_producto', '=', 'fd.producto_id')
+                    ->on('p.empresa_id', '=', 'f.empresa_id');
+            })
+            ->whereIn('fd.factura_id', $facturaIds)
+            ->where('p.tipo_producto', 'servicio')
+            ->sum('fd.subtotal');
+
+        $totalGeneral = (float) (clone $query)->sum('total');
+        $ventas    = $totalGeneral - $totalServicios;
+
+        // Contado y crédito solo de productos
+        $contadoTotal = (float) (clone $query)->where('tipo_pago', 'contado')->sum('total');
+        $creditoTotal = (float) (clone $query)->where('tipo_pago', 'credito')->sum('total');
+
+        $serviciosContado = $facturaIds->isEmpty() ? 0.0 : (float) DB::table('factura_detalles as fd')
+            ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
+            ->join('products as p', function ($join) {
+                $join->on('p.id_producto', '=', 'fd.producto_id')
+                    ->on('p.empresa_id', '=', 'f.empresa_id');
+            })
+            ->whereIn('fd.factura_id', $facturaIds)
+            ->where('f.tipo_pago', 'contado')
+            ->where('p.tipo_producto', 'servicio')
+            ->sum('fd.subtotal');
+
+        $serviciosCredito = $totalServicios - $serviciosContado;
+
+        $contado = $contadoTotal - $serviciosContado;
+        $credito = $creditoTotal - $serviciosCredito;
+
         $porCobrar = (float) (clone $query)
             ->where('tipo_pago', 'credito')
             ->sum('saldo');
-        $efectivo = $this->recibidoPorMedio($query, 'efectivo');
+        $efectivo      = $this->recibidoPorMedio($query, 'efectivo');
         $transferencia = $this->recibidoPorMedio($query, 'transferencia');
         $utilidad = $this->utilidad($query);
         $utilidadPorcentaje = $ventas > 0
@@ -110,6 +144,7 @@ class VentasReportStats extends BaseWidget
             return 0;
         }
 
+        // Solo productos (excluir servicios — su costo es 0 e inflarían la utilidad)
         return (float) DB::table('factura_detalles as fd')
             ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
             ->join('products as p', function ($join) {
@@ -117,6 +152,7 @@ class VentasReportStats extends BaseWidget
                     ->on('p.empresa_id', '=', 'f.empresa_id');
             })
             ->whereIn('fd.factura_id', $facturaIds)
+            ->where('p.tipo_producto', '!=', 'servicio')
             ->sum(DB::raw('
                 ((fd.cantidad - COALESCE(fd.devuelto_cantidad, 0)) * fd.precio)
                 -

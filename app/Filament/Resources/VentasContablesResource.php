@@ -83,7 +83,8 @@ class VentasContablesResource extends Resource
                     ->label('Ventas con IVA')
                     ->getStateUsing(function (Factura $record): float {
                         return (float) $record->detalles
-                            ->filter(fn ($detalle) => (float) ($detalle->producto?->iva_venta ?? 0) > 0)
+                            ->filter(fn ($d) => ($d->producto?->tipo_producto ?? '') !== 'servicio'
+                                && (float) ($d->producto?->iva_venta ?? 0) > 0)
                             ->sum('subtotal');
                     })
                     ->formatStateUsing($money)
@@ -92,7 +93,17 @@ class VentasContablesResource extends Resource
                     ->label('Ventas sin IVA')
                     ->getStateUsing(function (Factura $record): float {
                         return (float) $record->detalles
-                            ->filter(fn ($detalle) => (float) ($detalle->producto?->iva_venta ?? 0) <= 0)
+                            ->filter(fn ($d) => ($d->producto?->tipo_producto ?? '') !== 'servicio'
+                                && (float) ($d->producto?->iva_venta ?? 0) <= 0)
+                            ->sum('subtotal');
+                    })
+                    ->formatStateUsing($money)
+                    ->alignRight(),
+                Tables\Columns\TextColumn::make('ingresos_servicios')
+                    ->label('Otros servicios (4200)')
+                    ->getStateUsing(function (Factura $record): float {
+                        return (float) $record->detalles
+                            ->filter(fn ($d) => ($d->producto?->tipo_producto ?? '') === 'servicio')
                             ->sum('subtotal');
                     })
                     ->formatStateUsing($money)

@@ -38,9 +38,10 @@ class VentasContablesExport implements FromCollection, ShouldAutoSize, WithHeadi
             'Fecha',
             'Cliente',
             'Tipo',
-            'Ventas con IVA',
-            'Ventas sin IVA',
+            'Ventas productos c/IVA (4135)',
+            'Ventas productos s/IVA (4135)',
             'IVA',
+            'Otros servicios (4200)',
             'Total',
             'Saldo',
         ];
@@ -48,15 +49,19 @@ class VentasContablesExport implements FromCollection, ShouldAutoSize, WithHeadi
 
     public function map($factura): array
     {
-        $ventasConIva = 0.0;
-        $ventasSinIva = 0.0;
-        $ivaTotal = 0.0;
+        $ventasConIva  = 0.0;
+        $ventasSinIva  = 0.0;
+        $ivaTotal      = 0.0;
+        $servicios     = 0.0;
 
         foreach ($factura->detalles as $detalle) {
-            $base = (float) $detalle->subtotal;
+            $base   = (float) $detalle->subtotal;
             $ivaPct = (float) ($detalle->producto?->iva_venta ?? 0);
+            $esServicio = ($detalle->producto?->tipo_producto ?? '') === 'servicio';
 
-            if ($ivaPct > 0) {
+            if ($esServicio) {
+                $servicios += $base;
+            } elseif ($ivaPct > 0) {
                 $ventasConIva += $base;
                 $ivaTotal += round($base * ($ivaPct / 100), 2);
             } else {
@@ -72,6 +77,7 @@ class VentasContablesExport implements FromCollection, ShouldAutoSize, WithHeadi
             round($ventasConIva, 2),
             round($ventasSinIva, 2),
             round($ivaTotal, 2),
+            round($servicios, 2),
             (float) $factura->total,
             (float) $factura->saldo,
         ];
