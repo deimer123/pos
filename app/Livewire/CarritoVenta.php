@@ -4137,6 +4137,28 @@ $carteraOtro          = (clone $qPagosCredito)->where('medio_pago','otro')->sum(
         ->whereIn('metodo_pago', ['Transferencia', 'Nequi'])
         ->sum('monto');
 
+    // ----- SERVICIOS MECÁNICOS -----
+    $serviciosMecanicos = (float) \Illuminate\Support\Facades\DB::table('factura_detalles')
+        ->join('facturas', 'factura_detalles.factura_id', '=', 'facturas.id')
+        ->join('products', function ($j) use ($empresaId) {
+            $j->on('factura_detalles.producto_id', '=', 'products.id_producto')
+              ->where('products.empresa_id', '=', $empresaId);
+        })
+        ->where('facturas.empresa_id', $empresaId)
+        ->where('facturas.user_id', $userId)
+        ->whereBetween('facturas.fecha', [$inicio, $fin])
+        ->where('products.tipo_producto', 'servicio')
+        ->whereNotNull('factura_detalles.mecanico_id')
+        ->sum('factura_detalles.subtotal');
+
+    $liquidacionesMecanicos = (float) Gasto::query()
+        ->where('empresa_id', $empresaId)
+        ->where('created_by', $userId)
+        ->where('categoria', 'liquidacion_mecanico')
+        ->whereDate('fecha', '>=', $inicio->toDateString())
+        ->whereDate('fecha', '<=', $fin->toDateString())
+        ->sum('monto');
+
     // ----- DOMICILIOS (fees collected by company, to pay domiciliario) -----
     $qDom = \App\Models\Factura::query()
         ->where('empresa_id', $empresaId)
@@ -4219,6 +4241,11 @@ $efectivo = ($ventasContadoEfectivo + $carteraEfectivo + $entradasEfectivo) - $d
         'dom_cobrado_efectivo'      => $domCobradoEfectivo,
         'dom_cobrado_transferencia' => $domCobradoTransferencia,
         'dom_cobrado_total'         => $domCobradoTotal,
+
+        // Mecánicos
+        'servicios_mecanicos'       => $serviciosMecanicos,
+        'liquidaciones_mecanicos'   => $liquidacionesMecanicos,
+        'empresa_servicios'         => $serviciosMecanicos - $liquidacionesMecanicos,
     ];
 }
 public function updatedMontoCierre($value)

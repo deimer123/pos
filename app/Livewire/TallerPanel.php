@@ -2,7 +2,9 @@
 
 namespace App\Livewire;
 
+use App\Models\Caja;
 use App\Models\FacturaDetalle;
+use App\Models\Gasto;
 use App\Models\LiquidacionMecanico;
 use App\Models\LiquidacionMecanicoDetalle;
 use App\Models\Mecanico;
@@ -419,6 +421,32 @@ class TallerPanel extends Component
                     'monto_mecanico'       => $svc['monto_mecanico'],
                 ]);
             }
+
+            // Registrar salida de caja automática
+            $mecanicoNombre = Mecanico::find($this->liquidarMecanicoId)?->nombre ?? 'Mecánico';
+            $cajaActiva = Caja::where('empresa_id', $this->empresaId())
+                ->where('estado', 'abierta')
+                ->latest('opened_at')
+                ->first();
+
+            $medioPagoGasto = match(strtolower($this->liqMedioPago ?? '')) {
+                'transferencia', 'nequi' => 'Transferencia',
+                default => 'Efectivo',
+            };
+
+            Gasto::create([
+                'id_gasto'    => Gasto::where('empresa_id', $this->empresaId())->max('id_gasto') + 1,
+                'empresa_id'  => $this->empresaId(),
+                'tipo'        => 'salida',
+                'categoria'   => 'liquidacion_mecanico',
+                'descripcion' => 'Liquidación mecánico: ' . $mecanicoNombre,
+                'monto'       => $this->liqMontoMecanico,
+                'fecha'       => today()->toDateString(),
+                'metodo_pago' => $medioPagoGasto,
+                'observacion' => $this->liqNotas ?: null,
+                'created_by'  => auth()->id(),
+                'caja_id'     => $cajaActiva?->id,
+            ]);
         });
 
         $this->modalLiquidacion = false;
