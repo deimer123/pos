@@ -45,10 +45,70 @@
                style="border:none; border-radius:20px; padding:5px 14px; font-size:11px; font-weight:700; cursor:pointer; background:rgba(255,255,255,.2); color:white; text-decoration:none; white-space:nowrap;">
                 📄 Reporte PDF
             </a>
+
+            {{-- Separador --}}
+            <span style="width:1px; height:20px; background:rgba(255,255,255,.3); display:inline-block;"></span>
+
+            {{-- Tab Mecánicos --}}
+            <button wire:click="$set('vistaActiva', @if($vistaActiva === 'mecanicos')'ordenes'@else'mecanicos'@endif)"
+                style="border:none; border-radius:20px; padding:5px 14px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap;
+                    background:{{ $vistaActiva === 'mecanicos' ? 'white' : 'rgba(255,255,255,.2)' }};
+                    color:{{ $vistaActiva === 'mecanicos' ? '#0f766e' : 'white' }};">
+                👨‍🔧 Mecánicos
+            </button>
         </div>
     </div>
 
+    {{-- Vista Mecánicos --}}
+    @if($vistaActiva === 'mecanicos')
+    <div style="flex:1; overflow-y:auto; padding:16px;">
+        <div style="max-width:900px; margin:0 auto;">
+            <h2 style="font-size:16px; font-weight:700; color:#0f766e; margin-bottom:12px;">👨‍🔧 Mecánicos y Liquidaciones</h2>
+
+            @if($mecanicos->isEmpty())
+                <div style="text-align:center; padding:40px; color:#94a3b8; background:white; border-radius:12px;">
+                    <div style="font-size:40px;">👨‍🔧</div>
+                    <div style="margin-top:8px;">No hay mecánicos registrados. Créalos en <strong>Administración → Taller → Mecánicos</strong>.</div>
+                </div>
+            @else
+                <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px;">
+                    @foreach($mecanicos as $mec)
+                    <div style="background:white; border-radius:12px; padding:16px; border:1px solid #e5e7eb; box-shadow:0 1px 4px rgba(0,0,0,.06);">
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                            <div>
+                                <div style="font-weight:700; font-size:15px; color:#1f2937;">{{ $mec->nombre }}</div>
+                                @if($mec->cedula)<div style="font-size:11px; color:#6b7280;">CC: {{ $mec->cedula }}</div>@endif
+                                @if($mec->telefono)<div style="font-size:11px; color:#6b7280;">📞 {{ $mec->telefono }}</div>@endif
+                            </div>
+                            <div style="font-size:28px;">🔧</div>
+                        </div>
+
+                        <div style="background:#f0fdf4; border-radius:8px; padding:10px; margin-bottom:10px;">
+                            <div style="font-size:11px; color:#6b7280; margin-bottom:3px;">Pendiente por liquidar</div>
+                            <div style="font-size:20px; font-weight:900; color:#16a34a;">${{ number_format($mec->monto_pendiente, 0, ',', '.') }}</div>
+                            <div style="font-size:11px; color:#6b7280;">
+                                {{ $mec->servicios_pending }} servicio(s) · Total cobrado ${{ number_format($mec->total_pendiente, 0, ',', '.') }}
+                            </div>
+                        </div>
+
+                        @if($mec->servicios_pending > 0)
+                        <button wire:click="abrirLiquidacion({{ $mec->id }})"
+                            style="width:100%; border:none; border-radius:8px; padding:8px; font-size:13px; font-weight:700; cursor:pointer; background:#0f766e; color:white;">
+                            💰 Liquidar
+                        </button>
+                        @else
+                        <div style="text-align:center; font-size:12px; color:#94a3b8; padding:6px;">Sin servicios pendientes</div>
+                        @endif
+                    </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+    </div>
+    @endif
+
     {{-- Grid de órdenes --}}
+    @if($vistaActiva === 'ordenes')
     <div style="flex:1; overflow-y:auto; padding:16px;">
         @if($ordenes->isEmpty())
             <div style="text-align:center; padding:60px 20px; color:#94a3b8;">
@@ -182,6 +242,112 @@
         </div>
         @endif
     </div>
+    @endif {{-- fin @if($vistaActiva === 'ordenes') --}}
+
+    {{-- Modal Liquidación Mecánico --}}
+    @if($modalLiquidacion)
+    <div style="position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1100; display:flex; align-items:center; justify-content:center; padding:16px;">
+        <div style="background:white; border-radius:16px; width:100%; max-width:640px; max-height:90vh; overflow-y:auto;">
+            <div style="background:#0f766e; color:white; padding:14px 18px; border-radius:16px 16px 0 0; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:1;">
+                <span style="font-size:15px; font-weight:700;">💰 Liquidar mecánico</span>
+                <button wire:click="$set('modalLiquidacion',false)" style="background:rgba(255,255,255,.2); border:none; color:white; border-radius:99px; width:28px; height:28px; cursor:pointer; font-size:16px; line-height:1;">×</button>
+            </div>
+            <div style="padding:18px;">
+
+                {{-- Período --}}
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:#4b5563;">Desde</label>
+                        <input wire:model.live="liqFechaDesde" type="date"
+                            style="width:100%; height:34px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; margin-top:3px;">
+                    </div>
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:#4b5563;">Hasta</label>
+                        <input wire:model.live="liqFechaHasta" type="date"
+                            style="width:100%; height:34px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; margin-top:3px;">
+                    </div>
+                </div>
+
+                {{-- Resumen servicios --}}
+                @if(empty($liqServicios))
+                    <div style="text-align:center; padding:20px; color:#94a3b8; background:#f8fafc; border-radius:8px; margin-bottom:14px;">
+                        Sin servicios pendientes en el período seleccionado.
+                    </div>
+                @else
+                <div style="background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px; margin-bottom:14px; max-height:220px; overflow-y:auto;">
+                    <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                        <thead style="position:sticky;top:0;background:#f1f5f9;">
+                            <tr>
+                                <th style="padding:6px 8px; text-align:left; color:#6b7280;">Fecha</th>
+                                <th style="padding:6px 8px; text-align:right; color:#6b7280;">Total cobrado</th>
+                                <th style="padding:6px 8px; text-align:right; color:#6b7280;">% Mecánico</th>
+                                <th style="padding:6px 8px; text-align:right; color:#6b7280;">Al mecánico</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($liqServicios as $svc)
+                            <tr style="border-top:1px solid #f1f5f9;">
+                                <td style="padding:5px 8px;">{{ $svc['fecha'] }}</td>
+                                <td style="padding:5px 8px; text-align:right;">${{ number_format($svc['subtotal'], 0, ',', '.') }}</td>
+                                <td style="padding:5px 8px; text-align:right;">{{ 100 - $svc['pct_empresa'] }}%</td>
+                                <td style="padding:5px 8px; text-align:right; font-weight:700; color:#16a34a;">${{ number_format($svc['monto_mecanico'], 0, ',', '.') }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="background:#f0fdf4; border-radius:8px; padding:12px; margin-bottom:14px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; text-align:center;">
+                    <div>
+                        <div style="font-size:10px; color:#6b7280;">Total cobrado</div>
+                        <div style="font-size:16px; font-weight:700; color:#374151;">${{ number_format($liqTotalServicios, 0, ',', '.') }}</div>
+                    </div>
+                    <div>
+                        <div style="font-size:10px; color:#6b7280;">% promedio mecánico</div>
+                        <div style="font-size:16px; font-weight:700; color:#2563eb;">{{ number_format($liqPorcentajeMecanico, 1, ',', '.') }}%</div>
+                    </div>
+                    <div>
+                        <div style="font-size:10px; color:#6b7280;">A pagar al mecánico</div>
+                        <div style="font-size:20px; font-weight:900; color:#16a34a;">${{ number_format($liqMontoMecanico, 0, ',', '.') }}</div>
+                    </div>
+                </div>
+                @endif
+
+                {{-- Medio de pago y notas --}}
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:#4b5563;">Medio de pago</label>
+                        <select wire:model="liqMedioPago"
+                            style="width:100%; height:34px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; margin-top:3px;">
+                            <option value="efectivo">Efectivo</option>
+                            <option value="transferencia">Transferencia</option>
+                            <option value="cheque">Cheque</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:#4b5563;">Notas (opcional)</label>
+                        <input wire:model="liqNotas" type="text" placeholder="Semana 1, enero, etc."
+                            style="width:100%; height:34px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; margin-top:3px;">
+                    </div>
+                </div>
+
+                {{-- Botones --}}
+                <div style="display:flex; gap:8px; justify-content:flex-end;">
+                    <button wire:click="$set('modalLiquidacion',false)"
+                        style="border:1px solid #d1d5db; background:white; border-radius:8px; padding:8px 18px; font-size:13px; cursor:pointer; color:#6b7280;">
+                        Cancelar
+                    </button>
+                    @if(!empty($liqServicios))
+                    <button wire:click="confirmarLiquidacion" wire:loading.attr="disabled"
+                        style="border:none; background:#16a34a; color:white; border-radius:8px; padding:8px 20px; font-size:13px; font-weight:700; cursor:pointer;">
+                        💰 Confirmar liquidación (${{ number_format($liqMontoMecanico, 0, ',', '.') }})
+                    </button>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
 
     {{-- Modal editar orden --}}
     @if($modalOrden)
@@ -276,6 +442,11 @@
         Livewire.on('warning', (msg) => {
             const text = Array.isArray(msg) ? msg[0] : msg;
             Swal.fire({ icon: 'warning', title: '⚠️ Atención', text: text, confirmButtonColor: '#f59e0b' });
+        });
+        Livewire.on('notify', (data) => {
+            const d = Array.isArray(data) ? data[0] : data;
+            if (d.type === 'success') Swal.fire({ icon: 'success', title: d.message, timer: 2000, showConfirmButton: false });
+            else Swal.fire({ icon: d.type || 'info', title: d.message, confirmButtonColor: '#0f766e' });
         });
     });
 </script>

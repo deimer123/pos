@@ -6,6 +6,7 @@ use App\Filament\Resources\ProductResource\Pages;
 use App\Models\Product;
 use App\Models\CuentaContable;
 use App\Models\Actor;
+use App\Models\Mecanico;
 use App\Models\Familia;
 use App\Models\Subfamilia;
 use App\Models\AlternateCode;
@@ -261,6 +262,27 @@ return \App\Models\Familia::create($data)->id;
                         ->visible(fn (Get $get) => $get('tipo_producto') === 'servicio' && $get('tipo_servicio') === 'propio')
                         ->required(fn (Get $get) => $get('tipo_producto') === 'servicio' && $get('tipo_servicio') === 'propio')
                         ->helperText('Este porcentaje es propio de este servicio, puede variar de un servicio a otro.'),
+
+                    Select::make('mecanico_id')
+                        ->label('Mecánico asignado')
+                        ->options(function () {
+                            $empresaId = auth()->user()->getEmpresaActualId();
+                            return Mecanico::where('empresa_id', $empresaId)
+                                ->where('activo', true)
+                                ->pluck('nombre', 'id');
+                        })
+                        ->searchable()
+                        ->nullable()
+                        ->placeholder('Sin mecánico asignado')
+                        ->visible(fn (Get $get) => $get('tipo_producto') === 'servicio' && $get('tipo_servicio') === 'propio')
+                        ->helperText('El mecánico que realiza este servicio. Se usará para la liquidación.'),
+
+                    Forms\Components\TextInput::make('tercero_nombre')
+                        ->label('Nombre del tercero / proveedor')
+                        ->maxLength(150)
+                        ->placeholder('Ej: Taller Pérez, Proveedor XYZ')
+                        ->visible(fn (Get $get) => $get('tipo_producto') === 'servicio' && $get('tipo_servicio') === 'tercero')
+                        ->helperText('Nombre de la empresa o persona a quien se le debe pagar este servicio.'),
 
                     Select::make('vende_por')
                         ->label('Vende por')

@@ -1992,12 +1992,13 @@ public function confirmarFacturar()
 protected function datosServicioFactura(?Product $producto): array
 {
     if (! $producto || $producto->tipo_producto !== 'servicio' || ! $producto->tipo_servicio) {
-        return ['tipo_servicio' => null, 'porcentaje_empresa' => null];
+        return ['tipo_servicio' => null, 'porcentaje_empresa' => null, 'mecanico_id' => null];
     }
 
     return [
         'tipo_servicio'      => $producto->tipo_servicio,
         'porcentaje_empresa' => $producto->tipo_servicio === 'propio' ? (float) ($producto->porcentaje_empresa ?? 0) : 0,
+        'mecanico_id'        => $producto->tipo_servicio === 'propio' ? $producto->mecanico_id : null,
     ];
 }
 
@@ -2140,6 +2141,7 @@ public function facturarConfirmada(array $data = [])
                 'descuento'          => (float)($item['descuento'] ?? 0),
                 'tipo_servicio'      => $datosServicio['tipo_servicio'],
                 'porcentaje_empresa' => $datosServicio['porcentaje_empresa'],
+                'mecanico_id'        => $datosServicio['mecanico_id'] ?? null,
             ]);
 
 if ($producto && $producto->tipo_producto !== 'servicio') {
@@ -2674,6 +2676,7 @@ public function facturarEImprimir(array $data = [])
                 'descuento'          => (float)($item['descuento'] ?? 0),
                 'tipo_servicio'      => $datosServicio['tipo_servicio'],
                 'porcentaje_empresa' => $datosServicio['porcentaje_empresa'],
+                'mecanico_id'        => $datosServicio['mecanico_id'] ?? null,
             ]);
 
 if ($producto && $producto->tipo_producto !== 'servicio') {

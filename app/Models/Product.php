@@ -45,6 +45,8 @@ class Product extends Model
         'descripcion_larga',
         'tipo_producto',
         'tipo_servicio',
+        'mecanico_id',
+        'tercero_nombre',
         'porcentaje_empresa',
         'vende_por',
         'maneja_inventario',
@@ -76,6 +78,11 @@ class Product extends Model
         'peso_base' => 'decimal:3',
         'porcentaje_empresa' => 'decimal:2',
     ];
+
+    public function mecanico()
+    {
+        return $this->belongsTo(Mecanico::class, 'mecanico_id');
+    }
 
     public function proveedor()
     {
@@ -164,3 +171,5 @@ public static function stock(int $pid): float
 }
 
 }
+
+// appended

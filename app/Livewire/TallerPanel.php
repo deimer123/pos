@@ -2,10 +2,15 @@
 
 namespace App\Livewire;
 
+use App\Models\FacturaDetalle;
+use App\Models\LiquidacionMecanico;
+use App\Models\LiquidacionMecanicoDetalle;
+use App\Models\Mecanico;
 use App\Models\Mesa;
 use App\Models\Product;
 use App\Models\TallerOrden;
 use App\Models\TallerRepuesto;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
 class TallerPanel extends Component
@@ -36,6 +41,21 @@ class TallerPanel extends Component
 
     // Búsqueda de productos para repuestos
     public string $buscarProducto = '';
+
+    // ── Vista activa: 'ordenes' | 'mecanicos'
+    public string $vistaActiva = 'ordenes';
+
+    // ── Liquidación
+    public bool  $modalLiquidacion    = false;
+    public ?int  $liquidarMecanicoId  = null;
+    public string $liqFechaDesde      = '';
+    public string $liqFechaHasta      = '';
+    public string $liqMedioPago       = 'efectivo';
+    public string $liqNotas           = '';
+    public array  $liqServicios       = []; // pending services preview
+    public float  $liqTotalServicios  = 0;
+    public float  $liqMontoMecanico   = 0;
+    public float  $liqPorcentajeMecanico = 0;
 
     private function empresaId(): int
     {
@@ -264,11 +284,151 @@ class TallerPanel extends Component
         TallerOrden::where('empresa_id', $this->empresaId())->findOrFail($id)->delete();
     }
 
+    // ── Mecánicos / Liquidación ──────────────────────────────────────────────
+
+    public function getMecanicosProperty()
+    {
+        $empresaId = $this->empresaId();
+        $mecanicos = Mecanico::where('empresa_id', $empresaId)->where('activo', true)->get();
+
+        return $mecanicos->map(function (Mecanico $m) use ($empresaId) {
+            $pendiente = $this->pendienteMecanico($m->id, $empresaId);
+            $m->total_pendiente   = $pendiente['total_servicios'];
+            $m->monto_pendiente   = $pendiente['monto_mecanico'];
+            $m->porcentaje_prom   = $pendiente['porcentaje'];
+            $m->servicios_pending = $pendiente['count'];
+            return $m;
+        });
+    }
+
+    private function pendienteMecanico(int $mecanicoId, int $empresaId): array
+    {
+        $rows = DB::table('factura_detalles as fd')
+            ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
+            ->leftJoin('liquidacion_mecanico_detalles as lmd', 'lmd.factura_detalle_id', '=', 'fd.id')
+            ->where('f.empresa_id', $empresaId)
+            ->where('fd.mecanico_id', $mecanicoId)
+            ->where('fd.tipo_servicio', 'propio')
+            ->whereNull('lmd.id')
+            ->select(DB::raw('SUM(fd.subtotal) as total_servicios, COUNT(fd.id) as total_count, AVG(COALESCE(100 - fd.porcentaje_empresa, 100)) as porcentaje_prom'))
+            ->first();
+
+        $totalServicios = (float) ($rows->total_servicios ?? 0);
+        $pct            = (float) ($rows->porcentaje_prom ?? 0);
+        return [
+            'total_servicios' => $totalServicios,
+            'monto_mecanico'  => round($totalServicios * $pct / 100, 2),
+            'porcentaje'      => $pct,
+            'count'           => (int) ($rows->total_count ?? 0),
+        ];
+    }
+
+    public function abrirLiquidacion(int $mecanicoId): void
+    {
+        $this->liquidarMecanicoId = $mecanicoId;
+        $this->liqFechaDesde      = now()->startOfMonth()->toDateString();
+        $this->liqFechaHasta      = now()->toDateString();
+        $this->liqMedioPago       = 'efectivo';
+        $this->liqNotas           = '';
+        $this->calcularLiquidacion();
+        $this->modalLiquidacion   = true;
+    }
+
+    public function updatedLiqFechaDesde(): void { $this->calcularLiquidacion(); }
+    public function updatedLiqFechaHasta(): void  { $this->calcularLiquidacion(); }
+
+    private function calcularLiquidacion(): void
+    {
+        if (! $this->liquidarMecanicoId) return;
+
+        $empresaId = $this->empresaId();
+        $q = DB::table('factura_detalles as fd')
+            ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
+            ->leftJoin('liquidacion_mecanico_detalles as lmd', 'lmd.factura_detalle_id', '=', 'fd.id')
+            ->where('f.empresa_id', $empresaId)
+            ->where('fd.mecanico_id', $this->liquidarMecanicoId)
+            ->where('fd.tipo_servicio', 'propio')
+            ->whereNull('lmd.id');
+
+        if ($this->liqFechaDesde) $q->whereDate('f.fecha', '>=', $this->liqFechaDesde);
+        if ($this->liqFechaHasta) $q->whereDate('f.fecha', '<=', $this->liqFechaHasta);
+
+        $rows = $q->select([
+            'fd.id',
+            'f.id as factura_id',
+            DB::raw("DATE_FORMAT(f.fecha,'%d/%m/%Y') as fecha_fmt"),
+            'fd.subtotal',
+            'fd.porcentaje_empresa',
+        ])->get();
+
+        $this->liqServicios = $rows->map(fn($r) => [
+            'detalle_id'        => $r->id,
+            'factura_id'        => $r->factura_id,
+            'fecha'             => $r->fecha_fmt,
+            'subtotal'          => (float) $r->subtotal,
+            'pct_empresa'       => (float) ($r->porcentaje_empresa ?? 0),
+            'monto_mecanico'    => round((float) $r->subtotal * (100 - (float) ($r->porcentaje_empresa ?? 0)) / 100, 2),
+        ])->toArray();
+
+        $this->liqTotalServicios    = collect($this->liqServicios)->sum('subtotal');
+        $this->liqMontoMecanico     = collect($this->liqServicios)->sum('monto_mecanico');
+        $this->liqPorcentajeMecanico = $this->liqTotalServicios > 0
+            ? round($this->liqMontoMecanico / $this->liqTotalServicios * 100, 2)
+            : 0;
+    }
+
+    public function confirmarLiquidacion(): void
+    {
+        if (! $this->liquidarMecanicoId || empty($this->liqServicios)) {
+            $this->dispatch('notify', type: 'error', message: 'No hay servicios para liquidar en el período seleccionado.');
+            return;
+        }
+
+        DB::transaction(function () {
+            $liquidacion = LiquidacionMecanico::create([
+                'empresa_id'          => $this->empresaId(),
+                'mecanico_id'         => $this->liquidarMecanicoId,
+                'fecha_desde'         => $this->liqFechaDesde ?: now()->startOfMonth()->toDateString(),
+                'fecha_hasta'         => $this->liqFechaHasta ?: now()->toDateString(),
+                'total_servicios'     => $this->liqTotalServicios,
+                'porcentaje_mecanico' => $this->liqPorcentajeMecanico,
+                'monto_mecanico'      => $this->liqMontoMecanico,
+                'estado'              => 'pagado',
+                'fecha_pago'          => today()->toDateString(),
+                'medio_pago'          => $this->liqMedioPago,
+                'notas'               => $this->liqNotas ?: null,
+                'user_id'             => auth()->id(),
+            ]);
+
+            foreach ($this->liqServicios as $svc) {
+                LiquidacionMecanicoDetalle::create([
+                    'liquidacion_id'       => $liquidacion->id,
+                    'factura_detalle_id'   => $svc['detalle_id'],
+                    'subtotal_servicio'    => $svc['subtotal'],
+                    'monto_mecanico'       => $svc['monto_mecanico'],
+                ]);
+            }
+        });
+
+        $this->modalLiquidacion = false;
+        $this->liquidarMecanicoId = null;
+        $this->liqServicios = [];
+        $this->dispatch('notify', type: 'success', message: 'Liquidación registrada exitosamente.');
+    }
+
+    public function getLiquidacionesHistoricoProperty()
+    {
+        if (! $this->liquidarMecanicoId) return collect();
+        return LiquidacionMecanico::where('mecanico_id', $this->liquidarMecanicoId)
+            ->orderByDesc('created_at')->limit(10)->get();
+    }
+
     public function render()
     {
         return view('livewire.taller-panel', [
             'ordenes'            => $this->ordenes,
             'productosSugeridos' => $this->productosSugeridos,
+            'mecanicos'          => $this->mecanicos,
         ]);
     }
 }
