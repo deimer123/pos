@@ -282,6 +282,7 @@ class User extends Authenticatable implements FilamentUser
             'cocina',
             'vendedor',
             'cajero',
+            'taller',
         ]);
     }
 }
