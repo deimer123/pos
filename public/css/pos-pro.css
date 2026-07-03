@@ -3097,3 +3097,51 @@ button:hover {
     }
 }
 /* FIN TEXTO DOS LÍNEAS IPAD */
+
+/* Móvil mesas: Enviar cocina, Facturar y Total en la misma línea */
+@media (max-width: 768px) {
+    .pos-cart-component > .pos-cart-total-bar.flex.items-center.justify-between {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 6px !important;
+        padding: 6px 8px !important;
+    }
+
+    .pos-cart-component > .pos-cart-total-bar > .flex.gap-2.flex-shrink-0.items-center {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        gap: 4px !important;
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        overflow-x: auto !important;
+    }
+
+    .pos-cart-component > .pos-cart-total-bar button.pos-mesa-total-btn {
+        flex: 0 0 auto !important;
+        min-width: 0 !important;
+        height: 28px !important;
+        padding: 0 8px !important;
+        font-size: 10px !important;
+        white-space: nowrap !important;
+    }
+
+    .pos-cart-component > .pos-cart-total-bar .text-right {
+        width: auto !important;
+        flex: 0 0 auto !important;
+        margin-left: auto !important;
+        display: flex !important;
+        align-items: baseline !important;
+        gap: 4px !important;
+        white-space: nowrap !important;
+    }
+
+    .pos-cart-component > .pos-cart-total-bar .text-2xl,
+    .pos-cart-component > .pos-cart-total-bar .text-3xl {
+        font-size: 15px !important;
+    }
+}
+/* FIN Móvil mesas: Enviar cocina, Facturar y Total en la misma línea */
