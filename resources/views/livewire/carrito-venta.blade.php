@@ -806,7 +806,13 @@
                 ⏸ Espera
             </button>
             <button
-                onclick="window.open('/pos/mesa/{{ $mesaId }}/cuenta', '_blank', 'width=420,height=680')"
+                x-on:click="
+                    if (Object.keys($wire.get('carrito') ?? {}).length === 0) {
+                        Swal.fire({icon:'warning', title:'Mesa sin productos', text:'Debe haber una mesa activa con productos para imprimir la cuenta.'});
+                    } else {
+                        window.open('/pos/mesa/{{ $mesaId }}/cuenta', '_blank', 'width=420,height=680');
+                    }
+                "
                 class="pos-cart-main-action text-white text-xs px-3 h-8 rounded-full"
                 style="background:#374151;">
                 🖨️ Cuenta
