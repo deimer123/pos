@@ -2933,6 +2933,14 @@
             });
         });
 
+        Livewire.on('mostrar-carrito-vacio', () => {
+            Swal.fire({ icon: 'warning', title: 'Carrito vacío', text: 'Agregue productos primero.' });
+        });
+
+        Livewire.on('mostrar-cliente-requerido', () => {
+            Swal.fire({ icon: 'warning', title: 'Cliente requerido', text: 'Seleccione un cliente antes de guardar.' });
+        });
+
     });
 </script>
 
