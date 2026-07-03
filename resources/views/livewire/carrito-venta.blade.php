@@ -666,11 +666,11 @@
     <div class="pos-desktop-cart-actions flex items-center justify-between">
         @if(! $mesaId)
         @php $usaTallerPos = (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_taller'); @endphp
-        <div style="display:flex; flex-wrap:wrap; gap:4px; width:100%; align-items:center;">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(90px, 1fr)); gap:4px; width:100%; align-items:center;">
 
             <button
                 x-on:click="if(Object.keys($wire.get('carrito') ?? {}).length===0){Swal.fire({icon:'warning',title:'Carrito vacío',text:'Agregue productos primero.'});}else{$wire.abrirModalEditar();}"
-                style="background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                style="width:100%;text-align:center;background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 Editar
             </button>
 
@@ -679,27 +679,32 @@
             {{-- Ya hay orden activa: ir al lobby guardando primero --}}
             <button
                 x-on:click="Swal.fire({title:'¿Ir al lobby?',text:'Se guardarán los productos actuales en la orden antes de salir.',icon:'question',showCancelButton:true,confirmButtonText:'Guardar y salir',cancelButtonText:'Cancelar',confirmButtonColor:'#0f766e'}).then(r=>{if(r.isConfirmed){$wire.salirALobbyTaller();}})"
-                style="background:#0d9488;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                style="width:100%;text-align:center;background:#0d9488;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 🔧 Ver lobby
             </button>
             @else
             {{-- Sin orden activa: botón de ingreso --}}
             <button onclick="abrirIngresoTaller(@js($clienteSeleccionadoNombre ?? ''), @js($clienteTelefono ?? ''))"
-                style="background:#0f766e;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                style="width:100%;text-align:center;background:#0f766e;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 🔧 Ingresar
             </button>
             @endif
             @endif
 
             <button wire:click="abrirModalCrearCliente"
-                style="background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                style="width:100%;text-align:center;background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 + Cliente
             </button>
 
             @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
+                <button type="button" wire:click="abrirModalCartera"
+                    style="width:100%;text-align:center;background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                    Cartera
+                </button>
+
                 @if ($cajaEstado === 'abierta')
                 <button type="button" wire:click="abrirMovimientoCajaModal('salida')"
-                    style="background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                    style="width:100%;text-align:center;background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                     Entrada/Salida
                 </button>
                 @endif
@@ -715,20 +720,25 @@
                         confirmButtonText:'Sí, eliminar', cancelButtonText:'Cancelar',
                         confirmButtonColor:'#dc2626'
                     }).then(r=>{ if(r.isConfirmed){ $wire.limpiarCarrito(); } })"
-                style="background:#dc2626;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                style="width:100%;text-align:center;background:#dc2626;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 Limpiar
             </button>
 
             @if($tallerOrdenId)
             <button
                 x-on:click="Swal.fire({title:'💾 Guardar orden taller',text:'Se guardan los productos en la orden. Puedes reabrirla desde el panel Taller.',icon:'question',showCancelButton:true,confirmButtonText:'Guardar',cancelButtonText:'Cancelar',confirmButtonColor:'#0f766e'}).then(r=>{if(r.isConfirmed){$wire.guardarOrdenTaller();}})"
-                style="background:#0f766e;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                style="width:100%;text-align:center;background:#0f766e;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 💾 Guardar orden
             </button>
             @endif
 
+            <button type="button" wire:click="confirmarGuardarPrefactura"
+                style="width:100%;text-align:center;background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                Guardar
+            </button>
+
             <button wire:click="verPrefacturas"
-                style="background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                style="width:100%;text-align:center;background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 Ver
             </button>
 
@@ -845,6 +855,10 @@
                 @endif
 
                 @if(! $mesaId)
+                <button type="button" class="pos-cart-menu-item pos-cart-menu-item-save" wire:key="mobile-action-guardar" @click.prevent.stop="open = false; $wire.confirmarGuardarPrefactura();">
+                    Guardar
+                </button>
+
                 <button type="button" class="pos-cart-menu-item pos-cart-menu-item-view" wire:key="mobile-action-ver" @click.prevent.stop="open = false; $wire.verPrefacturas();">
                     Ver
                 </button>
