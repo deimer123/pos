@@ -988,7 +988,8 @@ button:hover {
 
     .pos-cart-component > .pos-cart-total-bar {
         align-items: center !important;
-        flex-wrap: nowrap !important;
+        flex-wrap: wrap !important;
+        row-gap: 4px !important;
         gap: 6px !important;
     }
 
@@ -1006,6 +1007,8 @@ button:hover {
     .pos-cart-component > .pos-cart-total-bar .text-right {
         width: auto !important;
         margin-left: auto;
+        flex-shrink: 0;
+        white-space: nowrap;
     }
 
     .pos-cart-component > .pos-desktop-cart-actions {
