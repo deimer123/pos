@@ -1,16 +1,21 @@
 <div style="height:100%; display:flex; flex-direction:column; background:#f8fafc;">
 
     {{-- Header --}}
-    <div style="padding:10px 16px; background:#0f766e; color:white; flex-shrink:0;">
-        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+    <div class="taller-header" style="padding:10px 16px; background:#0f766e; color:white; flex-shrink:0;">
+
+        <div class="taller-header-row taller-header-titulo" style="display:flex; align-items:center; gap:10px;">
             <span style="font-size:16px; font-weight:700; white-space:nowrap;">🔧 Taller</span>
 
             {{-- Búsqueda --}}
             <input wire:model.live.debounce.300ms="busqueda" type="text" placeholder="Buscar placa o cliente..."
+                class="taller-search"
                 style="border:none; border-radius:20px; padding:5px 14px; font-size:12px; width:190px; outline:none; color:#1f2937;">
+        </div>
+
+        <div class="taller-header-row taller-header-filtros" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:8px;">
 
             {{-- Rango de fechas --}}
-            <div style="display:flex; align-items:center; gap:4px;">
+            <div class="taller-dates" style="display:flex; align-items:center; gap:4px;">
                 <input wire:model.live="fechaDesde" type="date"
                     style="border:none; border-radius:10px; padding:4px 8px; font-size:11px; outline:none; color:#1f2937; height:28px;">
                 <span style="font-size:11px;">→</span>
@@ -18,44 +23,48 @@
                     style="border:none; border-radius:10px; padding:4px 8px; font-size:11px; outline:none; color:#1f2937; height:28px;">
                 @if($fechaDesde || $fechaHasta)
                 <button wire:click="limpiarFechas"
-                    style="border:none; border-radius:99px; background:rgba(255,255,255,.25); color:white; font-size:14px; width:24px; height:24px; cursor:pointer; padding:0; line-height:1;">×</button>
+                    style="border:none; border-radius:99px; background:rgba(255,255,255,.25); color:white; font-size:14px; width:24px; height:24px; cursor:pointer; padding:0; line-height:1; flex-shrink:0;">×</button>
                 @endif
             </div>
 
             {{-- Separador --}}
-            <span style="width:1px; height:20px; background:rgba(255,255,255,.3); display:inline-block;"></span>
+            <span class="taller-separador" style="width:1px; height:20px; background:rgba(255,255,255,.3); display:inline-block;"></span>
 
             {{-- Filtros estado --}}
-            @foreach(['activas'=>'🔧 En ejecución','entregado'=>'💰 Cobradas',''=>'📋 Todas'] as $val => $lbl)
-            <button wire:click="$set('filtroEstado','{{ $val }}')"
-                style="border:none; border-radius:20px; padding:5px 14px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap;
-                    background:{{ $filtroEstado === $val ? 'white' : 'rgba(255,255,255,.2)' }};
-                    color:{{ $filtroEstado === $val ? '#0f766e' : 'white' }};">
-                {{ $lbl }}
-                @if($val === 'activas')
-                    @php $nPend = \App\Models\TallerOrden::where('empresa_id', auth()->user()->getEmpresaActualId())->where('estado','!=','entregado')->count(); @endphp
-                    @if($nPend > 0)<span style="background:#ef4444; border-radius:99px; padding:1px 6px; font-size:10px; color:white; margin-left:3px;">{{ $nPend }}</span>@endif
-                @endif
-            </button>
-            @endforeach
-
-            {{-- Reporte PDF del listado actual --}}
-            <a href="{{ route('taller.reporte.pdf', ['estado' => $filtroEstado ?: 'todos', 'desde' => $fechaDesde, 'hasta' => $fechaHasta, 'busqueda' => $busqueda]) }}"
-               target="_blank"
-               style="border:none; border-radius:20px; padding:5px 14px; font-size:11px; font-weight:700; cursor:pointer; background:rgba(255,255,255,.2); color:white; text-decoration:none; white-space:nowrap;">
-                📄 Reporte PDF
-            </a>
+            <div class="taller-estado-group" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                @foreach(['activas'=>'🔧 En ejecución','entregado'=>'💰 Cobradas',''=>'📋 Todas'] as $val => $lbl)
+                <button wire:click="$set('filtroEstado','{{ $val }}')"
+                    style="border:none; border-radius:20px; padding:5px 14px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap;
+                        background:{{ $filtroEstado === $val ? 'white' : 'rgba(255,255,255,.2)' }};
+                        color:{{ $filtroEstado === $val ? '#0f766e' : 'white' }};">
+                    {{ $lbl }}
+                    @if($val === 'activas')
+                        @php $nPend = \App\Models\TallerOrden::where('empresa_id', auth()->user()->getEmpresaActualId())->where('estado','!=','entregado')->count(); @endphp
+                        @if($nPend > 0)<span style="background:#ef4444; border-radius:99px; padding:1px 6px; font-size:10px; color:white; margin-left:3px;">{{ $nPend }}</span>@endif
+                    @endif
+                </button>
+                @endforeach
+            </div>
 
             {{-- Separador --}}
-            <span style="width:1px; height:20px; background:rgba(255,255,255,.3); display:inline-block;"></span>
+            <span class="taller-separador" style="width:1px; height:20px; background:rgba(255,255,255,.3); display:inline-block;"></span>
 
-            {{-- Tab Mecánicos --}}
-            <button wire:click="$set('vistaActiva', @if($vistaActiva === 'mecanicos')'ordenes'@else'mecanicos'@endif)"
-                style="border:none; border-radius:20px; padding:5px 14px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap;
-                    background:{{ $vistaActiva === 'mecanicos' ? 'white' : 'rgba(255,255,255,.2)' }};
-                    color:{{ $vistaActiva === 'mecanicos' ? '#0f766e' : 'white' }};">
-                👨‍🔧 Mecánicos
-            </button>
+            <div class="taller-extra-group" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                {{-- Reporte PDF del listado actual --}}
+                <a href="{{ route('taller.reporte.pdf', ['estado' => $filtroEstado ?: 'todos', 'desde' => $fechaDesde, 'hasta' => $fechaHasta, 'busqueda' => $busqueda]) }}"
+                   target="_blank"
+                   style="border:none; border-radius:20px; padding:5px 14px; font-size:11px; font-weight:700; cursor:pointer; background:rgba(255,255,255,.2); color:white; text-decoration:none; white-space:nowrap;">
+                    📄 Reporte PDF
+                </a>
+
+                {{-- Tab Mecánicos --}}
+                <button wire:click="$set('vistaActiva', @if($vistaActiva === 'mecanicos')'ordenes'@else'mecanicos'@endif)"
+                    style="border:none; border-radius:20px; padding:5px 14px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap;
+                        background:{{ $vistaActiva === 'mecanicos' ? 'white' : 'rgba(255,255,255,.2)' }};
+                        color:{{ $vistaActiva === 'mecanicos' ? '#0f766e' : 'white' }};">
+                    👨‍🔧 Mecánicos
+                </button>
+            </div>
         </div>
     </div>
 

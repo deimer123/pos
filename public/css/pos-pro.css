@@ -3145,3 +3145,49 @@ button:hover {
     }
 }
 /* FIN Móvil mesas: Enviar cocina, Facturar y Total en la misma línea */
+
+/* Móvil: header del panel Taller (lobby) en filas ordenadas */
+@media (max-width: 768px) {
+    .taller-header-titulo {
+        flex-wrap: nowrap !important;
+    }
+
+    .taller-search {
+        flex: 1 1 auto !important;
+        width: auto !important;
+        min-width: 0 !important;
+    }
+
+    .taller-header-filtros {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 6px !important;
+    }
+
+    .taller-dates {
+        width: 100% !important;
+    }
+
+    .taller-dates input[type="date"] {
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
+    }
+
+    .taller-separador {
+        display: none !important;
+    }
+
+    .taller-estado-group,
+    .taller-extra-group {
+        width: 100% !important;
+    }
+
+    .taller-estado-group button,
+    .taller-extra-group a,
+    .taller-extra-group button {
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
+        text-align: center !important;
+    }
+}
+/* FIN Móvil: header del panel Taller */
