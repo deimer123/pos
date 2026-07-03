@@ -12,7 +12,11 @@ class RedirectTallerFromPos
     {
         $user = Auth::user();
 
-        if ($user && $user->hasRole('taller') && ! $user->hasAnyRole(['admin_empresa', 'cajero', 'vendedor', 'digitador', 'mesero', 'cocina'])) {
+        $esTallerPuro = $user && $user->hasRole('taller') && ! $user->hasAnyRole(['admin_empresa', 'cajero', 'vendedor', 'digitador', 'mesero', 'cocina']);
+
+        // El taller puro puede entrar al carrito ligado a una orden (/pos?taller=ID),
+        // pero no al POS normal sin orden vinculada.
+        if ($esTallerPuro && ! $request->query('taller')) {
             return redirect()->route('taller');
         }
 
