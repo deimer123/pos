@@ -101,7 +101,7 @@
             </h2>
 
             {{-- BOTÓN POS --}}
-            <a href="{{ route('pos') }}"
+            <a href="{{ route('pos', $user->hasRole('admin_empresa') ? ['modo' => 'normal'] : []) }}"
                 style="
                     text-decoration:none;
                     display:block;
@@ -158,7 +158,7 @@
 
             {{-- BOTÓN POS CON MESAS (solo admin_empresa con el módulo activo) --}}
             @if($user->hasRole('admin_empresa') && $config?->usa_mesas)
-            <a href="{{ route('pos') }}"
+            <a href="{{ route('pos', ['modo' => 'mesas']) }}"
                 style="
                     text-decoration:none;
                     display:block;
@@ -216,7 +216,7 @@
 
             {{-- BOTÓN POS CON DOMICILIOS (solo admin_empresa con el módulo activo) --}}
             @if($user->hasRole('admin_empresa') && $config?->usa_domicilios)
-            <a href="{{ route('pos') }}"
+            <a href="{{ route('pos', ['modo' => 'domicilios']) }}"
                 style="
                     text-decoration:none;
                     display:block;

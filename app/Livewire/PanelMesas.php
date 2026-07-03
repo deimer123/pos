@@ -14,6 +14,14 @@ class PanelMesas extends Component
     public string $zonaFiltro = '';
     public bool $mostrarDomicilios = false;
     public string $vistaActual = 'mesas'; // mesas | taller
+    public ?bool $domiciliosForzado = null;
+
+    public function mount($domiciliosForzado = null): void
+    {
+        if ($domiciliosForzado !== null) {
+            $this->domiciliosForzado = filter_var($domiciliosForzado, FILTER_VALIDATE_BOOLEAN);
+        }
+    }
 
     // Formulario nueva orden de taller
     public bool $mostrarFormTaller = false;
@@ -53,6 +61,10 @@ class PanelMesas extends Component
 
     public function getUsaDomiciliosProperty(): bool
     {
+        if ($this->domiciliosForzado !== null) {
+            return $this->domiciliosForzado;
+        }
+
         return (bool) ConfiguracionEmpresa::where('empresa_id', $this->empresaId())
             ->value('usa_domicilios');
     }

@@ -10,12 +10,30 @@
     $empresaId = auth()->user()->getEmpresaActualId();
     $configEmpresa = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();
     $usaMesas = (bool) ($configEmpresa?->usa_mesas ?? false);
+
+    // 'modo' permite al admin_empresa forzar una variante especifica desde
+    // la pantalla de Eleccion, sin depender de la configuracion real de la
+    // empresa. Sin 'modo' se conserva el comportamiento automatico normal.
+    $modo = request()->query('modo');
+    $domiciliosForzado = null;
+
+    if ($modo === 'normal') {
+        $mostrarMesas = false;
+    } elseif ($modo === 'mesas') {
+        $mostrarMesas = true;
+        $domiciliosForzado = false;
+    } elseif ($modo === 'domicilios') {
+        $mostrarMesas = true;
+        $domiciliosForzado = true;
+    } else {
+        $mostrarMesas = $usaMesas;
+    }
 @endphp
 
-@if($usaMesas)
+@if($mostrarMesas)
     {{-- Modo restaurante: pantalla completa de mesas --}}
     <div style="width:100%; height:100%;">
-        @livewire('panel-mesas', [], key('panel-mesas-main'))
+        @livewire('panel-mesas', ['domiciliosForzado' => $domiciliosForzado], key('panel-mesas-main-' . ($modo ?? 'auto')))
     </div>
 @else
     {{-- Modo tienda/almacén: POS normal --}}
