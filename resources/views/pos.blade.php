@@ -2,7 +2,6 @@
 
 @section('content')
 
-<link rel="stylesheet" href="{{ asset('css/pos-pro.css') }}?v={{ filemtime(public_path('css/pos-pro.css')) }}">
 <link rel="stylesheet" href="{{ asset('css/pos-facturas-table.css') }}?v={{ filemtime(public_path('css/pos-facturas-table.css')) }}">
 <script defer src="{{ asset('js/pos-prefactura-prefix.js') }}?v={{ filemtime(public_path('js/pos-prefactura-prefix.js')) }}"></script>
 
