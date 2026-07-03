@@ -5,7 +5,7 @@
         <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
             <div style="display:flex; align-items:center; gap:10px;">
                 <span style="font-size:16px; font-weight:700;">🪑 Mesas</span>
-                @if($usaDomicilios)
+                @if($usaDomicilios && $puedeGestionarDomicilios)
                 <button wire:click="$toggle('mostrarDomicilios')"
                     style="border:none; border-radius:20px; padding:5px 14px; font-size:12px; font-weight:700; cursor:pointer;
                         background:{{ $mostrarDomicilios ? '#f97316' : 'rgba(255,255,255,.2)' }};

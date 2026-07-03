@@ -69,6 +69,18 @@ class PanelMesas extends Component
             ->value('usa_domicilios');
     }
 
+    public function getPuedeGestionarDomiciliosProperty(): bool
+    {
+        return auth()->user()->hasAnyRole(['cajero', 'admin_empresa']);
+    }
+
+    public function updatedMostrarDomicilios(): void
+    {
+        if (! $this->puedeGestionarDomicilios) {
+            $this->mostrarDomicilios = false;
+        }
+    }
+
     public function getDomiciliosHoyProperty(): array
     {
         $empresaId = $this->empresaId();
@@ -186,6 +198,10 @@ class PanelMesas extends Component
 
     public function nuevoDomicilio(): void
     {
+        if (! $this->puedeGestionarDomicilios) {
+            return;
+        }
+
         $empresaId = $this->empresaId();
 
         $mesaLibre = Mesa::where('empresa_id', $empresaId)
@@ -335,6 +351,7 @@ class PanelMesas extends Component
             'zonas'             => $this->zonas,
             'cuentasPendientes' => $this->cuentasPendientes,
             'usaDomicilios'     => $this->usaDomicilios,
+            'puedeGestionarDomicilios' => $this->puedeGestionarDomicilios,
             'usaTaller'         => $this->usaTaller,
             'domiciliosHoy'     => $this->mostrarDomicilios ? $this->domiciliosHoy : [],
             'ordenesTaller'     => $this->vistaActual === 'taller' ? $this->ordenesTaller : collect(),
