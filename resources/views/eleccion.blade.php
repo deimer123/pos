@@ -73,14 +73,18 @@
     {{-- CONTENIDO --}}
     <div style="
         width:100%;
-        height:calc(100vh - 70px);
+        min-height:calc(100vh - 70px);
         display:flex;
         justify-content:center;
         align-items:center;
+        overflow-y:auto;
+        padding:30px 0;
+        box-sizing:border-box;
     ">
 
         <div style="
             width:500px;
+            max-width:92vw;
             background:white;
             border-radius:30px;
             padding:40px;
@@ -152,6 +156,122 @@
 
             </a>
 
+            {{-- BOTÓN POS CON MESAS (solo admin_empresa con el módulo activo) --}}
+            @if($user->hasRole('admin_empresa') && $config?->usa_mesas)
+            <a href="{{ route('pos') }}"
+                style="
+                    text-decoration:none;
+                    display:block;
+                    margin-bottom:25px;
+                ">
+
+                <div style="
+                    background:linear-gradient(135deg,#0891b2,#0e7490);
+                    border-radius:25px;
+                    padding:25px;
+                    color:white;
+                    display:flex;
+                    align-items:center;
+                    gap:20px;
+                    box-shadow:0 8px 20px rgba(8,145,178,.3);
+                    transition:.2s;
+                ">
+
+                    <div style="
+                        width:70px;
+                        height:70px;
+                        border-radius:20px;
+                        background:rgba(255,255,255,.2);
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        font-size:35px;
+                    ">
+                        🍽️
+                    </div>
+
+                    <div>
+
+                        <div style="
+                            font-size:24px;
+                            font-weight:bold;
+                            margin-bottom:5px;
+                        ">
+                            POS con Mesas
+                        </div>
+
+                        <div style="
+                            opacity:.9;
+                            font-size:14px;
+                        ">
+                            Mapa de mesas y comandas
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </a>
+            @endif
+
+            {{-- BOTÓN POS CON DOMICILIOS (solo admin_empresa con el módulo activo) --}}
+            @if($user->hasRole('admin_empresa') && $config?->usa_domicilios)
+            <a href="{{ route('pos') }}"
+                style="
+                    text-decoration:none;
+                    display:block;
+                    margin-bottom:25px;
+                ">
+
+                <div style="
+                    background:linear-gradient(135deg,#ea580c,#c2410c);
+                    border-radius:25px;
+                    padding:25px;
+                    color:white;
+                    display:flex;
+                    align-items:center;
+                    gap:20px;
+                    box-shadow:0 8px 20px rgba(234,88,12,.3);
+                    transition:.2s;
+                ">
+
+                    <div style="
+                        width:70px;
+                        height:70px;
+                        border-radius:20px;
+                        background:rgba(255,255,255,.2);
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        font-size:35px;
+                    ">
+                        🛵
+                    </div>
+
+                    <div>
+
+                        <div style="
+                            font-size:24px;
+                            font-weight:bold;
+                            margin-bottom:5px;
+                        ">
+                            POS con Domicilios
+                        </div>
+
+                        <div style="
+                            opacity:.9;
+                            font-size:14px;
+                        ">
+                            Pedidos y entregas a domicilio
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </a>
+            @endif
+
             {{-- BOTÓN POS CON TALLER (solo admin_empresa con el módulo activo) --}}
             @if($user->hasRole('admin_empresa') && $config?->usa_taller)
             <a href="{{ route('taller') }}"
@@ -201,6 +321,64 @@
                             font-size:14px;
                         ">
                             Órdenes de trabajo y mecánicos
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </a>
+            @endif
+
+            {{-- BOTÓN COCINA (solo admin_empresa con el módulo activo) --}}
+            @if($user->hasRole('admin_empresa') && $config?->usa_cocina)
+            <a href="{{ route('cocina') }}"
+                style="
+                    text-decoration:none;
+                    display:block;
+                    margin-bottom:25px;
+                ">
+
+                <div style="
+                    background:linear-gradient(135deg,#d97706,#b45309);
+                    border-radius:25px;
+                    padding:25px;
+                    color:white;
+                    display:flex;
+                    align-items:center;
+                    gap:20px;
+                    box-shadow:0 8px 20px rgba(217,119,6,.3);
+                    transition:.2s;
+                ">
+
+                    <div style="
+                        width:70px;
+                        height:70px;
+                        border-radius:20px;
+                        background:rgba(255,255,255,.2);
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        font-size:35px;
+                    ">
+                        🍳
+                    </div>
+
+                    <div>
+
+                        <div style="
+                            font-size:24px;
+                            font-weight:bold;
+                            margin-bottom:5px;
+                        ">
+                            Cocina
+                        </div>
+
+                        <div style="
+                            opacity:.9;
+                            font-size:14px;
+                        ">
+                            Pantalla de comandas para cocina
                         </div>
 
                     </div>
