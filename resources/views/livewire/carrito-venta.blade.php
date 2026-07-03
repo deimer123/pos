@@ -764,23 +764,23 @@
                       Swal.fire({icon:'warning', title:'Carrito vacio', text:'Debe agregar productos antes de editar.'});
                     } else { $wire.abrirModalEditar(); }
                 "
-                class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
+                class="pos-cart-secondary-action pos-hide-mobile bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
                 Editar
             </button>
             <button wire:click="abrirModalCrearCliente"
-                class="pos-cart-secondary-action pos-btn-texto-doble bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
+                class="pos-cart-secondary-action pos-btn-texto-doble pos-hide-mobile bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
                 + Crear Cliente
             </button>
             @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
             @if ($cajaEstado === 'abierta')
             <button type="button"
-                class="pos-cart-secondary-action pos-btn-texto-doble bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow"
+                class="pos-cart-secondary-action pos-btn-texto-doble pos-hide-mobile bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow"
                 wire:click="abrirMovimientoCajaModal('salida')">
                 Entrada / salida
             </button>
             @endif
             <button type="button"
-                class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow"
+                class="pos-cart-secondary-action pos-hide-mobile bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow"
                 wire:click="abrirModalCartera">
                 Cartera
             </button>
@@ -812,7 +812,7 @@
                 🖨️ Cuenta
             </button>
             <button wire:click="verPrefacturas"
-                class="pos-cart-secondary-action bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
+                class="pos-cart-secondary-action pos-hide-mobile bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
                 Ver
             </button>
             @endif {{-- fin !$esMesero --}}
@@ -824,13 +824,14 @@
 
     </div>{{-- /pos-desktop-cart-actions --}}
 
-    @if(! $mesaId)
+    @php $esMeseroPuroMenu = auth()->user()->hasRole('mesero') && ! auth()->user()->hasAnyRole(['cajero','admin_empresa','vendedor']); @endphp
     <div class="pos-cart-mobile-more" x-data="{ open: false }" wire:key="mobile-actions-root-{{ $cajaEstado }}">
         <button type="button" class="pos-cart-mobile-more-button" @click="open = !open">
                 Acciones
             </button>
 
             <div class="pos-cart-mobile-more-menu" x-show="open" x-cloak @click.stop @click.outside="open = false" wire:key="mobile-actions-menu-{{ $cajaEstado }}">
+                @if(! $mesaId || ! $esMeseroPuroMenu)
                 <button type="button" class="pos-cart-menu-item pos-cart-menu-item-edit" wire:key="mobile-action-editar"
                     @click.prevent.stop="
                         open = false;
@@ -848,6 +849,7 @@
                 <button type="button" class="pos-cart-menu-item pos-cart-menu-item-create-client" wire:key="mobile-action-crear-cliente" @click.prevent.stop="open = false; $wire.abrirModalCrearCliente();">
                     Crear Cliente
                 </button>
+                @endif
 
                 @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
                     @if ($cajaEstado === 'abierta')
@@ -865,26 +867,19 @@
                     </button>
                 @endif
 
-                @if(! $mesaId)
-                @if(! $tallerOrdenId)
+                @if(! $mesaId && ! $tallerOrdenId)
                 <button type="button" class="pos-cart-menu-item pos-cart-menu-item-save" wire:key="mobile-action-guardar" @click.prevent.stop="open = false; $wire.confirmarGuardarPrefactura();">
                     Guardar
                 </button>
                 @endif
 
+                @if(! $mesaId || ! $esMeseroPuroMenu)
                 <button type="button" class="pos-cart-menu-item pos-cart-menu-item-view" wire:key="mobile-action-ver" @click.prevent.stop="open = false; $wire.verPrefacturas();">
                     Ver
                 </button>
                 @endif
-
-                @if($mesaId)
-                <button type="button" class="pos-cart-menu-item" style="background:#16a34a;color:white;" wire:key="mobile-action-cocina" @click.prevent.stop="open = false; window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '', $wire.get('ordenDomDireccion') || $wire.get('clienteDireccion') || '', $wire.get('ordenDomTelefono') || $wire.get('clienteTelefono') || '', $wire.get('ordenDomNombre') || '', $wire.get('ordenDomObservaciones') || '', $wire.get('ordenDomCostoDomicilio') || 0, $wire.get('ordenDomCostoDesechables') || 0, $wire.get('ordenEstadoActual') || 'abierta', $wire.get('ordenTipoPedido') || 'mesa', $wire.get('usaDomicilios') || false, $wire.get('esMesero') || false, $wire.get('esMesaDomicilio') || false)">
-                    📤 Enviar cocina
-                </button>
-                @endif
             </div>
         </div>
-    @endif
 
     <div x-data="{ nombreCarritoMobile: null, stockCarritoMobile: null }" @ver-nombre-carrito-mobile.window="nombreCarritoMobile = $event.detail.nombre; stockCarritoMobile = $event.detail.stock">
         <div x-show="nombreCarritoMobile" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" x-transition>
