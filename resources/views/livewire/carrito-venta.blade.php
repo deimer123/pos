@@ -732,10 +732,12 @@
             </button>
             @endif
 
+            @if(! $tallerOrdenId)
             <button type="button" wire:click="confirmarGuardarPrefactura"
                 style="width:100%;text-align:center;background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 Guardar
             </button>
+            @endif
 
             <button wire:click="verPrefacturas"
                 style="width:100%;text-align:center;background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
@@ -855,9 +857,11 @@
                 @endif
 
                 @if(! $mesaId)
+                @if(! $tallerOrdenId)
                 <button type="button" class="pos-cart-menu-item pos-cart-menu-item-save" wire:key="mobile-action-guardar" @click.prevent.stop="open = false; $wire.confirmarGuardarPrefactura();">
                     Guardar
                 </button>
+                @endif
 
                 <button type="button" class="pos-cart-menu-item pos-cart-menu-item-view" wire:key="mobile-action-ver" @click.prevent.stop="open = false; $wire.verPrefacturas();">
                     Ver
