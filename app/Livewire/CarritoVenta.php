@@ -4187,8 +4187,21 @@ $efectivo = ($ventasContadoEfectivo + $carteraEfectivo + $entradasEfectivo) - $d
     $montoApertura = (float) ($this->cajaActual?->monto_apertura ?? 0);
     $efectivoEsperado = $montoApertura + $efectivo;
 
-    // Total de ventas (informativo: contado + crÃ©dito)
-    $totalVentas = $ventasContadoEfectivo + $ventasContadoTransferencia + $ventasCredito;
+    // ----- ITEMS MANUALES (codigo 10001): reembolsos de terceros sin margen -----
+    // Se facturan y se cuentan en el efectivo/cuadre de caja normalmente (el dinero
+    // si entra y sale de la caja real), pero se descuentan del "total ventas"
+    // informativo porque no son ventas propias: el mismo monto ya salio de la caja
+    // como gasto/salida para comprar el producto en otro lado.
+    $ventasPassthrough = (float) \Illuminate\Support\Facades\DB::table('factura_detalles as fd')
+        ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
+        ->where('f.empresa_id', $empresaId)
+        ->where('f.user_id', $userId)
+        ->whereBetween('f.fecha', [$inicio, $fin])
+        ->where('fd.producto_id', '10001')
+        ->sum('fd.subtotal');
+
+    // Total de ventas (informativo: contado + crÃ©dito, sin items manuales/reembolsos)
+    $totalVentas = $ventasContadoEfectivo + $ventasContadoTransferencia + $ventasCredito - $ventasPassthrough;
 
     // ----- VENTAS: SERVICIOS vs PRODUCTOS -----
     $ventasServiciosTotal = (float) \Illuminate\Support\Facades\DB::table('factura_detalles as fd')
@@ -4236,6 +4249,7 @@ $efectivo = ($ventasContadoEfectivo + $carteraEfectivo + $entradasEfectivo) - $d
         // Totales informativos
         'total_ventas'                  => $totalVentas,
         'total_ventas_sin_devoluciones'=> $totalVentas - $devolucionesDia,
+        'ventas_passthrough'            => $ventasPassthrough,
 
         // Ventas por tipo: servicios vs productos
         'ventas_servicios'              => $ventasServiciosTotal,

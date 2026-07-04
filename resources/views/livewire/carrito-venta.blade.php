@@ -2230,6 +2230,11 @@
                     <div class="flex justify-between"><span>Total ventas</span><span
                             class="font-semibold">${{ number_format($resumenCaja['total_ventas'], 0, ',', '.') }}</span>
                     </div>
+                    @if (($resumenCaja['ventas_passthrough'] ?? 0) > 0)
+                    <div class="flex justify-between text-xs text-gray-500"><span>No incluye reembolsos a
+                            terceros (item manual)</span><span>${{ number_format($resumenCaja['ventas_passthrough'], 0, ',', '.') }}</span>
+                    </div>
+                    @endif
                     <div class="flex justify-between"><span>Total contado</span><span
                             class="font-semibold">${{ number_format($resumenCaja['total_contado'], 0, ',', '.') }}</span>
                     </div>
