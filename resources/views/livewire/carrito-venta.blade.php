@@ -15,7 +15,7 @@
 
 
             <div class="flex items-center gap-2">
-                @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller']))
+                @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion']))
                     <div class="flex items-center gap-3">
                         @if ($cajaEstado === 'abierta')
                             <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">Caja abierta</span>
@@ -638,7 +638,7 @@
                 @endif
             </div>
         @else
-        @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller']))
+        @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion']))
             <button type="button" id="btn-abrir-facturar"
                 class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow"
                 wire:click="confirmarFacturar" wire:loading.attr="disabled" wire:target="confirmarFacturar">
@@ -736,7 +736,7 @@
             </button>
             </template>
 
-            @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller']) && $cajaEstado === 'abierta')
+            @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion']) && $cajaEstado === 'abierta')
             <template x-if="masAcciones">
             <button type="button" x-on:click="masAcciones = false; $wire.abrirMovimientoCajaModal('salida');"
                 style="flex:1 1 0; min-width:110px; background:#0891b2;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">

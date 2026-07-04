@@ -55,6 +55,9 @@ class CarritoVenta extends Component
     // ── Taller ──────────────────────────────────────────────────────────────
     public ?int $tallerOrdenId    = null;
     public $tallerFotoTemp        = null;
+
+    // ── Hotel ───────────────────────────────────────────────────────────────
+    public ?int $hotelReservaId   = null;
     public $clientes                  = [];
     public $mostrarModalClientes      = false;
     public $clienteSeleccionadoNombre = null;
@@ -594,7 +597,7 @@ if (request()->hasSession() && session()->has('observaciones_guardadas')) {
 
         if (
             !$this->cajaActual &&
-            $user->hasAnyRole(['cajero', 'admin_empresa', 'taller'])
+            $user->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion'])
         ) {
             $this->mostrarModalAbrirCaja = true;
         }
@@ -602,6 +605,11 @@ if (request()->hasSession() && session()->has('observaciones_guardadas')) {
     // Cargar orden de taller desde query param ?taller={id}
     if (!$this->mesaId && ($tallerQs = (int) request()->get('taller'))) {
         $this->cargarOrdenTaller($tallerQs);
+    }
+
+    // Cargar reserva de hotel desde query param ?hotel={id}
+    if (!$this->mesaId && ($hotelQs = (int) request()->get('hotel'))) {
+        $this->cargarHotelReserva($hotelQs);
     }
 
 }
@@ -1020,6 +1028,13 @@ public function limpiarCarrito()
 
         $this->tallerOrdenId  = null;
         $this->tallerFotoTemp = null;
+    }
+
+    // Si hay una reserva de hotel activa, "Limpiar" solo desasocia el
+    // carrito: la reserva sigue en check-in, el huésped sigue hospedado.
+    // Se puede volver a facturar después desde el panel de Hotel.
+    if ($this->hotelReservaId) {
+        $this->hotelReservaId = null;
     }
 
     $this->eliminarPrefacturaCargada();
@@ -1619,6 +1634,101 @@ public function guardarPrefacturaConfirmada()
         $this->dispatch('success', 'Orden #' . str_pad($orden->numero_orden, 4, '0', STR_PAD_LEFT) . ' cargada en el POS.');
     }
 
+    // ── Hotel ─────────────────────────────────────────────────────────────
+    // El hospedaje se agrega como un único ítem manual (no ligado a un
+    // Product) con el total ya calculado: precio por persona/noche de la
+    // habitación × número de personas × número de noches de la reserva.
+    public function cargarHotelReserva(int $reservaId): void
+    {
+        $empresaId = $this->getEmpresaId();
+
+        $reserva = \App\Models\HotelReserva::where('id', $reservaId)
+            ->where('empresa_id', $empresaId)
+            ->with('habitacion')
+            ->first();
+
+        if (! $reserva) return;
+
+        $this->hotelReservaId = $reserva->id;
+        $this->carrito        = [];
+
+        if ($reserva->huesped_nombre) {
+            $cliente = Actor::where('empresa_id', $empresaId)
+                ->whereRaw('LOWER(TRIM(nombre)) = ?', [mb_strtolower(trim($reserva->huesped_nombre))])
+                ->first();
+
+            if ($cliente) {
+                $this->clienteId = $cliente->id;
+                $this->clienteDireccion = $cliente->direccion ?? null;
+                $this->clienteTelefono  = $cliente->telefono ?? $reserva->huesped_telefono ?? null;
+            } else {
+                $this->clienteTelefono = $reserva->huesped_telefono ?? null;
+            }
+
+            $this->clienteSeleccionadoNombre = $this->textoUtf8($reserva->huesped_nombre);
+        }
+
+        $numeroHabitacion = $reserva->habitacion->numero ?? '?';
+        $descripcion = "Hospedaje habitación {$numeroHabitacion} · {$reserva->numero_noches} noche(s) x {$reserva->numero_personas} persona(s)";
+        $total = $reserva->total_estimado;
+        $uuid  = 'hotel-reserva-' . $reserva->id;
+
+        $this->carrito[$uuid] = [
+            'uuid'               => $uuid,
+            'id_producto'        => $uuid,
+            'nombre'             => $this->textoUtf8($descripcion),
+            'cantidad'           => 1,
+            'precio'             => $total,
+            'nuevo_precio'       => $total,
+            'descuento'          => 0,
+            'iva_venta'          => 0,
+            'utilidad1'          => 0,
+            'costo'              => 0,
+            'costo_iva'          => 0,
+            'utilidad_nueva'     => 0,
+            'total'              => $total,
+            'existencias'        => 0,
+            'porciones_receta'   => null,
+            'id_unidad_de_medida'=> 1,
+            'vende_por'          => 'unidad',
+            'permite_fraccion'   => false,
+            'permite_decimal'    => false,
+            'combo_activo'       => null,
+            'precio_editado_manual' => true,
+        ];
+
+        $this->actualizarTotales();
+        $this->dispatch('success', 'Reserva #' . str_pad($reserva->numero_reserva, 4, '0', STR_PAD_LEFT) . ' cargada en el POS.');
+    }
+
+    public function salirALobbyHotel(): void
+    {
+        $this->carrito        = [];
+        $this->totalGeneral   = 0;
+        $this->hotelReservaId = null;
+        session()->forget('carrito_guardado');
+        session()->forget('observaciones_guardadas');
+        $this->olvidarCarritoPersistente();
+        $this->forzarConsumidorFinal();
+
+        $this->redirect(route('hotel'));
+    }
+
+    protected function vincularFacturaHotel(int $facturaId): void
+    {
+        if (! $this->hotelReservaId) return;
+
+        \App\Models\HotelReserva::where('id', $this->hotelReservaId)
+            ->where('empresa_id', $this->getEmpresaId())
+            ->update([
+                'factura_id'       => $facturaId,
+                'estado'           => 'checkout',
+                'checkout_real_at' => now(),
+            ]);
+
+        $this->hotelReservaId = null;
+    }
+
     public function verPrefacturas()
     {
         $empresaId = $this->getEmpresaId();
@@ -1957,7 +2067,7 @@ public function borrarPrefacturaConfirmada()
 
 public function confirmarFacturar()
     {
-        if (! auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller'])) {
+        if (! auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion'])) {
     abort(403);
 }
 
@@ -2266,9 +2376,11 @@ if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->
         DB::commit();
 
         $eraOrdenTaller = (bool) $this->tallerOrdenId;
+        $eraReservaHotel = (bool) $this->hotelReservaId;
 
         $this->eliminarPrefacturaCargada();
         $this->vincularFacturaTaller($factura->id);
+        $this->vincularFacturaHotel($factura->id);
 
         // ===== Limpiar UI =====
         $this->carrito = [];
@@ -2298,6 +2410,8 @@ if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->
         $this->dispatch('success', $factura->numero_visual . ' creada.');
         if ($this->mesaId || $eraOrdenTaller) {
             $this->redirect(route('pos'));
+        } elseif ($eraReservaHotel) {
+            $this->redirect(route('hotel'));
         }
     } catch (\Throwable $e) {
         DB::rollBack();
@@ -2401,6 +2515,8 @@ public function cargarFacturas()
     } elseif ($user->hasRole('vendedor')) {
         $query->where('vendedor_id', $user->id);
     } elseif ($user->hasRole('taller')) {
+        $query->where('cajero_id', $user->id);
+    } elseif ($user->hasRole('recepcion')) {
         $query->where('cajero_id', $user->id);
     }
 
@@ -2799,9 +2915,11 @@ if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->
         DB::commit();
 
         $eraOrdenTaller = (bool) $this->tallerOrdenId;
+        $eraReservaHotel = (bool) $this->hotelReservaId;
 
         $this->eliminarPrefacturaCargada();
         $this->vincularFacturaTaller($factura->id);
+        $this->vincularFacturaHotel($factura->id);
 
         // ===== Limpiar UI
         $this->carrito = [];
@@ -2835,7 +2953,7 @@ if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->
         // carrito ya vacio hasta refrescar manualmente.
         $url = route('factura.imprimir', $factura->id);
         $this->dispatch('success', $factura->numero_visual . ' creada.');
-        $redirectUrl = $this->mesaId ? route('pos') : ($eraOrdenTaller ? route('pos') : null);
+        $redirectUrl = $this->mesaId ? route('pos') : ($eraOrdenTaller ? route('pos') : ($eraReservaHotel ? route('hotel') : null));
         return ['ok' => true, 'factura_id' => $factura->id, 'print_url' => $url, 'redirect_url' => $redirectUrl];
 
     } catch (\Throwable $e) {
@@ -3844,7 +3962,7 @@ public function pagarEImprimir(int $facturaId, array $data = [])
     // Dispara evento para mostrar modal de abrir caja (frontend)
     public function abrirCajaModal()
 {
-if (! auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller'])) {
+if (! auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion'])) {
     abort(403);
 }
 
@@ -3855,7 +3973,7 @@ if (! auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller'])) {
     // Dispara evento para confirmar cierre de caja con resumen de ventas
    public function cerrarCajaModal()
 {
-    if (! auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller'])) {
+    if (! auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion'])) {
     abort(403);
 }
 
@@ -3932,7 +4050,7 @@ public function confirmarAbrirCaja()
         return;
     }
 
-    if (! auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller'])) {
+    if (! auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion'])) {
     abort(403);
 }
 
@@ -4001,7 +4119,7 @@ public function confirmarCerrarCaja()
 
 public function abrirMovimientoCajaModal(string $tipo = 'salida'): void
 {
-    if (! auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller'])) {
+    if (! auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion'])) {
         abort(403);
     }
 
@@ -4023,7 +4141,7 @@ public function abrirMovimientoCajaModal(string $tipo = 'salida'): void
 
 public function registrarMovimientoCaja(): void
 {
-    if (! auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller'])) {
+    if (! auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion'])) {
         abort(403);
     }
 

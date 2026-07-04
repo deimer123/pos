@@ -21,7 +21,6 @@ return new class extends Migration
             $table->boolean('tiene_aire')->default(false);
             $table->boolean('tiene_ventilador')->default(false);
             $table->decimal('precio_persona_noche', 12, 2)->default(0);
-            $table->enum('estado', ['libre', 'reservada', 'ocupada'])->default('libre');
             $table->boolean('activa')->default(true);
             $table->text('observaciones')->nullable();
             $table->timestamps();
