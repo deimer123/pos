@@ -908,11 +908,16 @@
                 <span style="font-size:15px; font-weight:700;">💸 Registrar préstamo</span>
                 <button wire:click="$set('modalPrestamo',false)" style="background:rgba(255,255,255,.2); border:none; color:white; border-radius:99px; width:28px; height:28px; cursor:pointer; font-size:16px; line-height:1;">×</button>
             </div>
-            <div style="padding:18px;">
+            <div style="padding:18px;" x-data="{
+                    formato(v) { const limpio = String(v || '').replace(/\D/g, ''); return limpio ? Number(limpio).toLocaleString('es-CO') : ''; },
+                    limpiar(v) { return String(v || '').replace(/\D/g, ''); }
+                }">
                 <div style="margin-bottom:14px;">
                     <label style="font-size:11px; font-weight:700; color:#4b5563;">Monto prestado *</label>
-                    <input wire:model="prestamoMonto" type="number" step="0.01" min="0" placeholder="0"
-                        style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:14px; margin-top:3px;">
+                    <input type="text" inputmode="numeric" placeholder="0"
+                        value="{{ $prestamoMonto !== '' ? number_format((float) $prestamoMonto, 0, ',', '.') : '' }}"
+                        x-on:input="$event.target.value = formato($event.target.value); $wire.set('prestamoMonto', limpiar($event.target.value))"
+                        style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:14px; margin-top:3px; box-sizing:border-box;">
                     @error('prestamoMonto') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
                 </div>
                 <div style="margin-bottom:16px;">
