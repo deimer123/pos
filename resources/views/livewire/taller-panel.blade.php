@@ -805,21 +805,22 @@
 
                 @php $resumenCajaMec = $this->calcularCajaMecanicos(); @endphp
 
-                {{-- Servicios cobrados en el rango, por mecánico y por terceros --}}
+                {{-- Servicios AÚN NO liquidados en el rango, por mecánico y por terceros --}}
                 <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:12px; font-size:12px; margin-bottom:10px;">
-                    <div style="font-size:10px; color:#2563eb; text-transform:uppercase; font-weight:700; margin-bottom:6px;">Servicios cobrados por mecánico</div>
+                    <div style="font-size:10px; color:#2563eb; text-transform:uppercase; font-weight:700; margin-bottom:6px;">Servicios sin liquidar, por mecánico</div>
                     @forelse($resumenCajaMec['por_mecanico'] as $pm)
                         <div style="display:flex; justify-content:space-between; padding:2px 0;">
                             <span>🔧 {{ $pm['nombre'] }}</span>
                             <span class="font-semibold">${{ number_format($pm['monto'], 0, ',', '.') }}</span>
                         </div>
                     @empty
-                        <div style="color:#94a3b8; font-size:11px;">Sin servicios propios en este rango.</div>
+                        <div style="color:#94a3b8; font-size:11px;">Sin servicios propios pendientes en este rango.</div>
                     @endforelse
                     <div style="display:flex; justify-content:space-between; padding:2px 0; margin-top:4px; border-top:1px dashed #bfdbfe; padding-top:6px;">
                         <span>🤝 Terceros (ganancia empresa)</span>
                         <span class="font-semibold">${{ number_format($resumenCajaMec['terceros_monto'], 0, ',', '.') }}</span>
                     </div>
+                    <div style="font-size:9px; color:#9ca3af; margin-top:4px;">No incluye servicios que ya fueron liquidados al mecánico.</div>
                 </div>
 
                 {{-- Ganancia y pendiente por liquidar, por aparte --}}
@@ -827,7 +828,7 @@
                     <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:12px; text-align:center;">
                         <div style="font-size:10px; color:#16a34a; text-transform:uppercase; font-weight:700;">Ganancia empresa</div>
                         <div style="font-size:18px; font-weight:900; color:#16a34a; margin-top:2px;">${{ number_format($resumenCajaMec['ganancia_total'], 0, ',', '.') }}</div>
-                        <div style="font-size:9px; color:#9ca3af; margin-top:2px;">En el rango seleccionado</div>
+                        <div style="font-size:9px; color:#9ca3af; margin-top:2px;">Solo servicios sin liquidar del rango</div>
                     </div>
                     <div style="background:#fef3c7; border:1px solid #fde68a; border-radius:10px; padding:12px; text-align:center;">
                         <div style="font-size:10px; color:#92400e; text-transform:uppercase; font-weight:700;">Servicios por liquidar</div>

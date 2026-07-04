@@ -436,13 +436,17 @@ class TallerPanel extends Component
         $efectivo = (float) $serviciosEfectivo - $pagadoEfectivo;
         $transferencia = (float) $serviciosTransferencia - $pagadoTransferencia;
 
-        // Desglose por mecánico propio (valor bruto cobrado en el rango).
+        // Desglose por mecánico propio: solo servicios AÚN NO liquidados
+        // (no queremos que se acumule la ganancia de servicios que ya se
+        // le pagaron al mecánico en una liquidación anterior).
         $porMecanico = DB::table('factura_detalles as fd')
             ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
             ->join('mecanicos as m', 'm.id', '=', 'fd.mecanico_id')
+            ->leftJoin('liquidacion_mecanico_detalles as lmd', 'lmd.factura_detalle_id', '=', 'fd.id')
             ->where('f.empresa_id', $empresaId)
             ->where('m.empresa_id', $empresaId)
             ->where('fd.tipo_servicio', 'propio')
+            ->whereNull('lmd.id')
             ->whereDate('f.fecha', '>=', $desde)
             ->whereDate('f.fecha', '<=', $hasta)
             ->groupBy('fd.mecanico_id', 'm.nombre')
@@ -451,10 +455,17 @@ class TallerPanel extends Component
             ->map(fn ($r) => ['mecanico_id' => $r->mecanico_id, 'nombre' => $r->nombre, 'monto' => (float) $r->monto]);
 
         // Ganancia de la empresa en el rango: para propio, el % de empresa
-        // sobre lo cobrado; para tercero, el "cobrado" ya es solo la
-        // ganancia (ver $montoCobradoSql arriba).
-        $propioGanancia = (float) ((clone $qServicios)
+        // sobre lo cobrado SOLO de servicios aún no liquidados; para
+        // tercero, el "cobrado" ya es solo la ganancia (ver $montoCobradoSql
+        // arriba) y no tiene liquidación formal.
+        $propioGanancia = (float) (DB::table('factura_detalles as fd')
+            ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
+            ->leftJoin('liquidacion_mecanico_detalles as lmd', 'lmd.factura_detalle_id', '=', 'fd.id')
+            ->where('f.empresa_id', $empresaId)
             ->where('fd.tipo_servicio', 'propio')
+            ->whereNull('lmd.id')
+            ->whereDate('f.fecha', '>=', $desde)
+            ->whereDate('f.fecha', '<=', $hasta)
             ->rawValue('SUM(fd.subtotal * COALESCE(fd.porcentaje_empresa, 0) / 100)') ?? 0);
 
         $tercerosMonto = (float) ((clone $qServicios)
