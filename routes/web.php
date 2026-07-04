@@ -99,7 +99,7 @@ Route::middleware(['auth', 'no.cocina.en.pos'])->get('/eleccion', function () {
 | Solo pueden acceder vendedores. Se controla con un middleware personalizado
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'no_digitadores_en_pos', 'no.cocina.en.pos', 'no.taller.en.pos'])->get('/pos', function () {
+Route::middleware(['auth', 'no_digitadores_en_pos', 'no.cocina.en.pos'])->get('/pos', function () {
     return view('pos');
 })->name('pos');
 
@@ -306,7 +306,7 @@ Route::middleware('auth')->get('/check-tab', function (\Illuminate\Http\Request 
     return response()->json(['ok' => true]);
 });
 
-Route::middleware(['auth', 'no.cocina.en.pos', 'no.taller.en.pos'])->group(function () {
+Route::middleware(['auth', 'no.cocina.en.pos'])->group(function () {
 
     Route::view('/pos', 'pos')
         ->name('pos');

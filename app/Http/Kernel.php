@@ -76,7 +76,6 @@ class Kernel extends HttpKernel
     'solo.cocina' => \App\Http\Middleware\RestrictCocinaAccess::class,
     'solo.mesero' => \App\Http\Middleware\RestrictMeseroFromPanel::class,
     'no.cocina.en.pos' => \App\Http\Middleware\RedirectCocinaFromPos::class,
-    'no.taller.en.pos' => \App\Http\Middleware\RedirectTallerFromPos::class,
     'empresa.activa' => \App\Http\Middleware\EnsureEmpresaActiva::class,
     ];
 }

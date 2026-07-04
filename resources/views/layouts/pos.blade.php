@@ -86,9 +86,6 @@
                             $ordenesActivasTaller = \App\Models\TallerOrden::where('empresa_id', $u->getEmpresaActualId())
                                 ->whereIn('estado', ['pendiente','en_proceso','listo'])->count();
                         @endphp
-                        @php
-                            $esTallerPuroLayout = $u->hasRole('taller') && ! $u->hasAnyRole(['admin_empresa', 'cajero', 'vendedor', 'digitador', 'mesero', 'cocina']);
-                        @endphp
                         @if(!request()->routeIs('taller'))
                         <a href="{{ route('taller') }}" id="btn-ir-taller"
                            onclick="irAlTallerConGuardado(event, '{{ route('taller') }}')"
@@ -99,7 +96,7 @@
                                 <span style="background:#ef4444; border-radius:99px; padding:1px 6px; font-size:10px;">{{ $ordenesActivasTaller }}</span>
                             @endif
                         </a>
-                        @elseif(! $esTallerPuroLayout)
+                        @else
                         <a href="{{ route('pos') }}"
                            style="border:none; border-radius:20px; padding:5px 14px; font-size:12px; font-weight:700; cursor:pointer;
                                background:rgba(255,255,255,.2); color:white; text-decoration:none;">
