@@ -4116,9 +4116,12 @@ $carteraOtro          = (clone $qPagosCredito)->where('medio_pago','otro')->sum(
         ->where('metodo_pago', 'Efectivo')
         ->sum('monto');
 
+    // Movimientos de mecanicos (liquidaciones + prestamos) van a la caja de
+    // mecanicos, no a la de productos: se excluyen de las salidas del POS.
     $salidasEfectivo = (clone $qMovimientosCaja)
         ->where('tipo', 'salida')
         ->where('metodo_pago', 'Efectivo')
+        ->whereNotIn('categoria', ['liquidacion_mecanico', 'prestamo_mecanico'])
         ->sum('monto');
 
     $entradasTransferencia = (clone $qMovimientosCaja)
@@ -4129,29 +4132,39 @@ $carteraOtro          = (clone $qPagosCredito)->where('medio_pago','otro')->sum(
     $salidasTransferencia = (clone $qMovimientosCaja)
         ->where('tipo', 'salida')
         ->whereIn('metodo_pago', ['Transferencia', 'Nequi'])
+        ->whereNotIn('categoria', ['liquidacion_mecanico', 'prestamo_mecanico'])
         ->sum('monto');
 
-    // ----- SERVICIOS MECÁNICOS -----
-    $serviciosMecanicos = (float) \Illuminate\Support\Facades\DB::table('factura_detalles')
-        ->join('facturas', 'factura_detalles.factura_id', '=', 'facturas.id')
-        ->join('products', function ($j) use ($empresaId) {
-            $j->on('factura_detalles.producto_id', '=', 'products.id_producto')
-              ->where('products.empresa_id', '=', $empresaId);
+    // ----- SERVICIOS (mecanico propio + tercero): se cobran en el POS pero
+    // van a la caja de mecanicos, no cuentan como efectivo/transferencia de
+    // la caja de productos (tienen su propio "Cerrar caja de mecanicos"). -----
+    $serviciosContadoEfectivo = (float) \Illuminate\Support\Facades\DB::table('factura_detalles as fd')
+        ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
+        ->join('products as p', function ($j) use ($empresaId) {
+            $j->on('p.id_producto', '=', 'fd.producto_id')
+              ->where('p.empresa_id', '=', $empresaId);
         })
-        ->where('facturas.empresa_id', $empresaId)
-        ->where('facturas.user_id', $userId)
-        ->whereBetween('facturas.fecha', [$inicio, $fin])
-        ->where('products.tipo_producto', 'servicio')
-        ->whereNotNull('factura_detalles.mecanico_id')
-        ->sum('factura_detalles.subtotal');
+        ->where('f.empresa_id', $empresaId)
+        ->where('f.user_id', $userId)
+        ->whereBetween('f.fecha', [$inicio, $fin])
+        ->where('f.tipo_pago', 'contado')
+        ->where('f.medio_pago', 'efectivo')
+        ->where('p.tipo_producto', 'servicio')
+        ->sum('fd.subtotal');
 
-    $liquidacionesMecanicos = (float) Gasto::query()
-        ->where('empresa_id', $empresaId)
-        ->where('created_by', $userId)
-        ->where('categoria', 'liquidacion_mecanico')
-        ->whereDate('fecha', '>=', $inicio->toDateString())
-        ->whereDate('fecha', '<=', $fin->toDateString())
-        ->sum('monto');
+    $serviciosContadoTransferencia = (float) \Illuminate\Support\Facades\DB::table('factura_detalles as fd')
+        ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
+        ->join('products as p', function ($j) use ($empresaId) {
+            $j->on('p.id_producto', '=', 'fd.producto_id')
+              ->where('p.empresa_id', '=', $empresaId);
+        })
+        ->where('f.empresa_id', $empresaId)
+        ->where('f.user_id', $userId)
+        ->whereBetween('f.fecha', [$inicio, $fin])
+        ->where('f.tipo_pago', 'contado')
+        ->where('f.medio_pago', 'transferencia')
+        ->where('p.tipo_producto', 'servicio')
+        ->sum('fd.subtotal');
 
     // ----- DOMICILIOS (fees collected by company, to pay domiciliario) -----
     $qDom = \App\Models\Factura::query()
@@ -4184,12 +4197,12 @@ $devolucionesSinPago = \App\Models\Devolucion::query()
 
 $devolucionesDia = $devolucionesConPago + $devolucionesSinPago; // informativo
 
-// ----- TOTALES DE FLUJO DE CAJA -----
-// Efectivo del dÃ­a = ventas contado (efectivo) + cobros cartera (efectivo) - devoluciones de facturas CON pago
-$efectivo = ($ventasContadoEfectivo + $carteraEfectivo + $entradasEfectivo) - $devolucionesConPago - $salidasEfectivo;
+// ----- TOTALES DE FLUJO DE CAJA (SOLO PRODUCTOS) -----
+// Efectivo del dÃ­a = ventas contado (efectivo) - servicios (van a caja de mecanicos) + cobros cartera (efectivo) - devoluciones de facturas CON pago
+$efectivo = ($ventasContadoEfectivo - $serviciosContadoEfectivo + $carteraEfectivo + $entradasEfectivo) - $devolucionesConPago - $salidasEfectivo;
 
-    // Transferencia del dÃ­a = ventas contado (transferencia) + cobros cartera (transferencia)
-    $transferencia = $ventasContadoTransferencia + $carteraTransferencia + $entradasTransferencia - $salidasTransferencia;
+    // Transferencia del dÃ­a = ventas contado (transferencia) - servicios + cobros cartera (transferencia)
+    $transferencia = ($ventasContadoTransferencia - $serviciosContadoTransferencia) + $carteraTransferencia + $entradasTransferencia - $salidasTransferencia;
 
     // Total contado (lo que comparas contra "Monto de cierre")
     $totalContado = $efectivo + $transferencia;
@@ -4268,11 +4281,6 @@ $efectivo = ($ventasContadoEfectivo + $carteraEfectivo + $entradasEfectivo) - $d
         'dom_cobrado_efectivo'      => $domCobradoEfectivo,
         'dom_cobrado_transferencia' => $domCobradoTransferencia,
         'dom_cobrado_total'         => $domCobradoTotal,
-
-        // Mecánicos
-        'servicios_mecanicos'       => $serviciosMecanicos,
-        'liquidaciones_mecanicos'   => $liquidacionesMecanicos,
-        'empresa_servicios'         => $serviciosMecanicos - $liquidacionesMecanicos,
     ];
 }
 public function updatedMontoCierre($value)

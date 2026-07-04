@@ -87,6 +87,12 @@ class TallerPanel extends Component
     public string $prestamoMonto      = '';
     public string $prestamoNota       = '';
 
+    // ── Cierre de Caja de Mecánicos (servicios propios + terceros, aparte del POS)
+    public bool   $modalCajaMecanicos = false;
+    public string $cajaMecDesde       = '';
+    public string $cajaMecHasta       = '';
+    public string $cajaMecMontoCierre = '';
+
     private function empresaId(): int
     {
         return auth()->user()->getEmpresaActualId();
@@ -370,6 +376,66 @@ class TallerPanel extends Component
             'ganancia_liquidada'   => $gananciaLiquidada,
             'prestamos_pendientes' => $prestamosPendientes,
             'a_liquidar_neto'      => $aLiquidar - $prestamosPendientes,
+        ];
+    }
+
+    // ── Cierre de Caja de Mecánicos: servicios propios + terceros cobrados en
+    // el POS y lo pagado a mecánicos (liquidaciones + préstamos) en un rango
+    // de fechas. Es aparte del cierre de caja de productos del POS, porque el
+    // dinero de servicios va a un cajón/caja fisica distinta.
+    public function abrirCajaMecanicos(): void
+    {
+        $this->cajaMecDesde       = now()->startOfDay()->toDateString();
+        $this->cajaMecHasta       = now()->toDateString();
+        $this->cajaMecMontoCierre = '';
+        $this->modalCajaMecanicos = true;
+    }
+
+    public function calcularCajaMecanicos(): array
+    {
+        $empresaId = $this->empresaId();
+        $desde = $this->cajaMecDesde ?: now()->startOfDay()->toDateString();
+        $hasta = $this->cajaMecHasta ?: now()->toDateString();
+
+        $qServicios = DB::table('factura_detalles as fd')
+            ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
+            ->join('products as p', function ($j) use ($empresaId) {
+                $j->on('p.id_producto', '=', 'fd.producto_id')->where('p.empresa_id', '=', $empresaId);
+            })
+            ->where('f.empresa_id', $empresaId)
+            ->where('p.tipo_producto', 'servicio')
+            ->whereDate('f.fecha', '>=', $desde)
+            ->whereDate('f.fecha', '<=', $hasta);
+
+        $serviciosEfectivo      = (clone $qServicios)->where('f.tipo_pago', 'contado')->where('f.medio_pago', 'efectivo')->sum('fd.subtotal');
+        $serviciosTransferencia = (clone $qServicios)->where('f.tipo_pago', 'contado')->where('f.medio_pago', 'transferencia')->sum('fd.subtotal');
+        $serviciosCredito       = (clone $qServicios)->where('f.tipo_pago', 'credito')->sum('fd.subtotal');
+        $serviciosTotal         = $serviciosEfectivo + $serviciosTransferencia + $serviciosCredito;
+
+        $qPagos = Gasto::where('empresa_id', $empresaId)
+            ->whereIn('categoria', ['liquidacion_mecanico', 'prestamo_mecanico'])
+            ->whereDate('fecha', '>=', $desde)
+            ->whereDate('fecha', '<=', $hasta);
+
+        $pagadoEfectivo      = (float) (clone $qPagos)->where('metodo_pago', 'Efectivo')->sum('monto');
+        $pagadoTransferencia = (float) (clone $qPagos)->whereIn('metodo_pago', ['Transferencia', 'Nequi'])->sum('monto');
+        $pagadoTotal         = $pagadoEfectivo + $pagadoTransferencia;
+
+        $efectivo = (float) $serviciosEfectivo - $pagadoEfectivo;
+        $transferencia = (float) $serviciosTransferencia - $pagadoTransferencia;
+
+        return [
+            'servicios_efectivo'      => (float) $serviciosEfectivo,
+            'servicios_transferencia' => (float) $serviciosTransferencia,
+            'servicios_credito'       => (float) $serviciosCredito,
+            'servicios_total'         => (float) $serviciosTotal,
+            'pagado_efectivo'         => $pagadoEfectivo,
+            'pagado_transferencia'    => $pagadoTransferencia,
+            'pagado_total'            => $pagadoTotal,
+            'efectivo'                => $efectivo,
+            'transferencia'           => $transferencia,
+            'efectivo_esperado'       => $efectivo,
+            'queda_empresa'           => $serviciosTotal - $pagadoTotal,
         ];
     }
 

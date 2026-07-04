@@ -72,7 +72,13 @@
     @if($vistaActiva === 'mecanicos')
     <div style="flex:1; overflow-y:auto; padding:16px;">
         <div style="max-width:900px; margin:0 auto;">
-            <h2 style="font-size:16px; font-weight:700; color:#0f766e; margin-bottom:12px;">👨‍🔧 Mecánicos y Liquidaciones</h2>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+                <h2 style="font-size:16px; font-weight:700; color:#0f766e; margin:0;">👨‍🔧 Mecánicos y Liquidaciones</h2>
+                <button wire:click="abrirCajaMecanicos"
+                    style="border:none; border-radius:8px; padding:8px 14px; font-size:12px; font-weight:700; cursor:pointer; background:#7c3aed; color:white; white-space:nowrap;">
+                    🧾 Cerrar Caja de Mecánicos
+                </button>
+            </div>
 
             {{-- Resumen combinado de todos los mecánicos --}}
             <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:16px;">
@@ -702,6 +708,86 @@
                     </div>
                 @endif
 
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Modal Cerrar Caja de Mecánicos (servicios propios + terceros, aparte del POS) --}}
+    @if($modalCajaMecanicos)
+    <div style="position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1150; display:flex; align-items:center; justify-content:center; padding:16px;">
+        <div style="background:white; border-radius:16px; width:100%; max-width:480px; max-height:90vh; overflow-y:auto;">
+            <div style="background:#7c3aed; color:white; padding:14px 18px; border-radius:16px 16px 0 0; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:1;">
+                <span style="font-size:15px; font-weight:700;">🧾 Cerrar Caja de Mecánicos</span>
+                <button wire:click="$set('modalCajaMecanicos',false)" style="background:rgba(255,255,255,.2); border:none; color:white; border-radius:99px; width:28px; height:28px; cursor:pointer; font-size:16px; line-height:1;">×</button>
+            </div>
+            <div style="padding:18px;">
+
+                <div style="display:flex; gap:10px; align-items:end; margin-bottom:14px; flex-wrap:wrap;">
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Desde</label>
+                        <input wire:model.live="cajaMecDesde" type="date"
+                            style="height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px;">
+                    </div>
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Hasta</label>
+                        <input wire:model.live="cajaMecHasta" type="date"
+                            style="height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px;">
+                    </div>
+                </div>
+
+                @php $resumenCajaMec = $this->calcularCajaMecanicos(); @endphp
+
+                <div style="background:#faf5ff; border:1px solid #e9d5ff; border-radius:10px; padding:12px; font-size:12px;">
+                    <div style="font-size:10px; color:#7c3aed; text-transform:uppercase; font-weight:700; margin-bottom:4px;">Servicios cobrados (propios + terceros)</div>
+                    <div style="display:flex; justify-content:space-between;"><span>Efectivo</span><span class="font-semibold">${{ number_format($resumenCajaMec['servicios_efectivo'], 0, ',', '.') }}</span></div>
+                    <div style="display:flex; justify-content:space-between;"><span>Transferencia</span><span class="font-semibold">${{ number_format($resumenCajaMec['servicios_transferencia'], 0, ',', '.') }}</span></div>
+                    <div style="display:flex; justify-content:space-between;"><span>Crédito</span><span class="font-semibold">${{ number_format($resumenCajaMec['servicios_credito'], 0, ',', '.') }}</span></div>
+
+                    <div style="font-size:10px; color:#7c3aed; text-transform:uppercase; font-weight:700; margin:10px 0 4px;">Pagado a mecánicos (liquidaciones + préstamos)</div>
+                    <div style="display:flex; justify-content:space-between;"><span>Efectivo</span><span class="font-semibold text-red-700" style="color:#b91c1c;">- ${{ number_format($resumenCajaMec['pagado_efectivo'], 0, ',', '.') }}</span></div>
+                    <div style="display:flex; justify-content:space-between;"><span>Transferencia</span><span class="font-semibold" style="color:#b91c1c;">- ${{ number_format($resumenCajaMec['pagado_transferencia'], 0, ',', '.') }}</span></div>
+
+                    <div style="border-top:1px solid #e9d5ff; margin-top:8px; padding-top:8px; display:flex; justify-content:space-between;">
+                        <span style="font-weight:700;">Efectivo esperado</span>
+                        <span style="font-weight:900; color:{{ $resumenCajaMec['efectivo_esperado'] < 0 ? '#dc2626' : '#16a34a' }};">${{ number_format($resumenCajaMec['efectivo_esperado'], 0, ',', '.') }}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between;">
+                        <span>Transferencia neta</span>
+                        <span class="font-semibold">${{ number_format($resumenCajaMec['transferencia'], 0, ',', '.') }}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between;">
+                        <span>Queda para la empresa</span>
+                        <span class="font-semibold" style="color:{{ $resumenCajaMec['queda_empresa'] >= 0 ? '#16a34a' : '#dc2626' }};">${{ number_format($resumenCajaMec['queda_empresa'], 0, ',', '.') }}</span>
+                    </div>
+                </div>
+
+                <div style="margin-top:14px;">
+                    <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Efectivo contado en el cajón</label>
+                    <input wire:model.live="cajaMecMontoCierre" type="number" min="0" placeholder="0"
+                        style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
+                </div>
+
+                @if($cajaMecMontoCierre !== '')
+                    @php $difCajaMec = (float) $cajaMecMontoCierre - (float) $resumenCajaMec['efectivo_esperado']; @endphp
+                    <div style="margin-top:10px; text-align:center; font-weight:900; font-size:15px; border-radius:8px; padding:8px;
+                        background:{{ $difCajaMec == 0 ? '#dcfce7' : '#fee2e2' }}; color:{{ $difCajaMec == 0 ? '#16a34a' : '#dc2626' }};">
+                        @if($difCajaMec == 0)
+                            ✅ Cuadra
+                        @elseif($difCajaMec > 0)
+                            Sobra ${{ number_format($difCajaMec, 0, ',', '.') }}
+                        @else
+                            Faltó ${{ number_format(abs($difCajaMec), 0, ',', '.') }}
+                        @endif
+                    </div>
+                @endif
+
+                <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">
+                    <button wire:click="$set('modalCajaMecanicos',false)"
+                        style="border:1px solid #d1d5db; background:white; border-radius:8px; padding:8px 18px; font-size:13px; cursor:pointer; color:#6b7280;">
+                        Cerrar
+                    </button>
+                </div>
             </div>
         </div>
     </div>

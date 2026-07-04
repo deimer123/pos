@@ -2186,19 +2186,6 @@
                             class="font-semibold text-red-700">-
                             ${{ number_format($resumenCaja['salidas_transferencia'] ?? 0, 0, ',', '.') }}</span></div>
 
-                    @if(($resumenCaja['servicios_mecanicos'] ?? 0) > 0 || ($resumenCaja['liquidaciones_mecanicos'] ?? 0) > 0)
-                    <div class="mt-1 text-[11px] text-purple-700 uppercase tracking-wide font-bold">🔧 MECÁNICOS</div>
-                    <div class="flex justify-between"><span>Servicios cobrados</span><span
-                            class="font-semibold text-purple-700">${{ number_format($resumenCaja['servicios_mecanicos'] ?? 0, 0, ',', '.') }}</span>
-                    </div>
-                    <div class="flex justify-between"><span>Pagado a mecánicos (liquidaciones)</span><span
-                            class="font-semibold text-red-700">- ${{ number_format($resumenCaja['liquidaciones_mecanicos'] ?? 0, 0, ',', '.') }}</span>
-                    </div>
-                    <div class="flex justify-between border-t border-purple-100 mt-1 pt-1"><span class="font-semibold">Queda para la empresa</span><span
-                            class="font-semibold {{ ($resumenCaja['empresa_servicios'] ?? 0) >= 0 ? 'text-green-700' : 'text-red-600' }}">${{ number_format($resumenCaja['empresa_servicios'] ?? 0, 0, ',', '.') }}</span>
-                    </div>
-                    @endif
-
                     <div class="my-1 border-t"></div>
 
 
