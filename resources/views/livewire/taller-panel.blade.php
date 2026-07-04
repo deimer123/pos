@@ -743,10 +743,11 @@
                 @php $resumenCajaMec = $this->calcularCajaMecanicos(); @endphp
 
                 <div style="background:#faf5ff; border:1px solid #e9d5ff; border-radius:10px; padding:12px; font-size:12px;">
-                    <div style="font-size:10px; color:#7c3aed; text-transform:uppercase; font-weight:700; margin-bottom:4px;">Servicios cobrados (propios + terceros)</div>
+                    <div style="font-size:10px; color:#7c3aed; text-transform:uppercase; font-weight:700; margin-bottom:4px;">Servicios cobrados (propios + ganancia de terceros)</div>
                     <div style="display:flex; justify-content:space-between;"><span>Efectivo</span><span class="font-semibold">${{ number_format($resumenCajaMec['servicios_efectivo'], 0, ',', '.') }}</span></div>
                     <div style="display:flex; justify-content:space-between;"><span>Transferencia</span><span class="font-semibold">${{ number_format($resumenCajaMec['servicios_transferencia'], 0, ',', '.') }}</span></div>
                     <div style="display:flex; justify-content:space-between;"><span>Crédito</span><span class="font-semibold">${{ number_format($resumenCajaMec['servicios_credito'], 0, ',', '.') }}</span></div>
+                    <div style="font-size:9px; color:#9ca3af; margin-top:2px;">En servicios a terceros solo cuenta la ganancia de la empresa (venta − costo); lo que recibe el tercero no pasa por esta caja.</div>
 
                     <div style="font-size:10px; color:#7c3aed; text-transform:uppercase; font-weight:700; margin:10px 0 4px;">Pagado a mecánicos (liquidaciones + préstamos)</div>
                     <div style="display:flex; justify-content:space-between;"><span>Efectivo</span><span class="font-semibold text-red-700" style="color:#b91c1c;">- ${{ number_format($resumenCajaMec['pagado_efectivo'], 0, ',', '.') }}</span></div>

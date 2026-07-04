@@ -397,6 +397,13 @@ class TallerPanel extends Component
         $desde = $this->cajaMecDesde ?: now()->startOfDay()->toDateString();
         $hasta = $this->cajaMecHasta ?: now()->toDateString();
 
+        // Para servicios a terceros solo cuenta la ganancia de la empresa
+        // (venta - costo): el resto es plata que pasa directo al tercero y
+        // nunca entra a esta caja. Para servicios propios cuenta el valor
+        // completo cobrado (la parte del mecánico se descuenta aparte, como
+        // "pagado a mecánicos", cuando se liquida).
+        $montoCobradoSql = "SUM(CASE WHEN fd.tipo_servicio = 'tercero' THEN fd.subtotal * COALESCE(fd.porcentaje_empresa, 0) / 100 ELSE fd.subtotal END)";
+
         $qServicios = DB::table('factura_detalles as fd')
             ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
             ->join('products as p', function ($j) use ($empresaId) {
@@ -407,9 +414,9 @@ class TallerPanel extends Component
             ->whereDate('f.fecha', '>=', $desde)
             ->whereDate('f.fecha', '<=', $hasta);
 
-        $serviciosEfectivo      = (clone $qServicios)->where('f.tipo_pago', 'contado')->where('f.medio_pago', 'efectivo')->sum('fd.subtotal');
-        $serviciosTransferencia = (clone $qServicios)->where('f.tipo_pago', 'contado')->where('f.medio_pago', 'transferencia')->sum('fd.subtotal');
-        $serviciosCredito       = (clone $qServicios)->where('f.tipo_pago', 'credito')->sum('fd.subtotal');
+        $serviciosEfectivo      = (float) ((clone $qServicios)->where('f.tipo_pago', 'contado')->where('f.medio_pago', 'efectivo')->rawValue($montoCobradoSql) ?? 0);
+        $serviciosTransferencia = (float) ((clone $qServicios)->where('f.tipo_pago', 'contado')->where('f.medio_pago', 'transferencia')->rawValue($montoCobradoSql) ?? 0);
+        $serviciosCredito       = (float) ((clone $qServicios)->where('f.tipo_pago', 'credito')->rawValue($montoCobradoSql) ?? 0);
         $serviciosTotal         = $serviciosEfectivo + $serviciosTransferencia + $serviciosCredito;
 
         $qPagos = Gasto::where('empresa_id', $empresaId)

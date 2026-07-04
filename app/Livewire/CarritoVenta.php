@@ -1992,7 +1992,7 @@ protected function datosServicioFactura(?Product $producto): array
 
     return [
         'tipo_servicio'      => $producto->tipo_servicio,
-        'porcentaje_empresa' => $producto->tipo_servicio === 'propio' ? (float) ($producto->porcentaje_empresa ?? 0) : 0,
+        'porcentaje_empresa' => (float) ($producto->porcentaje_empresa ?? 0),
         'mecanico_id'        => $producto->tipo_servicio === 'propio' ? $producto->mecanico_id : null,
     ];
 }
