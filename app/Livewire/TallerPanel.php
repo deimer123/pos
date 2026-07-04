@@ -434,7 +434,8 @@ class TallerPanel extends Component
         return $q->select([
                 'fd.id',
                 'f.id as factura_id',
-                'f.numero_visual',
+                'f.tipo_factura',
+                'f.factus_number',
                 DB::raw("DATE_FORMAT(f.fecha,'%d/%m/%Y %H:%i') as fecha_fmt"),
                 'fd.descripcion_larga',
                 'fd.subtotal',
@@ -444,17 +445,23 @@ class TallerPanel extends Component
             ])
             ->orderByDesc('f.fecha')
             ->get()
-            ->map(fn($r) => (object) [
-                'id'               => $r->id,
-                'factura_id'       => $r->factura_id,
-                'numero_visual'    => $r->numero_visual,
-                'fecha'            => $r->fecha_fmt,
-                'descripcion'      => $r->descripcion_larga,
-                'subtotal'         => (float) $r->subtotal,
-                'monto_mecanico'   => round((float) $r->subtotal * (100 - (float) ($r->porcentaje_empresa ?? 0)) / 100, 2),
-                'liquidado'        => (bool) $r->fecha_pago,
-                'fecha_pago'       => $r->fecha_pago,
-            ]);
+            ->map(function ($r) {
+                $numeroVisual = ($r->tipo_factura === 'electronica' && filled($r->factus_number))
+                    ? (string) $r->factus_number
+                    : (($r->tipo_factura === 'salida' ? 'SAL-' : 'FAC-') . str_pad((string) $r->factura_id, 6, '0', STR_PAD_LEFT));
+
+                return (object) [
+                    'id'               => $r->id,
+                    'factura_id'       => $r->factura_id,
+                    'numero_visual'    => $numeroVisual,
+                    'fecha'            => $r->fecha_fmt,
+                    'descripcion'      => $r->descripcion_larga,
+                    'subtotal'         => (float) $r->subtotal,
+                    'monto_mecanico'   => round((float) $r->subtotal * (100 - (float) ($r->porcentaje_empresa ?? 0)) / 100, 2),
+                    'liquidado'        => (bool) $r->fecha_pago,
+                    'fecha_pago'       => $r->fecha_pago,
+                ];
+            });
     }
 
     public function abrirLiquidacion(int $mecanicoId): void
