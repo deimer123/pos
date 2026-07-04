@@ -42,6 +42,7 @@ class VentasContablesExport implements FromCollection, ShouldAutoSize, WithHeadi
             'Ventas productos s/IVA (4135)',
             'IVA',
             'Otros servicios (4200)',
+            'Reembolso a terceros (no es venta)',
             'Total',
             'Saldo',
         ];
@@ -53,13 +54,18 @@ class VentasContablesExport implements FromCollection, ShouldAutoSize, WithHeadi
         $ventasSinIva  = 0.0;
         $ivaTotal      = 0.0;
         $servicios     = 0.0;
+        $passthrough   = 0.0;
 
         foreach ($factura->detalles as $detalle) {
             $base   = (float) $detalle->subtotal;
             $ivaPct = (float) ($detalle->producto?->iva_venta ?? 0);
             $esServicio = ($detalle->producto?->tipo_producto ?? '') === 'servicio';
+            $esPassthrough = (string) $detalle->producto_id === '10001';
 
-            if ($esServicio) {
+            if ($esPassthrough) {
+                // Item manual: reembolso a terceros sin margen, no es venta ni servicio propio.
+                $passthrough += $base;
+            } elseif ($esServicio) {
                 $servicios += $base;
             } elseif ($ivaPct > 0) {
                 $ventasConIva += $base;
@@ -78,6 +84,7 @@ class VentasContablesExport implements FromCollection, ShouldAutoSize, WithHeadi
             round($ventasSinIva, 2),
             round($ivaTotal, 2),
             round($servicios, 2),
+            round($passthrough, 2),
             (float) $factura->total,
             (float) $factura->saldo,
         ];

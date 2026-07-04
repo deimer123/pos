@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Models\Factura;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Support\Facades\DB;
 
 class VentasUltimos7Dias extends ChartWidget
 {
@@ -60,6 +61,8 @@ class VentasUltimos7Dias extends ChartWidget
                 ->where('total', '>', 0)
                 ->sum('total');
 
+            $total -= $this->passthroughEnRango($empresaId, $fecha->copy()->startOfDay(), $fecha->copy()->endOfDay());
+
             $data[] = round(max(0, $total));
         }
 
@@ -91,12 +94,25 @@ class VentasUltimos7Dias extends ChartWidget
                 ->where('total', '>', 0)
                 ->sum('total');
 
+            $total -= $this->passthroughEnRango($empresaId, $inicio->copy()->startOfDay(), $fin->copy()->endOfDay());
+
             $data[] = round(max(0, $total));
             $inicio = $fin->copy()->addDay()->startOfDay();
             $semana++;
         }
 
         return $this->chartData($labels, $data, $mes->translatedFormat('F Y'));
+    }
+
+    // Item manual (codigo 10001): reembolso a terceros sin margen, no cuenta como venta propia.
+    protected function passthroughEnRango(int $empresaId, $inicio, $fin): float
+    {
+        return (float) DB::table('factura_detalles as fd')
+            ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
+            ->where('f.empresa_id', $empresaId)
+            ->whereBetween('f.fecha', [$inicio, $fin])
+            ->where('fd.producto_id', '10001')
+            ->sum('fd.subtotal');
     }
 
     protected function chartData(array $labels, array $data, string $label): array

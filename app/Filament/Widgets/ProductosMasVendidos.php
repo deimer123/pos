@@ -48,6 +48,8 @@ class ProductosMasVendidos extends BaseWidget
                         $q->where('empresa_id', $empresaId);
                     })
 
+                    ->where('producto_id', '!=', '10001')
+
                     ->groupBy(
                         'producto_id',
                         'descripcion_larga'

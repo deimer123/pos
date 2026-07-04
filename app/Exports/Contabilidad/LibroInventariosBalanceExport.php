@@ -292,12 +292,24 @@ class LibroInventariosBalanceExport implements FromCollection, ShouldAutoSize, W
 
     protected function ventasContado(): float
     {
-        return (float) Factura::query()
+        $total = (float) Factura::query()
             ->where('empresa_id', $this->empresaId)
             ->when($this->desde, fn ($query) => $query->whereDate('fecha', '>=', $this->desde))
             ->when($this->hasta, fn ($query) => $query->whereDate('fecha', '<=', $this->hasta))
             ->where('tipo_pago', 'contado')
             ->sum('total');
+
+        // Item manual (codigo 10001): reembolso a terceros sin margen, no es venta propia.
+        $passthrough = (float) \Illuminate\Support\Facades\DB::table('factura_detalles as fd')
+            ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
+            ->where('f.empresa_id', $this->empresaId)
+            ->when($this->desde, fn ($query) => $query->whereDate('f.fecha', '>=', $this->desde))
+            ->when($this->hasta, fn ($query) => $query->whereDate('f.fecha', '<=', $this->hasta))
+            ->where('f.tipo_pago', 'contado')
+            ->where('fd.producto_id', '10001')
+            ->sum('fd.subtotal');
+
+        return $total - $passthrough;
     }
 
     protected function ivaVentas(): float

@@ -28,6 +28,7 @@ class SalidaMercanciaContableExport implements FromCollection, ShouldAutoSize, W
                     ->when($this->desde, fn ($qq) => $qq->whereDate('fecha', '>=', $this->desde))
                     ->when($this->hasta, fn ($qq) => $qq->whereDate('fecha', '<=', $this->hasta));
             })
+            ->where('producto_id', '!=', '10001')
             ->orderByDesc('id')
             ->get();
     }

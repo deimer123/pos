@@ -22,6 +22,7 @@ class InventarioContableExport implements FromCollection, ShouldAutoSize, WithCo
         return Product::query()
             ->with('cuentaContable')
             ->where('empresa_id', $this->empresaId)
+            ->where('id_producto', '!=', '10001')
             ->orderBy('id_producto')
             ->get();
     }

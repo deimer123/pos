@@ -55,6 +55,18 @@ class VentasPorVendedor extends BaseWidget
                 'facturas.id'
             )
 
+            // Item manual (codigo 10001): reembolso a terceros sin margen, no cuenta como venta propia.
+            ->leftJoinSub(
+                DB::table('factura_detalles as fd')
+                    ->where('fd.producto_id', '10001')
+                    ->select('fd.factura_id', DB::raw('SUM(fd.subtotal) as passthrough_total'))
+                    ->groupBy('fd.factura_id'),
+                'pt',
+                'pt.factura_id',
+                '=',
+                'facturas.id'
+            )
+
             ->select([
                 'facturas.vendedor_id',
 
@@ -62,7 +74,7 @@ class VentasPorVendedor extends BaseWidget
 
                 DB::raw('COUNT(facturas.id) as total_facturas'),
 
-                DB::raw('SUM(facturas.total - COALESCE(svc.servicios_total, 0)) as total_ventas'),
+                DB::raw('SUM(facturas.total - COALESCE(svc.servicios_total, 0) - COALESCE(pt.passthrough_total, 0)) as total_ventas'),
             ])
 
             ->where('facturas.empresa_id', $empresaId)

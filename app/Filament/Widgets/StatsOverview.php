@@ -32,6 +32,19 @@ class StatsOverview extends BaseWidget
             ->sum('fd.subtotal');
     }
 
+    // Item manual (codigo 10001): reembolso a terceros sin margen, no cuenta como venta propia.
+    private function passthroughTotal(array $facturaIds): float
+    {
+        if (empty($facturaIds)) {
+            return 0.0;
+        }
+
+        return (float) DB::table('factura_detalles as fd')
+            ->whereIn('fd.factura_id', $facturaIds)
+            ->where('fd.producto_id', '10001')
+            ->sum('fd.subtotal');
+    }
+
     protected function getCards(): array
     {
         $empresaId = auth()->user()->getEmpresaActualId();
@@ -43,12 +56,16 @@ class StatsOverview extends BaseWidget
             ->pluck('id')->toArray();
 
         $serviciosHoy = $this->serviciosTotal($empresaId, $idsHoy);
+        $passthroughHoy = $this->passthroughTotal($idsHoy);
 
-        $ventasHoy         = Factura::whereIn('id', $idsHoy)->sum('total') - $serviciosHoy;
-        $ventasContadoHoy  = Factura::whereIn('id', $idsHoy)->where('tipo_pago', 'contado')->sum('total')
-                           - $this->serviciosTotal($empresaId, Factura::whereIn('id', $idsHoy)->where('tipo_pago', 'contado')->pluck('id')->toArray());
-        $ventasCreditoHoy  = Factura::whereIn('id', $idsHoy)->where('tipo_pago', 'credito')->sum('total')
-                           - $this->serviciosTotal($empresaId, Factura::whereIn('id', $idsHoy)->where('tipo_pago', 'credito')->pluck('id')->toArray());
+        $idsHoyContado = Factura::whereIn('id', $idsHoy)->where('tipo_pago', 'contado')->pluck('id')->toArray();
+        $idsHoyCredito = Factura::whereIn('id', $idsHoy)->where('tipo_pago', 'credito')->pluck('id')->toArray();
+
+        $ventasHoy         = Factura::whereIn('id', $idsHoy)->sum('total') - $serviciosHoy - $passthroughHoy;
+        $ventasContadoHoy  = Factura::whereIn('id', $idsHoyContado)->sum('total')
+                           - $this->serviciosTotal($empresaId, $idsHoyContado) - $this->passthroughTotal($idsHoyContado);
+        $ventasCreditoHoy  = Factura::whereIn('id', $idsHoyCredito)->sum('total')
+                           - $this->serviciosTotal($empresaId, $idsHoyCredito) - $this->passthroughTotal($idsHoyCredito);
 
         // --- MES ---
         $idsMes = Factura::query()
@@ -57,12 +74,16 @@ class StatsOverview extends BaseWidget
             ->pluck('id')->toArray();
 
         $serviciosMes = $this->serviciosTotal($empresaId, $idsMes);
+        $passthroughMes = $this->passthroughTotal($idsMes);
 
-        $ventasMes         = Factura::whereIn('id', $idsMes)->sum('total') - $serviciosMes;
-        $ventasContadoMes  = Factura::whereIn('id', $idsMes)->where('tipo_pago', 'contado')->sum('total')
-                           - $this->serviciosTotal($empresaId, Factura::whereIn('id', $idsMes)->where('tipo_pago', 'contado')->pluck('id')->toArray());
-        $ventasCreditoMes  = Factura::whereIn('id', $idsMes)->where('tipo_pago', 'credito')->sum('total')
-                           - $this->serviciosTotal($empresaId, Factura::whereIn('id', $idsMes)->where('tipo_pago', 'credito')->pluck('id')->toArray());
+        $idsMesContado = Factura::whereIn('id', $idsMes)->where('tipo_pago', 'contado')->pluck('id')->toArray();
+        $idsMesCredito = Factura::whereIn('id', $idsMes)->where('tipo_pago', 'credito')->pluck('id')->toArray();
+
+        $ventasMes         = Factura::whereIn('id', $idsMes)->sum('total') - $serviciosMes - $passthroughMes;
+        $ventasContadoMes  = Factura::whereIn('id', $idsMesContado)->sum('total')
+                           - $this->serviciosTotal($empresaId, $idsMesContado) - $this->passthroughTotal($idsMesContado);
+        $ventasCreditoMes  = Factura::whereIn('id', $idsMesCredito)->sum('total')
+                           - $this->serviciosTotal($empresaId, $idsMesCredito) - $this->passthroughTotal($idsMesCredito);
 
         $gastosMes = Gasto::query()
             ->where('empresa_id', $empresaId)
