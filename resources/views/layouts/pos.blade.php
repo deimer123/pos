@@ -66,7 +66,7 @@
                 @auth
                 @php
                     $u = auth()->user();
-                    $roleLabels = ['admin_empresa'=>'Admin','cajero'=>'Cajero','vendedor'=>'Vendedor','mesero'=>'Mesero','digitador'=>'Digitador'];
+                    $roleLabels = ['admin_empresa'=>'Admin','cajero'=>'Cajero','vendedor'=>'Vendedor','mesero'=>'Mesero','digitador'=>'Digitador','taller'=>'Taller','cocina'=>'Cocina'];
                     $rolActual = collect($roleLabels)->first(fn($l,$r) => $u->hasRole($r));
                 @endphp
                 <span style="background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.3); border-radius:20px; padding:3px 12px; font-size:12px; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px;">
