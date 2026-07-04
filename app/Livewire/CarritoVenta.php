@@ -2248,6 +2248,8 @@ if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->
 
         DB::commit();
 
+        $eraOrdenTaller = (bool) $this->tallerOrdenId;
+
         $this->eliminarPrefacturaCargada();
         $this->vincularFacturaTaller($factura->id);
 
@@ -2277,7 +2279,7 @@ if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->
         }
 
         $this->dispatch('success', $factura->numero_visual . ' creada.');
-        if ($this->mesaId) {
+        if ($this->mesaId || $eraOrdenTaller) {
             $this->redirect(route('pos'));
         }
     } catch (\Throwable $e) {
@@ -2779,6 +2781,8 @@ if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->
 
         DB::commit();
 
+        $eraOrdenTaller = (bool) $this->tallerOrdenId;
+
         $this->eliminarPrefacturaCargada();
         $this->vincularFacturaTaller($factura->id);
 
@@ -2808,9 +2812,14 @@ if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->
         }
 
         // ===== Devolver URL para imprimir (lo consume el .then del botón)
+        // Se fuerza recarga de pagina (redirect_url) tambien al facturar una orden
+        // de taller: al imprimir se abre una ventana nueva y, en algunos
+        // navegadores, la ventana principal no reflejaba de inmediato el
+        // carrito ya vacio hasta refrescar manualmente.
         $url = route('factura.imprimir', $factura->id);
         $this->dispatch('success', $factura->numero_visual . ' creada.');
-        return ['ok' => true, 'factura_id' => $factura->id, 'print_url' => $url, 'redirect_url' => $this->mesaId ? route('pos') : null];
+        $redirectUrl = $this->mesaId ? route('pos') : ($eraOrdenTaller ? route('pos') : null);
+        return ['ok' => true, 'factura_id' => $factura->id, 'print_url' => $url, 'redirect_url' => $redirectUrl];
 
     } catch (\Throwable $e) {
         DB::rollBack();

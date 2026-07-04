@@ -35,6 +35,7 @@ class ReporteMecanicosStats extends BaseWidget
             })
             ->whereIn('fd.factura_id', $facturaIds)
             ->where('p.tipo_producto', '!=', 'servicio')
+            ->where('fd.producto_id', '!=', '10001')
             ->sum('fd.subtotal');
 
         return [
