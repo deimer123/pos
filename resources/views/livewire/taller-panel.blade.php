@@ -106,12 +106,18 @@
 
             {{-- Servicios a Terceros: independientes de los mecanicos propios --}}
             <div style="background:white; border-radius:12px; border:1px solid #fde68a; margin-bottom:16px; overflow:hidden;">
-                <div style="background:#fffbeb; padding:12px 16px; display:flex; align-items:center; justify-content:space-between;">
+                <div style="background:#fffbeb; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
                     <span style="font-size:13px; font-weight:700; color:#d97706;">🤝 Servicios a Terceros</span>
-                    <button wire:click="abrirNuevoServicioTercero"
-                        style="border:none; border-radius:8px; padding:5px 12px; font-size:11px; font-weight:700; cursor:pointer; background:#d97706; color:white;">
-                        ➕ Nuevo servicio a tercero
-                    </button>
+                    <div style="display:flex; gap:6px;">
+                        <button wire:click="abrirHistorialTerceros"
+                            style="border:none; border-radius:8px; padding:5px 12px; font-size:11px; font-weight:700; cursor:pointer; background:#7c3aed; color:white;">
+                            📊 Historial
+                        </button>
+                        <button wire:click="abrirNuevoServicioTercero"
+                            style="border:none; border-radius:8px; padding:5px 12px; font-size:11px; font-weight:700; cursor:pointer; background:#d97706; color:white;">
+                            ➕ Nuevo servicio a tercero
+                        </button>
+                    </div>
                 </div>
                 <div style="padding:12px 16px;">
                     @php $serviciosTerceros = $this->serviciosTerceros(); @endphp
@@ -706,6 +712,63 @@
                                         ⏳ Pendiente
                                     </span>
                                 @endif
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                @endif
+
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Modal Historial de servicios a terceros --}}
+    @if($modalHistorialTerceros)
+    <div style="position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1150; display:flex; align-items:center; justify-content:center; padding:16px;">
+        <div style="background:white; border-radius:16px; width:100%; max-width:680px; max-height:90vh; overflow-y:auto;">
+            <div style="background:#d97706; color:white; padding:14px 18px; border-radius:16px 16px 0 0; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:1;">
+                <span style="font-size:15px; font-weight:700;">📊 Historial de servicios a terceros</span>
+                <button wire:click="$set('modalHistorialTerceros',false)" style="background:rgba(255,255,255,.2); border:none; color:white; border-radius:99px; width:28px; height:28px; cursor:pointer; font-size:16px; line-height:1;">×</button>
+            </div>
+            <div style="padding:18px;">
+
+                {{-- Rango de fechas --}}
+                <div style="display:flex; gap:10px; align-items:end; margin-bottom:14px; flex-wrap:wrap;">
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Desde</label>
+                        <input wire:model.live="histTercDesde" type="date"
+                            style="height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px;">
+                    </div>
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Hasta</label>
+                        <input wire:model.live="histTercHasta" type="date"
+                            style="height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px;">
+                    </div>
+                </div>
+
+                @php $historialTerc = $this->historialTerceros(); @endphp
+
+                @if($historialTerc->isEmpty())
+                    <div style="text-align:center; padding:24px; color:#94a3b8; font-size:12px;">
+                        No hay servicios a terceros en este rango de fechas.
+                    </div>
+                @else
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        @foreach($historialTerc as $svc)
+                        <div style="border:1px solid #fde68a; border-radius:8px; padding:10px 12px; display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                            <div style="min-width:0;">
+                                <div style="font-weight:700; font-size:13px; color:#1f2937; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                    {{ $svc->descripcion }}
+                                </div>
+                                <div style="font-size:10px; color:#6b7280; margin-top:2px;">
+                                    {{ $svc->fecha }} · {{ $svc->numero_visual }}
+                                    @if($svc->tercero_nombre) · 🤝 {{ $svc->tercero_nombre }} @endif
+                                </div>
+                            </div>
+                            <div style="text-align:right; flex-shrink:0;">
+                                <div style="font-size:13px; font-weight:700; color:#16a34a;">${{ number_format($svc->monto_empresa, 0, ',', '.') }}</div>
+                                <div style="font-size:9px; color:#9ca3af;">de ${{ number_format($svc->subtotal, 0, ',', '.') }} · tercero ${{ number_format($svc->monto_tercero, 0, ',', '.') }}</div>
                             </div>
                         </div>
                         @endforeach

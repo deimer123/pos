@@ -81,6 +81,11 @@ class TallerPanel extends Component
     public string $histDesde              = '';
     public string $histHasta              = '';
 
+    // ── Historial de servicios a terceros
+    public bool   $modalHistorialTerceros = false;
+    public string $histTercDesde          = '';
+    public string $histTercHasta          = '';
+
     // ── Préstamos a mecánicos
     public bool   $modalPrestamo      = false;
     public ?int   $prestamoMecanicoId = null;
@@ -533,6 +538,64 @@ class TallerPanel extends Component
                     'monto_mecanico'   => round((float) $r->subtotal * (100 - (float) ($r->porcentaje_empresa ?? 0)) / 100, 2),
                     'liquidado'        => (bool) $r->fecha_pago,
                     'fecha_pago'       => $r->fecha_pago,
+                ];
+            });
+    }
+
+    // Historial de servicios a terceros (no atados a un mecánico propio) por
+    // rango de fechas, para revisar reclamos: qué se cobró y a qué tercero.
+    public function abrirHistorialTerceros(): void
+    {
+        $this->histTercDesde          = now()->startOfMonth()->toDateString();
+        $this->histTercHasta          = now()->toDateString();
+        $this->modalHistorialTerceros = true;
+    }
+
+    public function historialTerceros(): \Illuminate\Support\Collection
+    {
+        $empresaId = $this->empresaId();
+
+        $q = DB::table('factura_detalles as fd')
+            ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
+            ->leftJoin('products as p', function ($j) use ($empresaId) {
+                $j->on('p.id_producto', '=', 'fd.producto_id')->where('p.empresa_id', '=', $empresaId);
+            })
+            ->where('f.empresa_id', $empresaId)
+            ->where('fd.tipo_servicio', 'tercero');
+
+        if ($this->histTercDesde) $q->whereDate('f.fecha', '>=', $this->histTercDesde);
+        if ($this->histTercHasta) $q->whereDate('f.fecha', '<=', $this->histTercHasta);
+
+        return $q->select([
+                'fd.id',
+                'f.id as factura_id',
+                'f.tipo_factura',
+                'f.factus_number',
+                DB::raw("DATE_FORMAT(f.fecha,'%d/%m/%Y %H:%i') as fecha_fmt"),
+                'fd.descripcion_larga',
+                'fd.subtotal',
+                'fd.porcentaje_empresa',
+                'p.tercero_nombre',
+            ])
+            ->orderByDesc('f.fecha')
+            ->get()
+            ->map(function ($r) {
+                $numeroVisual = ($r->tipo_factura === 'electronica' && filled($r->factus_number))
+                    ? (string) $r->factus_number
+                    : (($r->tipo_factura === 'salida' ? 'SAL-' : 'FAC-') . str_pad((string) $r->factura_id, 6, '0', STR_PAD_LEFT));
+
+                $montoEmpresa = round((float) $r->subtotal * (float) ($r->porcentaje_empresa ?? 0) / 100, 2);
+
+                return (object) [
+                    'id'             => $r->id,
+                    'factura_id'     => $r->factura_id,
+                    'numero_visual'  => $numeroVisual,
+                    'fecha'          => $r->fecha_fmt,
+                    'descripcion'    => $r->descripcion_larga,
+                    'tercero_nombre' => $r->tercero_nombre,
+                    'subtotal'       => (float) $r->subtotal,
+                    'monto_empresa'  => $montoEmpresa,
+                    'monto_tercero'  => round((float) $r->subtotal - $montoEmpresa, 2),
                 ];
             });
     }
