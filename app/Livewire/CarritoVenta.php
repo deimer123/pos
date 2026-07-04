@@ -4166,6 +4166,28 @@ $carteraOtro          = (clone $qPagosCredito)->where('medio_pago','otro')->sum(
         ->where('p.tipo_producto', 'servicio')
         ->sum('fd.subtotal');
 
+    // ----- ITEM MANUAL (codigo 10001): reembolso a terceros sin margen, no
+    // cuenta para nada en el efectivo esperado de la caja de productos. -----
+    $passthroughContadoEfectivo = (float) \Illuminate\Support\Facades\DB::table('factura_detalles as fd')
+        ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
+        ->where('f.empresa_id', $empresaId)
+        ->where('f.user_id', $userId)
+        ->whereBetween('f.fecha', [$inicio, $fin])
+        ->where('f.tipo_pago', 'contado')
+        ->where('f.medio_pago', 'efectivo')
+        ->where('fd.producto_id', '10001')
+        ->sum('fd.subtotal');
+
+    $passthroughContadoTransferencia = (float) \Illuminate\Support\Facades\DB::table('factura_detalles as fd')
+        ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
+        ->where('f.empresa_id', $empresaId)
+        ->where('f.user_id', $userId)
+        ->whereBetween('f.fecha', [$inicio, $fin])
+        ->where('f.tipo_pago', 'contado')
+        ->where('f.medio_pago', 'transferencia')
+        ->where('fd.producto_id', '10001')
+        ->sum('fd.subtotal');
+
     // ----- DOMICILIOS (fees collected by company, to pay domiciliario) -----
     $qDom = \App\Models\Factura::query()
         ->where('empresa_id', $empresaId)
@@ -4199,10 +4221,10 @@ $devolucionesDia = $devolucionesConPago + $devolucionesSinPago; // informativo
 
 // ----- TOTALES DE FLUJO DE CAJA (SOLO PRODUCTOS) -----
 // Efectivo del dÃ­a = ventas contado (efectivo) - servicios (van a caja de mecanicos) + cobros cartera (efectivo) - devoluciones de facturas CON pago
-$efectivo = ($ventasContadoEfectivo - $serviciosContadoEfectivo + $carteraEfectivo + $entradasEfectivo) - $devolucionesConPago - $salidasEfectivo;
+$efectivo = ($ventasContadoEfectivo - $serviciosContadoEfectivo - $passthroughContadoEfectivo + $carteraEfectivo + $entradasEfectivo) - $devolucionesConPago - $salidasEfectivo;
 
     // Transferencia del dÃ­a = ventas contado (transferencia) - servicios + cobros cartera (transferencia)
-    $transferencia = ($ventasContadoTransferencia - $serviciosContadoTransferencia) + $carteraTransferencia + $entradasTransferencia - $salidasTransferencia;
+    $transferencia = ($ventasContadoTransferencia - $serviciosContadoTransferencia - $passthroughContadoTransferencia) + $carteraTransferencia + $entradasTransferencia - $salidasTransferencia;
 
     // Total contado (lo que comparas contra "Monto de cierre")
     $totalContado = $efectivo + $transferencia;
