@@ -594,10 +594,7 @@ if (request()->hasSession() && session()->has('observaciones_guardadas')) {
 
         if (
             !$this->cajaActual &&
-            (
-                $user->hasRole('cajero') ||
-                $user->hasRole('admin_empresa')
-            )
+            $user->hasAnyRole(['cajero', 'admin_empresa', 'taller'])
         ) {
             $this->mostrarModalAbrirCaja = true;
         }
@@ -1943,10 +1940,7 @@ public function borrarPrefacturaConfirmada()
 
 public function confirmarFacturar()
     {
-        if (
-    !auth()->user()->hasRole('cajero') &&
-    !auth()->user()->hasRole('admin_empresa')
-) {
+        if (! auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller'])) {
     abort(403);
 }
 
@@ -2387,6 +2381,8 @@ public function cargarFacturas()
         $query->where('cajero_id', $user->id);
     } elseif ($user->hasRole('vendedor')) {
         $query->where('vendedor_id', $user->id);
+    } elseif ($user->hasRole('taller')) {
+        $query->where('cajero_id', $user->id);
     }
 
     $this->facturas = $query
@@ -3822,10 +3818,7 @@ public function pagarEImprimir(int $facturaId, array $data = [])
     // Dispara evento para mostrar modal de abrir caja (frontend)
     public function abrirCajaModal()
 {
-if (
-    !auth()->user()->hasRole('cajero') &&
-    !auth()->user()->hasRole('admin_empresa')
-) {
+if (! auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller'])) {
     abort(403);
 }
 
@@ -3836,10 +3829,7 @@ if (
     // Dispara evento para confirmar cierre de caja con resumen de ventas
    public function cerrarCajaModal()
 {
-    if (
-    !auth()->user()->hasRole('cajero') &&
-    !auth()->user()->hasRole('admin_empresa')
-) {
+    if (! auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller'])) {
     abort(403);
 }
 
@@ -3916,12 +3906,7 @@ public function confirmarAbrirCaja()
         return;
     }
 
-    if (
-    !auth()->user()->hasAnyRole([
-        'cajero',
-        'admin_empresa'
-    ])
-) {
+    if (! auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller'])) {
     abort(403);
 }
 
@@ -3990,7 +3975,7 @@ public function confirmarCerrarCaja()
 
 public function abrirMovimientoCajaModal(string $tipo = 'salida'): void
 {
-    if (! auth()->user()->hasAnyRole(['cajero', 'admin_empresa'])) {
+    if (! auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller'])) {
         abort(403);
     }
 
@@ -4012,7 +3997,7 @@ public function abrirMovimientoCajaModal(string $tipo = 'salida'): void
 
 public function registrarMovimientoCaja(): void
 {
-    if (! auth()->user()->hasAnyRole(['cajero', 'admin_empresa'])) {
+    if (! auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller'])) {
         abort(403);
     }
 
