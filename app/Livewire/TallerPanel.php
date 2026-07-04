@@ -615,6 +615,17 @@ class TallerPanel extends Component
             ->get(['id_producto', 'descripcion_larga as nombre', 'precio_venta1', 'tipo_servicio', 'porcentaje_empresa', 'tercero_nombre']);
     }
 
+    // Servicios a terceros: no estan atados a ningun mecanico propio, se
+    // gestionan aparte (no aparecen dentro de serviciosDelMecanico porque
+    // su mecanico_id siempre es null).
+    public function serviciosTerceros(): \Illuminate\Support\Collection
+    {
+        return Product::where('empresa_id', $this->empresaId())
+            ->where('tipo_producto', 'servicio')
+            ->where('tipo_servicio', 'tercero')
+            ->get(['id_producto', 'descripcion_larga as nombre', 'precio_venta1', 'tipo_servicio', 'porcentaje_empresa', 'tercero_nombre']);
+    }
+
     public function abrirNuevoServicio(int $mecanicoId): void
     {
         $this->servicioId       = null;
@@ -623,6 +634,18 @@ class TallerPanel extends Component
         $this->svcPrecio        = '';
         $this->svcPctEmpresa    = '0';
         $this->svcTipoServicio  = 'propio';
+        $this->svcTerceroNombre = '';
+        $this->modalServicio    = true;
+    }
+
+    public function abrirNuevoServicioTercero(): void
+    {
+        $this->servicioId       = null;
+        $this->svcMecanicoId    = null;
+        $this->svcNombre        = '';
+        $this->svcPrecio        = '';
+        $this->svcPctEmpresa    = '0';
+        $this->svcTipoServicio  = 'tercero';
         $this->svcTerceroNombre = '';
         $this->modalServicio    = true;
     }

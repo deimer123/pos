@@ -98,6 +98,50 @@
                 </div>
             </div>
 
+            {{-- Servicios a Terceros: independientes de los mecanicos propios --}}
+            <div style="background:white; border-radius:12px; border:1px solid #fde68a; margin-bottom:16px; overflow:hidden;">
+                <div style="background:#fffbeb; padding:12px 16px; display:flex; align-items:center; justify-content:space-between;">
+                    <span style="font-size:13px; font-weight:700; color:#d97706;">🤝 Servicios a Terceros</span>
+                    <button wire:click="abrirNuevoServicioTercero"
+                        style="border:none; border-radius:8px; padding:5px 12px; font-size:11px; font-weight:700; cursor:pointer; background:#d97706; color:white;">
+                        ➕ Nuevo servicio a tercero
+                    </button>
+                </div>
+                <div style="padding:12px 16px;">
+                    @php $serviciosTerceros = $this->serviciosTerceros(); @endphp
+                    @if($serviciosTerceros->isEmpty())
+                        <div style="text-align:center; padding:12px; color:#94a3b8; font-size:12px;">
+                            No hay servicios a terceros. Crea el primero con "➕ Nuevo servicio a tercero".
+                        </div>
+                    @else
+                        <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:8px;">
+                            @foreach($serviciosTerceros as $svc)
+                            <div style="background:white; border:1px solid #fde68a; border-radius:8px; padding:10px;">
+                                <div style="font-weight:700; font-size:13px; color:#1f2937; margin-bottom:4px;">{{ $svc->nombre }}</div>
+                                <div style="font-size:12px; color:#16a34a; font-weight:700;">${{ number_format($svc->precio_venta1, 0, ',', '.') }}</div>
+                                <div style="font-size:10px; color:#f59e0b; margin-top:2px;">🤝 Tercero: {{ $svc->tercero_nombre }}</div>
+                                <div style="font-size:10px; color:#6b7280; margin-top:2px;">
+                                    🏢 Empresa: {{ $svc->porcentaje_empresa ?? 0 }}%
+                                    · 🤝 Tercero: {{ 100 - ($svc->porcentaje_empresa ?? 0) }}%
+                                </div>
+                                <div style="display:flex; gap:6px; margin-top:8px;">
+                                    <button wire:click="abrirEditarServicio({{ $svc->id_producto ?? $svc->id }})"
+                                        style="flex:1; border:none; border-radius:6px; padding:4px; font-size:10px; font-weight:700; cursor:pointer; background:#fffbeb; color:#d97706;">
+                                        ✏️ Editar
+                                    </button>
+                                    <button wire:click="eliminarServicio({{ $svc->id_producto ?? $svc->id }})"
+                                        onclick="return confirm('¿Eliminar este servicio?')"
+                                        style="flex:1; border:none; border-radius:6px; padding:4px; font-size:10px; font-weight:700; cursor:pointer; background:#fef2f2; color:#ef4444;">
+                                        🗑️ Eliminar
+                                    </button>
+                                </div>
+                            </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            </div>
+
             @if($mecanicos->isEmpty())
                 <div style="text-align:center; padding:40px; color:#94a3b8; background:white; border-radius:12px;">
                     <div style="font-size:40px;">👨‍🔧</div>
