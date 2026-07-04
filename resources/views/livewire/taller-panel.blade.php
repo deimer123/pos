@@ -661,7 +661,7 @@
     <div style="position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1150; display:flex; align-items:center; justify-content:center; padding:16px;">
         <div style="background:white; border-radius:16px; width:100%; max-width:680px; max-height:90vh; overflow-y:auto;">
             <div style="background:#7c3aed; color:white; padding:14px 18px; border-radius:16px 16px 0 0; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:1;">
-                <span style="font-size:15px; font-weight:700;">📊 Historial de servicios</span>
+                <span style="font-size:15px; font-weight:700;">📊 Historial de servicios y préstamos</span>
                 <button wire:click="$set('modalHistorialMecanico',false)" style="background:rgba(255,255,255,.2); border:none; color:white; border-radius:99px; width:28px; height:28px; cursor:pointer; font-size:16px; line-height:1;">×</button>
             </div>
             <div style="padding:18px;">
@@ -684,11 +684,37 @@
 
                 @if($historial->isEmpty())
                     <div style="text-align:center; padding:24px; color:#94a3b8; font-size:12px;">
-                        No hay servicios en este rango de fechas.
+                        No hay servicios ni préstamos en este rango de fechas.
                     </div>
                 @else
                     <div style="display:flex; flex-direction:column; gap:8px;">
                         @foreach($historial as $svc)
+                        @if($svc->tipo === 'prestamo')
+                        <div style="border:1px solid #fde68a; background:#fffbeb; border-radius:8px; padding:10px 12px; display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                            <div style="min-width:0;">
+                                <div style="font-weight:700; font-size:13px; color:#92400e; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                    💸 {{ $svc->descripcion }}
+                                </div>
+                                <div style="font-size:10px; color:#6b7280; margin-top:2px;">
+                                    {{ $svc->fecha }}
+                                </div>
+                            </div>
+                            <div style="text-align:right; flex-shrink:0;">
+                                <div style="font-size:13px; font-weight:700; color:#dc2626;">- ${{ number_format($svc->subtotal, 0, ',', '.') }}</div>
+                            </div>
+                            <div style="flex-shrink:0;">
+                                @if($svc->liquidado)
+                                    <span style="font-size:10px; font-weight:700; background:#dcfce7; color:#16a34a; border-radius:99px; padding:3px 10px; white-space:nowrap;">
+                                        ✅ Descontado
+                                    </span>
+                                @else
+                                    <span style="font-size:10px; font-weight:700; background:#fef3c7; color:#92400e; border-radius:99px; padding:3px 10px; white-space:nowrap;">
+                                        ⏳ Pendiente
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+                        @else
                         <div style="border:1px solid #e5e7eb; border-radius:8px; padding:10px 12px; display:flex; align-items:center; justify-content:space-between; gap:10px;">
                             <div style="min-width:0;">
                                 <div style="font-weight:700; font-size:13px; color:#1f2937; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
@@ -714,6 +740,7 @@
                                 @endif
                             </div>
                         </div>
+                        @endif
                         @endforeach
                     </div>
                 @endif

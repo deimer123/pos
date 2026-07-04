@@ -551,19 +551,19 @@ class TallerPanel extends Component
         if ($this->histDesde) $q->whereDate('f.fecha', '>=', $this->histDesde);
         if ($this->histHasta) $q->whereDate('f.fecha', '<=', $this->histHasta);
 
-        return $q->select([
+        $servicios = $q->select([
                 'fd.id',
                 'f.id as factura_id',
                 'f.tipo_factura',
                 'f.factus_number',
                 DB::raw("DATE_FORMAT(f.fecha,'%d/%m/%Y %H:%i') as fecha_fmt"),
+                'f.fecha as fecha_orden',
                 'fd.descripcion_larga',
                 'fd.subtotal',
                 'fd.porcentaje_empresa',
                 'lm.fecha_pago',
                 'lm.estado as liquidacion_estado',
             ])
-            ->orderByDesc('f.fecha')
             ->get()
             ->map(function ($r) {
                 $numeroVisual = ($r->tipo_factura === 'electronica' && filled($r->factus_number))
@@ -571,10 +571,12 @@ class TallerPanel extends Component
                     : (($r->tipo_factura === 'salida' ? 'SAL-' : 'FAC-') . str_pad((string) $r->factura_id, 6, '0', STR_PAD_LEFT));
 
                 return (object) [
+                    'tipo'             => 'servicio',
                     'id'               => $r->id,
                     'factura_id'       => $r->factura_id,
                     'numero_visual'    => $numeroVisual,
                     'fecha'            => $r->fecha_fmt,
+                    'fecha_orden'      => $r->fecha_orden,
                     'descripcion'      => $r->descripcion_larga,
                     'subtotal'         => (float) $r->subtotal,
                     'monto_mecanico'   => round((float) $r->subtotal * (100 - (float) ($r->porcentaje_empresa ?? 0)) / 100, 2),
@@ -582,6 +584,29 @@ class TallerPanel extends Component
                     'fecha_pago'       => $r->fecha_pago,
                 ];
             });
+
+        $qPrestamos = MecanicoPrestamo::where('mecanico_id', $this->histMecanicoId);
+
+        if ($this->histDesde) $qPrestamos->whereDate('fecha', '>=', $this->histDesde);
+        if ($this->histHasta) $qPrestamos->whereDate('fecha', '<=', $this->histHasta);
+
+        $prestamos = $qPrestamos->get()->map(function ($p) {
+            return (object) [
+                'tipo'             => 'prestamo',
+                'id'               => $p->id,
+                'factura_id'       => null,
+                'numero_visual'    => null,
+                'fecha'            => $p->fecha->format('d/m/Y'),
+                'fecha_orden'      => $p->fecha->format('Y-m-d H:i:s'),
+                'descripcion'      => 'Préstamo' . ($p->nota ? ': ' . $p->nota : ''),
+                'subtotal'         => (float) $p->monto,
+                'monto_mecanico'   => -1 * (float) $p->monto,
+                'liquidado'        => $p->estado === 'descontado',
+                'fecha_pago'       => null,
+            ];
+        });
+
+        return $servicios->concat($prestamos)->sortByDesc('fecha_orden')->values();
     }
 
     // Historial de servicios a terceros (no atados a un mecánico propio) por
