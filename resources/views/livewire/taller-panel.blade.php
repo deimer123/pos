@@ -448,6 +448,10 @@
                         </button>
                     </div>
                 </div>
+                @elseif($svcTipoServicio === 'tercero')
+                <div style="margin-bottom:12px; background:#fffbeb; border-radius:8px; padding:8px 12px; font-size:11px; font-weight:700; color:#d97706;">
+                    🤝 Servicio a tercero (externo)
+                </div>
                 @else
                 <div style="margin-bottom:12px; background:#eff6ff; border-radius:8px; padding:8px 12px; font-size:11px; font-weight:700; color:#2563eb;">
                     🔧 Servicio propio de este mecánico

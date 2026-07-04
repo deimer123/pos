@@ -786,7 +786,7 @@ class TallerPanel extends Component
         $this->svcPctEmpresa    = '0';
         $this->svcTipoServicio  = 'tercero';
         $this->svcTerceroNombre = '';
-        $this->svcBloquearTipo  = false;
+        $this->svcBloquearTipo  = true;
         $this->modalServicio    = true;
     }
 
