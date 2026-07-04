@@ -411,7 +411,7 @@
                 {{-- Precio --}}
                 <div style="margin-bottom:12px;">
                     <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Precio de venta *</label>
-                    <input wire:model="svcPrecio" type="number" min="0" placeholder="0"
+                    <input wire:model.live="svcPrecio" type="number" min="0" placeholder="0"
                         style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
                     @error('svcPrecio') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
                 </div>
@@ -460,18 +460,33 @@
                     <input wire:model="svcTerceroNombre" type="text" placeholder="Nombre de quien presta el servicio..."
                         style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
                 </div>
-                {{-- % Empresa para tercero --}}
+
+                {{-- Precio de costo (lo que cobra el tercero) --}}
+                <div style="margin-bottom:12px;">
+                    <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Precio de costo (lo que cobra el tercero)</label>
+                    <input wire:model.live="svcCosto" type="number" min="0" placeholder="0"
+                        style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
+                </div>
+
+                {{-- % Empresa para tercero: calculado a partir de costo y venta --}}
                 <div style="margin-bottom:12px; background:#fffbeb; border-radius:8px; padding:12px;">
-                    <label style="font-size:11px; font-weight:700; color:#d97706; display:block; margin-bottom:4px;">% que queda para la empresa (comisión)</label>
+                    <label style="font-size:11px; font-weight:700; color:#d97706; display:block; margin-bottom:4px;">% que queda para la empresa (calculado)</label>
                     <div style="display:flex; align-items:center; gap:10px;">
-                        <input wire:model.live="svcPctEmpresa" type="range" min="0" max="100" step="5"
+                        <input wire:model="svcPctEmpresa" type="range" min="0" max="100" step="1" disabled
                             style="flex:1; accent-color:#f59e0b;">
                         <span style="font-size:16px; font-weight:900; color:#d97706; min-width:40px; text-align:right;">{{ $svcPctEmpresa }}%</span>
                     </div>
                     <div style="display:flex; justify-content:space-between; font-size:11px; color:#6b7280; margin-top:4px;">
                         <span>🏢 Empresa: {{ $svcPctEmpresa }}%</span>
-                        <span>🤝 Tercero recibe: {{ 100 - (int)$svcPctEmpresa }}%</span>
+                        <span>🤝 Tercero recibe: {{ 100 - (float)$svcPctEmpresa }}%</span>
                     </div>
+                    @if($svcPrecio)
+                    <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:700; margin-top:6px; padding-top:6px; border-top:1px solid #fde68a;">
+                        <span style="color:#d97706;">🏢 ${{ number_format(((float)$svcPrecio - (float)$svcCosto), 0, ',', '.') }}</span>
+                        <span style="color:#16a34a;">🤝 ${{ number_format((float)$svcCosto, 0, ',', '.') }}</span>
+                    </div>
+                    @endif
+                    <div style="font-size:10px; color:#9ca3af; margin-top:4px;">Se calcula solo: (Venta − Costo) / Venta.</div>
                 </div>
                 @endif
 

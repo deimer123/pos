@@ -54,6 +54,7 @@ class TallerPanel extends Component
     public ?int   $svcMecanicoId      = null;
     public string $svcNombre          = '';
     public string $svcPrecio          = '';
+    public string $svcCosto           = '';   // solo para servicios a terceros
     public string $svcPctEmpresa      = '0';
     public string $svcTipoServicio    = 'propio';
     public string $svcTerceroNombre   = '';
@@ -632,6 +633,7 @@ class TallerPanel extends Component
         $this->svcMecanicoId    = $mecanicoId;
         $this->svcNombre        = '';
         $this->svcPrecio        = '';
+        $this->svcCosto         = '';
         $this->svcPctEmpresa    = '0';
         $this->svcTipoServicio  = 'propio';
         $this->svcTerceroNombre = '';
@@ -644,6 +646,7 @@ class TallerPanel extends Component
         $this->svcMecanicoId    = null;
         $this->svcNombre        = '';
         $this->svcPrecio        = '';
+        $this->svcCosto         = '';
         $this->svcPctEmpresa    = '0';
         $this->svcTipoServicio  = 'tercero';
         $this->svcTerceroNombre = '';
@@ -657,10 +660,42 @@ class TallerPanel extends Component
         $this->svcMecanicoId    = $p->mecanico_id;
         $this->svcNombre        = $p->descripcion_larga;
         $this->svcPrecio        = (string) $p->precio_venta1;
+        $this->svcCosto         = (string) ($p->precio_costo ?? 0);
         $this->svcPctEmpresa    = (string) ($p->porcentaje_empresa ?? 0);
         $this->svcTipoServicio  = $p->tipo_servicio ?? 'propio';
         $this->svcTerceroNombre = $p->tercero_nombre ?? '';
         $this->modalServicio    = true;
+    }
+
+    // Para servicios a terceros: el % de la empresa se calcula solo a partir
+    // de precio de costo (lo que cobra el tercero) y precio de venta (lo que
+    // se le cobra al cliente), en vez de moverse a mano con la barra.
+    public function recalcularPctTercero(): void
+    {
+        if ($this->svcTipoServicio !== 'tercero') {
+            return;
+        }
+
+        $venta = (float) $this->svcPrecio;
+        $costo = (float) $this->svcCosto;
+
+        if ($venta <= 0) {
+            $this->svcPctEmpresa = '0';
+            return;
+        }
+
+        $pct = (($venta - $costo) / $venta) * 100;
+        $this->svcPctEmpresa = (string) round(max(0, min(100, $pct)), 2);
+    }
+
+    public function updatedSvcCosto(): void
+    {
+        $this->recalcularPctTercero();
+    }
+
+    public function updatedSvcPrecio(): void
+    {
+        $this->recalcularPctTercero();
     }
 
     public function guardarServicio(): void
@@ -686,7 +721,7 @@ class TallerPanel extends Component
             'tipo_producto'     => 'servicio',
             'tipo_servicio'     => $this->svcTipoServicio,
             'precio_venta1'     => (float) $this->svcPrecio,
-            'precio_costo'      => 0,
+            'precio_costo'      => $this->svcTipoServicio === 'tercero' ? (float) $this->svcCosto : 0,
             'porcentaje_empresa'=> (float) $this->svcPctEmpresa,
             'mecanico_id'       => $this->svcTipoServicio === 'propio' ? $this->svcMecanicoId : null,
             'tercero_nombre'    => $this->svcTipoServicio === 'tercero' ? trim($this->svcTerceroNombre) : null,
