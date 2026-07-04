@@ -75,6 +75,12 @@ class TallerPanel extends Component
     public float  $liqPrestamosPendientes = 0;
     public float  $liqMontoNeto          = 0;
 
+    // ── Historial de servicios por mecánico (para revisar reclamos, cobrado/pendiente)
+    public bool   $modalHistorialMecanico = false;
+    public ?int   $histMecanicoId         = null;
+    public string $histDesde              = '';
+    public string $histHasta              = '';
+
     // ── Préstamos a mecánicos
     public bool   $modalPrestamo      = false;
     public ?int   $prestamoMecanicoId = null;
@@ -394,6 +400,61 @@ class TallerPanel extends Component
             'porcentaje'      => $pct,
             'count'           => (int) ($rows->total_count ?? 0),
         ];
+    }
+
+    // Historial de servicios de un mecanico (liquidados y pendientes) por rango
+    // de fechas, para revisar reclamos: que se cobro (ya liquidado) y que no.
+    public function abrirHistorialMecanico(int $mecanicoId): void
+    {
+        $this->histMecanicoId          = $mecanicoId;
+        $this->histDesde               = now()->startOfMonth()->toDateString();
+        $this->histHasta               = now()->toDateString();
+        $this->modalHistorialMecanico  = true;
+    }
+
+    public function historialMecanico(): \Illuminate\Support\Collection
+    {
+        if (! $this->histMecanicoId) {
+            return collect();
+        }
+
+        $empresaId = $this->empresaId();
+
+        $q = DB::table('factura_detalles as fd')
+            ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
+            ->leftJoin('liquidacion_mecanico_detalles as lmd', 'lmd.factura_detalle_id', '=', 'fd.id')
+            ->leftJoin('liquidaciones_mecanico as lm', 'lm.id', '=', 'lmd.liquidacion_id')
+            ->where('f.empresa_id', $empresaId)
+            ->where('fd.mecanico_id', $this->histMecanicoId)
+            ->where('fd.tipo_servicio', 'propio');
+
+        if ($this->histDesde) $q->whereDate('f.fecha', '>=', $this->histDesde);
+        if ($this->histHasta) $q->whereDate('f.fecha', '<=', $this->histHasta);
+
+        return $q->select([
+                'fd.id',
+                'f.id as factura_id',
+                'f.numero_visual',
+                DB::raw("DATE_FORMAT(f.fecha,'%d/%m/%Y %H:%i') as fecha_fmt"),
+                'fd.descripcion_larga',
+                'fd.subtotal',
+                'fd.porcentaje_empresa',
+                'lm.fecha_pago',
+                'lm.estado as liquidacion_estado',
+            ])
+            ->orderByDesc('f.fecha')
+            ->get()
+            ->map(fn($r) => (object) [
+                'id'               => $r->id,
+                'factura_id'       => $r->factura_id,
+                'numero_visual'    => $r->numero_visual,
+                'fecha'            => $r->fecha_fmt,
+                'descripcion'      => $r->descripcion_larga,
+                'subtotal'         => (float) $r->subtotal,
+                'monto_mecanico'   => round((float) $r->subtotal * (100 - (float) ($r->porcentaje_empresa ?? 0)) / 100, 2),
+                'liquidado'        => (bool) $r->fecha_pago,
+                'fecha_pago'       => $r->fecha_pago,
+            ]);
     }
 
     public function abrirLiquidacion(int $mecanicoId): void

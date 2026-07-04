@@ -182,6 +182,10 @@
                                         color:{{ $svcExpandMecanico === $mec->id ? '#2563eb' : '#374151' }}; white-space:nowrap;">
                                     🛠️ Servicios
                                 </button>
+                                <button wire:click="abrirHistorialMecanico({{ $mec->id }})"
+                                    style="flex:1; border:none; border-bottom:1px solid #f3f4f6; padding:8px 16px; font-size:11px; font-weight:700; cursor:pointer; background:white; color:#7c3aed; white-space:nowrap;">
+                                    📊 Historial
+                                </button>
                                 <button wire:click="abrirPrestamo({{ $mec->id }})"
                                     style="flex:1; border:none; border-bottom:1px solid #f3f4f6; padding:8px 16px; font-size:11px; font-weight:700; cursor:pointer; background:white; color:#d97706; white-space:nowrap;">
                                     💸 Préstamo
@@ -631,6 +635,73 @@
                     </button>
                     @endif
                 </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Modal Historial de servicios por mecánico --}}
+    @if($modalHistorialMecanico)
+    <div style="position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1150; display:flex; align-items:center; justify-content:center; padding:16px;">
+        <div style="background:white; border-radius:16px; width:100%; max-width:680px; max-height:90vh; overflow-y:auto;">
+            <div style="background:#7c3aed; color:white; padding:14px 18px; border-radius:16px 16px 0 0; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:1;">
+                <span style="font-size:15px; font-weight:700;">📊 Historial de servicios</span>
+                <button wire:click="$set('modalHistorialMecanico',false)" style="background:rgba(255,255,255,.2); border:none; color:white; border-radius:99px; width:28px; height:28px; cursor:pointer; font-size:16px; line-height:1;">×</button>
+            </div>
+            <div style="padding:18px;">
+
+                {{-- Rango de fechas --}}
+                <div style="display:flex; gap:10px; align-items:end; margin-bottom:14px; flex-wrap:wrap;">
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Desde</label>
+                        <input wire:model.live="histDesde" type="date"
+                            style="height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px;">
+                    </div>
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Hasta</label>
+                        <input wire:model.live="histHasta" type="date"
+                            style="height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px;">
+                    </div>
+                </div>
+
+                @php $historial = $this->historialMecanico(); @endphp
+
+                @if($historial->isEmpty())
+                    <div style="text-align:center; padding:24px; color:#94a3b8; font-size:12px;">
+                        No hay servicios en este rango de fechas.
+                    </div>
+                @else
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        @foreach($historial as $svc)
+                        <div style="border:1px solid #e5e7eb; border-radius:8px; padding:10px 12px; display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                            <div style="min-width:0;">
+                                <div style="font-weight:700; font-size:13px; color:#1f2937; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                    {{ $svc->descripcion }}
+                                </div>
+                                <div style="font-size:10px; color:#6b7280; margin-top:2px;">
+                                    {{ $svc->fecha }} · {{ $svc->numero_visual }}
+                                </div>
+                            </div>
+                            <div style="text-align:right; flex-shrink:0;">
+                                <div style="font-size:13px; font-weight:700; color:#16a34a;">${{ number_format($svc->monto_mecanico, 0, ',', '.') }}</div>
+                                <div style="font-size:9px; color:#9ca3af;">de ${{ number_format($svc->subtotal, 0, ',', '.') }}</div>
+                            </div>
+                            <div style="flex-shrink:0;">
+                                @if($svc->liquidado)
+                                    <span style="font-size:10px; font-weight:700; background:#dcfce7; color:#16a34a; border-radius:99px; padding:3px 10px; white-space:nowrap;">
+                                        ✅ Liquidado {{ $svc->fecha_pago ? \Carbon\Carbon::parse($svc->fecha_pago)->format('d/m/Y') : '' }}
+                                    </span>
+                                @else
+                                    <span style="font-size:10px; font-weight:700; background:#fef3c7; color:#92400e; border-radius:99px; padding:3px 10px; white-space:nowrap;">
+                                        ⏳ Pendiente
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                @endif
+
             </div>
         </div>
     </div>
