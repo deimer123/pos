@@ -58,6 +58,7 @@ class TallerPanel extends Component
     public string $svcPctEmpresa      = '0';
     public string $svcTipoServicio    = 'propio';
     public string $svcTerceroNombre   = '';
+    public bool   $svcBloquearTipo    = false;   // true = creando desde un mecanico, no puede cambiarse a tercero
     public ?int   $svcExpandMecanico  = null;   // mecánico cuya lista de servicios está expandida
 
     // ── Liquidación
@@ -637,6 +638,7 @@ class TallerPanel extends Component
         $this->svcPctEmpresa    = '0';
         $this->svcTipoServicio  = 'propio';
         $this->svcTerceroNombre = '';
+        $this->svcBloquearTipo  = true;
         $this->modalServicio    = true;
     }
 
@@ -650,12 +652,14 @@ class TallerPanel extends Component
         $this->svcPctEmpresa    = '0';
         $this->svcTipoServicio  = 'tercero';
         $this->svcTerceroNombre = '';
+        $this->svcBloquearTipo  = false;
         $this->modalServicio    = true;
     }
 
     public function abrirEditarServicio(int $productoId): void
     {
         $p = Product::where('empresa_id', $this->empresaId())->where('id_producto', $productoId)->firstOrFail();
+        $this->svcBloquearTipo  = false;
         $this->servicioId       = $productoId;
         $this->svcMecanicoId    = $p->mecanico_id;
         $this->svcNombre        = $p->descripcion_larga;

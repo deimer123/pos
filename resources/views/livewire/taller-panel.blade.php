@@ -398,7 +398,10 @@
                 <span style="font-size:15px; font-weight:700;">{{ $servicioId ? '✏️ Editar servicio' : '➕ Nuevo servicio' }}</span>
                 <button wire:click="$set('modalServicio',false)" style="background:rgba(255,255,255,.2); border:none; color:white; border-radius:99px; width:28px; height:28px; cursor:pointer; font-size:16px; line-height:1;">×</button>
             </div>
-            <div style="padding:18px;">
+            <div style="padding:18px;" x-data="{
+                    formato(v) { const limpio = String(v || '').replace(/\D/g, ''); return limpio ? Number(limpio).toLocaleString('es-CO') : ''; },
+                    limpiar(v) { return String(v || '').replace(/\D/g, ''); }
+                }">
 
                 {{-- Nombre --}}
                 <div style="margin-bottom:12px;">
@@ -411,12 +414,15 @@
                 {{-- Precio --}}
                 <div style="margin-bottom:12px;">
                     <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Precio de venta *</label>
-                    <input wire:model.live="svcPrecio" type="number" min="0" placeholder="0"
+                    <input type="text" inputmode="numeric" placeholder="0"
+                        value="{{ $svcPrecio !== '' ? number_format((float) $svcPrecio, 0, ',', '.') : '' }}"
+                        x-on:input="$event.target.value = formato($event.target.value); $wire.set('svcPrecio', limpiar($event.target.value))"
                         style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
                     @error('svcPrecio') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
                 </div>
 
                 {{-- Tipo de servicio --}}
+                @if(! $svcBloquearTipo)
                 <div style="margin-bottom:12px;">
                     <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Tipo de servicio *</label>
                     <div style="display:flex; gap:8px;">
@@ -432,6 +438,11 @@
                         </button>
                     </div>
                 </div>
+                @else
+                <div style="margin-bottom:12px; background:#eff6ff; border-radius:8px; padding:8px 12px; font-size:11px; font-weight:700; color:#2563eb;">
+                    🔧 Servicio propio de este mecánico
+                </div>
+                @endif
 
                 @if($svcTipoServicio === 'propio')
                 {{-- % Empresa (propio) --}}
@@ -464,7 +475,9 @@
                 {{-- Precio de costo (lo que cobra el tercero) --}}
                 <div style="margin-bottom:12px;">
                     <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Precio de costo (lo que cobra el tercero)</label>
-                    <input wire:model.live="svcCosto" type="number" min="0" placeholder="0"
+                    <input type="text" inputmode="numeric" placeholder="0"
+                        value="{{ $svcCosto !== '' ? number_format((float) $svcCosto, 0, ',', '.') : '' }}"
+                        x-on:input="$event.target.value = formato($event.target.value); $wire.set('svcCosto', limpiar($event.target.value))"
                         style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
                 </div>
 
