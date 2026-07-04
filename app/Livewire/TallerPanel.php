@@ -409,11 +409,16 @@ class TallerPanel extends Component
         $hasta = $this->cajaMecHasta ?: now()->toDateString();
 
         // Servicios propios AÚN NO liquidados (sin límite de fecha), por
-        // medio de pago.
+        // medio de pago. Se une con mecanicos (scoped por empresa) para que
+        // los totales SIEMPRE coincidan exactamente con el desglose por
+        // mecánico de abajo: un fd.mecanico_id huérfano o de otro registro
+        // no debe sumar en un lado y desaparecer en el otro.
         $qPropioPendiente = DB::table('factura_detalles as fd')
             ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
+            ->join('mecanicos as m', 'm.id', '=', 'fd.mecanico_id')
             ->leftJoin('liquidacion_mecanico_detalles as lmd', 'lmd.factura_detalle_id', '=', 'fd.id')
             ->where('f.empresa_id', $empresaId)
+            ->where('m.empresa_id', $empresaId)
             ->where('fd.tipo_servicio', 'propio')
             ->whereNull('lmd.id');
 
@@ -425,8 +430,6 @@ class TallerPanel extends Component
 
         // Desglose por mecánico propio: solo servicios AÚN NO liquidados.
         $porMecanico = (clone $qPropioPendiente)
-            ->join('mecanicos as m', 'm.id', '=', 'fd.mecanico_id')
-            ->where('m.empresa_id', $empresaId)
             ->groupBy('fd.mecanico_id', 'm.nombre')
             ->orderByDesc(DB::raw('SUM(fd.subtotal)'))
             ->get(['fd.mecanico_id', 'm.nombre', DB::raw('SUM(fd.subtotal) as monto')])
