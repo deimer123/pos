@@ -43,7 +43,8 @@ class VentasReportStats extends BaseWidget
             ->sum('fd.subtotal');
 
         $totalGeneral = (float) (clone $query)->sum('total');
-        $ventas    = $totalGeneral - $totalServicios;
+        $totalPassthrough = $this->passthroughTotal($facturaIds);
+        $ventas    = $totalGeneral - $totalServicios - $totalPassthrough;
 
         // Contado y crédito solo de productos
         $contadoTotal = (float) (clone $query)->where('tipo_pago', 'contado')->sum('total');
@@ -62,8 +63,11 @@ class VentasReportStats extends BaseWidget
 
         $serviciosCredito = $totalServicios - $serviciosContado;
 
-        $contado = $contadoTotal - $serviciosContado;
-        $credito = $creditoTotal - $serviciosCredito;
+        $passthroughContado = $this->passthroughTotal($facturaIds, 'contado');
+        $passthroughCredito = $totalPassthrough - $passthroughContado;
+
+        $contado = $contadoTotal - $serviciosContado - $passthroughContado;
+        $credito = $creditoTotal - $serviciosCredito - $passthroughCredito;
 
         $porCobrar = (float) (clone $query)
             ->where('tipo_pago', 'credito')
@@ -119,10 +123,17 @@ class VentasReportStats extends BaseWidget
 
     private function recibidoPorMedio($query, string $medioPago): float
     {
+        $facturaIdsContadoMedio = (clone $query)
+            ->where('tipo_pago', 'contado')
+            ->where('medio_pago', $medioPago)
+            ->pluck('id');
+
         $ventasContado = (float) (clone $query)
             ->where('tipo_pago', 'contado')
             ->where('medio_pago', $medioPago)
             ->sum('total');
+
+        $passthroughContado = $this->passthroughTotal($facturaIdsContadoMedio);
 
         $facturaIdsCredito = (clone $query)
             ->where('tipo_pago', 'credito')
@@ -133,7 +144,22 @@ class VentasReportStats extends BaseWidget
             ->whereIn('factura_id', $facturaIdsCredito)
             ->sum('monto');
 
-        return $ventasContado + $abonosCredito;
+        return $ventasContado - $passthroughContado + $abonosCredito;
+    }
+
+    // Item manual (codigo 10001): reembolso a terceros sin margen, no cuenta como venta propia.
+    private function passthroughTotal($facturaIds, ?string $tipoPago = null): float
+    {
+        if ($facturaIds->isEmpty()) {
+            return 0.0;
+        }
+
+        return (float) DB::table('factura_detalles as fd')
+            ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
+            ->whereIn('fd.factura_id', $facturaIds)
+            ->where('fd.producto_id', '10001')
+            ->when($tipoPago, fn ($q) => $q->where('f.tipo_pago', $tipoPago))
+            ->sum('fd.subtotal');
     }
 
     private function utilidad($query): float
@@ -144,7 +170,8 @@ class VentasReportStats extends BaseWidget
             return 0;
         }
 
-        // Solo productos (excluir servicios — su costo es 0 e inflarían la utilidad)
+        // Solo productos (excluir servicios y el item manual 10001 — su costo real
+        // no esta en precio_costo del producto y no debe contar como ganancia)
         return (float) DB::table('factura_detalles as fd')
             ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
             ->join('products as p', function ($join) {
@@ -153,6 +180,7 @@ class VentasReportStats extends BaseWidget
             })
             ->whereIn('fd.factura_id', $facturaIds)
             ->where('p.tipo_producto', '!=', 'servicio')
+            ->where('fd.producto_id', '!=', '10001')
             ->sum(DB::raw('
                 ((fd.cantidad - COALESCE(fd.devuelto_cantidad, 0)) * fd.precio)
                 -
