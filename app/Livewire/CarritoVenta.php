@@ -2139,7 +2139,7 @@ public function facturarConfirmada(array $data = [])
                 'mecanico_id'        => $datosServicio['mecanico_id'] ?? null,
             ]);
 
-if ($producto && $producto->tipo_producto !== 'servicio') {
+if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->id_producto !== '10001') {
 
     $stockAnterior = (float)$producto->existencias;
 
@@ -2676,7 +2676,7 @@ public function facturarEImprimir(array $data = [])
                 'mecanico_id'        => $datosServicio['mecanico_id'] ?? null,
             ]);
 
-if ($producto && $producto->tipo_producto !== 'servicio') {
+if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->id_producto !== '10001') {
 
     $stockAnterior = (float)$producto->existencias;
 
@@ -3050,7 +3050,7 @@ public function confirmarDevolucion()
     ->where('id_producto', $row['producto_id'])
     ->first();
 
-if ($producto && $producto->tipo_producto !== 'servicio') {
+if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->id_producto !== '10001') {
 
     $stockAnterior = $producto->existencias;
 
