@@ -1363,15 +1363,15 @@
                                         ${{ number_format($preciosBase[$id] ?? ($item['precio'] ?? 0), 0, ',', '.') }}
                                     </td>
                                     <td class="px-2 p-2 border py-2 text-center">
-                                        <input type="number" step="1" x-ref="nuevoPrecio{{ $id }}"
-                                            x-model.number="nuevoPrecio"
+                                        <input type="text" inputmode="numeric" x-ref="nuevoPrecio{{ $id }}"
+                                            :value="nuevoPrecio.toLocaleString('es-CO')"
                                             @input="
-                            nuevoPrecio = Math.round(nuevoPrecio);
+                            nuevoPrecio = parseInt($event.target.value.replace(/\D/g, '')) || 0;
+                            $event.target.value = nuevoPrecio.toLocaleString('es-CO');
                             recalculaPorPrecio();
                             $dispatch('recalcular-total');
                         "
                                             @blur="
-                            nuevoPrecio = Math.round(nuevoPrecio);
                             if (nuevoPrecio < costoMasIva) {
                                 nuevoPrecio = Math.round(costoMasIva);
                             }
@@ -1425,10 +1425,10 @@
                             const key = tr.getAttribute('wire:key').replace('carrito-', '');
                             const nuevo = tr.querySelector('input[x-ref^=nuevoPrecio]')?.value;
                             const desc = tr.querySelector('input[x-ref^=descuento]')?.value;
-                            
+
                             if (key) {
                                 cambios[key] = {
-                                    nuevo_precio: parseFloat(nuevo) || 0,
+                                    nuevo_precio: parseInt((nuevo || '').replace(/\D/g, '')) || 0,
                                     descuento: parseFloat(desc) || 0
                                 };
                             }
