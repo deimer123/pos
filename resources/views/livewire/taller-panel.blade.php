@@ -790,7 +790,7 @@
             </div>
             <div style="padding:18px;">
 
-                <div style="display:flex; gap:10px; align-items:end; margin-bottom:14px; flex-wrap:wrap;">
+                <div style="display:flex; gap:10px; align-items:end; margin-bottom:6px; flex-wrap:wrap;">
                     <div>
                         <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Desde</label>
                         <input wire:model.live="cajaMecDesde" type="date"
@@ -802,10 +802,11 @@
                             style="height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px;">
                     </div>
                 </div>
+                <div style="font-size:9px; color:#9ca3af; margin-bottom:14px;">Este rango solo aplica a los servicios de terceros (no tienen liquidación formal). Lo demás es el saldo pendiente actual, sin importar la fecha.</div>
 
                 @php $resumenCajaMec = $this->calcularCajaMecanicos(); @endphp
 
-                {{-- Servicios AÚN NO liquidados en el rango, por mecánico y por terceros --}}
+                {{-- Servicios AÚN NO liquidados, por mecánico y por tercero --}}
                 <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:12px; font-size:12px; margin-bottom:10px;">
                     <div style="font-size:10px; color:#2563eb; text-transform:uppercase; font-weight:700; margin-bottom:6px;">Servicios sin liquidar, por mecánico</div>
                     @forelse($resumenCajaMec['por_mecanico'] as $pm)
@@ -814,12 +815,18 @@
                             <span class="font-semibold">${{ number_format($pm['monto'], 0, ',', '.') }}</span>
                         </div>
                     @empty
-                        <div style="color:#94a3b8; font-size:11px;">Sin servicios propios pendientes en este rango.</div>
+                        <div style="color:#94a3b8; font-size:11px;">Sin servicios propios pendientes.</div>
                     @endforelse
-                    <div style="display:flex; justify-content:space-between; padding:2px 0; margin-top:4px; border-top:1px dashed #bfdbfe; padding-top:6px;">
-                        <span>🤝 Terceros (ganancia empresa)</span>
-                        <span class="font-semibold">${{ number_format($resumenCajaMec['terceros_monto'], 0, ',', '.') }}</span>
-                    </div>
+
+                    <div style="font-size:10px; color:#d97706; text-transform:uppercase; font-weight:700; margin:10px 0 6px; border-top:1px dashed #bfdbfe; padding-top:8px;">Terceros (ganancia empresa) en el rango</div>
+                    @forelse($resumenCajaMec['por_tercero'] as $pt)
+                        <div style="display:flex; justify-content:space-between; padding:2px 0;">
+                            <span>🤝 {{ $pt['nombre'] }}</span>
+                            <span class="font-semibold">${{ number_format($pt['monto'], 0, ',', '.') }}</span>
+                        </div>
+                    @empty
+                        <div style="color:#94a3b8; font-size:11px;">Sin servicios a terceros en este rango.</div>
+                    @endforelse
                     <div style="font-size:9px; color:#9ca3af; margin-top:4px;">No incluye servicios que ya fueron liquidados al mecánico.</div>
                 </div>
 
@@ -828,7 +835,7 @@
                     <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:12px; text-align:center;">
                         <div style="font-size:10px; color:#16a34a; text-transform:uppercase; font-weight:700;">Ganancia empresa</div>
                         <div style="font-size:18px; font-weight:900; color:#16a34a; margin-top:2px;">${{ number_format($resumenCajaMec['ganancia_total'], 0, ',', '.') }}</div>
-                        <div style="font-size:9px; color:#9ca3af; margin-top:2px;">Solo servicios sin liquidar del rango</div>
+                        <div style="font-size:9px; color:#9ca3af; margin-top:2px;">Servicios sin liquidar + terceros del rango</div>
                     </div>
                     <div style="background:#fef3c7; border:1px solid #fde68a; border-radius:10px; padding:12px; text-align:center;">
                         <div style="font-size:10px; color:#92400e; text-transform:uppercase; font-weight:700;">Servicios por liquidar</div>
@@ -839,14 +846,14 @@
                 <div style="font-size:9px; color:#9ca3af; margin-bottom:10px;">Los valores ya liquidados se consultan en el "📊 Historial" de cada mecánico o de terceros.</div>
 
                 <div style="background:#faf5ff; border:1px solid #e9d5ff; border-radius:10px; padding:12px; font-size:12px;">
-                    <div style="font-size:10px; color:#7c3aed; text-transform:uppercase; font-weight:700; margin-bottom:4px;">Cierre de caja (efectivo) — cobrado en el rango</div>
+                    <div style="font-size:10px; color:#7c3aed; text-transform:uppercase; font-weight:700; margin-bottom:4px;">Cierre de caja (efectivo) — sin liquidar</div>
                     <div style="display:flex; justify-content:space-between;"><span>Efectivo</span><span class="font-semibold">${{ number_format($resumenCajaMec['servicios_efectivo'], 0, ',', '.') }}</span></div>
                     <div style="display:flex; justify-content:space-between;"><span>Transferencia</span><span class="font-semibold">${{ number_format($resumenCajaMec['servicios_transferencia'], 0, ',', '.') }}</span></div>
                     <div style="display:flex; justify-content:space-between;"><span>Crédito</span><span class="font-semibold">${{ number_format($resumenCajaMec['servicios_credito'], 0, ',', '.') }}</span></div>
 
-                    <div style="font-size:10px; color:#7c3aed; text-transform:uppercase; font-weight:700; margin:10px 0 4px;">Pagado a mecánicos (liquidaciones + préstamos)</div>
-                    <div style="display:flex; justify-content:space-between;"><span>Efectivo</span><span class="font-semibold text-red-700" style="color:#b91c1c;">- ${{ number_format($resumenCajaMec['pagado_efectivo'], 0, ',', '.') }}</span></div>
-                    <div style="display:flex; justify-content:space-between;"><span>Transferencia</span><span class="font-semibold" style="color:#b91c1c;">- ${{ number_format($resumenCajaMec['pagado_transferencia'], 0, ',', '.') }}</span></div>
+                    <div style="font-size:10px; color:#7c3aed; text-transform:uppercase; font-weight:700; margin:10px 0 4px;">Préstamos pendientes a mecánicos</div>
+                    <div style="display:flex; justify-content:space-between;"><span>Efectivo</span><span class="font-semibold" style="color:#b91c1c;">- ${{ number_format($resumenCajaMec['prestamos_pendientes'], 0, ',', '.') }}</span></div>
+                    <div style="font-size:9px; color:#9ca3af; margin-top:2px;">Ya salieron del cajón como adelanto, aunque el servicio no se haya liquidado.</div>
 
                     <div style="border-top:1px solid #e9d5ff; margin-top:8px; padding-top:8px; display:flex; justify-content:space-between;">
                         <span style="font-weight:700;">Efectivo esperado</span>

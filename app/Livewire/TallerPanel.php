@@ -384,10 +384,10 @@ class TallerPanel extends Component
         ];
     }
 
-    // ── Cierre de Caja de Mecánicos: servicios propios + terceros cobrados en
-    // el POS y lo pagado a mecánicos (liquidaciones + préstamos) en un rango
-    // de fechas. Es aparte del cierre de caja de productos del POS, porque el
-    // dinero de servicios va a un cajón/caja fisica distinta.
+    // ── Cierre de Caja de Mecánicos: saldo pendiente de servicios propios sin
+    // liquidar y de terceros en el rango, menos préstamos pendientes. Es
+    // aparte del cierre de caja de productos del POS, porque el dinero de
+    // servicios va a un cajón/caja física distinta.
     public function abrirCajaMecanicos(): void
     {
         $this->cajaMecDesde       = now()->startOfDay()->toDateString();
@@ -399,100 +399,94 @@ class TallerPanel extends Component
     public function calcularCajaMecanicos(): array
     {
         $empresaId = $this->empresaId();
+        // Los servicios propios sin liquidar y los préstamos pendientes son
+        // saldos acumulados: no dependen del rango de fechas, para no
+        // mezclar "cobrado en el rango" con pagos que en realidad cubren
+        // trabajo de otros días. El rango solo se usa para los servicios a
+        // terceros, que no tienen un paso de liquidación formal y por eso
+        // necesitan un corte de fechas para no acumularse indefinidamente.
         $desde = $this->cajaMecDesde ?: now()->startOfDay()->toDateString();
         $hasta = $this->cajaMecHasta ?: now()->toDateString();
 
-        // Para servicios a terceros solo cuenta la ganancia de la empresa
-        // (venta - costo): el resto es plata que pasa directo al tercero y
-        // nunca entra a esta caja. Para servicios propios cuenta el valor
-        // completo cobrado (la parte del mecánico se descuenta aparte, como
-        // "pagado a mecánicos", cuando se liquida).
-        $montoCobradoSql = "SUM(CASE WHEN fd.tipo_servicio = 'tercero' THEN fd.subtotal * COALESCE(fd.porcentaje_empresa, 0) / 100 ELSE fd.subtotal END)";
-
-        $qServicios = DB::table('factura_detalles as fd')
+        // Servicios propios AÚN NO liquidados (sin límite de fecha), por
+        // medio de pago.
+        $qPropioPendiente = DB::table('factura_detalles as fd')
             ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
-            ->join('products as p', function ($j) use ($empresaId) {
-                $j->on('p.id_producto', '=', 'fd.producto_id')->where('p.empresa_id', '=', $empresaId);
-            })
-            ->where('f.empresa_id', $empresaId)
-            ->where('p.tipo_producto', 'servicio')
-            ->whereDate('f.fecha', '>=', $desde)
-            ->whereDate('f.fecha', '<=', $hasta);
-
-        $serviciosEfectivo      = (float) ((clone $qServicios)->where('f.tipo_pago', 'contado')->where('f.medio_pago', 'efectivo')->rawValue($montoCobradoSql) ?? 0);
-        $serviciosTransferencia = (float) ((clone $qServicios)->where('f.tipo_pago', 'contado')->where('f.medio_pago', 'transferencia')->rawValue($montoCobradoSql) ?? 0);
-        $serviciosCredito       = (float) ((clone $qServicios)->where('f.tipo_pago', 'credito')->rawValue($montoCobradoSql) ?? 0);
-        $serviciosTotal         = $serviciosEfectivo + $serviciosTransferencia + $serviciosCredito;
-
-        $qPagos = Gasto::where('empresa_id', $empresaId)
-            ->whereIn('categoria', ['liquidacion_mecanico', 'prestamo_mecanico'])
-            ->whereDate('fecha', '>=', $desde)
-            ->whereDate('fecha', '<=', $hasta);
-
-        $pagadoEfectivo      = (float) (clone $qPagos)->where('metodo_pago', 'Efectivo')->sum('monto');
-        $pagadoTransferencia = (float) (clone $qPagos)->whereIn('metodo_pago', ['Transferencia', 'Nequi'])->sum('monto');
-        $pagadoTotal         = $pagadoEfectivo + $pagadoTransferencia;
-
-        $efectivo = (float) $serviciosEfectivo - $pagadoEfectivo;
-        $transferencia = (float) $serviciosTransferencia - $pagadoTransferencia;
-
-        // Desglose por mecánico propio: solo servicios AÚN NO liquidados
-        // (no queremos que se acumule la ganancia de servicios que ya se
-        // le pagaron al mecánico en una liquidación anterior).
-        $porMecanico = DB::table('factura_detalles as fd')
-            ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
-            ->join('mecanicos as m', 'm.id', '=', 'fd.mecanico_id')
             ->leftJoin('liquidacion_mecanico_detalles as lmd', 'lmd.factura_detalle_id', '=', 'fd.id')
             ->where('f.empresa_id', $empresaId)
-            ->where('m.empresa_id', $empresaId)
             ->where('fd.tipo_servicio', 'propio')
-            ->whereNull('lmd.id')
-            ->whereDate('f.fecha', '>=', $desde)
-            ->whereDate('f.fecha', '<=', $hasta)
+            ->whereNull('lmd.id');
+
+        $propioEfectivo      = (float) ((clone $qPropioPendiente)->where('f.tipo_pago', 'contado')->where('f.medio_pago', 'efectivo')->rawValue('SUM(fd.subtotal)') ?? 0);
+        $propioTransferencia = (float) ((clone $qPropioPendiente)->where('f.tipo_pago', 'contado')->where('f.medio_pago', 'transferencia')->rawValue('SUM(fd.subtotal)') ?? 0);
+        $propioCredito       = (float) ((clone $qPropioPendiente)->where('f.tipo_pago', 'credito')->rawValue('SUM(fd.subtotal)') ?? 0);
+
+        $propioGanancia = (float) ((clone $qPropioPendiente)->rawValue('SUM(fd.subtotal * COALESCE(fd.porcentaje_empresa, 0) / 100)') ?? 0);
+
+        // Desglose por mecánico propio: solo servicios AÚN NO liquidados.
+        $porMecanico = (clone $qPropioPendiente)
+            ->join('mecanicos as m', 'm.id', '=', 'fd.mecanico_id')
+            ->where('m.empresa_id', $empresaId)
             ->groupBy('fd.mecanico_id', 'm.nombre')
             ->orderByDesc(DB::raw('SUM(fd.subtotal)'))
             ->get(['fd.mecanico_id', 'm.nombre', DB::raw('SUM(fd.subtotal) as monto')])
             ->map(fn ($r) => ['mecanico_id' => $r->mecanico_id, 'nombre' => $r->nombre, 'monto' => (float) $r->monto]);
 
-        // Ganancia de la empresa en el rango: para propio, el % de empresa
-        // sobre lo cobrado SOLO de servicios aún no liquidados; para
-        // tercero, el "cobrado" ya es solo la ganancia (ver $montoCobradoSql
-        // arriba) y no tiene liquidación formal.
-        $propioGanancia = (float) (DB::table('factura_detalles as fd')
+        // Terceros: solo cuenta la ganancia de la empresa (venta - costo),
+        // en el rango seleccionado. No tienen liquidación formal, por eso sí
+        // se acotan por fecha.
+        $montoTerceroSql = 'SUM(fd.subtotal * COALESCE(fd.porcentaje_empresa, 0) / 100)';
+
+        $qTerceros = DB::table('factura_detalles as fd')
             ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
-            ->leftJoin('liquidacion_mecanico_detalles as lmd', 'lmd.factura_detalle_id', '=', 'fd.id')
+            ->leftJoin('products as p', function ($j) use ($empresaId) {
+                $j->on('p.id_producto', '=', 'fd.producto_id')->where('p.empresa_id', '=', $empresaId);
+            })
             ->where('f.empresa_id', $empresaId)
-            ->where('fd.tipo_servicio', 'propio')
-            ->whereNull('lmd.id')
-            ->whereDate('f.fecha', '>=', $desde)
-            ->whereDate('f.fecha', '<=', $hasta)
-            ->rawValue('SUM(fd.subtotal * COALESCE(fd.porcentaje_empresa, 0) / 100)') ?? 0);
-
-        $tercerosMonto = (float) ((clone $qServicios)
             ->where('fd.tipo_servicio', 'tercero')
-            ->rawValue($montoCobradoSql) ?? 0);
+            ->whereDate('f.fecha', '>=', $desde)
+            ->whereDate('f.fecha', '<=', $hasta);
 
-        // Servicios por liquidar: saldo pendiente actual (no depende del
-        // rango de fechas seleccionado, es un saldo acumulado). El detalle
-        // de qué ya se liquidó se consulta en el Historial de cada mecánico.
-        $pendienteLiquidar = (float) $this->getResumenMecanicosProperty()['a_liquidar_neto'];
+        $tercerosEfectivo      = (float) ((clone $qTerceros)->where('f.tipo_pago', 'contado')->where('f.medio_pago', 'efectivo')->rawValue($montoTerceroSql) ?? 0);
+        $tercerosTransferencia = (float) ((clone $qTerceros)->where('f.tipo_pago', 'contado')->where('f.medio_pago', 'transferencia')->rawValue($montoTerceroSql) ?? 0);
+        $tercerosCredito       = (float) ((clone $qTerceros)->where('f.tipo_pago', 'credito')->rawValue($montoTerceroSql) ?? 0);
+        $tercerosMonto         = $tercerosEfectivo + $tercerosTransferencia + $tercerosCredito;
+
+        // Desglose por tercero (nombre del proveedor), en el rango.
+        $porTercero = (clone $qTerceros)
+            ->groupBy('p.tercero_nombre')
+            ->orderByDesc(DB::raw($montoTerceroSql))
+            ->get(['p.tercero_nombre', DB::raw($montoTerceroSql . ' as monto')])
+            ->map(fn ($r) => ['nombre' => $r->tercero_nombre ?: 'Sin nombre', 'monto' => (float) $r->monto]);
+
+        // Préstamos pendientes: ya salieron en efectivo del cajón como
+        // adelanto, así que se descuentan del efectivo esperado aunque el
+        // servicio todavía no se haya liquidado formalmente.
+        $prestamosPendientes = (float) MecanicoPrestamo::whereHas('mecanico', fn ($q) => $q->where('empresa_id', $empresaId))
+            ->where('estado', 'pendiente')
+            ->sum('monto');
+
+        $serviciosEfectivo      = $propioEfectivo + $tercerosEfectivo;
+        $serviciosTransferencia = $propioTransferencia + $tercerosTransferencia;
+        $serviciosCredito       = $propioCredito + $tercerosCredito;
+
+        $efectivo      = $serviciosEfectivo - $prestamosPendientes;
+        $transferencia = $serviciosTransferencia;
 
         return [
             'servicios_efectivo'      => (float) $serviciosEfectivo,
             'servicios_transferencia' => (float) $serviciosTransferencia,
             'servicios_credito'       => (float) $serviciosCredito,
-            'servicios_total'         => (float) $serviciosTotal,
-            'pagado_efectivo'         => $pagadoEfectivo,
-            'pagado_transferencia'    => $pagadoTransferencia,
-            'pagado_total'            => $pagadoTotal,
+            'prestamos_pendientes'    => $prestamosPendientes,
             'efectivo'                => $efectivo,
             'transferencia'           => $transferencia,
             'efectivo_esperado'       => $efectivo,
-            'queda_empresa'           => $serviciosTotal - $pagadoTotal,
+            'queda_empresa'           => $propioGanancia + $tercerosMonto,
             'por_mecanico'            => $porMecanico,
+            'por_tercero'             => $porTercero,
             'terceros_monto'          => $tercerosMonto,
             'ganancia_total'          => $propioGanancia + $tercerosMonto,
-            'pendiente_liquidar'      => $pendienteLiquidar,
+            'pendiente_liquidar'      => (float) $this->getResumenMecanicosProperty()['a_liquidar_neto'],
         ];
     }
 
