@@ -1006,9 +1006,18 @@ public function updatedCarrito($value, $key)
 
 public function limpiarCarrito()
 {
-    // Si hay orden taller activa, solo limpiar el carrito y desasociarla (NO eliminar del lobby)
+    // Si hay orden taller activa, "Limpiar" cancela la orden por completo:
+    // se borra del lobby junto con sus repuestos (no solo se desasocia).
     if ($this->tallerOrdenId) {
-        $this->sincronizarCarritoConOrdenTaller(); // deja repuestos en sync antes de limpiar
+        $orden = \App\Models\TallerOrden::where('id', $this->tallerOrdenId)
+            ->where('empresa_id', $this->getEmpresaId())
+            ->first();
+
+        if ($orden) {
+            \App\Models\TallerRepuesto::where('orden_id', $orden->id)->delete();
+            $orden->delete();
+        }
+
         $this->tallerOrdenId  = null;
         $this->tallerFotoTemp = null;
     }
@@ -1196,14 +1205,22 @@ public function aplicarCambiosModal($cambios)
     
     // âœ… RECALCULAR TOTAL GENERAL
     $this->calcularTotalGeneral();
-    
+
+    // Si hay una orden de taller activa, persistir el cambio de precio de
+    // inmediato: si el usuario sale de la orden sin pasar por "Guardar
+    // orden" o "Ver lobby" (ej. navegando a otra pantalla), el cambio no
+    // se pierde.
+    if ($this->tallerOrdenId) {
+        $this->sincronizarCarritoConOrdenTaller();
+    }
+
     // Cerrar modal
     $this->mostrarModal = false;
-    
+
     // Guardar en cache
     $this->dispatch('guardar-carrito-en-cache', $this->carrito);
-    
-   
+
+
 }
 public function calcularTotalGeneral()
 {
