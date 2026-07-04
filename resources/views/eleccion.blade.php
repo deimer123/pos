@@ -330,6 +330,64 @@
             </a>
             @endif
 
+            {{-- BOTÓN POS CON HOTEL (solo admin_empresa con el módulo activo) --}}
+            @if($user->hasRole('admin_empresa') && $config?->usa_hotel)
+            <a href="{{ route('hotel') }}"
+                style="
+                    text-decoration:none;
+                    display:block;
+                    margin-bottom:25px;
+                ">
+
+                <div style="
+                    background:linear-gradient(135deg,#7c3aed,#a855f7);
+                    border-radius:25px;
+                    padding:25px;
+                    color:white;
+                    display:flex;
+                    align-items:center;
+                    gap:20px;
+                    box-shadow:0 8px 20px rgba(124,58,237,.3);
+                    transition:.2s;
+                ">
+
+                    <div style="
+                        width:70px;
+                        height:70px;
+                        border-radius:20px;
+                        background:rgba(255,255,255,.2);
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        font-size:35px;
+                    ">
+                        🏨
+                    </div>
+
+                    <div>
+
+                        <div style="
+                            font-size:24px;
+                            font-weight:bold;
+                            margin-bottom:5px;
+                        ">
+                            POS con Hotel
+                        </div>
+
+                        <div style="
+                            opacity:.9;
+                            font-size:14px;
+                        ">
+                            Habitaciones, reservas y hospedaje
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </a>
+            @endif
+
             {{-- BOTÓN COCINA (solo admin_empresa con el módulo activo) --}}
             @if($user->hasRole('admin_empresa') && $config?->usa_cocina)
             <a href="{{ route('cocina') }}"

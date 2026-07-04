@@ -129,6 +129,10 @@ class ConfiguracionEmpresaResource extends Resource
                                 ->label('Usa taller')
                                 ->helperText('Activa el módulo de taller: órdenes de trabajo, vehículos y repuestos.'),
 
+                            Forms\Components\Toggle::make('usa_hotel')
+                                ->label('Usa hotel')
+                                ->helperText('Activa el módulo de hotel: habitaciones, reservas y hospedaje por noche.'),
+
                             Forms\Components\Toggle::make('permite_stock_negativo')
                                 ->label('Permitir stock negativo')
                                 ->helperText('Deja vender aunque no haya inventario suficiente.'),

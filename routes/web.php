@@ -90,6 +90,13 @@ Route::middleware(['auth', 'no.cocina.en.pos'])->get('/eleccion', function () {
 
     }
 
+    // RECEPCIÓN (HOTEL) PURO
+    if ($user->hasRole('recepcion')) {
+
+        return redirect()->route('hotel');
+
+    }
+
     abort(403, 'No autorizado');
 })->name('eleccion');
 
@@ -106,6 +113,10 @@ Route::middleware(['auth', 'no_digitadores_en_pos', 'no.cocina.en.pos'])->get('/
 Route::middleware(['auth'])->get('/taller', function () {
     return view('taller');
 })->name('taller');
+
+Route::middleware(['auth'])->get('/hotel', function () {
+    return view('hotel');
+})->name('hotel');
 
 Route::middleware(['auth'])->get('/taller/orden/{ordenId}', function ($ordenId) {
     return view('taller-orden', ['ordenId' => (int) $ordenId]);

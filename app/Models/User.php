@@ -283,6 +283,7 @@ class User extends Authenticatable implements FilamentUser
             'vendedor',
             'cajero',
             'taller',
+            'recepcion',
         ]);
     }
 }

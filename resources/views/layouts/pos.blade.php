@@ -66,7 +66,7 @@
                 @auth
                 @php
                     $u = auth()->user();
-                    $roleLabels = ['admin_empresa'=>'Admin','cajero'=>'Cajero','vendedor'=>'Vendedor','mesero'=>'Mesero','digitador'=>'Digitador','taller'=>'Taller','cocina'=>'Cocina'];
+                    $roleLabels = ['admin_empresa'=>'Admin','cajero'=>'Cajero','vendedor'=>'Vendedor','mesero'=>'Mesero','digitador'=>'Digitador','taller'=>'Taller','cocina'=>'Cocina','recepcion'=>'Recepción'];
                     $rolActual = collect($roleLabels)->first(fn($l,$r) => $u->hasRole($r));
                 @endphp
                 <span style="background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.3); border-radius:20px; padding:3px 12px; font-size:12px; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px;">
@@ -76,6 +76,7 @@
                     $cfgEmpresa = \App\Models\ConfiguracionEmpresa::where('empresa_id', $u->getEmpresaActualId())->first();
                     $usaTallerLayout = (bool) ($cfgEmpresa?->usa_taller ?? false);
                     $usaMesasLayout  = (bool) ($cfgEmpresa?->usa_mesas ?? false);
+                    $usaHotelLayout  = (bool) ($cfgEmpresa?->usa_hotel ?? false);
                 @endphp
                 @if($usaTallerLayout)
                     @if($usaMesasLayout)
@@ -103,6 +104,22 @@
                             🛒 POS
                         </a>
                         @endif
+                    @endif
+                @endif
+                @if($usaHotelLayout && !$usaMesasLayout)
+                    @if(!request()->routeIs('hotel'))
+                    <a href="{{ route('hotel') }}" id="btn-ir-hotel"
+                       onclick="irAlHotelConGuardado(event, '{{ route('hotel') }}')"
+                       style="border:none; border-radius:20px; padding:5px 14px; font-size:12px; font-weight:700; cursor:pointer;
+                           background:rgba(255,255,255,.2); color:white; display:flex; align-items:center; gap:5px; text-decoration:none;">
+                        🏨 Hotel
+                    </a>
+                    @else
+                    <a href="{{ route('pos') }}"
+                       style="border:none; border-radius:20px; padding:5px 14px; font-size:12px; font-weight:700; cursor:pointer;
+                           background:rgba(255,255,255,.2); color:white; text-decoration:none;">
+                        🛒 POS
+                    </a>
                     @endif
                 @endif
                 @endauth
@@ -158,6 +175,36 @@
         }).then(r => {
             if (r.isConfirmed) {
                 wire.call('salirALobbyTaller');
+            }
+        });
+    }
+
+    function irAlHotelConGuardado(event, urlHotel) {
+        const carritoEl = document.querySelector('[wire\\:id]');
+        if (!carritoEl) { window.location.href = urlHotel; return; }
+
+        const wire = Livewire.find(carritoEl.getAttribute('wire:id'));
+        if (!wire) { window.location.href = urlHotel; return; }
+
+        const hotelReservaId = wire.get('hotelReservaId');
+        if (!hotelReservaId) {
+            window.location.href = urlHotel;
+            return;
+        }
+
+        event.preventDefault();
+        Swal.fire({
+            title: '¿Ir al lobby?',
+            text: 'Los productos del carrito se guardarán en la reserva antes de salir.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: '💾 Guardar y salir',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#7c3aed',
+            cancelButtonColor: '#6b7280',
+        }).then(r => {
+            if (r.isConfirmed) {
+                wire.call('salirALobbyHotel');
             }
         });
     }
