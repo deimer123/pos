@@ -436,6 +436,36 @@ class TallerPanel extends Component
         $efectivo = (float) $serviciosEfectivo - $pagadoEfectivo;
         $transferencia = (float) $serviciosTransferencia - $pagadoTransferencia;
 
+        // Desglose por mecánico propio (valor bruto cobrado en el rango).
+        $porMecanico = DB::table('factura_detalles as fd')
+            ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
+            ->join('mecanicos as m', 'm.id', '=', 'fd.mecanico_id')
+            ->where('f.empresa_id', $empresaId)
+            ->where('m.empresa_id', $empresaId)
+            ->where('fd.tipo_servicio', 'propio')
+            ->whereDate('f.fecha', '>=', $desde)
+            ->whereDate('f.fecha', '<=', $hasta)
+            ->groupBy('fd.mecanico_id', 'm.nombre')
+            ->orderByDesc(DB::raw('SUM(fd.subtotal)'))
+            ->get(['fd.mecanico_id', 'm.nombre', DB::raw('SUM(fd.subtotal) as monto')])
+            ->map(fn ($r) => ['mecanico_id' => $r->mecanico_id, 'nombre' => $r->nombre, 'monto' => (float) $r->monto]);
+
+        // Ganancia de la empresa en el rango: para propio, el % de empresa
+        // sobre lo cobrado; para tercero, el "cobrado" ya es solo la
+        // ganancia (ver $montoCobradoSql arriba).
+        $propioGanancia = (float) ((clone $qServicios)
+            ->where('fd.tipo_servicio', 'propio')
+            ->rawValue('SUM(fd.subtotal * COALESCE(fd.porcentaje_empresa, 0) / 100)') ?? 0);
+
+        $tercerosMonto = (float) ((clone $qServicios)
+            ->where('fd.tipo_servicio', 'tercero')
+            ->rawValue($montoCobradoSql) ?? 0);
+
+        // Servicios por liquidar: saldo pendiente actual (no depende del
+        // rango de fechas seleccionado, es un saldo acumulado). El detalle
+        // de qué ya se liquidó se consulta en el Historial de cada mecánico.
+        $pendienteLiquidar = (float) $this->getResumenMecanicosProperty()['a_liquidar_neto'];
+
         return [
             'servicios_efectivo'      => (float) $serviciosEfectivo,
             'servicios_transferencia' => (float) $serviciosTransferencia,
@@ -448,6 +478,10 @@ class TallerPanel extends Component
             'transferencia'           => $transferencia,
             'efectivo_esperado'       => $efectivo,
             'queda_empresa'           => $serviciosTotal - $pagadoTotal,
+            'por_mecanico'            => $porMecanico,
+            'terceros_monto'          => $tercerosMonto,
+            'ganancia_total'          => $propioGanancia + $tercerosMonto,
+            'pendiente_liquidar'      => $pendienteLiquidar,
         ];
     }
 
