@@ -4,9 +4,11 @@ namespace App\Observers;
 
 use App\Models\User;
 use App\Models\Actor;
+use App\Models\CuentaContable;
 use App\Models\Product;
 use App\Models\Familia;
 use App\Models\Subfamilia;
+use Database\Seeders\CuentasContablesPucSeeder;
 
 class UserObserver
 {
@@ -88,5 +90,23 @@ class UserObserver
             'id_familia1'         => $familia->id,
             'id_familia2'         => $subfamilia->id_familia2,
         ]);
+
+        // 📊 Plan de cuentas contables básico (PUC), para que la empresa
+        // tenga de una vez las cuentas principales para asignar en
+        // productos, cajas, etc.
+        foreach (CuentasContablesPucSeeder::cuentasBase() as $cuenta) {
+            CuentaContable::firstOrCreate(
+                [
+                    'empresa_id' => $user->id,
+                    'codigo'     => $cuenta['codigo'],
+                ],
+                [
+                    'nombre'    => $cuenta['nombre'],
+                    'tipo'      => $cuenta['tipo'],
+                    'categoria' => $cuenta['categoria'],
+                    'activo'    => true,
+                ]
+            );
+        }
     }
 }

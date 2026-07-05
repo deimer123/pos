@@ -13,7 +13,7 @@ class CuentasContablesPucSeeder extends Seeder
      */
     public function run(): void
     {
-        $cuentas = $this->cuentasBase();
+        $cuentas = self::cuentasBase();
 
         User::query()
             ->where('tipo_usuario', 'empresa')
@@ -36,7 +36,9 @@ class CuentasContablesPucSeeder extends Seeder
             });
     }
 
-    protected function cuentasBase(): array
+    // Público y estático para que UserObserver pueda reutilizar esta misma
+    // lista al crear una empresa nueva, sin duplicarla.
+    public static function cuentasBase(): array
     {
         return [
             ['codigo' => '1', 'nombre' => 'Activo', 'tipo' => 'grupo', 'categoria' => 'activo'],
