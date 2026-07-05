@@ -1841,28 +1841,49 @@ public function guardarPrefacturaConfirmada()
 
     // Guarda los productos agregados al carrito (aparte del ítem de
     // hospedaje) como consumos de la reserva, para poder salir sin facturar
-    // y cobrarlos después junto con el hospedaje al hacer check-out.
+    // y cobrarlos después junto con el hospedaje al hacer check-out. Se
+    // llama automáticamente cada vez que se agrega/quita un producto o se
+    // cambia una cantidad, así que nunca debe poder tumbar la acción que la
+    // disparó: cualquier error se registra en el log y se ignora.
     public function sincronizarCarritoConHotelReserva(): void
     {
         if (! $this->hotelReservaId) return;
 
-        \App\Models\HotelReservaConsumo::where('reserva_id', $this->hotelReservaId)->delete();
+        try {
+            $existe = \App\Models\HotelReserva::where('empresa_id', $this->getEmpresaId())
+                ->where('id', $this->hotelReservaId)
+                ->exists();
 
-        foreach ($this->carrito as $key => $item) {
-            if (str_starts_with((string) $key, 'hotel-reserva-')) {
-                continue; // el ítem de hospedaje no es un consumo, se recalcula solo
+            if (! $existe) {
+                // La reserva ya no existe (se anuló/eliminó desde otra
+                // pantalla): no hay nada que sincronizar.
+                $this->hotelReservaId = null;
+                return;
             }
 
-            $precio = (float) ($item['nuevo_precio'] ?? $item['precio'] ?? 0);
-            $cant   = (float) ($item['cantidad'] ?? 1);
+            \App\Models\HotelReservaConsumo::where('reserva_id', $this->hotelReservaId)->delete();
 
-            \App\Models\HotelReservaConsumo::create([
-                'reserva_id'      => $this->hotelReservaId,
-                'producto_id'     => is_numeric($item['id_producto']) ? (int) $item['id_producto'] : null,
-                'descripcion'     => $item['nombre'] ?? 'Sin descripción',
-                'cantidad'        => $cant,
-                'precio_unitario' => $precio,
-                'subtotal'        => round($precio * $cant, 2),
+            foreach ($this->carrito as $key => $item) {
+                if (str_starts_with((string) $key, 'hotel-reserva-')) {
+                    continue; // el ítem de hospedaje no es un consumo, se recalcula solo
+                }
+
+                $precio = (float) ($item['nuevo_precio'] ?? $item['precio'] ?? 0);
+                $cant   = (float) ($item['cantidad'] ?? 1);
+
+                \App\Models\HotelReservaConsumo::create([
+                    'reserva_id'      => $this->hotelReservaId,
+                    'producto_id'     => is_numeric($item['id_producto']) ? (int) $item['id_producto'] : null,
+                    'descripcion'     => $item['nombre'] ?? 'Sin descripción',
+                    'cantidad'        => $cant,
+                    'precio_unitario' => $precio,
+                    'subtotal'        => round($precio * $cant, 2),
+                ]);
+            }
+        } catch (\Throwable $e) {
+            \Log::error('sincronizarCarritoConHotelReserva fallo', [
+                'hotel_reserva_id' => $this->hotelReservaId,
+                'error' => $e->getMessage(),
             ]);
         }
     }
@@ -2283,13 +2304,15 @@ public function confirmarFacturar()
 
 // Los items manuales del carrito (hospedaje de hotel, repuestos sueltos de
 // taller, etc.) se guardan con una clave sintética como id_producto
-// ('hotel-reserva-3', un uuid...) que no existe como Product real. Para
-// facturarlos sin romper la FK de factura_detalles, se agrupan bajo el
-// producto de prueba 10001 (ya excluido de kardex/existencias en el resto
-// del código) y el texto real queda en descripcion_larga.
+// ('hotel-reserva-3', un uuid...) que no existe como Product real. Se
+// facturan con producto_id = 0 (igual que el cargo de empaque/domicilio),
+// NO con el código 10001: ese código es el de "ítems manuales/reembolsos a
+// terceros" y tiene sus propios reportes — usarlo aquí mezclaría hospedaje
+// de hotel o repuestos de taller con esos reportes. El texto real de cada
+// ítem queda en descripcion_larga.
 private function idProductoFacturable($idProducto): int
 {
-    return is_numeric($idProducto) ? (int) $idProducto : 10001;
+    return is_numeric($idProducto) ? (int) $idProducto : 0;
 }
 
 protected function datosServicioFactura(?Product $producto): array
@@ -2305,44 +2328,14 @@ protected function datosServicioFactura(?Product $producto): array
     ];
 }
 
-// Registra cómo quedó pagada la factura recién creada. Si viene de una
-// reserva de hotel con abono, el abono ya se cobró (y ya quedó como entrada
-// de caja) al momento de reservar, así que aquí solo se cobra el saldo real
-// que falta y se cierra la factura como pagada — para no volver a contar el
-// abono una segunda vez en caja ni dejar la factura con saldo pendiente
-// fantasma en cartera.
+// Registra cómo quedó pagada la factura recién creada. El abono de una
+// reserva de hotel es puramente informativo (ya se cobró y se registró como
+// entrada de caja al momento de reservar): la factura se paga igual que
+// cualquier venta de contado/crédito, por el total completo, para no meter
+// lógica especial de hotel en el reporte de caja compartido con el resto
+// del POS. La nota del pago solo deja constancia del abono para trazabilidad.
 private function finalizarPagoFactura(Factura $factura, string $tipoPago, ?string $medioPago, ?string $transferObs, ?string $vencRaw): void
 {
-    if ($this->hotelReservaId && $this->hotelAbonoMonto > 0) {
-        $abono      = min($this->hotelAbonoMonto, (float) $factura->total);
-        $montoAhora = round((float) $factura->total - $abono, 2);
-
-        $nota = 'Saldo al salida (abono ya recibido al reservar: $' . number_format($abono, 0, ',', '.') . ')';
-        if ($medioPago === 'transferencia' && $transferObs) {
-            $nota .= ' · Transferencia: ' . $transferObs;
-        }
-
-        $factura->tipo_pago  = 'credito';
-        $factura->medio_pago = $medioPago;
-
-        if ($montoAhora > 0) {
-            $factura->registrarAbono(
-                monto: $montoAhora,
-                medio: $medioPago ?? 'efectivo',
-                nota : $nota,
-                userId: auth()->id(),
-                transferenciaObs: $transferObs
-            );
-        }
-
-        $factura->saldo       = 0;
-        $factura->estado_pago = 'pagada';
-        $factura->fecha_pago  = now();
-        $factura->save();
-
-        return;
-    }
-
     if ($tipoPago === 'credito') {
         $info = $this->clienteCreditoInfo; // accessor existente
 
@@ -2369,6 +2362,10 @@ private function finalizarPagoFactura(Factura $factura, string $tipoPago, ?strin
     $nota = ($medioPago === 'transferencia' && $transferObs)
         ? ('Transferencia: ' . $transferObs)
         : 'Pago contado';
+
+    if ($this->hotelReservaId && $this->hotelAbonoMonto > 0) {
+        $nota .= ' (incluye abono de $' . number_format($this->hotelAbonoMonto, 0, ',', '.') . ' ya recibido al reservar)';
+    }
 
     $factura->registrarAbono(
         monto: (float) $factura->total,
@@ -2413,13 +2410,15 @@ public function facturarConfirmada(array $data = [])
 
         // âœ… Permitir stock negativo: solo valida que exista y cantidad > 0
         foreach ($this->carrito as $item) {
-            $prod = Product::where('empresa_id', $empresaId)
-                ->where('id_producto', $this->idProductoFacturable($item['id_producto']))
-                ->lockForUpdate()
-                ->first();
+            if (is_numeric($item['id_producto'])) {
+                $prod = Product::where('empresa_id', $empresaId)
+                    ->where('id_producto', $item['id_producto'])
+                    ->lockForUpdate()
+                    ->first();
 
-            if (!$prod) {
-                throw new \Exception("Producto {$item['id_producto']} no existe.");
+                if (!$prod) {
+                    throw new \Exception("Producto {$item['id_producto']} no existe.");
+                }
             }
 
             $cant = $this->normalizarCantidad($item['cantidad'] ?? 1, $this->permiteCantidadDecimal($item));
@@ -2923,13 +2922,15 @@ public function facturarEImprimir(array $data = [])
         }
 
         foreach ($this->carrito as $item) {
-            $prod = Product::where('empresa_id', $empresaId)
-                ->where('id_producto', $this->idProductoFacturable($item['id_producto']))
-                ->lockForUpdate()
-                ->first();
+            if (is_numeric($item['id_producto'])) {
+                $prod = Product::where('empresa_id', $empresaId)
+                    ->where('id_producto', $item['id_producto'])
+                    ->lockForUpdate()
+                    ->first();
 
-            if (!$prod) {
-                throw new \Exception("Producto {$item['id_producto']} no existe.");
+                if (!$prod) {
+                    throw new \Exception("Producto {$item['id_producto']} no existe.");
+                }
             }
 
             $cant = $this->normalizarCantidad($item['cantidad'] ?? 1, $this->permiteCantidadDecimal($item));

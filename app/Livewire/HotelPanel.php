@@ -133,11 +133,6 @@ class HotelPanel extends Component
         $this->modalReserva         = true;
     }
 
-    public function cambiarHabitacionReserva(): void
-    {
-        $this->resHabitacionBloqueada = false;
-    }
-
     public function abrirEditarReserva(int $id): void
     {
         $r = HotelReserva::where('empresa_id', $this->empresaId())->findOrFail($id);

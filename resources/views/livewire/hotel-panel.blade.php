@@ -122,8 +122,8 @@
                                 style="flex:1; border:none; border-radius:6px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#eff6ff; color:#2563eb;">
                                 ✏️ Editar
                             </button>
-                            <button wire:click="cancelarReserva({{ $r->id }})"
-                                onclick="return confirm('¿Cancelar esta reserva?')"
+                            <button type="button"
+                                x-on:click="Swal.fire({title:'¿Cancelar esta reserva?',text:'Esta acción no se puede deshacer.',icon:'warning',showCancelButton:true,confirmButtonText:'Sí, cancelar',cancelButtonText:'No',confirmButtonColor:'#ef4444'}).then(r=>{if(r.isConfirmed){$wire.cancelarReserva({{ $r->id }});}})"
                                 style="flex:1; border:none; border-radius:6px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#fef2f2; color:#ef4444;">
                                 ✕ Cancelar
                             </button>
@@ -188,9 +188,9 @@
                                     $res = $celda['reserva'];
                                     $bg = $res ? ($res->estado === 'checkin' ? '#fca5a5' : '#fde68a') : $coloresDia[$i % 2];
                                 @endphp
-                                <td title="{{ $res ? $res->huesped_nombre : 'Libre' }}"
-                                    style="padding:6px; text-align:center; border:1px solid #e2e8f0; background:{{ $bg }}; cursor:{{ $res ? 'default' : 'pointer' }};"
-                                    @if(! $res) wire:click="abrirNuevaReserva({{ $fila['habitacion']->id }})" @endif>
+                                <td title="{{ $res ? $res->huesped_nombre . ' (clic para ver la reserva)' : 'Libre' }}"
+                                    style="padding:6px; text-align:center; border:1px solid #e2e8f0; background:{{ $bg }}; cursor:pointer;"
+                                    wire:click="{{ $res ? 'abrirEditarReserva(' . $res->id . ')' : 'abrirNuevaReserva(' . $fila['habitacion']->id . ')' }}">
                                     @if($res)
                                         <span style="font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; max-width:56px;">{{ $res->huesped_nombre }}</span>
                                     @endif
@@ -230,15 +230,12 @@
                     <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Habitación *</label>
                     @if($resHabitacionBloqueada && $this->habitacionSeleccionada)
                         @php $hs = $this->habitacionSeleccionada; @endphp
-                        <div style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:0 10px; font-size:13px; box-sizing:border-box; background:#f8fafc; display:flex; align-items:center; justify-content:space-between;">
+                        <div style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:0 10px; font-size:13px; box-sizing:border-box; background:#f8fafc; display:flex; align-items:center;">
                             <span>🚪 {{ $hs->numero }}
                                 @if($hs->tiene_aire) ❄️ @endif
                                 @if($hs->tiene_ventilador) 🌀 @endif
                                 · hasta {{ $hs->capacidad_maxima }} pers.
                             </span>
-                            @unless($reservaId)
-                            <button type="button" wire:click="cambiarHabitacionReserva" style="border:none; background:none; color:#2563eb; font-size:11px; font-weight:700; cursor:pointer;">Cambiar</button>
-                            @endunless
                         </div>
                     @else
                         <select wire:model.live="resHabitacionId"
