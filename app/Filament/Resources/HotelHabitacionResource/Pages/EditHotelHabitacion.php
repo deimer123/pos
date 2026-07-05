@@ -25,6 +25,9 @@ class EditHotelHabitacion extends EditRecord
             $data["precio_{$n}"] = $valor === null ? null : number_format((float) $valor, 0, ',', '.');
         }
 
+        $data['recargo_aire'] = number_format((float) ($data['recargo_aire'] ?? 0), 0, ',', '.');
+        $data['recargo_ventilador'] = number_format((float) ($data['recargo_ventilador'] ?? 0), 0, ',', '.');
+
         return $data;
     }
 
@@ -35,13 +38,24 @@ class EditHotelHabitacion extends EditRecord
         for ($n = 1; $n <= HotelHabitacionResource::MAX_PERSONAS; $n++) {
             $key = "precio_{$n}";
             if (isset($data[$key]) && $data[$key] !== '') {
-                $precios[(string) $n] = (float) str_replace('.', '', (string) $data[$key]);
+                $precios[(string) $n] = $this->limpiarMonto($data[$key]);
             }
             unset($data[$key]);
         }
 
         $data['precios_por_persona'] = $precios;
+        $data['recargo_aire'] = $this->limpiarMonto($data['recargo_aire'] ?? null);
+        $data['recargo_ventilador'] = $this->limpiarMonto($data['recargo_ventilador'] ?? null);
 
         return $data;
+    }
+
+    private function limpiarMonto($valor): float
+    {
+        if ($valor === null || $valor === '') {
+            return 0;
+        }
+
+        return (float) str_replace('.', '', (string) $valor);
     }
 }

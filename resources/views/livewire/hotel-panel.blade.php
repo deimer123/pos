@@ -8,6 +8,16 @@
             <input wire:model.live.debounce.300ms="busqueda" type="text" placeholder="Buscar habitación..."
                 style="border:none; border-radius:20px; padding:5px 14px; font-size:12px; width:180px; outline:none; color:#1f2937;">
 
+            @if(count($zonasDisponibles) > 0)
+            <select wire:model.live="filtroZona"
+                style="border:none; border-radius:20px; padding:5px 14px; font-size:12px; outline:none; color:#1f2937;">
+                <option value="">Todas las zonas</option>
+                @foreach($zonasDisponibles as $z)
+                    <option value="{{ $z }}">{{ $z }}</option>
+                @endforeach
+            </select>
+            @endif
+
             <span style="width:1px; height:20px; background:rgba(255,255,255,.3);"></span>
 
             <button wire:click="$set('vistaActiva','habitaciones')"
@@ -61,6 +71,10 @@
                         <span style="font-size:16px; font-weight:900; color:{{ $c['text'] }};">🚪 {{ $h->numero }}</span>
                     </div>
 
+                    @if($h->zona)
+                    <div style="font-size:10px; color:#7c3aed; font-weight:700; margin-bottom:4px;">📍 {{ $h->zona }}</div>
+                    @endif
+
                     <div style="font-size:11px; color:#374151; display:flex; gap:8px; flex-wrap:wrap; margin-bottom:4px;">
                         @if($h->camas_dobles > 0)<span>🛏️×{{ $h->camas_dobles }} doble</span>@endif
                         @if($h->camas_sencillas > 0)<span>🛏️×{{ $h->camas_sencillas }} sencilla</span>@endif
@@ -79,10 +93,17 @@
                     <div style="background:white; border-radius:8px; padding:8px; margin-bottom:8px; font-size:11px;">
                         <div style="font-weight:700; color:#1f2937;">👤 {{ $r->huesped_nombre }}</div>
                         <div style="color:#6b7280; margin-top:2px;">
-                            {{ $r->fecha_checkin->format('d/m') }} → {{ $r->fecha_checkout->format('d/m') }}
+                            {{ $r->fecha_checkin->format('d/m') }} → {{ $r->fecha_checkout?->format('d/m') ?? 'Sin definir' }}
                             · {{ $r->numero_personas }} pers. · {{ $r->numero_noches }} noche(s)
                         </div>
                         <div style="color:#16a34a; font-weight:700; margin-top:2px;">${{ number_format($r->total_estimado, 0, ',', '.') }}</div>
+                        @if($r->abono_monto > 0)
+                        <div style="color:#d97706; margin-top:2px;">Abono: ${{ number_format($r->abono_monto, 0, ',', '.') }} ({{ $r->abono_medio_pago }})</div>
+                        @endif
+                        @if($r->total_consumos > 0)
+                        <div style="color:#7c3aed; margin-top:2px;">+ Consumos: ${{ number_format($r->total_consumos, 0, ',', '.') }}</div>
+                        @endif
+                        <div style="color:#1f2937; font-weight:900; margin-top:2px; border-top:1px dashed #e5e7eb; padding-top:2px;">Saldo: ${{ number_format($r->saldo_pendiente, 0, ',', '.') }}</div>
                     </div>
                     @endif
 
@@ -144,9 +165,12 @@
                 <thead>
                     <tr>
                         <th style="position:sticky; left:0; background:#f1f5f9; padding:8px; text-align:left; border-bottom:1px solid #e5e7eb; min-width:80px;">Habitación</th>
-                        @php $diasAbrev = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']; @endphp
-                        @foreach($diasCalendario as $dia)
-                            <th style="padding:6px; text-align:center; border-bottom:1px solid #e5e7eb; min-width:56px; color:#6b7280;">
+                        @php
+                            $diasAbrev = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+                            $coloresDia = ['#f0fdf4', '#eff6ff']; // verde / azul, alternando por día
+                        @endphp
+                        @foreach($diasCalendario as $i => $dia)
+                            <th style="padding:6px; text-align:center; border-bottom:1px solid #e5e7eb; min-width:56px; color:#6b7280; background:{{ $coloresDia[$i % 2] }};">
                                 {{ $dia->format('d/m') }}<br><span style="font-weight:400;">{{ $diasAbrev[$dia->dayOfWeek] }}</span>
                             </th>
                         @endforeach
@@ -158,10 +182,10 @@
                             <td style="position:sticky; left:0; background:white; padding:8px; font-weight:700; border-bottom:1px solid #f1f5f9;">
                                 🚪 {{ $fila['habitacion']->numero }}
                             </td>
-                            @foreach($fila['celdas'] as $celda)
+                            @foreach($fila['celdas'] as $i => $celda)
                                 @php
                                     $res = $celda['reserva'];
-                                    $bg = $res ? ($res->estado === 'checkin' ? '#fca5a5' : '#fde68a') : '#f0fdf4';
+                                    $bg = $res ? ($res->estado === 'checkin' ? '#fca5a5' : '#fde68a') : $coloresDia[$i % 2];
                                 @endphp
                                 <td title="{{ $res ? $res->huesped_nombre : 'Libre' }}"
                                     style="padding:6px; text-align:center; border-bottom:1px solid #f1f5f9; background:{{ $bg }}; cursor:{{ $res ? 'default' : 'pointer' }};"
@@ -234,9 +258,10 @@
                             style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
                     </div>
                     <div>
-                        <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Check-out *</label>
+                        <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Check-out</label>
                         <input wire:model.live="resFechaCheckout" type="date"
                             style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
+                        <div style="font-size:9px; color:#9ca3af; margin-top:2px;">Déjalo en blanco si no sabe cuándo se va.</div>
                         @error('resFechaCheckout') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
                     </div>
                     <div>
@@ -249,18 +274,47 @@
 
                 @if($this->habitacionSeleccionada)
                 <div style="background:#f0fdf4; border-radius:8px; padding:12px; margin-bottom:12px; text-align:center;">
-                    <div style="font-size:10px; color:#16a34a; text-transform:uppercase; font-weight:700;">Total estimado</div>
-                    <div style="font-size:22px; font-weight:900; color:#16a34a;">${{ number_format($this->totalEstimadoReserva, 0, ',', '.') }}</div>
-                    <div style="font-size:10px; color:#6b7280;">
-                        ${{ number_format($this->precioNocheReserva, 0, ',', '.') }} / noche
-                        @if($resFechaCheckin && $resFechaCheckout)
+                    @if($resFechaCheckout)
+                        <div style="font-size:10px; color:#16a34a; text-transform:uppercase; font-weight:700;">Total estimado</div>
+                        <div style="font-size:22px; font-weight:900; color:#16a34a;">${{ number_format($this->totalEstimadoReserva, 0, ',', '.') }}</div>
+                        <div style="font-size:10px; color:#6b7280;">
+                            ${{ number_format($this->precioNocheReserva, 0, ',', '.') }} / noche
                             × {{ \Illuminate\Support\Carbon::parse($resFechaCheckin)->diffInDays(\Illuminate\Support\Carbon::parse($resFechaCheckout)) ?: 1 }} noche(s)
-                        @endif
-                        para {{ $resNumeroPersonas ?: 1 }} persona(s)
-                    </div>
+                            para {{ $resNumeroPersonas ?: 1 }} persona(s)
+                        </div>
+                    @else
+                        <div style="font-size:10px; color:#16a34a; text-transform:uppercase; font-weight:700;">Precio por noche</div>
+                        <div style="font-size:22px; font-weight:900; color:#16a34a;">${{ number_format($this->precioNocheReserva, 0, ',', '.') }}</div>
+                        <div style="font-size:10px; color:#6b7280;">para {{ $resNumeroPersonas ?: 1 }} persona(s) · el total se calcula al hacer check-out</div>
+                    @endif
                     @if($this->precioNocheReserva <= 0)
                         <div style="font-size:10px; color:#dc2626; margin-top:4px; font-weight:700;">⚠️ Esta habitación no tiene precio configurado para {{ $resNumeroPersonas ?: 1 }} persona(s).</div>
                     @endif
+                </div>
+                @endif
+
+                @if(! $reservaId)
+                <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:12px; margin-bottom:12px;" x-data="{
+                        formato(v) { const limpio = String(v || '').replace(/\D/g, ''); return limpio ? Number(limpio).toLocaleString('es-CO') : ''; },
+                        limpiar(v) { return String(v || '').replace(/\D/g, ''); }
+                    }">
+                    <label style="font-size:11px; font-weight:700; color:#92400e; display:block; margin-bottom:6px;">💰 Abono (opcional)</label>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div>
+                            <input type="text" inputmode="numeric" placeholder="0"
+                                value="{{ $resAbonoMonto !== '' ? number_format((float) $resAbonoMonto, 0, ',', '.') : '' }}"
+                                x-on:input="$event.target.value = formato($event.target.value); $wire.set('resAbonoMonto', limpiar($event.target.value))"
+                                style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <select wire:model="resAbonoMedioPago"
+                                style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px;">
+                                <option value="Efectivo">Efectivo</option>
+                                <option value="Transferencia">Transferencia</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="font-size:9px; color:#92400e; margin-top:4px;">Si registras un abono, se descuenta del total a cobrar en el check-out y queda registrado como entrada de caja.</div>
                 </div>
                 @endif
 

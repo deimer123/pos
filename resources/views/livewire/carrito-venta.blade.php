@@ -490,6 +490,30 @@
         @endif
     @endif
 
+    {{-- HOTEL BANNER --}}
+    @if($hotelReservaId)
+        @php
+            $hotelReserva = \App\Models\HotelReserva::with('habitacion')->find($hotelReservaId);
+        @endphp
+        @if($hotelReserva)
+        <div style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap;">
+            <div style="font-size:20px;">🏨</div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:11px;font-weight:800;letter-spacing:.06em;opacity:.8;">RESERVA #{{ str_pad($hotelReserva->numero_reserva,4,'0',STR_PAD_LEFT) }} · HABITACIÓN {{ $hotelReserva->habitacion->numero ?? '?' }}</div>
+                <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                    {{ $hotelReserva->huesped_nombre }}
+                </div>
+                @if($hotelAbonoMonto > 0)
+                <div style="font-size:11px;opacity:.95;margin-top:2px;">
+                    💰 Abono ya pagado: ${{ number_format($hotelAbonoMonto, 0, ',', '.') }} ({{ $hotelAbonoMedioPago }})
+                    · Saldo a cobrar: ${{ number_format(max(0, ($totalGeneral ?? 0) - $hotelAbonoMonto), 0, ',', '.') }}
+                </div>
+                @endif
+            </div>
+        </div>
+        @endif
+    @endif
+
     {{-- CARRITO CARDS --}}
     <div class="pos-cart-table-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden" style="background:#f1f5f9; padding:8px 6px; display:flex; flex-direction:column; gap:6px;">
 

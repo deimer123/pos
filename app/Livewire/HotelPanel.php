@@ -2,6 +2,8 @@
 
 namespace App\Livewire;
 
+use App\Models\Caja;
+use App\Models\Gasto;
 use App\Models\HotelHabitacion;
 use App\Models\HotelReserva;
 use Illuminate\Support\Carbon;
@@ -12,6 +14,7 @@ class HotelPanel extends Component
     // ── Vista activa: 'habitaciones' | 'calendario'
     public string $vistaActiva = 'habitaciones';
     public string $busqueda    = '';
+    public string $filtroZona  = '';
 
     // ── Modal Reserva (nueva / editar)
     public bool   $modalReserva          = false;
@@ -24,6 +27,8 @@ class HotelPanel extends Component
     public string $resFechaCheckin       = '';
     public string $resFechaCheckout      = '';
     public string $resObservaciones      = '';
+    public string $resAbonoMonto         = '';
+    public string $resAbonoMedioPago     = 'Efectivo';
 
     // ── Calendario de reservas
     public string $calDesde = '';
@@ -50,6 +55,7 @@ class HotelPanel extends Component
         $habitaciones = HotelHabitacion::where('empresa_id', $empresaId)
             ->where('activa', true)
             ->when($this->busqueda, fn ($q) => $q->where('numero', 'like', '%' . $this->busqueda . '%'))
+            ->when($this->filtroZona, fn ($q) => $q->where('zona', $this->filtroZona))
             ->orderBy('numero')
             ->get();
 
@@ -57,7 +63,7 @@ class HotelPanel extends Component
             $reservaActiva = HotelReserva::where('habitacion_id', $h->id)
                 ->whereIn('estado', ['reservada', 'checkin'])
                 ->whereDate('fecha_checkin', '<=', $hoy)
-                ->whereDate('fecha_checkout', '>', $hoy)
+                ->where(fn ($q) => $q->whereNull('fecha_checkout')->orWhereDate('fecha_checkout', '>', $hoy))
                 ->orderBy('fecha_checkin')
                 ->first();
 
@@ -77,6 +83,18 @@ class HotelPanel extends Component
         });
     }
 
+    public function getZonasDisponiblesProperty(): array
+    {
+        return HotelHabitacion::where('empresa_id', $this->empresaId())
+            ->where('activa', true)
+            ->whereNotNull('zona')
+            ->where('zona', '!=', '')
+            ->distinct()
+            ->orderBy('zona')
+            ->pluck('zona')
+            ->toArray();
+    }
+
     // Las habitaciones (camas, aire/ventilador, precio por número de
     // personas) se crean y editan en Administración → Hotel → Habitaciones,
     // no aquí — este panel es solo para operar las reservas del día a día.
@@ -94,6 +112,8 @@ class HotelPanel extends Component
         $this->resFechaCheckin     = now()->toDateString();
         $this->resFechaCheckout    = now()->addDay()->toDateString();
         $this->resObservaciones    = '';
+        $this->resAbonoMonto       = '';
+        $this->resAbonoMedioPago   = 'Efectivo';
         $this->modalReserva        = true;
     }
 
@@ -108,8 +128,10 @@ class HotelPanel extends Component
         $this->resHuespedDocumento = $r->huesped_documento ?? '';
         $this->resNumeroPersonas   = (string) $r->numero_personas;
         $this->resFechaCheckin     = $r->fecha_checkin->toDateString();
-        $this->resFechaCheckout    = $r->fecha_checkout->toDateString();
+        $this->resFechaCheckout    = $r->fecha_checkout?->toDateString() ?? '';
         $this->resObservaciones    = $r->observaciones ?? '';
+        $this->resAbonoMonto       = '';
+        $this->resAbonoMedioPago   = 'Efectivo';
         $this->modalReserva        = true;
     }
 
@@ -139,7 +161,7 @@ class HotelPanel extends Component
 
         $personas = max(1, (int) $this->resNumeroPersonas);
 
-        return $habitacion->precioParaPersonas($personas);
+        return $habitacion->precioNochePara($personas);
     }
 
     public function getTotalEstimadoReservaProperty(): float
@@ -160,7 +182,7 @@ class HotelPanel extends Component
             'resHuespedNombre'   => 'required|string|max:200',
             'resNumeroPersonas'  => 'required|integer|min:1',
             'resFechaCheckin'    => 'required|date',
-            'resFechaCheckout'   => 'required|date|after:resFechaCheckin',
+            'resFechaCheckout'   => 'nullable|date|after:resFechaCheckin',
         ], [
             'resHabitacionId.required'   => 'Selecciona una habitación.',
             'resHuespedNombre.required'  => 'El nombre del huésped es obligatorio.',
@@ -180,20 +202,27 @@ class HotelPanel extends Component
             return;
         }
 
-        $precioNoche = $habitacion->precioParaPersonas((int) $this->resNumeroPersonas);
+        $precioNoche = $habitacion->precioNochePara((int) $this->resNumeroPersonas);
         if ($precioNoche <= 0) {
             $this->addError('resNumeroPersonas', 'Esta habitación no tiene un precio configurado para esa cantidad de personas. Configúralo en Administración → Hotel → Habitaciones.');
             return;
         }
 
-        $conflicto = HotelReserva::where('habitacion_id', $this->resHabitacionId)
+        // Si la nueva reserva no tiene fecha de salida definida (el huésped
+        // no sabe cuándo se va), bloquea la habitación indefinidamente desde
+        // el check-in, así que choca con cualquier reserva activa desde ese
+        // punto en adelante. Si sí tiene fecha de salida, solo choca con
+        // reservas que se crucen en ese rango.
+        $conflictoQuery = HotelReserva::where('habitacion_id', $this->resHabitacionId)
             ->whereIn('estado', ['reservada', 'checkin'])
             ->when($this->reservaId, fn ($q) => $q->where('id', '!=', $this->reservaId))
-            ->where('fecha_checkin', '<', $this->resFechaCheckout)
-            ->where('fecha_checkout', '>', $this->resFechaCheckin)
-            ->exists();
+            ->where(fn ($q) => $q->whereNull('fecha_checkout')->orWhere('fecha_checkout', '>', $this->resFechaCheckin));
 
-        if ($conflicto) {
+        if ($this->resFechaCheckout) {
+            $conflictoQuery->where('fecha_checkin', '<', $this->resFechaCheckout);
+        }
+
+        if ($conflictoQuery->exists()) {
             $this->dispatch('notify', type: 'error', message: 'La habitación ya tiene una reserva en ese rango de fechas.');
             return;
         }
@@ -206,7 +235,7 @@ class HotelPanel extends Component
             'huesped_documento' => trim($this->resHuespedDocumento) ?: null,
             'numero_personas'   => (int) $this->resNumeroPersonas,
             'fecha_checkin'     => $this->resFechaCheckin,
-            'fecha_checkout'    => $this->resFechaCheckout,
+            'fecha_checkout'    => $this->resFechaCheckout ?: null,
             'precio_noche'      => $precioNoche,
             'observaciones'     => trim($this->resObservaciones) ?: null,
         ];
@@ -216,11 +245,46 @@ class HotelPanel extends Component
         } else {
             $data['creado_por'] = auth()->id();
             $data['estado']     = 'reservada';
-            HotelReserva::create($data);
+            $reserva = HotelReserva::create($data);
+
+            $abono = (float) $this->resAbonoMonto;
+            if ($abono > 0) {
+                $this->registrarAbonoReserva($reserva, $abono, $this->resAbonoMedioPago);
+            }
         }
 
         $this->modalReserva = false;
         $this->dispatch('notify', type: 'success', message: $this->reservaId ? 'Reserva actualizada.' : 'Reserva creada.');
+    }
+
+    private function registrarAbonoReserva(HotelReserva $reserva, float $monto, string $medioPago): void
+    {
+        $empresaId = $this->empresaId();
+
+        $reserva->update([
+            'abono_monto'      => $monto,
+            'abono_medio_pago' => $medioPago,
+        ]);
+
+        $cajaActiva = Caja::where('empresa_id', $empresaId)
+            ->where('estado', 'abierta')
+            ->latest('opened_at')
+            ->first();
+
+        $ultimo = Gasto::where('empresa_id', $empresaId)->max('id_gasto');
+
+        Gasto::create([
+            'id_gasto'    => $ultimo ? $ultimo + 1 : 1,
+            'empresa_id'  => $empresaId,
+            'tipo'        => 'entrada',
+            'categoria'   => 'Abono hotel',
+            'descripcion' => 'Abono reserva #' . str_pad((string) $reserva->numero_reserva, 4, '0', STR_PAD_LEFT) . ' - ' . $reserva->huesped_nombre,
+            'monto'       => $monto,
+            'fecha'       => today()->toDateString(),
+            'metodo_pago' => $medioPago,
+            'created_by'  => auth()->id(),
+            'caja_id'     => $cajaActiva?->id,
+        ]);
     }
 
     public function confirmarCheckin(int $reservaId): void
@@ -278,7 +342,7 @@ class HotelPanel extends Component
         $reservas = HotelReserva::where('empresa_id', $empresaId)
             ->whereIn('estado', ['reservada', 'checkin'])
             ->where('fecha_checkin', '<', $hasta)
-            ->where('fecha_checkout', '>=', $desde)
+            ->where(fn ($q) => $q->whereNull('fecha_checkout')->orWhere('fecha_checkout', '>=', $desde))
             ->get();
 
         return $habitaciones->map(function (HotelHabitacion $h) use ($dias, $reservas) {
@@ -287,7 +351,7 @@ class HotelPanel extends Component
                 $reserva = $reservas->first(function ($r) use ($h, $dia) {
                     return (int) $r->habitacion_id === (int) $h->id
                         && $dia->gte($r->fecha_checkin)
-                        && $dia->lt($r->fecha_checkout);
+                        && ($r->fecha_checkout === null || $dia->lt($r->fecha_checkout));
                 });
 
                 $celdas[] = [
@@ -308,6 +372,7 @@ class HotelPanel extends Component
         return view('livewire.hotel-panel', [
             'habitaciones'      => $this->habitaciones,
             'todasHabitaciones' => $this->todasHabitaciones,
+            'zonasDisponibles'  => $this->zonasDisponibles,
             'calendario'        => $this->vistaActiva === 'calendario' ? $this->calendario : [],
             'diasCalendario'    => $this->vistaActiva === 'calendario' ? $this->diasCalendario : [],
         ]);

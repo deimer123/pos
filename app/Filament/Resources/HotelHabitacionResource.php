@@ -39,6 +39,18 @@ class HotelHabitacionResource extends Resource
         return (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_hotel');
     }
 
+    private static function moneyField(string $name, string $label): Forms\Components\TextInput
+    {
+        return Forms\Components\TextInput::make($name)
+            ->label($label)
+            ->prefix('$')
+            ->live(onBlur: true)
+            ->afterStateUpdated(function ($state, callable $set) use ($name) {
+                $digits = preg_replace('/\D/', '', (string) $state);
+                $set($name, $digits === '' ? null : number_format((int) $digits, 0, ',', '.'));
+            });
+    }
+
     public static function form(Form $form): Form
     {
         return $form->schema([
@@ -49,9 +61,10 @@ class HotelHabitacionResource extends Resource
                         ->required()
                         ->maxLength(20),
 
-                    Forms\Components\Toggle::make('activa')
-                        ->label('Activa')
-                        ->default(true),
+                    Forms\Components\TextInput::make('zona')
+                        ->label('Zona / Piso')
+                        ->placeholder('Ej: Piso 1, Zona A...')
+                        ->maxLength(60),
 
                     Forms\Components\TextInput::make('camas_dobles')
                         ->label('Camas dobles')
@@ -68,25 +81,30 @@ class HotelHabitacionResource extends Resource
                         ->required(),
 
                     Forms\Components\Toggle::make('tiene_aire')
-                        ->label('❄️ Tiene aire acondicionado'),
+                        ->label('❄️ Tiene aire acondicionado')
+                        ->live(),
 
                     Forms\Components\Toggle::make('tiene_ventilador')
-                        ->label('🌀 Tiene ventilador'),
+                        ->label('🌀 Tiene ventilador')
+                        ->live(),
+
+                    static::moneyField('recargo_aire', 'Recargo por aire (por noche)')
+                        ->visible(fn (Forms\Get $get) => (bool) $get('tiene_aire')),
+
+                    static::moneyField('recargo_ventilador', 'Recargo por ventilador (por noche)')
+                        ->visible(fn (Forms\Get $get) => (bool) $get('tiene_ventilador')),
+
+                    Forms\Components\Toggle::make('activa')
+                        ->label('Activa')
+                        ->default(true),
                 ]),
             ]),
 
             Forms\Components\Section::make('Precio por número de personas')
-                ->description('El precio es por noche completa según cuántas personas se hospeden (no tiene que ser proporcional). Una habitación con aire/ventilador normalmente se cobra más que una sin.')
+                ->description('El precio base es por noche completa según cuántas personas se hospeden (no tiene que ser proporcional). El recargo de aire/ventilador (si aplica) se suma aparte.')
                 ->schema(
                     collect(range(1, self::MAX_PERSONAS))->map(
-                        fn ($n) => Forms\Components\TextInput::make("precio_{$n}")
-                            ->label($n == 1 ? '1 persona' : "{$n} personas")
-                            ->prefix('$')
-                            ->live(onBlur: true)
-                            ->afterStateUpdated(function ($state, callable $set) use ($n) {
-                                $digits = preg_replace('/\D/', '', (string) $state);
-                                $set("precio_{$n}", $digits === '' ? null : number_format((int) $digits, 0, ',', '.'));
-                            })
+                        fn ($n) => static::moneyField("precio_{$n}", $n == 1 ? '1 persona' : "{$n} personas")
                     )->toArray()
                 )
                 ->columns(3),
@@ -112,6 +130,11 @@ class HotelHabitacionResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->weight('bold'),
+
+                Tables\Columns\TextColumn::make('zona')
+                    ->label('Zona/Piso')
+                    ->placeholder('—')
+                    ->searchable(),
 
                 Tables\Columns\TextColumn::make('camas_dobles')
                     ->label('Camas dobles')
@@ -144,6 +167,14 @@ class HotelHabitacionResource extends Resource
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('activa')->label('Estado'),
+                Tables\Filters\SelectFilter::make('zona')
+                    ->label('Zona/Piso')
+                    ->options(fn () => HotelHabitacion::where('empresa_id', $empresaId)
+                        ->whereNotNull('zona')
+                        ->where('zona', '!=', '')
+                        ->distinct()
+                        ->pluck('zona', 'zona')
+                        ->toArray()),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

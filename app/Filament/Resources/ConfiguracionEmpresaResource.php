@@ -131,7 +131,15 @@ class ConfiguracionEmpresaResource extends Resource
 
                             Forms\Components\Toggle::make('usa_hotel')
                                 ->label('Usa hotel')
+                                ->live()
                                 ->helperText('Activa el módulo de hotel: habitaciones, reservas y hospedaje por noche.'),
+
+                            Forms\Components\TimePicker::make('hotel_hora_inicio_dia')
+                                ->label('Hora en que empieza el día del hotel')
+                                ->seconds(false)
+                                ->default('14:00')
+                                ->helperText('Ej: 2:00pm. Se usa para calcular las noches cuando no se define fecha de salida al reservar.')
+                                ->visible(fn (Forms\Get $get) => (bool) $get('usa_hotel')),
 
                             Forms\Components\Toggle::make('permite_stock_negativo')
                                 ->label('Permitir stock negativo')

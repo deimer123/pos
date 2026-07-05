@@ -33,6 +33,7 @@ class ConfiguracionEmpresa extends Model
         'usa_domicilios',
         'usa_taller',
         'usa_hotel',
+        'hotel_hora_inicio_dia',
         'permite_stock_negativo',
         'imprime_ticket',
         'mostrar_iva_separado',

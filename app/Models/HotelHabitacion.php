@@ -11,9 +11,9 @@ class HotelHabitacion extends Model
     protected $table = 'hotel_habitaciones';
 
     protected $fillable = [
-        'empresa_id', 'numero', 'camas_dobles', 'camas_sencillas',
+        'empresa_id', 'numero', 'zona', 'camas_dobles', 'camas_sencillas',
         'tiene_aire', 'tiene_ventilador', 'precios_por_persona',
-        'activa', 'observaciones',
+        'recargo_aire', 'recargo_ventilador', 'activa', 'observaciones',
     ];
 
     protected $casts = [
@@ -22,6 +22,8 @@ class HotelHabitacion extends Model
         'tiene_aire'           => 'boolean',
         'tiene_ventilador'     => 'boolean',
         'precios_por_persona'  => 'array',
+        'recargo_aire'         => 'float',
+        'recargo_ventilador'   => 'float',
         'activa'               => 'boolean',
     ];
 
@@ -68,8 +70,25 @@ class HotelHabitacion extends Model
         return (float) $precios[(string) $masCercano];
     }
 
+    // Precio total de la noche (base por ocupación + recargos fijos de
+    // aire/ventilador si la habitación los tiene).
+    public function precioNochePara(int $personas): float
+    {
+        $total = $this->precioParaPersonas($personas);
+
+        if ($this->tiene_aire) {
+            $total += (float) $this->recargo_aire;
+        }
+
+        if ($this->tiene_ventilador) {
+            $total += (float) $this->recargo_ventilador;
+        }
+
+        return round($total, 2);
+    }
+
     public function getPrecioDesdeAttribute(): float
     {
-        return $this->precioParaPersonas(1);
+        return $this->precioNochePara(1);
     }
 }

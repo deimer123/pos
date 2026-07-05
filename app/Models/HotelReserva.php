@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class HotelReserva extends Model
 {
@@ -13,7 +14,8 @@ class HotelReserva extends Model
         'empresa_id', 'habitacion_id', 'numero_reserva',
         'huesped_nombre', 'huesped_telefono', 'huesped_documento', 'numero_personas',
         'fecha_checkin', 'fecha_checkout', 'checkin_real_at', 'checkout_real_at',
-        'precio_noche', 'estado', 'factura_id', 'observaciones', 'creado_por',
+        'precio_noche', 'abono_monto', 'abono_medio_pago',
+        'estado', 'factura_id', 'observaciones', 'creado_por',
     ];
 
     protected $casts = [
@@ -23,6 +25,7 @@ class HotelReserva extends Model
         'checkin_real_at'  => 'datetime',
         'checkout_real_at' => 'datetime',
         'precio_noche'     => 'float',
+        'abono_monto'      => 'float',
     ];
 
     protected static function booted(): void
@@ -45,15 +48,51 @@ class HotelReserva extends Model
         return $this->belongsTo(Factura::class);
     }
 
+    public function consumos(): HasMany
+    {
+        return $this->hasMany(HotelReservaConsumo::class, 'reserva_id');
+    }
+
+    // Si hay fecha de salida definida, se calculan las noches por
+    // diferencia de fechas. Si el huésped no sabe cuándo se va (fecha de
+    // salida en blanco), se usa la hora de corte del hotel (por defecto
+    // 2:00pm) para calcular cuántas noches lleva hasta ahora.
     public function getNumeroNochesAttribute(): int
     {
-        $noches = $this->fecha_checkin->diffInDays($this->fecha_checkout);
+        if ($this->fecha_checkout) {
+            return max(1, $this->fecha_checkin->diffInDays($this->fecha_checkout));
+        }
 
-        return max(1, $noches);
+        return $this->calcularNochesAbiertas();
+    }
+
+    public function calcularNochesAbiertas(?string $horaInicioDia = null): int
+    {
+        [$horas] = array_map('intval', explode(':', $horaInicioDia ?: '14:00:00'));
+
+        $inicio = $this->checkin_real_at ?? now();
+        $ahora  = now();
+
+        $inicioAjustado = $inicio->copy()->subHours($horas)->startOfDay();
+        $ahoraAjustado  = $ahora->copy()->subHours($horas)->startOfDay();
+
+        return max(1, $inicioAjustado->diffInDays($ahoraAjustado) + 1);
     }
 
     public function getTotalEstimadoAttribute(): float
     {
         return round($this->precio_noche * $this->numero_noches, 2);
+    }
+
+    public function getTotalConsumosAttribute(): float
+    {
+        return round((float) $this->consumos()->sum('subtotal'), 2);
+    }
+
+    // Lo que falta por cobrar al hacer check-out: hospedaje + consumos
+    // extra, menos el abono que ya se recibió al reservar.
+    public function getSaldoPendienteAttribute(): float
+    {
+        return round($this->total_estimado + $this->total_consumos - $this->abono_monto, 2);
     }
 }

@@ -57,7 +57,9 @@ class CarritoVenta extends Component
     public $tallerFotoTemp        = null;
 
     // ── Hotel ───────────────────────────────────────────────────────────────
-    public ?int $hotelReservaId   = null;
+    public ?int $hotelReservaId          = null;
+    public float $hotelAbonoMonto        = 0;
+    public string $hotelAbonoMedioPago   = '';
     public $clientes                  = [];
     public $mostrarModalClientes      = false;
     public $clienteSeleccionadoNombre = null;
@@ -1030,11 +1032,15 @@ public function limpiarCarrito()
         $this->tallerFotoTemp = null;
     }
 
-    // Si hay una reserva de hotel activa, "Limpiar" solo desasocia el
-    // carrito: la reserva sigue en check-in, el huésped sigue hospedado.
-    // Se puede volver a facturar después desde el panel de Hotel.
+    // Si hay una reserva de hotel activa, "Limpiar" guarda los productos
+    // agregados como consumos de la reserva y solo desasocia el carrito: la
+    // reserva sigue en check-in, el huésped sigue hospedado. Se puede volver
+    // a facturar después desde el panel de Hotel.
     if ($this->hotelReservaId) {
-        $this->hotelReservaId = null;
+        $this->sincronizarCarritoConHotelReserva();
+        $this->hotelReservaId      = null;
+        $this->hotelAbonoMonto     = 0;
+        $this->hotelAbonoMedioPago = '';
     }
 
     $this->eliminarPrefacturaCargada();
@@ -1637,20 +1643,26 @@ public function guardarPrefacturaConfirmada()
     // ── Hotel ─────────────────────────────────────────────────────────────
     // El hospedaje se agrega como un único ítem manual (no ligado a un
     // Product) con el total ya calculado: precio por persona/noche de la
-    // habitación × número de personas × número de noches de la reserva.
+    // habitación (incluye recargos de aire/ventilador) × número de noches.
+    // Si la reserva no tiene fecha de salida definida, las noches se
+    // calculan según la hora de corte configurada para el hotel. También se
+    // recargan los consumos (productos) que se hayan agregado previamente a
+    // la reserva y no se hayan facturado todavía.
     public function cargarHotelReserva(int $reservaId): void
     {
         $empresaId = $this->getEmpresaId();
 
         $reserva = \App\Models\HotelReserva::where('id', $reservaId)
             ->where('empresa_id', $empresaId)
-            ->with('habitacion')
+            ->with(['habitacion', 'consumos'])
             ->first();
 
         if (! $reserva) return;
 
-        $this->hotelReservaId = $reserva->id;
-        $this->carrito        = [];
+        $this->hotelReservaId       = $reserva->id;
+        $this->hotelAbonoMonto      = (float) $reserva->abono_monto;
+        $this->hotelAbonoMedioPago  = (string) ($reserva->abono_medio_pago ?? '');
+        $this->carrito              = [];
 
         if ($reserva->huesped_nombre) {
             $cliente = Actor::where('empresa_id', $empresaId)
@@ -1668,25 +1680,28 @@ public function guardarPrefacturaConfirmada()
             $this->clienteSeleccionadoNombre = $this->textoUtf8($reserva->huesped_nombre);
         }
 
+        $horaInicioDia = (string) (\App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('hotel_hora_inicio_dia') ?? '14:00:00');
+        $noches = $reserva->fecha_checkout ? $reserva->numero_noches : $reserva->calcularNochesAbiertas($horaInicioDia);
+        $totalHospedaje = round((float) $reserva->precio_noche * $noches, 2);
+
         $numeroHabitacion = $reserva->habitacion->numero ?? '?';
-        $descripcion = "Hospedaje habitación {$numeroHabitacion} · {$reserva->numero_noches} noche(s) x {$reserva->numero_personas} persona(s)";
-        $total = $reserva->total_estimado;
-        $uuid  = 'hotel-reserva-' . $reserva->id;
+        $descripcion = "Hospedaje habitación {$numeroHabitacion} · {$noches} noche(s) x {$reserva->numero_personas} persona(s)";
+        $uuid = 'hotel-reserva-' . $reserva->id;
 
         $this->carrito[$uuid] = [
             'uuid'               => $uuid,
             'id_producto'        => $uuid,
             'nombre'             => $this->textoUtf8($descripcion),
             'cantidad'           => 1,
-            'precio'             => $total,
-            'nuevo_precio'       => $total,
+            'precio'             => $totalHospedaje,
+            'nuevo_precio'       => $totalHospedaje,
             'descuento'          => 0,
             'iva_venta'          => 0,
             'utilidad1'          => 0,
             'costo'              => 0,
             'costo_iva'          => 0,
             'utilidad_nueva'     => 0,
-            'total'              => $total,
+            'total'              => $totalHospedaje,
             'existencias'        => 0,
             'porciones_receta'   => null,
             'id_unidad_de_medida'=> 1,
@@ -1697,12 +1712,107 @@ public function guardarPrefacturaConfirmada()
             'precio_editado_manual' => true,
         ];
 
+        foreach ($reserva->consumos as $consumo) {
+            $precio = (float) $consumo->precio_unitario;
+            $cant   = (float) $consumo->cantidad;
+
+            if ($consumo->producto_id) {
+                $producto = Product::where('id_producto', $consumo->producto_id)
+                    ->where('empresa_id', $empresaId)
+                    ->first();
+
+                if ($producto) {
+                    $key = (string) $consumo->producto_id;
+                    $costoConIva = $this->costoConIvaProducto($producto);
+                    $this->carrito[$key] = [
+                        'uuid'               => $key,
+                        'id_producto'        => $producto->id_producto,
+                        'nombre'             => $this->textoUtf8($consumo->descripcion ?: $producto->descripcion_larga),
+                        'cantidad'           => $cant,
+                        'precio'             => $precio,
+                        'nuevo_precio'       => $precio,
+                        'descuento'          => 0,
+                        'iva_venta'          => (float) ($producto->iva_venta ?? 0),
+                        'utilidad1'          => $this->utilidadSobreVenta($precio, $costoConIva),
+                        'costo'              => (float) ($producto->precio_costo ?? 0),
+                        'costo_iva'          => $costoConIva,
+                        'utilidad_nueva'     => $this->utilidadSobreVenta($precio, $costoConIva),
+                        'total'              => round($precio * $cant, 2),
+                        'existencias'        => (float) ($producto->existencias ?? 0),
+                        'porciones_receta'   => null,
+                        'id_unidad_de_medida'=> (int) ($producto->id_unidad_de_medida ?? 1),
+                        'vende_por'          => (string) ($producto->vende_por ?? 'unidad'),
+                        'permite_fraccion'   => (bool) ($producto->permite_fraccion ?? false),
+                        'permite_decimal'    => $producto->permiteCantidadDecimal(),
+                        'combo_activo'       => null,
+                        'precio_editado_manual' => false,
+                    ];
+                    continue;
+                }
+            }
+
+            $uuidConsumo = 'hotel-consumo-' . $consumo->id;
+            $this->carrito[$uuidConsumo] = [
+                'uuid'               => $uuidConsumo,
+                'id_producto'        => $uuidConsumo,
+                'nombre'             => $consumo->descripcion ?: 'Consumo',
+                'cantidad'           => $cant,
+                'precio'             => $precio,
+                'nuevo_precio'       => $precio,
+                'descuento'          => 0,
+                'iva_venta'          => 0,
+                'utilidad1'          => 0,
+                'costo'              => 0,
+                'costo_iva'          => 0,
+                'utilidad_nueva'     => 0,
+                'total'              => round($precio * $cant, 2),
+                'existencias'        => 0,
+                'porciones_receta'   => null,
+                'id_unidad_de_medida'=> 1,
+                'vende_por'          => 'unidad',
+                'permite_fraccion'   => false,
+                'permite_decimal'    => false,
+                'combo_activo'       => null,
+                'precio_editado_manual' => true,
+            ];
+        }
+
         $this->actualizarTotales();
         $this->dispatch('success', 'Reserva #' . str_pad($reserva->numero_reserva, 4, '0', STR_PAD_LEFT) . ' cargada en el POS.');
     }
 
+    // Guarda los productos agregados al carrito (aparte del ítem de
+    // hospedaje) como consumos de la reserva, para poder salir sin facturar
+    // y cobrarlos después junto con el hospedaje al hacer check-out.
+    public function sincronizarCarritoConHotelReserva(): void
+    {
+        if (! $this->hotelReservaId) return;
+
+        \App\Models\HotelReservaConsumo::where('reserva_id', $this->hotelReservaId)->delete();
+
+        foreach ($this->carrito as $key => $item) {
+            if (str_starts_with((string) $key, 'hotel-reserva-')) {
+                continue; // el ítem de hospedaje no es un consumo, se recalcula solo
+            }
+
+            $precio = (float) ($item['nuevo_precio'] ?? $item['precio'] ?? 0);
+            $cant   = (float) ($item['cantidad'] ?? 1);
+
+            \App\Models\HotelReservaConsumo::create([
+                'reserva_id'      => $this->hotelReservaId,
+                'producto_id'     => is_numeric($item['id_producto']) ? (int) $item['id_producto'] : null,
+                'descripcion'     => $item['nombre'] ?? 'Sin descripción',
+                'cantidad'        => $cant,
+                'precio_unitario' => $precio,
+                'subtotal'        => round($precio * $cant, 2),
+            ]);
+        }
+    }
+
     public function salirALobbyHotel(): void
     {
+        $this->sincronizarCarritoConHotelReserva();
+
         $this->carrito        = [];
         $this->totalGeneral   = 0;
         $this->hotelReservaId = null;
@@ -1726,7 +1836,9 @@ public function guardarPrefacturaConfirmada()
                 'checkout_real_at' => now(),
             ]);
 
-        $this->hotelReservaId = null;
+        $this->hotelReservaId      = null;
+        $this->hotelAbonoMonto     = 0;
+        $this->hotelAbonoMedioPago = '';
     }
 
     public function verPrefacturas()
