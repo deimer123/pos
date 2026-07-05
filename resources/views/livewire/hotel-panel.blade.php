@@ -190,7 +190,7 @@
                                 @endphp
                                 <td title="{{ $res ? $res->huesped_nombre . ' (clic para ver la reserva)' : 'Libre' }}"
                                     style="padding:6px; text-align:center; border:1px solid #e2e8f0; background:{{ $bg }}; cursor:pointer;"
-                                    wire:click="{{ $res ? 'abrirEditarReserva(' . $res->id . ')' : 'abrirNuevaReserva(' . $fila['habitacion']->id . ')' }}">
+                                    wire:click="{{ $res ? 'verReserva(' . $res->id . ')' : 'abrirNuevaReserva(' . $fila['habitacion']->id . ')' }}">
                                     @if($res)
                                         <span style="font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; max-width:56px;">{{ $res->huesped_nombre }}</span>
                                     @endif
@@ -390,6 +390,104 @@
                     </button>
                 </div>
             </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Modal Ver reserva (informativo, desde el calendario) --}}
+    @if($modalVerReserva)
+    <div style="position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1200; display:flex; align-items:center; justify-content:center; padding:16px;">
+        <div style="background:white; border-radius:16px; width:100%; max-width:420px; max-height:90vh; overflow-y:auto;">
+            <div style="background:#334155; color:white; padding:14px 18px; border-radius:16px 16px 0 0; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:15px; font-weight:700;">👁️ Detalle de la reserva</span>
+                <button wire:click="$set('modalVerReserva',false)" style="background:rgba(255,255,255,.2); border:none; color:white; border-radius:99px; width:28px; height:28px; cursor:pointer; font-size:16px; line-height:1;">×</button>
+            </div>
+            @if($this->reservaVista)
+                @php $rv = $this->reservaVista; @endphp
+                <div style="padding:18px; font-size:13px; color:#1f2937;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <span style="font-weight:900; font-size:15px;">🚪 {{ $rv->habitacion->numero ?? '?' }}</span>
+                        <span style="font-size:10px; font-weight:700; background:#e2e8f0; color:#334155; border-radius:99px; padding:2px 10px; text-transform:uppercase;">
+                            {{ ['reservada'=>'Reservada','checkin'=>'Con entrada','checkout'=>'Facturada','cancelada'=>'Cancelada'][$rv->estado] ?? $rv->estado }}
+                        </span>
+                    </div>
+
+                    <div style="margin-bottom:10px;">
+                        <div style="font-size:10px; color:#6b7280; text-transform:uppercase; font-weight:700;">Huésped</div>
+                        <div style="font-weight:700;">{{ $rv->huesped_nombre }}</div>
+                        <div style="color:#6b7280; font-size:12px;">
+                            {{ $rv->huesped_telefono ?: 'Sin teléfono' }} · {{ $rv->huesped_documento ?: 'Sin documento' }}
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                        <div>
+                            <div style="font-size:10px; color:#6b7280; text-transform:uppercase; font-weight:700;">Entrada</div>
+                            <div>{{ $rv->fecha_checkin->format('d/m/Y') }}</div>
+                        </div>
+                        <div>
+                            <div style="font-size:10px; color:#6b7280; text-transform:uppercase; font-weight:700;">Salida</div>
+                            <div>{{ $rv->fecha_checkout?->format('d/m/Y') ?? 'Sin definir' }}</div>
+                        </div>
+                        <div>
+                            <div style="font-size:10px; color:#6b7280; text-transform:uppercase; font-weight:700;">Personas</div>
+                            <div>{{ $rv->numero_personas }}</div>
+                        </div>
+                        <div>
+                            <div style="font-size:10px; color:#6b7280; text-transform:uppercase; font-weight:700;">Aire/Ventilador</div>
+                            <div>
+                                @if($rv->climatizacion === 'aire') ❄️ Aire
+                                @elseif($rv->climatizacion === 'ventilador') 🌀 Ventilador
+                                @else Ninguno
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background:#f8fafc; border-radius:8px; padding:10px; margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>Hospedaje ({{ $rv->numero_noches }} noche(s) × ${{ number_format($rv->precio_noche, 0, ',', '.') }})</span>
+                            <span style="font-weight:700;">${{ number_format($rv->total_estimado, 0, ',', '.') }}</span>
+                        </div>
+                        @if($rv->total_consumos > 0)
+                        <div style="display:flex; justify-content:space-between; margin-top:4px;">
+                            <span>Consumos</span>
+                            <span style="font-weight:700;">${{ number_format($rv->total_consumos, 0, ',', '.') }}</span>
+                        </div>
+                        @endif
+                        @if($rv->abono_monto > 0)
+                        <div style="display:flex; justify-content:space-between; margin-top:4px; color:#d97706;">
+                            <span>Abono ({{ $rv->abono_medio_pago }})</span>
+                            <span style="font-weight:700;">-${{ number_format($rv->abono_monto, 0, ',', '.') }}</span>
+                        </div>
+                        @endif
+                        <div style="display:flex; justify-content:space-between; margin-top:6px; border-top:1px dashed #cbd5e1; padding-top:6px; font-weight:900;">
+                            <span>Saldo</span>
+                            <span>${{ number_format($rv->saldo_pendiente, 0, ',', '.') }}</span>
+                        </div>
+                    </div>
+
+                    @if($rv->observaciones)
+                    <div style="margin-bottom:10px;">
+                        <div style="font-size:10px; color:#6b7280; text-transform:uppercase; font-weight:700;">Observaciones</div>
+                        <div>{{ $rv->observaciones }}</div>
+                    </div>
+                    @endif
+
+                    <div style="display:flex; gap:8px; justify-content:flex-end;">
+                        <button wire:click="$set('modalVerReserva',false)"
+                            style="border:1px solid #d1d5db; background:white; border-radius:8px; padding:8px 18px; font-size:13px; cursor:pointer; color:#6b7280;">
+                            Cerrar
+                        </button>
+                        @if($rv->estado === 'reservada')
+                        <button wire:click="editarDesdeVerReserva"
+                            style="border:none; background:#2563eb; color:white; border-radius:8px; padding:8px 20px; font-size:13px; font-weight:700; cursor:pointer;">
+                            ✏️ Editar
+                        </button>
+                        @endif
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
     @endif

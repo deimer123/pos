@@ -42,6 +42,10 @@ class HotelPanel extends Component
     public bool   $modalCrearClienteHotel  = false;
     public array  $nuevoClienteHotel       = [];
 
+    // ── Ver reserva (informativo, desde el calendario)
+    public bool $modalVerReserva = false;
+    public ?int $verReservaId    = null;
+
     // ── Calendario de reservas
     public string $calDesde = '';
     public string $calHasta = '';
@@ -153,6 +157,37 @@ class HotelPanel extends Component
         $this->resAbonoMonto        = '';
         $this->resAbonoMedioPago    = 'Efectivo';
         $this->modalReserva         = true;
+    }
+
+    // Vista informativa de una reserva (desde el calendario): solo para
+    // consultar los datos, no se puede editar desde aquí.
+    public function verReserva(int $id): void
+    {
+        $this->verReservaId   = $id;
+        $this->modalVerReserva = true;
+    }
+
+    public function getReservaVistaProperty(): ?HotelReserva
+    {
+        if (! $this->verReservaId) {
+            return null;
+        }
+
+        return HotelReserva::where('empresa_id', $this->empresaId())
+            ->with(['habitacion', 'consumos'])
+            ->find($this->verReservaId);
+    }
+
+    // Desde la vista informativa, si de verdad se necesita editar, pasa al
+    // modal de edición normal.
+    public function editarDesdeVerReserva(): void
+    {
+        if (! $this->verReservaId) return;
+
+        $id = $this->verReservaId;
+        $this->modalVerReserva = false;
+        $this->verReservaId    = null;
+        $this->abrirEditarReserva($id);
     }
 
     // ── Buscar / crear cliente (huésped) ─────────────────────────────────
