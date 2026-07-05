@@ -113,10 +113,14 @@
                                 style="flex:1; border:none; border-radius:6px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#16a34a; color:white;">
                                 📅 Reservar
                             </button>
+                            <button wire:click="abrirNuevaReserva({{ $h->id }}, true)"
+                                style="flex:1; border:none; border-radius:6px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#f59e0b; color:white;">
+                                🔑 Entrada ahora
+                            </button>
                         @elseif($r->estado === 'reservada')
                             <button wire:click="confirmarCheckin({{ $r->id }})"
                                 style="flex:1; border:none; border-radius:6px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#f59e0b; color:white;">
-                                🔑 Check-in
+                                🔑 Entrada
                             </button>
                             <button wire:click="abrirEditarReserva({{ $r->id }})"
                                 style="flex:1; border:none; border-radius:6px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#eff6ff; color:#2563eb;">
@@ -130,7 +134,7 @@
                         @else
                             <button wire:click="irAFacturar({{ $r->id }})"
                                 style="flex:1; border:none; border-radius:6px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#0f766e; color:white;">
-                                🧾 Check-out / Facturar
+                                🧾 Salida / Facturar
                             </button>
                         @endif
                     </div>
@@ -164,22 +168,23 @@
             <table style="border-collapse:collapse; font-size:11px; width:100%;">
                 <thead>
                     <tr>
-                        <th style="position:sticky; left:0; background:#f1f5f9; padding:8px; text-align:left; border-bottom:1px solid #e5e7eb; min-width:80px;">Habitación</th>
+                        <th style="position:sticky; left:0; background:#f1f5f9; padding:8px; text-align:left; border:1px solid #e2e8f0; min-width:80px;">Habitación</th>
                         @php
                             $diasAbrev = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
                             $coloresDia = ['#f0fdf4', '#eff6ff']; // verde / azul, alternando por día
+                            $coloresFila = ['#fee2e2', '#fef9c3']; // rojo / amarillo, alternando por habitación
                         @endphp
                         @foreach($diasCalendario as $i => $dia)
-                            <th style="padding:6px; text-align:center; border-bottom:1px solid #e5e7eb; min-width:56px; color:#6b7280; background:{{ $coloresDia[$i % 2] }};">
+                            <th style="padding:6px; text-align:center; border:1px solid #e2e8f0; min-width:56px; color:#6b7280; background:{{ $coloresDia[$i % 2] }};">
                                 {{ $dia->format('d/m') }}<br><span style="font-weight:400;">{{ $diasAbrev[$dia->dayOfWeek] }}</span>
                             </th>
                         @endforeach
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($calendario as $fila)
+                    @foreach($calendario as $fi => $fila)
                         <tr>
-                            <td style="position:sticky; left:0; background:white; padding:8px; font-weight:700; border-bottom:1px solid #f1f5f9;">
+                            <td style="position:sticky; left:0; padding:8px; font-weight:700; border:1px solid #e2e8f0; border-left:5px solid {{ $coloresFila[$fi % 2] === '#fee2e2' ? '#ef4444' : '#eab308' }}; background:{{ $coloresFila[$fi % 2] }};">
                                 🚪 {{ $fila['habitacion']->numero }}
                             </td>
                             @foreach($fila['celdas'] as $i => $celda)
@@ -188,7 +193,7 @@
                                     $bg = $res ? ($res->estado === 'checkin' ? '#fca5a5' : '#fde68a') : $coloresDia[$i % 2];
                                 @endphp
                                 <td title="{{ $res ? $res->huesped_nombre : 'Libre' }}"
-                                    style="padding:6px; text-align:center; border-bottom:1px solid #f1f5f9; background:{{ $bg }}; cursor:{{ $res ? 'default' : 'pointer' }};"
+                                    style="padding:6px; text-align:center; border:1px solid #e2e8f0; background:{{ $bg }}; cursor:{{ $res ? 'default' : 'pointer' }};"
                                     @if(! $res) wire:click="abrirNuevaReserva({{ $fila['habitacion']->id }})" @endif>
                                     @if($res)
                                         <span style="font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; max-width:56px;">{{ $res->huesped_nombre }}</span>
@@ -200,10 +205,11 @@
                 </tbody>
             </table>
         </div>
-        <div style="display:flex; gap:14px; margin-top:10px; font-size:11px; color:#6b7280;">
+        <div style="display:flex; gap:14px; margin-top:10px; font-size:11px; color:#6b7280; flex-wrap:wrap;">
             <span><span style="display:inline-block; width:10px; height:10px; background:#f0fdf4; border:1px solid #86efac; border-radius:2px; vertical-align:middle;"></span> Libre</span>
             <span><span style="display:inline-block; width:10px; height:10px; background:#fde68a; border-radius:2px; vertical-align:middle;"></span> Reservada</span>
-            <span><span style="display:inline-block; width:10px; height:10px; background:#fca5a5; border-radius:2px; vertical-align:middle;"></span> Ocupada (check-in)</span>
+            <span><span style="display:inline-block; width:10px; height:10px; background:#fca5a5; border-radius:2px; vertical-align:middle;"></span> Ocupada (con entrada)</span>
+            <span><span style="display:inline-block; width:10px; height:10px; background:#ef4444; border-radius:2px; vertical-align:middle;"></span> / <span style="display:inline-block; width:10px; height:10px; background:#eab308; border-radius:2px; vertical-align:middle;"></span> Franja de color por habitación (para diferenciar filas)</span>
         </div>
         @endif
     </div>
@@ -213,26 +219,54 @@
     @if($modalReserva)
     <div style="position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1200; display:flex; align-items:center; justify-content:center; padding:16px;">
         <div style="background:white; border-radius:16px; width:100%; max-width:480px; max-height:90vh; overflow-y:auto;">
-            <div style="background:#16a34a; color:white; padding:14px 18px; border-radius:16px 16px 0 0; display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:15px; font-weight:700;">{{ $reservaId ? '✏️ Editar reserva' : '📅 Nueva reserva' }}</span>
+            <div style="background:{{ $resInmediato ? '#f59e0b' : '#16a34a' }}; color:white; padding:14px 18px; border-radius:16px 16px 0 0; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:15px; font-weight:700;">
+                    @if($reservaId) ✏️ Editar reserva
+                    @elseif($resInmediato) 🔑 Entrada ahora
+                    @else 📅 Nueva reserva
+                    @endif
+                </span>
                 <button wire:click="$set('modalReserva',false)" style="background:rgba(255,255,255,.2); border:none; color:white; border-radius:99px; width:28px; height:28px; cursor:pointer; font-size:16px; line-height:1;">×</button>
             </div>
             <div style="padding:18px;">
 
                 <div style="margin-bottom:12px;">
                     <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Habitación *</label>
-                    <select wire:model.live="resHabitacionId"
-                        style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px;">
-                        <option value="">Selecciona...</option>
-                        @foreach($todasHabitaciones as $h)
-                            <option value="{{ $h->id }}">🚪 {{ $h->numero }} · hasta {{ $h->capacidad_maxima }} pers. · desde ${{ number_format($h->precio_desde, 0, ',', '.') }}/noche</option>
-                        @endforeach
-                    </select>
+                    @if($resHabitacionBloqueada && $this->habitacionSeleccionada)
+                        @php($hs = $this->habitacionSeleccionada)
+                        <div style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:0 10px; font-size:13px; box-sizing:border-box; background:#f8fafc; display:flex; align-items:center; justify-content:space-between;">
+                            <span>🚪 {{ $hs->numero }}
+                                @if($hs->tiene_aire) ❄️ @endif
+                                @if($hs->tiene_ventilador) 🌀 @endif
+                                · hasta {{ $hs->capacidad_maxima }} pers.
+                            </span>
+                            @unless($reservaId)
+                            <button type="button" wire:click="cambiarHabitacionReserva" style="border:none; background:none; color:#2563eb; font-size:11px; font-weight:700; cursor:pointer;">Cambiar</button>
+                            @endunless
+                        </div>
+                    @else
+                        <select wire:model.live="resHabitacionId"
+                            style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px;">
+                            <option value="">Selecciona...</option>
+                            @foreach($todasHabitaciones as $h)
+                                <option value="{{ $h->id }}">🚪 {{ $h->numero }}
+                                    @if($h->tiene_aire) ❄️ @endif
+                                    @if($h->tiene_ventilador) 🌀 @endif
+                                    · hasta {{ $h->capacidad_maxima }} pers. · desde ${{ number_format($h->precio_desde, 0, ',', '.') }}/noche</option>
+                            @endforeach
+                        </select>
+                    @endif
                     @error('resHabitacionId') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
                 </div>
 
                 <div style="margin-bottom:12px;">
-                    <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Nombre del huésped *</label>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <label style="font-size:11px; font-weight:700; color:#4b5563;">Nombre del huésped *</label>
+                        <span style="display:flex; gap:8px;">
+                            <button type="button" wire:click="abrirModalBuscarClienteHotel" style="border:none; background:none; color:#2563eb; font-size:11px; font-weight:700; cursor:pointer;">🔍 Buscar cliente</button>
+                            <button type="button" wire:click="abrirModalCrearClienteHotel" style="border:none; background:none; color:#16a34a; font-size:11px; font-weight:700; cursor:pointer;">➕ Cliente nuevo</button>
+                        </span>
+                    </div>
                     <input wire:model="resHuespedNombre" type="text"
                         style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
                     @error('resHuespedNombre') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
@@ -253,12 +287,12 @@
 
                 <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:12px;">
                     <div>
-                        <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Check-in *</label>
+                        <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Entrada *</label>
                         <input wire:model.live="resFechaCheckin" type="date"
                             style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
                     </div>
                     <div>
-                        <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Check-out</label>
+                        <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Salida</label>
                         <input wire:model.live="resFechaCheckout" type="date"
                             style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
                         <div style="font-size:9px; color:#9ca3af; margin-top:2px;">Déjalo en blanco si no sabe cuándo se va.</div>
@@ -285,7 +319,7 @@
                     @else
                         <div style="font-size:10px; color:#16a34a; text-transform:uppercase; font-weight:700;">Precio por noche</div>
                         <div style="font-size:22px; font-weight:900; color:#16a34a;">${{ number_format($this->precioNocheReserva, 0, ',', '.') }}</div>
-                        <div style="font-size:10px; color:#6b7280;">para {{ $resNumeroPersonas ?: 1 }} persona(s) · el total se calcula al hacer check-out</div>
+                        <div style="font-size:10px; color:#6b7280;">para {{ $resNumeroPersonas ?: 1 }} persona(s) · el total se calcula al hacer la salida</div>
                     @endif
                     @if($this->precioNocheReserva <= 0)
                         <div style="font-size:10px; color:#dc2626; margin-top:4px; font-weight:700;">⚠️ Esta habitación no tiene precio configurado para {{ $resNumeroPersonas ?: 1 }} persona(s).</div>
@@ -293,7 +327,13 @@
                 </div>
                 @endif
 
-                @if(! $reservaId)
+                @if($resInmediato)
+                <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:10px 12px; margin-bottom:12px; font-size:11px; color:#1e40af;">
+                    ℹ️ El huésped se hospeda de una vez, no necesita abono. Puedes facturar de inmediato o dejarlo pendiente para cobrarlo cuando se vaya.
+                </div>
+                @endif
+
+                @if(! $reservaId && ! $resInmediato)
                 <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:12px; margin-bottom:12px;" x-data="{
                         formato(v) { const limpio = String(v || '').replace(/\D/g, ''); return limpio ? Number(limpio).toLocaleString('es-CO') : ''; },
                         limpiar(v) { return String(v || '').replace(/\D/g, ''); }
@@ -314,7 +354,7 @@
                             </select>
                         </div>
                     </div>
-                    <div style="font-size:9px; color:#92400e; margin-top:4px;">Si registras un abono, se descuenta del total a cobrar en el check-out y queda registrado como entrada de caja.</div>
+                    <div style="font-size:9px; color:#92400e; margin-top:4px;">Si registras un abono, se descuenta del total a cobrar en la salida y queda registrado como entrada de caja.</div>
                 </div>
                 @endif
 
@@ -330,8 +370,88 @@
                         Cancelar
                     </button>
                     <button wire:click="guardarReserva" wire:loading.attr="disabled"
+                        style="border:none; background:{{ $resInmediato ? '#f59e0b' : '#16a34a' }}; color:white; border-radius:8px; padding:8px 20px; font-size:13px; font-weight:700; cursor:pointer;">
+                        💾 {{ $resInmediato ? 'Registrar entrada' : 'Guardar reserva' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Modal Buscar cliente --}}
+    @if($modalBuscarClienteHotel)
+    <div style="position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1300; display:flex; align-items:center; justify-content:center; padding:16px;">
+        <div style="background:white; border-radius:16px; width:100%; max-width:420px; max-height:80vh; overflow-y:auto;">
+            <div style="background:#2563eb; color:white; padding:14px 18px; border-radius:16px 16px 0 0; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:15px; font-weight:700;">🔍 Buscar cliente</span>
+                <button wire:click="$set('modalBuscarClienteHotel',false)" style="background:rgba(255,255,255,.2); border:none; color:white; border-radius:99px; width:28px; height:28px; cursor:pointer; font-size:16px; line-height:1;">×</button>
+            </div>
+            <div style="padding:16px;">
+                <input wire:model.live.debounce.300ms="buscarClienteHotelTexto" type="text" placeholder="Nombre, teléfono o documento..."
+                    style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box; margin-bottom:10px;">
+
+                @if(trim($buscarClienteHotelTexto) === '')
+                    <div style="text-align:center; color:#9ca3af; font-size:12px; padding:20px 0;">Escribe para buscar.</div>
+                @elseif($this->resultadosClienteHotel->isEmpty())
+                    <div style="text-align:center; color:#9ca3af; font-size:12px; padding:20px 0;">No se encontraron clientes.</div>
+                @else
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        @foreach($this->resultadosClienteHotel as $actor)
+                            <button type="button" wire:click="seleccionarClienteHotel({{ $actor->id }})"
+                                style="text-align:left; border:1px solid #e5e7eb; background:#f8fafc; border-radius:8px; padding:8px 10px; cursor:pointer;">
+                                <div style="font-size:12px; font-weight:700; color:#1f2937;">{{ $actor->nombre }}</div>
+                                <div style="font-size:10px; color:#6b7280;">{{ $actor->identificacion ?: 'Sin documento' }} · {{ $actor->telefono ?: 'Sin teléfono' }}</div>
+                            </button>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Modal Crear cliente --}}
+    @if($modalCrearClienteHotel)
+    <div style="position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1300; display:flex; align-items:center; justify-content:center; padding:16px;">
+        <div style="background:white; border-radius:16px; width:100%; max-width:420px; max-height:80vh; overflow-y:auto;">
+            <div style="background:#16a34a; color:white; padding:14px 18px; border-radius:16px 16px 0 0; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:15px; font-weight:700;">➕ Cliente nuevo</span>
+                <button wire:click="$set('modalCrearClienteHotel',false)" style="background:rgba(255,255,255,.2); border:none; color:white; border-radius:99px; width:28px; height:28px; cursor:pointer; font-size:16px; line-height:1;">×</button>
+            </div>
+            <div style="padding:16px;">
+                <div style="margin-bottom:10px;">
+                    <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Nombre *</label>
+                    <input wire:model="nuevoClienteHotel.nombre" type="text"
+                        style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
+                    @error('nuevoClienteHotel.nombre') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Documento</label>
+                        <input wire:model="nuevoClienteHotel.identificacion" type="text"
+                            style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
+                        @error('nuevoClienteHotel.identificacion') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
+                    </div>
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Teléfono</label>
+                        <input wire:model="nuevoClienteHotel.telefono" type="text"
+                            style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
+                    </div>
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Dirección</label>
+                    <input wire:model="nuevoClienteHotel.direccion" type="text"
+                        style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
+                </div>
+                <div style="display:flex; gap:8px; justify-content:flex-end;">
+                    <button wire:click="$set('modalCrearClienteHotel',false)"
+                        style="border:1px solid #d1d5db; background:white; border-radius:8px; padding:8px 18px; font-size:13px; cursor:pointer; color:#6b7280;">
+                        Cancelar
+                    </button>
+                    <button wire:click="guardarClienteHotel" wire:loading.attr="disabled"
                         style="border:none; background:#16a34a; color:white; border-radius:8px; padding:8px 20px; font-size:13px; font-weight:700; cursor:pointer;">
-                        💾 Guardar reserva
+                        💾 Guardar cliente
                     </button>
                 </div>
             </div>

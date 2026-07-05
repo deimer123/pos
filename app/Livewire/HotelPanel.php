@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Models\Actor;
 use App\Models\Caja;
 use App\Models\Gasto;
 use App\Models\HotelHabitacion;
@@ -20,6 +21,9 @@ class HotelPanel extends Component
     public bool   $modalReserva          = false;
     public ?int   $reservaId             = null;
     public ?int   $resHabitacionId       = null;
+    public bool   $resHabitacionBloqueada = false; // true = la habitación ya viene definida (se abrió desde una habitación o celda específica)
+    public bool   $resInmediato          = false;  // true = "check-in ahora" (huésped llega de una vez, sin abono); false = reserva a futuro
+    public ?int   $resActorId            = null;
     public string $resHuespedNombre      = '';
     public string $resHuespedTelefono    = '';
     public string $resHuespedDocumento   = '';
@@ -29,6 +33,12 @@ class HotelPanel extends Component
     public string $resObservaciones      = '';
     public string $resAbonoMonto         = '';
     public string $resAbonoMedioPago     = 'Efectivo';
+
+    // ── Buscar / crear cliente (huésped) dentro del modal de reserva
+    public bool   $modalBuscarClienteHotel = false;
+    public string $buscarClienteHotelTexto = '';
+    public bool   $modalCrearClienteHotel  = false;
+    public array  $nuevoClienteHotel       = [];
 
     // ── Calendario de reservas
     public string $calDesde = '';
@@ -101,38 +111,135 @@ class HotelPanel extends Component
 
     // ── Reservas ──────────────────────────────────────────────────────────
 
-    public function abrirNuevaReserva(?int $habitacionId = null): void
+    public function abrirNuevaReserva(?int $habitacionId = null, bool $inmediato = false): void
     {
-        $this->reservaId           = null;
-        $this->resHabitacionId     = $habitacionId;
-        $this->resHuespedNombre    = '';
-        $this->resHuespedTelefono  = '';
-        $this->resHuespedDocumento = '';
-        $this->resNumeroPersonas   = '1';
-        $this->resFechaCheckin     = now()->toDateString();
-        $this->resFechaCheckout    = now()->addDay()->toDateString();
-        $this->resObservaciones    = '';
-        $this->resAbonoMonto       = '';
-        $this->resAbonoMedioPago   = 'Efectivo';
-        $this->modalReserva        = true;
+        $this->reservaId            = null;
+        $this->resHabitacionId      = $habitacionId;
+        $this->resHabitacionBloqueada = $habitacionId !== null;
+        $this->resInmediato         = $inmediato;
+        $this->resActorId           = null;
+        $this->resHuespedNombre     = '';
+        $this->resHuespedTelefono   = '';
+        $this->resHuespedDocumento  = '';
+        $this->resNumeroPersonas    = '1';
+        $this->resFechaCheckin      = now()->toDateString();
+        $this->resFechaCheckout     = $inmediato ? '' : now()->addDay()->toDateString();
+        $this->resObservaciones     = '';
+        $this->resAbonoMonto        = '';
+        $this->resAbonoMedioPago    = 'Efectivo';
+        $this->modalReserva         = true;
+    }
+
+    public function cambiarHabitacionReserva(): void
+    {
+        $this->resHabitacionBloqueada = false;
     }
 
     public function abrirEditarReserva(int $id): void
     {
         $r = HotelReserva::where('empresa_id', $this->empresaId())->findOrFail($id);
 
-        $this->reservaId           = $r->id;
-        $this->resHabitacionId     = $r->habitacion_id;
-        $this->resHuespedNombre    = $r->huesped_nombre;
-        $this->resHuespedTelefono  = $r->huesped_telefono ?? '';
-        $this->resHuespedDocumento = $r->huesped_documento ?? '';
-        $this->resNumeroPersonas   = (string) $r->numero_personas;
-        $this->resFechaCheckin     = $r->fecha_checkin->toDateString();
-        $this->resFechaCheckout    = $r->fecha_checkout?->toDateString() ?? '';
-        $this->resObservaciones    = $r->observaciones ?? '';
-        $this->resAbonoMonto       = '';
-        $this->resAbonoMedioPago   = 'Efectivo';
-        $this->modalReserva        = true;
+        $this->reservaId            = $r->id;
+        $this->resHabitacionId      = $r->habitacion_id;
+        $this->resHabitacionBloqueada = true;
+        $this->resInmediato         = false;
+        $this->resActorId           = $r->actor_id;
+        $this->resHuespedNombre     = $r->huesped_nombre;
+        $this->resHuespedTelefono   = $r->huesped_telefono ?? '';
+        $this->resHuespedDocumento  = $r->huesped_documento ?? '';
+        $this->resNumeroPersonas    = (string) $r->numero_personas;
+        $this->resFechaCheckin      = $r->fecha_checkin->toDateString();
+        $this->resFechaCheckout     = $r->fecha_checkout?->toDateString() ?? '';
+        $this->resObservaciones     = $r->observaciones ?? '';
+        $this->resAbonoMonto        = '';
+        $this->resAbonoMedioPago    = 'Efectivo';
+        $this->modalReserva         = true;
+    }
+
+    // ── Buscar / crear cliente (huésped) ─────────────────────────────────
+
+    public function abrirModalBuscarClienteHotel(): void
+    {
+        $this->buscarClienteHotelTexto = '';
+        $this->modalBuscarClienteHotel = true;
+    }
+
+    public function getResultadosClienteHotelProperty()
+    {
+        if (trim($this->buscarClienteHotelTexto) === '') {
+            return collect();
+        }
+
+        $texto = '%' . $this->buscarClienteHotelTexto . '%';
+
+        return Actor::where('empresa_id', $this->empresaId())
+            ->where(fn ($q) => $q->where('nombre', 'like', $texto)
+                ->orWhere('identificacion', 'like', $texto)
+                ->orWhere('telefono', 'like', $texto))
+            ->orderBy('nombre')
+            ->limit(20)
+            ->get();
+    }
+
+    public function seleccionarClienteHotel(int $actorId): void
+    {
+        $actor = Actor::where('empresa_id', $this->empresaId())->find($actorId);
+        if (! $actor) {
+            return;
+        }
+
+        $this->resActorId          = $actor->id;
+        $this->resHuespedNombre    = (string) $actor->nombre;
+        $this->resHuespedTelefono  = (string) ($actor->telefono ?? '');
+        $this->resHuespedDocumento = (string) ($actor->identificacion ?? '');
+        $this->modalBuscarClienteHotel = false;
+    }
+
+    public function abrirModalCrearClienteHotel(): void
+    {
+        $this->resetErrorBag();
+        $this->nuevoClienteHotel = [
+            'nombre'         => '',
+            'identificacion' => '',
+            'telefono'       => '',
+            'direccion'      => '',
+        ];
+        $this->modalCrearClienteHotel = true;
+    }
+
+    public function guardarClienteHotel(): void
+    {
+        $this->validate([
+            'nuevoClienteHotel.nombre'         => 'required|string|max:200',
+            'nuevoClienteHotel.identificacion' => 'nullable|string|max:50|unique:actors,identificacion',
+            'nuevoClienteHotel.telefono'       => 'nullable|string|max:30',
+            'nuevoClienteHotel.direccion'      => 'nullable|string|max:255',
+        ], [
+            'nuevoClienteHotel.nombre.required' => 'El nombre es obligatorio.',
+            'nuevoClienteHotel.identificacion.unique' => 'Este número de identificación ya está registrado.',
+        ]);
+
+        $actor = Actor::create([
+            'id_clip_pro'        => (int) Actor::max('id_clip_pro') + 1,
+            'empresa_id'         => $this->empresaId(),
+            'tipo'               => 1,
+            'tipo_persona'       => 'natural',
+            'tipo_documento_id'  => 3,
+            'identificacion'     => trim($this->nuevoClienteHotel['identificacion']) ?: null,
+            'nombre'             => trim($this->nuevoClienteHotel['nombre']),
+            'telefono'           => trim($this->nuevoClienteHotel['telefono']) ?: null,
+            'direccion'          => trim($this->nuevoClienteHotel['direccion']) ?: null,
+            'regimen_tributario' => 'simplificado',
+            'responsable_iva'    => 0,
+            'clasificacion'      => 'cliente',
+        ]);
+
+        $this->resActorId          = $actor->id;
+        $this->resHuespedNombre    = (string) $actor->nombre;
+        $this->resHuespedTelefono  = (string) ($actor->telefono ?? '');
+        $this->resHuespedDocumento = (string) ($actor->identificacion ?? '');
+        $this->modalCrearClienteHotel = false;
+        $this->dispatch('notify', type: 'success', message: 'Cliente creado.');
     }
 
     public function getTodasHabitacionesProperty()
@@ -230,6 +337,7 @@ class HotelPanel extends Component
         $data = [
             'empresa_id'        => $empresaId,
             'habitacion_id'     => $this->resHabitacionId,
+            'actor_id'          => $this->resActorId,
             'huesped_nombre'    => trim($this->resHuespedNombre),
             'huesped_telefono'  => trim($this->resHuespedTelefono) ?: null,
             'huesped_documento' => trim($this->resHuespedDocumento) ?: null,
@@ -244,17 +352,28 @@ class HotelPanel extends Component
             HotelReserva::where('empresa_id', $empresaId)->where('id', $this->reservaId)->update($data);
         } else {
             $data['creado_por'] = auth()->id();
-            $data['estado']     = 'reservada';
+
+            if ($this->resInmediato) {
+                // El huésped llega para hospedarse de una vez: entra directo
+                // a "checkin", sin pasar por "reservada" ni pedir abono.
+                $data['estado']          = 'checkin';
+                $data['checkin_real_at'] = now();
+            } else {
+                $data['estado'] = 'reservada';
+            }
+
             $reserva = HotelReserva::create($data);
 
-            $abono = (float) $this->resAbonoMonto;
-            if ($abono > 0) {
-                $this->registrarAbonoReserva($reserva, $abono, $this->resAbonoMedioPago);
+            if (! $this->resInmediato) {
+                $abono = (float) $this->resAbonoMonto;
+                if ($abono > 0) {
+                    $this->registrarAbonoReserva($reserva, $abono, $this->resAbonoMedioPago);
+                }
             }
         }
 
         $this->modalReserva = false;
-        $this->dispatch('notify', type: 'success', message: $this->reservaId ? 'Reserva actualizada.' : 'Reserva creada.');
+        $this->dispatch('notify', type: 'success', message: $this->reservaId ? 'Reserva actualizada.' : ($this->resInmediato ? 'Entrada registrada.' : 'Reserva creada.'));
     }
 
     private function registrarAbonoReserva(HotelReserva $reserva, float $monto, string $medioPago): void

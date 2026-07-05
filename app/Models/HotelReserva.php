@@ -11,7 +11,7 @@ class HotelReserva extends Model
     protected $table = 'hotel_reservas';
 
     protected $fillable = [
-        'empresa_id', 'habitacion_id', 'numero_reserva',
+        'empresa_id', 'habitacion_id', 'actor_id', 'numero_reserva',
         'huesped_nombre', 'huesped_telefono', 'huesped_documento', 'numero_personas',
         'fecha_checkin', 'fecha_checkout', 'checkin_real_at', 'checkout_real_at',
         'precio_noche', 'abono_monto', 'abono_medio_pago',
@@ -41,6 +41,11 @@ class HotelReserva extends Model
     public function habitacion(): BelongsTo
     {
         return $this->belongsTo(HotelHabitacion::class, 'habitacion_id');
+    }
+
+    public function actor(): BelongsTo
+    {
+        return $this->belongsTo(Actor::class, 'actor_id');
     }
 
     public function factura(): BelongsTo

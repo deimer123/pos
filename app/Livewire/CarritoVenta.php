@@ -1664,11 +1664,17 @@ public function guardarPrefacturaConfirmada()
         $this->hotelAbonoMedioPago  = (string) ($reserva->abono_medio_pago ?? '');
         $this->carrito              = [];
 
-        if ($reserva->huesped_nombre) {
+        if ($reserva->actor_id) {
+            $cliente = Actor::where('empresa_id', $empresaId)->find($reserva->actor_id);
+        } elseif ($reserva->huesped_nombre) {
             $cliente = Actor::where('empresa_id', $empresaId)
                 ->whereRaw('LOWER(TRIM(nombre)) = ?', [mb_strtolower(trim($reserva->huesped_nombre))])
                 ->first();
+        } else {
+            $cliente = null;
+        }
 
+        if ($reserva->huesped_nombre || $cliente) {
             if ($cliente) {
                 $this->clienteId = $cliente->id;
                 $this->clienteDireccion = $cliente->direccion ?? null;
@@ -1677,7 +1683,7 @@ public function guardarPrefacturaConfirmada()
                 $this->clienteTelefono = $reserva->huesped_telefono ?? null;
             }
 
-            $this->clienteSeleccionadoNombre = $this->textoUtf8($reserva->huesped_nombre);
+            $this->clienteSeleccionadoNombre = $this->textoUtf8($reserva->huesped_nombre ?: ($cliente->nombre ?? ''));
         }
 
         $horaInicioDia = (string) (\App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('hotel_hora_inicio_dia') ?? '14:00:00');
