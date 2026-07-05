@@ -52,84 +52,82 @@
                 <div style="font-size:12px; color:#cbd5e1; margin-top:6px;">Créalas en <strong>Administración → Hotel → Habitaciones</strong>.</div>
             </div>
         @else
-        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:10px;">
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:12px;">
             @foreach($habitaciones as $h)
                 @php
                     $colores = [
-                        'libre'     => ['bg'=>'#f0fdf4','border'=>'#86efac','badge'=>'#16a34a','text'=>'#14532d','icon'=>'🟢','label'=>'Libre'],
-                        'reservada' => ['bg'=>'#fef3c7','border'=>'#fbbf24','badge'=>'#f59e0b','text'=>'#78350f','icon'=>'🟡','label'=>'Reservada'],
-                        'ocupada'   => ['bg'=>'#fef2f2','border'=>'#fca5a5','badge'=>'#dc2626','text'=>'#7f1d1d','icon'=>'🔴','label'=>'Ocupada'],
+                        'libre'     => ['border'=>'#22c55e','badge'=>'#dcfce7','badgeText'=>'#15803d','icon'=>'🟢','label'=>'Libre'],
+                        'reservada' => ['border'=>'#f59e0b','badge'=>'#fef3c7','badgeText'=>'#92400e','icon'=>'🟡','label'=>'Reservada'],
+                        'ocupada'   => ['border'=>'#ef4444','badge'=>'#fee2e2','badgeText'=>'#991b1b','icon'=>'🔴','label'=>'Ocupada'],
                     ];
                     $c = $colores[$h->estado_actual] ?? $colores['libre'];
                     $r = $h->reserva_activa;
                 @endphp
-                <div style="background:{{ $c['bg'] }}; border:2px solid {{ $c['border'] }}; border-radius:12px; padding:12px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                        <span style="font-size:10px; font-weight:700; background:{{ $c['badge'] }}; color:white; border-radius:99px; padding:2px 10px;">
+                <div style="background:white; border-radius:14px; padding:14px; box-shadow:0 1px 3px rgba(0,0,0,.08); border-left:5px solid {{ $c['border'] }};">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                        <div>
+                            <div style="font-size:18px; font-weight:900; color:#1f2937; line-height:1.15;">🚪 {{ $h->numero }}</div>
+                            @if($h->zona)
+                            <div style="font-size:11px; color:#94a3b8; margin-top:2px;">📍 {{ $h->zona }}</div>
+                            @endif
+                        </div>
+                        <span style="font-size:10px; font-weight:800; background:{{ $c['badge'] }}; color:{{ $c['badgeText'] }}; border-radius:99px; padding:3px 10px; white-space:nowrap;">
                             {{ $c['icon'] }} {{ $c['label'] }}
                         </span>
-                        <span style="font-size:16px; font-weight:900; color:{{ $c['text'] }};">🚪 {{ $h->numero }}</span>
                     </div>
 
-                    @if($h->zona)
-                    <div style="font-size:10px; color:#7c3aed; font-weight:700; margin-bottom:4px;">📍 {{ $h->zona }}</div>
-                    @endif
-
-                    <div style="font-size:11px; color:#374151; display:flex; gap:8px; flex-wrap:wrap; margin-bottom:4px;">
-                        @if($h->camas_dobles > 0)<span>🛏️×{{ $h->camas_dobles }} doble</span>@endif
-                        @if($h->camas_sencillas > 0)<span>🛏️×{{ $h->camas_sencillas }} sencilla</span>@endif
-                        <span>👥 hasta {{ $h->capacidad_maxima }}</span>
-                    </div>
-                    <div style="font-size:11px; color:#6b7280; margin-bottom:6px;">
-                        @if($h->tiene_aire)<span>❄️ Aire (+${{ number_format($h->recargo_aire, 0, ',', '.') }})</span>@endif
-                        @if($h->tiene_ventilador)<span> 🌀 Ventilador (+${{ number_format($h->recargo_ventilador, 0, ',', '.') }})</span>@endif
-                        @if(!$h->tiene_aire && !$h->tiene_ventilador)<span>Sin aire/ventilador</span>@endif
-                    </div>
-                    <div style="font-size:12px; font-weight:700; color:#7c3aed; margin-bottom:8px;">
-                        Desde ${{ number_format($h->precio_desde, 0, ',', '.') }} / noche (1 persona, habitación sola)
+                    <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:#6b7280; margin-bottom:10px;">
+                        <span>👥 {{ $h->capacidad_maxima }}</span>
+                        @if($h->tiene_aire)<span title="Aire disponible">❄️</span>@endif
+                        @if($h->tiene_ventilador)<span title="Ventilador disponible">🌀</span>@endif
+                        <span style="margin-left:auto; font-weight:800; color:#7c3aed;">${{ number_format($h->precio_desde, 0, ',', '.') }}<span style="font-weight:600; color:#a78bfa;">/noche</span></span>
                     </div>
 
                     @if($r)
-                    <div style="background:white; border-radius:8px; padding:8px; margin-bottom:8px; font-size:11px;">
-                        <div style="font-weight:700; color:#1f2937;">👤 {{ $r->huesped_nombre }}</div>
-                        <div style="color:#6b7280; margin-top:2px;">
-                            {{ $r->fecha_checkin->format('d/m') }} → {{ $r->fecha_checkout?->format('d/m') ?? 'Sin definir' }}
+                    <div style="background:#f8fafc; border-radius:10px; padding:10px; margin-bottom:10px;">
+                        <div style="font-weight:700; font-size:13px; color:#1f2937; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">👤 {{ $r->huesped_nombre }}</div>
+                        <div style="font-size:11px; color:#94a3b8; margin-top:3px;">
+                            {{ $r->fecha_checkin->format('d/m') }} → {{ $r->fecha_checkout?->format('d/m') ?? '¿?' }}
                             · {{ $r->numero_personas }} pers. · {{ $r->numero_noches }} noche(s)
+                            @if($r->total_consumos > 0)
+                                · +${{ number_format($r->total_consumos, 0, ',', '.') }} consumo(s)
+                            @endif
                         </div>
-                        <div style="color:#16a34a; font-weight:700; margin-top:2px;">${{ number_format($r->total_estimado, 0, ',', '.') }}</div>
-                        @if($r->abono_monto > 0)
-                        <div style="color:#d97706; margin-top:2px;">Abono: ${{ number_format($r->abono_monto, 0, ',', '.') }} ({{ $r->abono_medio_pago }})</div>
-                        @endif
-                        @if($r->total_consumos > 0)
-                        <div style="color:#7c3aed; margin-top:2px;">+ Consumos: ${{ number_format($r->total_consumos, 0, ',', '.') }}</div>
-                        @endif
-                        <div style="color:#1f2937; font-weight:900; margin-top:2px; border-top:1px dashed #e5e7eb; padding-top:2px;">Saldo: ${{ number_format($r->saldo_pendiente, 0, ',', '.') }}</div>
+                        <div style="display:flex; justify-content:space-between; align-items:baseline; margin-top:8px; padding-top:8px; border-top:1px dashed #e2e8f0;">
+                            <span style="font-size:11px; color:#6b7280;">
+                                Saldo
+                                @if($r->abono_monto > 0)
+                                    <span style="color:#d97706;">(abono ${{ number_format($r->abono_monto, 0, ',', '.') }})</span>
+                                @endif
+                            </span>
+                            <span style="font-size:17px; font-weight:900; color:{{ $r->saldo_pendiente > 0 ? '#dc2626' : '#16a34a' }};">${{ number_format($r->saldo_pendiente, 0, ',', '.') }}</span>
+                        </div>
                     </div>
                     @endif
 
                     <div style="display:flex; gap:6px; flex-wrap:wrap;">
                         @if(! $r)
                             <button wire:click="abrirNuevaReserva({{ $h->id }}, true)"
-                                style="flex:1; border:none; border-radius:6px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#f59e0b; color:white;">
+                                style="flex:1; border:none; border-radius:8px; padding:7px; font-size:11px; font-weight:700; cursor:pointer; background:#f59e0b; color:white;">
                                 🔑 Entrada ahora
                             </button>
                         @elseif($r->estado === 'reservada')
                             <button wire:click="confirmarCheckin({{ $r->id }})"
-                                style="flex:1; border:none; border-radius:6px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#f59e0b; color:white;">
+                                style="flex:1; border:none; border-radius:8px; padding:7px; font-size:11px; font-weight:700; cursor:pointer; background:#f59e0b; color:white;">
                                 🔑 Entrada
                             </button>
                             <button wire:click="abrirEditarReserva({{ $r->id }})"
-                                style="flex:1; border:none; border-radius:6px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#eff6ff; color:#2563eb;">
+                                style="flex:1; border:none; border-radius:8px; padding:7px; font-size:11px; font-weight:700; cursor:pointer; background:#eff6ff; color:#2563eb;">
                                 ✏️ Editar
                             </button>
                             <button type="button"
                                 x-on:click="Swal.fire({title:'¿Cancelar esta reserva?',text:'Esta acción no se puede deshacer.',icon:'warning',showCancelButton:true,confirmButtonText:'Sí, cancelar',cancelButtonText:'No',confirmButtonColor:'#ef4444'}).then(r=>{if(r.isConfirmed){$wire.cancelarReserva({{ $r->id }});}})"
-                                style="flex:1; border:none; border-radius:6px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#fef2f2; color:#ef4444;">
+                                style="flex:1; border:none; border-radius:8px; padding:7px; font-size:11px; font-weight:700; cursor:pointer; background:#fef2f2; color:#ef4444;">
                                 ✕ Cancelar
                             </button>
                         @else
                             <button wire:click="irAFacturar({{ $r->id }})"
-                                style="flex:1; border:none; border-radius:6px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#0f766e; color:white;">
+                                style="flex:1; border:none; border-radius:8px; padding:7px; font-size:11px; font-weight:700; cursor:pointer; background:#0f766e; color:white;">
                                 🧾 Salida / Facturar
                             </button>
                         @endif
