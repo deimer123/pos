@@ -81,12 +81,12 @@
                         <span>👥 hasta {{ $h->capacidad_maxima }}</span>
                     </div>
                     <div style="font-size:11px; color:#6b7280; margin-bottom:6px;">
-                        @if($h->tiene_aire)<span>❄️ Aire</span>@endif
-                        @if($h->tiene_ventilador)<span> 🌀 Ventilador</span>@endif
+                        @if($h->tiene_aire)<span>❄️ Aire (+${{ number_format($h->recargo_aire, 0, ',', '.') }})</span>@endif
+                        @if($h->tiene_ventilador)<span> 🌀 Ventilador (+${{ number_format($h->recargo_ventilador, 0, ',', '.') }})</span>@endif
                         @if(!$h->tiene_aire && !$h->tiene_ventilador)<span>Sin aire/ventilador</span>@endif
                     </div>
                     <div style="font-size:12px; font-weight:700; color:#7c3aed; margin-bottom:8px;">
-                        Desde ${{ number_format($h->precio_desde, 0, ',', '.') }} / noche (1 persona)
+                        Desde ${{ number_format($h->precio_desde, 0, ',', '.') }} / noche (1 persona, ya incluye aire/ventilador)
                     </div>
 
                     @if($r)
@@ -233,7 +233,7 @@
                 <div style="margin-bottom:12px;">
                     <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Habitación *</label>
                     @if($resHabitacionBloqueada && $this->habitacionSeleccionada)
-                        @php($hs = $this->habitacionSeleccionada)
+                        @php $hs = $this->habitacionSeleccionada; @endphp
                         <div style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:0 10px; font-size:13px; box-sizing:border-box; background:#f8fafc; display:flex; align-items:center; justify-content:space-between;">
                             <span>🚪 {{ $hs->numero }}
                                 @if($hs->tiene_aire) ❄️ @endif
@@ -323,6 +323,20 @@
                     @endif
                     @if($this->precioNocheReserva <= 0)
                         <div style="font-size:10px; color:#dc2626; margin-top:4px; font-weight:700;">⚠️ Esta habitación no tiene precio configurado para {{ $resNumeroPersonas ?: 1 }} persona(s).</div>
+                    @elseif($this->habitacionSeleccionada->tiene_aire || $this->habitacionSeleccionada->tiene_ventilador)
+                        @php
+                            $hSel = $this->habitacionSeleccionada;
+                            $baseNoche = $hSel->precioParaPersonas(max(1, (int) $resNumeroPersonas));
+                        @endphp
+                        <div style="font-size:10px; color:#6b7280; margin-top:6px; border-top:1px dashed #bbf7d0; padding-top:4px;">
+                            Base: ${{ number_format($baseNoche, 0, ',', '.') }}
+                            @if($hSel->tiene_aire)
+                                &nbsp;+ ❄️ Aire: ${{ number_format($hSel->recargo_aire, 0, ',', '.') }}
+                            @endif
+                            @if($hSel->tiene_ventilador)
+                                &nbsp;+ 🌀 Ventilador: ${{ number_format($hSel->recargo_ventilador, 0, ',', '.') }}
+                            @endif
+                        </div>
                     @endif
                 </div>
                 @endif
@@ -391,11 +405,12 @@
                 <input wire:model.live.debounce.300ms="buscarClienteHotelTexto" type="text" placeholder="Nombre, teléfono o documento..."
                     style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box; margin-bottom:10px;">
 
-                @if(trim($buscarClienteHotelTexto) === '')
-                    <div style="text-align:center; color:#9ca3af; font-size:12px; padding:20px 0;">Escribe para buscar.</div>
-                @elseif($this->resultadosClienteHotel->isEmpty())
+                @if($this->resultadosClienteHotel->isEmpty())
                     <div style="text-align:center; color:#9ca3af; font-size:12px; padding:20px 0;">No se encontraron clientes.</div>
                 @else
+                    @if(trim($buscarClienteHotelTexto) === '')
+                        <div style="font-size:10px; color:#9ca3af; margin-bottom:6px;">Clientes recientes. Escribe para filtrar.</div>
+                    @endif
                     <div style="display:flex; flex-direction:column; gap:6px;">
                         @foreach($this->resultadosClienteHotel as $actor)
                             <button type="button" wire:click="seleccionarClienteHotel({{ $actor->id }})"

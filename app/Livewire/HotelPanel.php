@@ -166,19 +166,21 @@ class HotelPanel extends Component
 
     public function getResultadosClienteHotelProperty()
     {
-        if (trim($this->buscarClienteHotelTexto) === '') {
-            return collect();
-        }
+        $query = Actor::where('empresa_id', $this->empresaId())
+            ->where(fn ($q) => $q->where('clasificacion', 'cliente')->orWhere('clasificacion', 'cliente_proveedor'));
 
-        $texto = '%' . $this->buscarClienteHotelTexto . '%';
+        if (trim($this->buscarClienteHotelTexto) !== '') {
+            $texto = '%' . $this->buscarClienteHotelTexto . '%';
 
-        return Actor::where('empresa_id', $this->empresaId())
-            ->where(fn ($q) => $q->where('nombre', 'like', $texto)
+            return $query->where(fn ($q) => $q->where('nombre', 'like', $texto)
                 ->orWhere('identificacion', 'like', $texto)
                 ->orWhere('telefono', 'like', $texto))
-            ->orderBy('nombre')
-            ->limit(20)
-            ->get();
+                ->orderBy('nombre')
+                ->limit(20)
+                ->get();
+        }
+
+        return $query->latest('id')->limit(10)->get();
     }
 
     public function seleccionarClienteHotel(int $actorId): void

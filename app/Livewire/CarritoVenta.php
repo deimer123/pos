@@ -2242,6 +2242,80 @@ protected function datosServicioFactura(?Product $producto): array
     ];
 }
 
+// Registra cómo quedó pagada la factura recién creada. Si viene de una
+// reserva de hotel con abono, el abono ya se cobró (y ya quedó como entrada
+// de caja) al momento de reservar, así que aquí solo se cobra el saldo real
+// que falta y se cierra la factura como pagada — para no volver a contar el
+// abono una segunda vez en caja ni dejar la factura con saldo pendiente
+// fantasma en cartera.
+private function finalizarPagoFactura(Factura $factura, string $tipoPago, ?string $medioPago, ?string $transferObs, ?string $vencRaw): void
+{
+    if ($this->hotelReservaId && $this->hotelAbonoMonto > 0) {
+        $abono      = min($this->hotelAbonoMonto, (float) $factura->total);
+        $montoAhora = round((float) $factura->total - $abono, 2);
+
+        $nota = 'Saldo al salida (abono ya recibido al reservar: $' . number_format($abono, 0, ',', '.') . ')';
+        if ($medioPago === 'transferencia' && $transferObs) {
+            $nota .= ' · Transferencia: ' . $transferObs;
+        }
+
+        $factura->tipo_pago  = 'credito';
+        $factura->medio_pago = $medioPago;
+
+        if ($montoAhora > 0) {
+            $factura->registrarAbono(
+                monto: $montoAhora,
+                medio: $medioPago ?? 'efectivo',
+                nota : $nota,
+                userId: auth()->id(),
+                transferenciaObs: $transferObs
+            );
+        }
+
+        $factura->saldo       = 0;
+        $factura->estado_pago = 'pagada';
+        $factura->fecha_pago  = now();
+        $factura->save();
+
+        return;
+    }
+
+    if ($tipoPago === 'credito') {
+        $info = $this->clienteCreditoInfo; // accessor existente
+
+        if (!($info['permite'] ?? false)) {
+            throw new \Exception('El cliente no tiene crédito habilitado.');
+        }
+        if ($factura->total > (float)($info['cupo_disponible'] ?? 0)) {
+            throw new \Exception('Cupo insuficiente para otorgar este crédito.');
+        }
+
+        $dias = (int)($info['dias'] ?? 0);
+
+        $factura->saldo             = $factura->total;
+        $factura->estado_pago       = 'pendiente';
+        $factura->fecha_vencimiento = $vencRaw
+            ? \Carbon\Carbon::parse($vencRaw)->toDateString()
+            : now()->addDays($dias)->toDateString();
+
+        $factura->save();
+
+        return;
+    }
+
+    $nota = ($medioPago === 'transferencia' && $transferObs)
+        ? ('Transferencia: ' . $transferObs)
+        : 'Pago contado';
+
+    $factura->registrarAbono(
+        monto: (float) $factura->total,
+        medio: $medioPago ?? 'efectivo',
+        nota : $nota,
+        userId: auth()->id(),
+        transferenciaObs: $transferObs
+    );
+}
+
 #[On('facturar-confirmada')]
 public function facturarConfirmada(array $data = [])
 {
@@ -2450,44 +2524,7 @@ if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->
         $factura->recalcularTotales();
 
         // ===== Condiciones de pago =====
-        if ($tipoPago === 'credito') {
-            $info = $this->clienteCreditoInfo; // accessor existente
-
-            if (!($info['permite'] ?? false)) {
-                throw new \Exception('El cliente no tiene crÃ©dito habilitado.');
-            }
-            if ($factura->total > (float)($info['cupo_disponible'] ?? 0)) {
-                throw new \Exception('Cupo insuficiente para otorgar este crÃ©dito.');
-            }
-
-            // saldo = total, estado pendiente, fecha_venc por dÃ­as de crÃ©dito si no viene
-            $factura->saldo = $factura->total;
-            $factura->estado_pago = 'pendiente';
-
-            $dias = (int)($info['dias'] ?? 0);
-            $factura->fecha_vencimiento = $vencRaw
-                ? \Carbon\Carbon::parse($vencRaw)->toDateString()
-                : now()->addDays($dias)->toDateString();
-
-            $factura->save();
-        } else {
-            // contado: registrar abono por el total
-            // Nota: si es transferencia, anexa la observaciÃ³n como nota
-            $nota = $medioPago === 'transferencia'
-                ? ('Transferencia: '.$transferObs)
-                : 'Pago contado';
-
-            $factura->registrarAbono(
-                monto: (float)$factura->total,
-                medio: $medioPago ?? 'efectivo',
-                nota : $nota,
-                userId: auth()->id(),
-                transferenciaObs: $transferObs
-            );
-
-            // Puedes marcar fecha_pago si tu registrarAbono no lo hace
-            // $factura->update(['fecha_pago' => now()]);
-        }
+        $this->finalizarPagoFactura($factura, $tipoPago, $medioPago, $transferObs, $vencRaw);
 
         $this->validarFacturaElectronicaConFactus($factura);
 
@@ -2994,39 +3031,7 @@ if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->
         $factura->recalcularTotales();
 
         // ===== Condiciones de pago
-        if ($tipoPago === 'credito') {
-            $info = $this->clienteCreditoInfo;
-
-            if (!($info['permite'] ?? false)) {
-                throw new \Exception('El cliente no tiene crÃ©dito habilitado.');
-            }
-            if ($factura->total > (float)($info['cupo_disponible'] ?? 0)) {
-                throw new \Exception('Cupo insuficiente para otorgar este crÃ©dito.');
-            }
-
-            $dias = (int)($info['dias'] ?? 0);
-
-            $factura->saldo = $factura->total;
-            $factura->estado_pago = 'pendiente';
-            $factura->fecha_vencimiento = $vencRaw
-                ? \Carbon\Carbon::parse($vencRaw)->toDateString()
-                : now()->addDays($dias)->toDateString();
-
-            $factura->save();
-        } else {
-            // contado: un solo abono por el total
-            $nota = ($medioPago === 'transferencia' && $transferObs)
-                ? ('Transferencia: '.$transferObs)
-                : 'Pago contado';
-
-            $factura->registrarAbono(
-                monto: (float)$factura->total,
-                medio: $medioPago ?? 'efectivo',
-                nota : $nota,
-                userId: auth()->id(),
-                transferenciaObs: $transferObs
-            );
-        }
+        $this->finalizarPagoFactura($factura, $tipoPago, $medioPago, $transferObs, $vencRaw);
 
         $this->validarFacturaElectronicaConFactus($factura);
 
