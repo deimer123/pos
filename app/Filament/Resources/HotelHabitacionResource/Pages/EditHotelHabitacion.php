@@ -21,7 +21,8 @@ class EditHotelHabitacion extends EditRecord
         $precios = $data['precios_por_persona'] ?? [];
 
         for ($n = 1; $n <= HotelHabitacionResource::MAX_PERSONAS; $n++) {
-            $data["precio_{$n}"] = $precios[(string) $n] ?? null;
+            $valor = $precios[(string) $n] ?? null;
+            $data["precio_{$n}"] = $valor === null ? null : number_format((float) $valor, 0, ',', '.');
         }
 
         return $data;
@@ -34,7 +35,7 @@ class EditHotelHabitacion extends EditRecord
         for ($n = 1; $n <= HotelHabitacionResource::MAX_PERSONAS; $n++) {
             $key = "precio_{$n}";
             if (isset($data[$key]) && $data[$key] !== '') {
-                $precios[(string) $n] = (float) $data[$key];
+                $precios[(string) $n] = (float) str_replace('.', '', (string) $data[$key]);
             }
             unset($data[$key]);
         }

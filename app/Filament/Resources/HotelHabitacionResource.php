@@ -81,9 +81,12 @@ class HotelHabitacionResource extends Resource
                     collect(range(1, self::MAX_PERSONAS))->map(
                         fn ($n) => Forms\Components\TextInput::make("precio_{$n}")
                             ->label($n == 1 ? '1 persona' : "{$n} personas")
-                            ->numeric()
-                            ->minValue(0)
                             ->prefix('$')
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(function ($state, callable $set) use ($n) {
+                                $digits = preg_replace('/\D/', '', (string) $state);
+                                $set("precio_{$n}", $digits === '' ? null : number_format((int) $digits, 0, ',', '.'));
+                            })
                     )->toArray()
                 )
                 ->columns(3),
