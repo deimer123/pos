@@ -13,17 +13,6 @@ class HotelPanel extends Component
     public string $vistaActiva = 'habitaciones';
     public string $busqueda    = '';
 
-    // ── Modal Habitación (crear/editar)
-    public bool   $modalHabitacion   = false;
-    public ?int   $habitacionId      = null;
-    public string $habNumero         = '';
-    public string $habCamasDobles    = '0';
-    public string $habCamasSencillas = '1';
-    public bool   $habTieneAire      = false;
-    public bool   $habTieneVentilador = false;
-    public string $habPrecioPersonaNoche = '';
-    public string $habObservaciones  = '';
-
     // ── Modal Reserva (nueva / editar)
     public bool   $modalReserva          = false;
     public ?int   $reservaId             = null;
@@ -88,86 +77,9 @@ class HotelPanel extends Component
         });
     }
 
-    public function abrirNuevaHabitacion(): void
-    {
-        $this->habitacionId          = null;
-        $this->habNumero             = '';
-        $this->habCamasDobles        = '0';
-        $this->habCamasSencillas     = '1';
-        $this->habTieneAire          = false;
-        $this->habTieneVentilador    = false;
-        $this->habPrecioPersonaNoche = '';
-        $this->habObservaciones      = '';
-        $this->modalHabitacion       = true;
-    }
-
-    public function abrirEditarHabitacion(int $id): void
-    {
-        $h = HotelHabitacion::where('empresa_id', $this->empresaId())->findOrFail($id);
-
-        $this->habitacionId          = $h->id;
-        $this->habNumero             = $h->numero;
-        $this->habCamasDobles        = (string) $h->camas_dobles;
-        $this->habCamasSencillas     = (string) $h->camas_sencillas;
-        $this->habTieneAire          = $h->tiene_aire;
-        $this->habTieneVentilador    = $h->tiene_ventilador;
-        $this->habPrecioPersonaNoche = (string) $h->precio_persona_noche;
-        $this->habObservaciones      = $h->observaciones ?? '';
-        $this->modalHabitacion       = true;
-    }
-
-    public function guardarHabitacion(): void
-    {
-        $this->validate([
-            'habNumero'             => 'required|string|max:20',
-            'habPrecioPersonaNoche' => 'required|numeric|min:0',
-        ], [
-            'habNumero.required'             => 'El número de habitación es obligatorio.',
-            'habPrecioPersonaNoche.required'  => 'El precio por persona/noche es obligatorio.',
-        ]);
-
-        $empresaId = $this->empresaId();
-
-        $data = [
-            'empresa_id'            => $empresaId,
-            'numero'                => trim($this->habNumero),
-            'camas_dobles'          => (int) $this->habCamasDobles,
-            'camas_sencillas'       => (int) $this->habCamasSencillas,
-            'tiene_aire'            => $this->habTieneAire,
-            'tiene_ventilador'      => $this->habTieneVentilador,
-            'precio_persona_noche'  => (float) $this->habPrecioPersonaNoche,
-            'observaciones'         => trim($this->habObservaciones) ?: null,
-        ];
-
-        try {
-            if ($this->habitacionId) {
-                HotelHabitacion::where('empresa_id', $empresaId)->where('id', $this->habitacionId)->update($data);
-            } else {
-                HotelHabitacion::create($data);
-            }
-        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
-            $this->addError('habNumero', 'Ya existe una habitación con ese número.');
-            return;
-        }
-
-        $this->modalHabitacion = false;
-        $this->dispatch('notify', type: 'success', message: $this->habitacionId ? 'Habitación actualizada.' : 'Habitación creada.');
-    }
-
-    public function eliminarHabitacion(int $id): void
-    {
-        $tieneReservas = HotelReserva::where('habitacion_id', $id)
-            ->whereIn('estado', ['reservada', 'checkin'])
-            ->exists();
-
-        if ($tieneReservas) {
-            $this->dispatch('notify', type: 'error', message: 'No se puede eliminar: la habitación tiene reservas activas.');
-            return;
-        }
-
-        HotelHabitacion::where('empresa_id', $this->empresaId())->where('id', $id)->update(['activa' => false]);
-        $this->dispatch('notify', type: 'success', message: 'Habitación eliminada.');
-    }
+    // Las habitaciones (camas, aire/ventilador, precio por número de
+    // personas) se crean y editan en Administración → Hotel → Habitaciones,
+    // no aquí — este panel es solo para operar las reservas del día a día.
 
     // ── Reservas ──────────────────────────────────────────────────────────
 
@@ -218,17 +130,27 @@ class HotelPanel extends Component
         return HotelHabitacion::where('empresa_id', $this->empresaId())->find($this->resHabitacionId);
     }
 
-    public function getTotalEstimadoReservaProperty(): float
+    public function getPrecioNocheReservaProperty(): float
     {
         $habitacion = $this->habitacionSeleccionada;
-        if (! $habitacion || ! $this->resFechaCheckin || ! $this->resFechaCheckout) {
+        if (! $habitacion) {
+            return 0;
+        }
+
+        $personas = max(1, (int) $this->resNumeroPersonas);
+
+        return $habitacion->precioParaPersonas($personas);
+    }
+
+    public function getTotalEstimadoReservaProperty(): float
+    {
+        if (! $this->habitacionSeleccionada || ! $this->resFechaCheckin || ! $this->resFechaCheckout) {
             return 0;
         }
 
         $noches = max(1, Carbon::parse($this->resFechaCheckin)->diffInDays(Carbon::parse($this->resFechaCheckout)));
-        $personas = max(1, (int) $this->resNumeroPersonas);
 
-        return round($habitacion->precio_persona_noche * $personas * $noches, 2);
+        return round($this->precioNocheReserva * $noches, 2);
     }
 
     public function guardarReserva(): void
@@ -258,6 +180,12 @@ class HotelPanel extends Component
             return;
         }
 
+        $precioNoche = $habitacion->precioParaPersonas((int) $this->resNumeroPersonas);
+        if ($precioNoche <= 0) {
+            $this->addError('resNumeroPersonas', 'Esta habitación no tiene un precio configurado para esa cantidad de personas. Configúralo en Administración → Hotel → Habitaciones.');
+            return;
+        }
+
         $conflicto = HotelReserva::where('habitacion_id', $this->resHabitacionId)
             ->whereIn('estado', ['reservada', 'checkin'])
             ->when($this->reservaId, fn ($q) => $q->where('id', '!=', $this->reservaId))
@@ -271,16 +199,16 @@ class HotelPanel extends Component
         }
 
         $data = [
-            'empresa_id'          => $empresaId,
-            'habitacion_id'       => $this->resHabitacionId,
-            'huesped_nombre'      => trim($this->resHuespedNombre),
-            'huesped_telefono'    => trim($this->resHuespedTelefono) ?: null,
-            'huesped_documento'   => trim($this->resHuespedDocumento) ?: null,
-            'numero_personas'     => (int) $this->resNumeroPersonas,
-            'fecha_checkin'       => $this->resFechaCheckin,
-            'fecha_checkout'      => $this->resFechaCheckout,
-            'precio_persona_noche'=> $habitacion->precio_persona_noche,
-            'observaciones'       => trim($this->resObservaciones) ?: null,
+            'empresa_id'        => $empresaId,
+            'habitacion_id'     => $this->resHabitacionId,
+            'huesped_nombre'    => trim($this->resHuespedNombre),
+            'huesped_telefono'  => trim($this->resHuespedTelefono) ?: null,
+            'huesped_documento' => trim($this->resHuespedDocumento) ?: null,
+            'numero_personas'   => (int) $this->resNumeroPersonas,
+            'fecha_checkin'     => $this->resFechaCheckin,
+            'fecha_checkout'    => $this->resFechaCheckout,
+            'precio_noche'      => $precioNoche,
+            'observaciones'     => trim($this->resObservaciones) ?: null,
         ];
 
         if ($this->reservaId) {

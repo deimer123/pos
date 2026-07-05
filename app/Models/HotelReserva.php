@@ -13,16 +13,16 @@ class HotelReserva extends Model
         'empresa_id', 'habitacion_id', 'numero_reserva',
         'huesped_nombre', 'huesped_telefono', 'huesped_documento', 'numero_personas',
         'fecha_checkin', 'fecha_checkout', 'checkin_real_at', 'checkout_real_at',
-        'precio_persona_noche', 'estado', 'factura_id', 'observaciones', 'creado_por',
+        'precio_noche', 'estado', 'factura_id', 'observaciones', 'creado_por',
     ];
 
     protected $casts = [
-        'numero_personas'      => 'integer',
-        'fecha_checkin'        => 'date',
-        'fecha_checkout'       => 'date',
-        'checkin_real_at'      => 'datetime',
-        'checkout_real_at'     => 'datetime',
-        'precio_persona_noche' => 'float',
+        'numero_personas'  => 'integer',
+        'fecha_checkin'    => 'date',
+        'fecha_checkout'   => 'date',
+        'checkin_real_at'  => 'datetime',
+        'checkout_real_at' => 'datetime',
+        'precio_noche'     => 'float',
     ];
 
     protected static function booted(): void
@@ -54,6 +54,6 @@ class HotelReserva extends Model
 
     public function getTotalEstimadoAttribute(): float
     {
-        return round($this->precio_persona_noche * $this->numero_personas * $this->numero_noches, 2);
+        return round($this->precio_noche * $this->numero_noches, 2);
     }
 }

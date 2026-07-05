@@ -29,10 +29,6 @@
                 style="border:none; border-radius:8px; padding:6px 14px; font-size:12px; font-weight:700; cursor:pointer; background:#16a34a; color:white; white-space:nowrap;">
                 ➕ Nueva reserva
             </button>
-            <button wire:click="abrirNuevaHabitacion"
-                style="border:none; border-radius:8px; padding:6px 14px; font-size:12px; font-weight:700; cursor:pointer; background:white; color:#7c3aed; white-space:nowrap;">
-                ➕ Nueva habitación
-            </button>
         </div>
     </div>
 
@@ -43,7 +39,7 @@
             <div style="text-align:center; padding:60px 20px; color:#94a3b8;">
                 <div style="font-size:48px;">🏨</div>
                 <div style="margin-top:12px; font-size:15px; font-weight:600;">No hay habitaciones registradas.</div>
-                <div style="font-size:12px; color:#cbd5e1; margin-top:6px;">Crea la primera con "➕ Nueva habitación".</div>
+                <div style="font-size:12px; color:#cbd5e1; margin-top:6px;">Créalas en <strong>Administración → Hotel → Habitaciones</strong>.</div>
             </div>
         @else
         <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:10px;">
@@ -76,7 +72,7 @@
                         @if(!$h->tiene_aire && !$h->tiene_ventilador)<span>Sin aire/ventilador</span>@endif
                     </div>
                     <div style="font-size:12px; font-weight:700; color:#7c3aed; margin-bottom:8px;">
-                        ${{ number_format($h->precio_persona_noche, 0, ',', '.') }} / persona / noche
+                        Desde ${{ number_format($h->precio_desde, 0, ',', '.') }} / noche (1 persona)
                     </div>
 
                     @if($r)
@@ -116,10 +112,6 @@
                                 🧾 Check-out / Facturar
                             </button>
                         @endif
-                        <button wire:click="abrirEditarHabitacion({{ $h->id }})"
-                            style="border:none; border-radius:6px; padding:6px 8px; font-size:11px; font-weight:700; cursor:pointer; background:#f3f4f6; color:#374151;">
-                            🔧
-                        </button>
                     </div>
                 </div>
             @endforeach
@@ -193,85 +185,6 @@
     </div>
     @endif
 
-    {{-- Modal Crear/Editar Habitación --}}
-    @if($modalHabitacion)
-    <div style="position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1200; display:flex; align-items:center; justify-content:center; padding:16px;">
-        <div style="background:white; border-radius:16px; width:100%; max-width:440px; max-height:90vh; overflow-y:auto;">
-            <div style="background:#7c3aed; color:white; padding:14px 18px; border-radius:16px 16px 0 0; display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:15px; font-weight:700;">{{ $habitacionId ? '✏️ Editar habitación' : '➕ Nueva habitación' }}</span>
-                <button wire:click="$set('modalHabitacion',false)" style="background:rgba(255,255,255,.2); border:none; color:white; border-radius:99px; width:28px; height:28px; cursor:pointer; font-size:16px; line-height:1;">×</button>
-            </div>
-            <div style="padding:18px;" x-data="{
-                    formato(v) { const limpio = String(v || '').replace(/\D/g, ''); return limpio ? Number(limpio).toLocaleString('es-CO') : ''; },
-                    limpiar(v) { return String(v || '').replace(/\D/g, ''); }
-                }">
-
-                <div style="margin-bottom:12px;">
-                    <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Número de habitación *</label>
-                    <input wire:model="habNumero" type="text" placeholder="Ej: 101, 202-A..."
-                        style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
-                    @error('habNumero') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
-                </div>
-
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
-                    <div>
-                        <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Camas dobles</label>
-                        <input wire:model="habCamasDobles" type="number" min="0"
-                            style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
-                    </div>
-                    <div>
-                        <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Camas sencillas</label>
-                        <input wire:model="habCamasSencillas" type="number" min="0"
-                            style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
-                    </div>
-                </div>
-
-                <div style="display:flex; gap:16px; margin-bottom:12px;">
-                    <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#4b5563; cursor:pointer;">
-                        <input wire:model="habTieneAire" type="checkbox"> ❄️ Tiene aire
-                    </label>
-                    <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#4b5563; cursor:pointer;">
-                        <input wire:model="habTieneVentilador" type="checkbox"> 🌀 Tiene ventilador
-                    </label>
-                </div>
-
-                <div style="margin-bottom:12px;">
-                    <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Precio por persona / noche *</label>
-                    <input type="text" inputmode="numeric" placeholder="0"
-                        value="{{ $habPrecioPersonaNoche !== '' ? number_format((float) $habPrecioPersonaNoche, 0, ',', '.') : '' }}"
-                        x-on:input="$event.target.value = formato($event.target.value); $wire.set('habPrecioPersonaNoche', limpiar($event.target.value))"
-                        style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
-                    @error('habPrecioPersonaNoche') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
-                </div>
-
-                <div style="margin-bottom:12px;">
-                    <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Observaciones</label>
-                    <textarea wire:model="habObservaciones" rows="2"
-                        style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:6px 10px; font-size:13px; box-sizing:border-box; resize:none;"></textarea>
-                </div>
-
-                <div style="display:flex; gap:8px; justify-content:flex-end;">
-                    <button wire:click="$set('modalHabitacion',false)"
-                        style="border:1px solid #d1d5db; background:white; border-radius:8px; padding:8px 18px; font-size:13px; cursor:pointer; color:#6b7280;">
-                        Cancelar
-                    </button>
-                    @if($habitacionId)
-                    <button wire:click="eliminarHabitacion({{ $habitacionId }})"
-                        onclick="return confirm('¿Eliminar esta habitación?')"
-                        style="border:none; background:#fef2f2; color:#ef4444; border-radius:8px; padding:8px 18px; font-size:13px; font-weight:700; cursor:pointer;">
-                        🗑️ Eliminar
-                    </button>
-                    @endif
-                    <button wire:click="guardarHabitacion" wire:loading.attr="disabled"
-                        style="border:none; background:#7c3aed; color:white; border-radius:8px; padding:8px 20px; font-size:13px; font-weight:700; cursor:pointer;">
-                        💾 Guardar
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-    @endif
-
     {{-- Modal Nueva/Editar Reserva --}}
     @if($modalReserva)
     <div style="position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1200; display:flex; align-items:center; justify-content:center; padding:16px;">
@@ -288,7 +201,7 @@
                         style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px;">
                         <option value="">Selecciona...</option>
                         @foreach($todasHabitaciones as $h)
-                            <option value="{{ $h->id }}">🚪 {{ $h->numero }} · hasta {{ $h->capacidad_maxima }} pers. · ${{ number_format($h->precio_persona_noche, 0, ',', '.') }}/pers/noche</option>
+                            <option value="{{ $h->id }}">🚪 {{ $h->numero }} · hasta {{ $h->capacidad_maxima }} pers. · desde ${{ number_format($h->precio_desde, 0, ',', '.') }}/noche</option>
                         @endforeach
                     </select>
                     @error('resHabitacionId') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
@@ -334,11 +247,20 @@
                     </div>
                 </div>
 
-                @if($habitacionSeleccionada)
+                @if($this->habitacionSeleccionada)
                 <div style="background:#f0fdf4; border-radius:8px; padding:12px; margin-bottom:12px; text-align:center;">
                     <div style="font-size:10px; color:#16a34a; text-transform:uppercase; font-weight:700;">Total estimado</div>
-                    <div style="font-size:22px; font-weight:900; color:#16a34a;">${{ number_format($totalEstimadoReserva, 0, ',', '.') }}</div>
-                    <div style="font-size:10px; color:#6b7280;">${{ number_format($habitacionSeleccionada->precio_persona_noche, 0, ',', '.') }} × {{ $resNumeroPersonas ?: 1 }} persona(s) × noche(s)</div>
+                    <div style="font-size:22px; font-weight:900; color:#16a34a;">${{ number_format($this->totalEstimadoReserva, 0, ',', '.') }}</div>
+                    <div style="font-size:10px; color:#6b7280;">
+                        ${{ number_format($this->precioNocheReserva, 0, ',', '.') }} / noche
+                        @if($resFechaCheckin && $resFechaCheckout)
+                            × {{ \Illuminate\Support\Carbon::parse($resFechaCheckin)->diffInDays(\Illuminate\Support\Carbon::parse($resFechaCheckout)) ?: 1 }} noche(s)
+                        @endif
+                        para {{ $resNumeroPersonas ?: 1 }} persona(s)
+                    </div>
+                    @if($this->precioNocheReserva <= 0)
+                        <div style="font-size:10px; color:#dc2626; margin-top:4px; font-weight:700;">⚠️ Esta habitación no tiene precio configurado para {{ $resNumeroPersonas ?: 1 }} persona(s).</div>
+                    @endif
                 </div>
                 @endif
 

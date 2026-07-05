@@ -28,7 +28,13 @@ class MecanicoResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->check() && auth()->user()->hasAnyRole(['admin_empresa', 'digitador']);
+        if (! auth()->check() || ! auth()->user()->hasAnyRole(['admin_empresa', 'digitador'])) {
+            return false;
+        }
+
+        $empresaId = auth()->user()->getEmpresaActualId();
+
+        return (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_taller');
     }
 
     public static function form(Form $form): Form

@@ -45,7 +45,13 @@ class ReporteServiciosResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->check() && auth()->user()->hasRole('admin_empresa');
+        if (! auth()->check() || ! auth()->user()->hasRole('admin_empresa')) {
+            return false;
+        }
+
+        $empresaId = auth()->user()->getEmpresaActualId();
+
+        return (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_taller');
     }
 
     public static function table(Table $table): Table

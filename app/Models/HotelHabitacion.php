@@ -12,8 +12,8 @@ class HotelHabitacion extends Model
 
     protected $fillable = [
         'empresa_id', 'numero', 'camas_dobles', 'camas_sencillas',
-        'tiene_aire', 'tiene_ventilador', 'precio_persona_noche',
-        'estado', 'activa', 'observaciones',
+        'tiene_aire', 'tiene_ventilador', 'precios_por_persona',
+        'activa', 'observaciones',
     ];
 
     protected $casts = [
@@ -21,7 +21,7 @@ class HotelHabitacion extends Model
         'camas_sencillas'      => 'integer',
         'tiene_aire'           => 'boolean',
         'tiene_ventilador'     => 'boolean',
-        'precio_persona_noche' => 'float',
+        'precios_por_persona'  => 'array',
         'activa'               => 'boolean',
     ];
 
@@ -38,5 +38,38 @@ class HotelHabitacion extends Model
     public function getCapacidadMaximaAttribute(): int
     {
         return ($this->camas_dobles * 2) + $this->camas_sencillas;
+    }
+
+    // Precio de la noche completa para una cantidad exacta de personas.
+    // Cada habitación define su propio precio por número de ocupantes (no es
+    // necesariamente un valor por persona multiplicado, ya que dos personas
+    // no siempre cuestan el doble que una).
+    public function precioParaPersonas(int $personas): float
+    {
+        $precios = $this->precios_por_persona ?? [];
+
+        if (isset($precios[(string) $personas])) {
+            return (float) $precios[(string) $personas];
+        }
+
+        // Si no hay un precio configurado exacto, usar el del mayor número
+        // de personas configurado que sea menor o igual al solicitado.
+        $disponibles = array_filter(
+            array_keys($precios),
+            fn ($n) => (int) $n <= $personas
+        );
+
+        if (empty($disponibles)) {
+            return 0;
+        }
+
+        $masCercano = max(array_map('intval', $disponibles));
+
+        return (float) $precios[(string) $masCercano];
+    }
+
+    public function getPrecioDesdeAttribute(): float
+    {
+        return $this->precioParaPersonas(1);
     }
 }
