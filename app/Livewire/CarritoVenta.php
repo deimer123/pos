@@ -497,6 +497,24 @@ private function limpiarUtf8Array(array $datos): array
        }
    }
 
+   // Si el carrito guardado es el de una reserva de hotel (trae el ítem
+   // sintético "hotel-reserva-X") y no hay ?hotel= en la URL, es que se
+   // salió del POS sin pasar por "Ver lobby": los consumos ya quedaron
+   // guardados en la reserva → limpiar el cache para no arrastrar ese
+   // carrito a la próxima venta.
+   if (auth()->check() && !(int) request()->get('hotel')) {
+       $eraCarritoDeHotel = collect($carritoGuardado)
+           ->keys()
+           ->contains(fn ($clave) => str_starts_with((string) $clave, 'hotel-reserva-'));
+
+       if ($eraCarritoDeHotel) {
+           $this->olvidarCarritoPersistente();
+           session()->forget('carrito_guardado');
+           session()->forget('observaciones_guardadas');
+           $carritoGuardado = [];
+       }
+   }
+
    if (! empty($carritoGuardado)) {
     
     foreach ($carritoGuardado as $clave => $item) {
