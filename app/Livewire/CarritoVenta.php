@@ -858,6 +858,11 @@ public function asignarConsumidorFinalPorDefecto()
     if ($this->tallerOrdenId) {
         $this->sincronizarCarritoConOrdenTaller();
     }
+
+    // Auto-sync con reserva de hotel activa
+    if ($this->hotelReservaId) {
+        $this->sincronizarCarritoConHotelReserva();
+    }
 }
     public function agregarProductoAlCarrito($idProducto)
     {
@@ -936,15 +941,23 @@ public function asignarConsumidorFinalPorDefecto()
     public function eliminarProductoDelCarrito($data)
     {
         $uuid = $data['uuid'] ?? $data;
-        
+
         foreach ($this->carrito as $index => $item) {
             if (($item['uuid'] ?? null) === $uuid || $item['id_producto'] == $uuid) {
                 unset($this->carrito[$index]);
                 break;
             }
         }
-        
+
         $this->actualizarTotales();
+
+        if ($this->tallerOrdenId) {
+            $this->sincronizarCarritoConOrdenTaller();
+        }
+
+        if ($this->hotelReservaId) {
+            $this->sincronizarCarritoConHotelReserva();
+        }
     }
 
     public function eliminarDelCarrito($uuid)
@@ -982,6 +995,14 @@ public function asignarConsumidorFinalPorDefecto()
     }
 
     $this->actualizarTotales();
+
+    if ($this->tallerOrdenId) {
+        $this->sincronizarCarritoConOrdenTaller();
+    }
+
+    if ($this->hotelReservaId) {
+        $this->sincronizarCarritoConHotelReserva();
+    }
 }
 public function updatedCarrito($value, $key)
 {
@@ -989,18 +1010,24 @@ public function updatedCarrito($value, $key)
     if (strpos($key, '.cantidad') !== false) {
         // Obtener el ID del producto desde el key
         $productId = str_replace('.cantidad', '', $key);
-        
+
         if (isset($this->carrito[$productId])) {
             $cantidad = $this->normalizarCantidad($value, $this->permiteCantidadDecimal($this->carrito[$productId]));
-            $nuevoPrecio = isset($this->carrito[$productId]['nuevo_precio']) 
-                ? floatval($this->carrito[$productId]['nuevo_precio']) 
+            $nuevoPrecio = isset($this->carrito[$productId]['nuevo_precio'])
+                ? floatval($this->carrito[$productId]['nuevo_precio'])
                 : floatval($this->carrito[$productId]['precio']);
-            
+
             // âœ… RECALCULAR SUBTOTAL CON EL PRECIO CORRECTO
             $this->carrito[$productId]['cantidad'] = $cantidad;
             $this->carrito[$productId]['total'] = round($nuevoPrecio * $cantidad, 2);
-            
-           
+
+            if ($this->tallerOrdenId) {
+                $this->sincronizarCarritoConOrdenTaller();
+            }
+
+            if ($this->hotelReservaId) {
+                $this->sincronizarCarritoConHotelReserva();
+            }
         }
         
         $this->calcularTotalGeneral();
@@ -1032,12 +1059,37 @@ public function limpiarCarrito()
         $this->tallerFotoTemp = null;
     }
 
-    // Si hay una reserva de hotel activa, "Limpiar" guarda los productos
-    // agregados como consumos de la reserva y solo desasocia el carrito: la
-    // reserva sigue en check-in, el huésped sigue hospedado. Se puede volver
-    // a facturar después desde el panel de Hotel.
+    // Si hay una reserva de hotel activa, "Limpiar" anula la reserva por
+    // completo: se borra junto con sus consumos y la habitación vuelve a
+    // quedar libre, sin cuenta, como si nunca se hubiera hospedado. Esto es
+    // para corregir errores al reservar/hacer el check-in, NO para "guardar
+    // y salir" (eso ya lo hace el botón "🏨 Hotel" del encabezado).
+    //
+    // Control de fraude: pasada 1 hora desde el check-in real, un cajero/
+    // recepcionista ya no puede usar esto para borrar una estadía completa
+    // (evita que, en vez de facturar al huésped que se quedó toda la noche,
+    // se "limpie" la cuenta y se quede con el dinero). Pasada esa hora, solo
+    // admin_empresa puede seguir anulando, para corregir errores genuinos.
     if ($this->hotelReservaId) {
-        $this->sincronizarCarritoConHotelReserva();
+        $reserva = \App\Models\HotelReserva::where('empresa_id', $this->getEmpresaId())
+            ->find($this->hotelReservaId);
+
+        if ($reserva) {
+            $minutosActiva = $reserva->checkin_real_at
+                ? $reserva->checkin_real_at->diffInMinutes(now())
+                : PHP_INT_MAX;
+
+            $puedeAnular = $minutosActiva <= 60 || auth()->user()->hasRole('admin_empresa');
+
+            if (! $puedeAnular) {
+                $this->dispatch('error', 'Esta habitación lleva más de 1 hora activa: ya no se puede "Limpiar". Factura la estadía, o pide a un administrador que anule la reserva si fue un error.');
+                return;
+            }
+
+            \App\Models\HotelReservaConsumo::where('reserva_id', $reserva->id)->delete();
+            $reserva->delete();
+        }
+
         $this->hotelReservaId      = null;
         $this->hotelAbonoMonto     = 0;
         $this->hotelAbonoMedioPago = '';

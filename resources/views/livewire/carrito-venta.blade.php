@@ -808,9 +808,10 @@
 
             <button
                 x-on:click="
+                    const hayHotel = !! $wire.get('hotelReservaId');
                     Swal.fire({
-                        title: '¿Vaciar carrito?',
-                        text: 'Se eliminarán todos los productos.',
+                        title: hayHotel ? '¿Anular esta reserva?' : '¿Vaciar carrito?',
+                        text: hayHotel ? 'Se eliminará la reserva y sus consumos, y la habitación quedará libre, como si nunca se hubiera hospedado.' : 'Se eliminarán todos los productos.',
                         icon:'warning', showCancelButton:true,
                         confirmButtonText:'Sí, eliminar', cancelButtonText:'Cancelar',
                         confirmButtonColor:'#dc2626'
@@ -819,10 +820,12 @@
                 Limpiar
             </button>
 
+            @if(! $hotelReservaId)
             <button type="button" wire:click="confirmarGuardarPrefactura"
                 style="width:100%;text-align:center;background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 Guardar
             </button>
+            @endif
 
             <button wire:click="verPrefacturas"
                 style="width:100%;text-align:center;background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
@@ -958,7 +961,7 @@
                     </button>
                 @endif
 
-                @if(! $mesaId && ! $tallerOrdenId)
+                @if(! $mesaId && ! $tallerOrdenId && ! $hotelReservaId)
                 <button type="button" class="pos-cart-menu-item pos-cart-menu-item-save" wire:key="mobile-action-guardar" @click.prevent.stop="open = false; $wire.confirmarGuardarPrefactura();">
                     Guardar
                 </button>
