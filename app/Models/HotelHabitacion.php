@@ -70,25 +70,43 @@ class HotelHabitacion extends Model
         return (float) $precios[(string) $masCercano];
     }
 
-    // Precio total de la noche (base por ocupación + recargos fijos de
-    // aire/ventilador si la habitación los tiene).
-    public function precioNochePara(int $personas): float
+    // Precio total de la noche: base por ocupación + el recargo de aire O
+    // ventilador que el huésped haya elegido para esa reserva (no ambos a la
+    // vez, aunque la habitación tenga las dos opciones disponibles).
+    public function precioNochePara(int $personas, ?string $climatizacion = null): float
     {
         $total = $this->precioParaPersonas($personas);
 
-        if ($this->tiene_aire) {
+        if ($climatizacion === 'aire' && $this->tiene_aire) {
             $total += (float) $this->recargo_aire;
-        }
-
-        if ($this->tiene_ventilador) {
+        } elseif ($climatizacion === 'ventilador' && $this->tiene_ventilador) {
             $total += (float) $this->recargo_ventilador;
         }
 
         return round($total, 2);
     }
 
+    // Precio base de la habitación sola (1 persona, sin aire ni ventilador).
     public function getPrecioDesdeAttribute(): float
     {
-        return $this->precioNochePara(1);
+        return $this->precioParaPersonas(1);
+    }
+
+    // Opciones de climatización que esta habitación realmente tiene
+    // instaladas, para preguntarle al huésped cuál quiere usar (y cobrar solo
+    // esa, no las dos).
+    public function opcionesClimatizacion(): array
+    {
+        $opciones = ['ninguno' => 'Sin aire/ventilador'];
+
+        if ($this->tiene_aire) {
+            $opciones['aire'] = '❄️ Aire (+$' . number_format((float) $this->recargo_aire, 0, ',', '.') . ')';
+        }
+
+        if ($this->tiene_ventilador) {
+            $opciones['ventilador'] = '🌀 Ventilador (+$' . number_format((float) $this->recargo_ventilador, 0, ',', '.') . ')';
+        }
+
+        return $opciones;
     }
 }

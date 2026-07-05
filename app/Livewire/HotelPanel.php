@@ -8,6 +8,7 @@ use App\Models\Gasto;
 use App\Models\HotelHabitacion;
 use App\Models\HotelReserva;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 
 class HotelPanel extends Component
@@ -27,6 +28,7 @@ class HotelPanel extends Component
     public string $resHuespedNombre      = '';
     public string $resHuespedTelefono    = '';
     public string $resHuespedDocumento   = '';
+    public string $resClimatizacion      = 'ninguno'; // 'ninguno' | 'aire' | 'ventilador'
     public string $resNumeroPersonas     = '1';
     public string $resFechaCheckin       = '';
     public string $resFechaCheckout      = '';
@@ -121,6 +123,7 @@ class HotelPanel extends Component
         $this->resHuespedNombre     = '';
         $this->resHuespedTelefono   = '';
         $this->resHuespedDocumento  = '';
+        $this->resClimatizacion     = 'ninguno';
         $this->resNumeroPersonas    = '1';
         $this->resFechaCheckin      = now()->toDateString();
         $this->resFechaCheckout     = $inmediato ? '' : now()->addDay()->toDateString();
@@ -147,6 +150,7 @@ class HotelPanel extends Component
         $this->resHuespedNombre     = $r->huesped_nombre;
         $this->resHuespedTelefono   = $r->huesped_telefono ?? '';
         $this->resHuespedDocumento  = $r->huesped_documento ?? '';
+        $this->resClimatizacion     = $r->climatizacion ?? 'ninguno';
         $this->resNumeroPersonas    = (string) $r->numero_personas;
         $this->resFechaCheckin      = $r->fecha_checkin->toDateString();
         $this->resFechaCheckout     = $r->fecha_checkout?->toDateString() ?? '';
@@ -201,38 +205,104 @@ class HotelPanel extends Component
     {
         $this->resetErrorBag();
         $this->nuevoClienteHotel = [
-            'nombre'         => '',
-            'identificacion' => '',
-            'telefono'       => '',
-            'direccion'      => '',
+            'tipo_documento_id'  => 3,
+            'identificacion'     => '',
+            'nombre'             => '',
+            'razon_social'       => '',
+            'email'              => '',
+            'telefono'           => '',
+            'direccion'          => '',
+            'departamento_id'    => '',
+            'ciudad_id'          => '',
+            'tipo_persona'       => '',
+            'regimen_tributario' => '',
+            'responsable_iva'    => '',
         ];
         $this->modalCrearClienteHotel = true;
     }
 
+    // Mismos campos y reglas que el "Crear Cliente" del POS base, para que el
+    // cliente quede completo (útil para facturación electrónica) sin
+    // importar desde dónde se creó.
     public function guardarClienteHotel(): void
     {
+        $this->resetErrorBag();
+        $empresaId = $this->empresaId();
+
+        $this->nuevoClienteHotel['responsable_iva'] = $this->nuevoClienteHotel['responsable_iva'] !== ''
+            ? (int) $this->nuevoClienteHotel['responsable_iva']
+            : null;
+
+        if ($this->nuevoClienteHotel['regimen_tributario'] === 'simplificado' && $this->nuevoClienteHotel['responsable_iva'] == 1) {
+            $this->addError('nuevoClienteHotel.responsable_iva', 'Un régimen simplificado no puede ser responsable de IVA.');
+        }
+
+        if ($this->nuevoClienteHotel['regimen_tributario'] === 'comun' && $this->nuevoClienteHotel['responsable_iva'] != 1) {
+            $this->addError('nuevoClienteHotel.responsable_iva', 'Un régimen común debe ser responsable de IVA.');
+        }
+
+        if ($this->nuevoClienteHotel['tipo_persona'] === 'juridica' && (int) $this->nuevoClienteHotel['tipo_documento_id'] !== 6) {
+            $this->addError('nuevoClienteHotel.tipo_documento_id', 'Una persona jurídica solo puede tener NIT como tipo de documento.');
+        }
+
+        if ($this->getErrorBag()->isNotEmpty()) {
+            return;
+        }
+
         $this->validate([
-            'nuevoClienteHotel.nombre'         => 'required|string|max:200',
-            'nuevoClienteHotel.identificacion' => 'nullable|string|max:50|unique:actors,identificacion',
-            'nuevoClienteHotel.telefono'       => 'nullable|string|max:30',
-            'nuevoClienteHotel.direccion'      => 'nullable|string|max:255',
+            'nuevoClienteHotel.identificacion' => [
+                'required',
+                Rule::unique('actors', 'identificacion')->where(fn ($q) => $q->where('empresa_id', $empresaId)),
+            ],
+            'nuevoClienteHotel.nombre' => [
+                'required',
+                Rule::unique('actors', 'nombre')->where(fn ($q) => $q->where('empresa_id', $empresaId)),
+            ],
+            'nuevoClienteHotel.email' => [
+                'required',
+                'email',
+                Rule::unique('actors', 'email')->where(fn ($q) => $q->where('empresa_id', $empresaId)),
+            ],
+            'nuevoClienteHotel.telefono'           => 'required|numeric',
+            'nuevoClienteHotel.departamento_id'    => 'required|exists:departamentos,id',
+            'nuevoClienteHotel.ciudad_id'          => 'required|exists:ciudades,id',
+            'nuevoClienteHotel.direccion'          => 'required',
+            'nuevoClienteHotel.responsable_iva'    => 'required|in:0,1',
+            'nuevoClienteHotel.regimen_tributario' => 'required',
+            'nuevoClienteHotel.tipo_persona'       => 'required',
         ], [
-            'nuevoClienteHotel.nombre.required' => 'El nombre es obligatorio.',
-            'nuevoClienteHotel.identificacion.unique' => 'Este número de identificación ya está registrado.',
+            'nuevoClienteHotel.identificacion.required' => 'Debe ingresar una identificación.',
+            'nuevoClienteHotel.identificacion.unique'   => 'Este número de identificación ya está registrado.',
+            'nuevoClienteHotel.nombre.required'         => 'Debe ingresar un nombre.',
+            'nuevoClienteHotel.nombre.unique'           => 'El nombre ya existe.',
+            'nuevoClienteHotel.email.required'          => 'Debe ingresar un correo electrónico.',
+            'nuevoClienteHotel.email.email'             => 'Debe ingresar un correo válido.',
+            'nuevoClienteHotel.email.unique'            => 'Este correo ya está registrado.',
+            'nuevoClienteHotel.telefono.required'          => 'Debe ingresar un teléfono.',
+            'nuevoClienteHotel.departamento_id.required'   => 'Seleccione un departamento.',
+            'nuevoClienteHotel.ciudad_id.required'         => 'Seleccione una ciudad.',
+            'nuevoClienteHotel.direccion.required'         => 'Ingrese una dirección.',
+            'nuevoClienteHotel.responsable_iva.required'   => 'Indique si es responsable de IVA.',
+            'nuevoClienteHotel.regimen_tributario.required' => 'Seleccione un régimen tributario.',
+            'nuevoClienteHotel.tipo_persona.required'      => 'Seleccione un tipo de persona.',
         ]);
 
         $actor = Actor::create([
             'id_clip_pro'        => (int) Actor::max('id_clip_pro') + 1,
-            'empresa_id'         => $this->empresaId(),
+            'empresa_id'         => $empresaId,
             'tipo'               => 1,
-            'tipo_persona'       => 'natural',
-            'tipo_documento_id'  => 3,
-            'identificacion'     => trim($this->nuevoClienteHotel['identificacion']) ?: null,
-            'nombre'             => trim($this->nuevoClienteHotel['nombre']),
-            'telefono'           => trim($this->nuevoClienteHotel['telefono']) ?: null,
-            'direccion'          => trim($this->nuevoClienteHotel['direccion']) ?: null,
-            'regimen_tributario' => 'simplificado',
-            'responsable_iva'    => 0,
+            'tipo_documento_id'  => $this->nuevoClienteHotel['tipo_documento_id'],
+            'identificacion'     => $this->nuevoClienteHotel['identificacion'],
+            'nombre'             => $this->nuevoClienteHotel['nombre'],
+            'razon_social'       => $this->nuevoClienteHotel['razon_social'] ?: null,
+            'email'              => $this->nuevoClienteHotel['email'],
+            'telefono'           => $this->nuevoClienteHotel['telefono'],
+            'direccion'          => $this->nuevoClienteHotel['direccion'],
+            'departamento_id'    => $this->nuevoClienteHotel['departamento_id'],
+            'ciudad_id'          => $this->nuevoClienteHotel['ciudad_id'],
+            'tipo_persona'       => $this->nuevoClienteHotel['tipo_persona'],
+            'regimen_tributario' => $this->nuevoClienteHotel['regimen_tributario'],
+            'responsable_iva'    => $this->nuevoClienteHotel['responsable_iva'],
             'clasificacion'      => 'cliente',
         ]);
 
@@ -269,8 +339,9 @@ class HotelPanel extends Component
         }
 
         $personas = max(1, (int) $this->resNumeroPersonas);
+        $clima    = $this->resClimatizacion === 'ninguno' ? null : $this->resClimatizacion;
 
-        return $habitacion->precioNochePara($personas);
+        return $habitacion->precioNochePara($personas, $clima);
     }
 
     public function getTotalEstimadoReservaProperty(): float
@@ -311,7 +382,18 @@ class HotelPanel extends Component
             return;
         }
 
-        $precioNoche = $habitacion->precioNochePara((int) $this->resNumeroPersonas);
+        if ($this->resClimatizacion === 'aire' && ! $habitacion->tiene_aire) {
+            $this->addError('resClimatizacion', 'Esta habitación no tiene aire acondicionado.');
+            return;
+        }
+
+        if ($this->resClimatizacion === 'ventilador' && ! $habitacion->tiene_ventilador) {
+            $this->addError('resClimatizacion', 'Esta habitación no tiene ventilador.');
+            return;
+        }
+
+        $climatizacion = $this->resClimatizacion === 'ninguno' ? null : $this->resClimatizacion;
+        $precioNoche   = $habitacion->precioNochePara((int) $this->resNumeroPersonas, $climatizacion);
         if ($precioNoche <= 0) {
             $this->addError('resNumeroPersonas', 'Esta habitación no tiene un precio configurado para esa cantidad de personas. Configúralo en Administración → Hotel → Habitaciones.');
             return;
@@ -343,6 +425,7 @@ class HotelPanel extends Component
             'huesped_nombre'    => trim($this->resHuespedNombre),
             'huesped_telefono'  => trim($this->resHuespedTelefono) ?: null,
             'huesped_documento' => trim($this->resHuespedDocumento) ?: null,
+            'climatizacion'     => $climatizacion,
             'numero_personas'   => (int) $this->resNumeroPersonas,
             'fecha_checkin'     => $this->resFechaCheckin,
             'fecha_checkout'    => $this->resFechaCheckout ?: null,

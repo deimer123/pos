@@ -86,7 +86,7 @@
                         @if(!$h->tiene_aire && !$h->tiene_ventilador)<span>Sin aire/ventilador</span>@endif
                     </div>
                     <div style="font-size:12px; font-weight:700; color:#7c3aed; margin-bottom:8px;">
-                        Desde ${{ number_format($h->precio_desde, 0, ',', '.') }} / noche (1 persona, ya incluye aire/ventilador)
+                        Desde ${{ number_format($h->precio_desde, 0, ',', '.') }} / noche (1 persona, habitación sola)
                     </div>
 
                     @if($r)
@@ -109,10 +109,6 @@
 
                     <div style="display:flex; gap:6px; flex-wrap:wrap;">
                         @if(! $r)
-                            <button wire:click="abrirNuevaReserva({{ $h->id }})"
-                                style="flex:1; border:none; border-radius:6px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#16a34a; color:white;">
-                                📅 Reservar
-                            </button>
                             <button wire:click="abrirNuevaReserva({{ $h->id }}, true)"
                                 style="flex:1; border:none; border-radius:6px; padding:6px; font-size:11px; font-weight:700; cursor:pointer; background:#f59e0b; color:white;">
                                 🔑 Entrada ahora
@@ -259,6 +255,70 @@
                     @error('resHabitacionId') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
                 </div>
 
+                @if($this->habitacionSeleccionada)
+                    @php $hSel = $this->habitacionSeleccionada; @endphp
+
+                    <div style="background:#f0fdf4; border-radius:8px; padding:10px 12px; margin-bottom:12px; text-align:center;">
+                        <div style="font-size:10px; color:#16a34a; text-transform:uppercase; font-weight:700;">Precio habitación sola (1 persona)</div>
+                        <div style="font-size:20px; font-weight:900; color:#16a34a;">${{ number_format($hSel->precio_desde, 0, ',', '.') }} / noche</div>
+                    </div>
+
+                    @if($hSel->tiene_aire || $hSel->tiene_ventilador)
+                    <div style="margin-bottom:12px;">
+                        <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">¿Con aire o con ventilador?</label>
+                        <select wire:model.live="resClimatizacion"
+                            style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px;">
+                            @foreach($hSel->opcionesClimatizacion() as $valor => $etiqueta)
+                                <option value="{{ $valor }}">{{ $etiqueta }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @endif
+
+                    <div style="margin-bottom:12px;">
+                        <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">¿Cuántas personas se van a {{ $resInmediato ? 'hospedar' : 'quedar' }}? *</label>
+                        <input wire:model.live="resNumeroPersonas" type="number" min="1"
+                            style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
+                        @error('resNumeroPersonas') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
+                    </div>
+
+                    @if(! $resInmediato)
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+                        <div>
+                            <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Entrada *</label>
+                            <input wire:model.live="resFechaCheckin" type="date"
+                                style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Salida</label>
+                            <input wire:model.live="resFechaCheckout" type="date"
+                                style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
+                            <div style="font-size:9px; color:#9ca3af; margin-top:2px;">No importa si se deja en blanco.</div>
+                            @error('resFechaCheckout') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+                    @endif
+
+                    <div style="background:#f0fdf4; border-radius:8px; padding:12px; margin-bottom:12px; text-align:center;">
+                        @if(! $resInmediato && $resFechaCheckout)
+                            <div style="font-size:10px; color:#16a34a; text-transform:uppercase; font-weight:700;">Total estimado</div>
+                            <div style="font-size:22px; font-weight:900; color:#16a34a;">${{ number_format($this->totalEstimadoReserva, 0, ',', '.') }}</div>
+                            <div style="font-size:10px; color:#6b7280;">
+                                ${{ number_format($this->precioNocheReserva, 0, ',', '.') }} / noche
+                                × {{ \Illuminate\Support\Carbon::parse($resFechaCheckin)->diffInDays(\Illuminate\Support\Carbon::parse($resFechaCheckout)) ?: 1 }} noche(s)
+                                para {{ $resNumeroPersonas ?: 1 }} persona(s)
+                            </div>
+                        @else
+                            <div style="font-size:10px; color:#16a34a; text-transform:uppercase; font-weight:700;">Precio por noche</div>
+                            <div style="font-size:22px; font-weight:900; color:#16a34a;">${{ number_format($this->precioNocheReserva, 0, ',', '.') }}</div>
+                            <div style="font-size:10px; color:#6b7280;">para {{ $resNumeroPersonas ?: 1 }} persona(s) · el total se calcula al hacer la salida</div>
+                        @endif
+                        @if($this->precioNocheReserva <= 0)
+                            <div style="font-size:10px; color:#dc2626; margin-top:4px; font-weight:700;">⚠️ Esta habitación no tiene precio configurado para {{ $resNumeroPersonas ?: 1 }} persona(s).</div>
+                        @endif
+                    </div>
+                @endif
+
                 <div style="margin-bottom:12px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                         <label style="font-size:11px; font-weight:700; color:#4b5563;">Nombre del huésped *</label>
@@ -284,62 +344,6 @@
                             style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
                     </div>
                 </div>
-
-                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:12px;">
-                    <div>
-                        <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Entrada *</label>
-                        <input wire:model.live="resFechaCheckin" type="date"
-                            style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
-                    </div>
-                    <div>
-                        <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Salida</label>
-                        <input wire:model.live="resFechaCheckout" type="date"
-                            style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
-                        <div style="font-size:9px; color:#9ca3af; margin-top:2px;">Déjalo en blanco si no sabe cuándo se va.</div>
-                        @error('resFechaCheckout') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
-                    </div>
-                    <div>
-                        <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Personas *</label>
-                        <input wire:model.live="resNumeroPersonas" type="number" min="1"
-                            style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
-                        @error('resNumeroPersonas') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
-                    </div>
-                </div>
-
-                @if($this->habitacionSeleccionada)
-                <div style="background:#f0fdf4; border-radius:8px; padding:12px; margin-bottom:12px; text-align:center;">
-                    @if($resFechaCheckout)
-                        <div style="font-size:10px; color:#16a34a; text-transform:uppercase; font-weight:700;">Total estimado</div>
-                        <div style="font-size:22px; font-weight:900; color:#16a34a;">${{ number_format($this->totalEstimadoReserva, 0, ',', '.') }}</div>
-                        <div style="font-size:10px; color:#6b7280;">
-                            ${{ number_format($this->precioNocheReserva, 0, ',', '.') }} / noche
-                            × {{ \Illuminate\Support\Carbon::parse($resFechaCheckin)->diffInDays(\Illuminate\Support\Carbon::parse($resFechaCheckout)) ?: 1 }} noche(s)
-                            para {{ $resNumeroPersonas ?: 1 }} persona(s)
-                        </div>
-                    @else
-                        <div style="font-size:10px; color:#16a34a; text-transform:uppercase; font-weight:700;">Precio por noche</div>
-                        <div style="font-size:22px; font-weight:900; color:#16a34a;">${{ number_format($this->precioNocheReserva, 0, ',', '.') }}</div>
-                        <div style="font-size:10px; color:#6b7280;">para {{ $resNumeroPersonas ?: 1 }} persona(s) · el total se calcula al hacer la salida</div>
-                    @endif
-                    @if($this->precioNocheReserva <= 0)
-                        <div style="font-size:10px; color:#dc2626; margin-top:4px; font-weight:700;">⚠️ Esta habitación no tiene precio configurado para {{ $resNumeroPersonas ?: 1 }} persona(s).</div>
-                    @elseif($this->habitacionSeleccionada->tiene_aire || $this->habitacionSeleccionada->tiene_ventilador)
-                        @php
-                            $hSel = $this->habitacionSeleccionada;
-                            $baseNoche = $hSel->precioParaPersonas(max(1, (int) $resNumeroPersonas));
-                        @endphp
-                        <div style="font-size:10px; color:#6b7280; margin-top:6px; border-top:1px dashed #bbf7d0; padding-top:4px;">
-                            Base: ${{ number_format($baseNoche, 0, ',', '.') }}
-                            @if($hSel->tiene_aire)
-                                &nbsp;+ ❄️ Aire: ${{ number_format($hSel->recargo_aire, 0, ',', '.') }}
-                            @endif
-                            @if($hSel->tiene_ventilador)
-                                &nbsp;+ 🌀 Ventilador: ${{ number_format($hSel->recargo_ventilador, 0, ',', '.') }}
-                            @endif
-                        </div>
-                    @endif
-                </div>
-                @endif
 
                 @if($resInmediato)
                 <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:10px 12px; margin-bottom:12px; font-size:11px; color:#1e40af;">
@@ -426,39 +430,144 @@
     </div>
     @endif
 
-    {{-- Modal Crear cliente --}}
+    {{-- Modal Crear cliente (mismos campos que "Crear Cliente" del POS base) --}}
     @if($modalCrearClienteHotel)
     <div style="position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1300; display:flex; align-items:center; justify-content:center; padding:16px;">
-        <div style="background:white; border-radius:16px; width:100%; max-width:420px; max-height:80vh; overflow-y:auto;">
+        <div style="background:white; border-radius:16px; width:100%; max-width:560px; max-height:90vh; overflow-y:auto;">
             <div style="background:#16a34a; color:white; padding:14px 18px; border-radius:16px 16px 0 0; display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:15px; font-weight:700;">➕ Cliente nuevo</span>
+                <span style="font-size:15px; font-weight:700;">➕ Crear cliente</span>
                 <button wire:click="$set('modalCrearClienteHotel',false)" style="background:rgba(255,255,255,.2); border:none; color:white; border-radius:99px; width:28px; height:28px; cursor:pointer; font-size:16px; line-height:1;">×</button>
             </div>
-            <div style="padding:16px;">
-                <div style="margin-bottom:10px;">
-                    <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Nombre *</label>
-                    <input wire:model="nuevoClienteHotel.nombre" type="text"
-                        style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
-                    @error('nuevoClienteHotel.nombre') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
-                </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
-                    <div>
-                        <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Documento</label>
-                        <input wire:model="nuevoClienteHotel.identificacion" type="text"
-                            style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
-                        @error('nuevoClienteHotel.identificacion') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
-                    </div>
-                    <div>
-                        <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Teléfono</label>
-                        <input wire:model="nuevoClienteHotel.telefono" type="text"
-                            style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
-                    </div>
-                </div>
+            <div style="padding:18px;">
+
                 <div style="margin-bottom:14px;">
-                    <label style="font-size:11px; font-weight:700; color:#4b5563; display:block; margin-bottom:4px;">Dirección</label>
-                    <input wire:model="nuevoClienteHotel.direccion" type="text"
-                        style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
+                    <h3 style="font-size:12px; font-weight:700; color:#4f46e5; margin-bottom:8px;">Datos personales</h3>
+                    <div style="display:grid; grid-template-columns:60% 40%; gap:10px; margin-bottom:8px;">
+                        <div>
+                            <label style="font-size:11px; color:#4b5563; display:block; margin-bottom:4px;">Tipo Documento</label>
+                            <select wire:model="nuevoClienteHotel.tipo_documento_id"
+                                style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px;">
+                                <option value="">Seleccione</option>
+                                @foreach(\App\Models\TipoDocumento::all() as $doc)
+                                    <option value="{{ $doc->id }}">{{ $doc->nombre }}</option>
+                                @endforeach
+                            </select>
+                            @error('nuevoClienteHotel.tipo_documento_id') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
+                        </div>
+                        <div>
+                            <label style="font-size:11px; color:#4b5563; display:block; margin-bottom:4px;">Numero de documento</label>
+                            <input type="text" wire:model.defer="nuevoClienteHotel.identificacion"
+                                oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                                style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
+                            @error('nuevoClienteHotel.identificacion') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+                    <div style="margin-bottom:8px;">
+                        <label style="font-size:11px; color:#4b5563; display:block; margin-bottom:4px;">Nombre</label>
+                        <input type="text" wire:model.defer="nuevoClienteHotel.nombre"
+                            style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
+                        @error('nuevoClienteHotel.nombre') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
+                    </div>
+                    <div>
+                        <label style="font-size:11px; color:#4b5563; display:block; margin-bottom:4px;">Razon Social</label>
+                        <input type="text" wire:model.defer="nuevoClienteHotel.razon_social"
+                            style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
+                    </div>
                 </div>
+
+                <div style="margin-bottom:14px;">
+                    <h3 style="font-size:12px; font-weight:700; color:#4f46e5; margin-bottom:8px;">Datos de contacto</h3>
+                    <div style="margin-bottom:8px;">
+                        <label style="font-size:11px; color:#4b5563; display:block; margin-bottom:4px;">Correo electronico</label>
+                        <input type="email" wire:model.defer="nuevoClienteHotel.email"
+                            style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
+                        @error('nuevoClienteHotel.email') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div>
+                            <label style="font-size:11px; color:#4b5563; display:block; margin-bottom:4px;">Telefono</label>
+                            <input type="tel" wire:model.defer="nuevoClienteHotel.telefono"
+                                oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                                style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
+                            @error('nuevoClienteHotel.telefono') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
+                        </div>
+                        <div>
+                            <label style="font-size:11px; color:#4b5563; display:block; margin-bottom:4px;">Direccion</label>
+                            <input type="text" wire:model.defer="nuevoClienteHotel.direccion"
+                                style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; box-sizing:border-box;">
+                            @error('nuevoClienteHotel.direccion') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:14px;">
+                    <h3 style="font-size:12px; font-weight:700; color:#4f46e5; margin-bottom:8px;">Ubicacion</h3>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div>
+                            <label style="font-size:11px; color:#4b5563; display:block; margin-bottom:4px;">Departamento</label>
+                            <select wire:model.live="nuevoClienteHotel.departamento_id"
+                                style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px;">
+                                <option value="">Seleccione...</option>
+                                @foreach(\App\Models\Departamento::all() as $dep)
+                                    <option value="{{ $dep->id }}">{{ $dep->nombre }}</option>
+                                @endforeach
+                            </select>
+                            @error('nuevoClienteHotel.departamento_id') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
+                        </div>
+                        <div>
+                            <label style="font-size:11px; color:#4b5563; display:block; margin-bottom:4px;">Ciudad</label>
+                            <select wire:model.live="nuevoClienteHotel.ciudad_id"
+                                style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px;">
+                                <option value="">Seleccione...</option>
+                                @if(!empty($nuevoClienteHotel['departamento_id']))
+                                    @foreach(\App\Models\Ciudad::where('departamento_id', $nuevoClienteHotel['departamento_id'])->get() as $ciu)
+                                        <option value="{{ $ciu->id }}">{{ $ciu->nombre }}</option>
+                                    @endforeach
+                                @endif
+                            </select>
+                            @error('nuevoClienteHotel.ciudad_id') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <h3 style="font-size:12px; font-weight:700; color:#4f46e5; margin-bottom:8px;">Datos tributarios</h3>
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+                        <div>
+                            <label style="font-size:11px; color:#4b5563; display:block; margin-bottom:4px;">Tipo de persona</label>
+                            <select wire:model.defer="nuevoClienteHotel.tipo_persona"
+                                style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px;">
+                                <option value="">Seleccione</option>
+                                <option value="natural">Natural</option>
+                                <option value="juridica">Juridica</option>
+                            </select>
+                            @error('nuevoClienteHotel.tipo_persona') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
+                        </div>
+                        <div>
+                            <label style="font-size:11px; color:#4b5563; display:block; margin-bottom:4px;">Regimen tributario</label>
+                            <select wire:model.defer="nuevoClienteHotel.regimen_tributario"
+                                style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px;">
+                                <option value="">Seleccione</option>
+                                <option value="comun">Comun</option>
+                                <option value="simplificado">Simplificado</option>
+                                <option value="especial">Especial</option>
+                                <option value="otro">Otro</option>
+                            </select>
+                            @error('nuevoClienteHotel.regimen_tributario') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
+                        </div>
+                        <div>
+                            <label style="font-size:11px; color:#4b5563; display:block; margin-bottom:4px;">Responsable de IVA?</label>
+                            <select wire:model.defer="nuevoClienteHotel.responsable_iva"
+                                style="width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px;">
+                                <option value="">Seleccione</option>
+                                <option value="1">Si</option>
+                                <option value="0">No</option>
+                            </select>
+                            @error('nuevoClienteHotel.responsable_iva') <span style="font-size:10px; color:#ef4444;">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+                </div>
+
                 <div style="display:flex; gap:8px; justify-content:flex-end;">
                     <button wire:click="$set('modalCrearClienteHotel',false)"
                         style="border:1px solid #d1d5db; background:white; border-radius:8px; padding:8px 18px; font-size:13px; cursor:pointer; color:#6b7280;">

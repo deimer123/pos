@@ -2229,6 +2229,17 @@ public function confirmarFacturar()
     }
 
 
+// Los items manuales del carrito (hospedaje de hotel, repuestos sueltos de
+// taller, etc.) se guardan con una clave sintética como id_producto
+// ('hotel-reserva-3', un uuid...) que no existe como Product real. Para
+// facturarlos sin romper la FK de factura_detalles, se agrupan bajo el
+// producto de prueba 10001 (ya excluido de kardex/existencias en el resto
+// del código) y el texto real queda en descripcion_larga.
+private function idProductoFacturable($idProducto): int
+{
+    return is_numeric($idProducto) ? (int) $idProducto : 10001;
+}
+
 protected function datosServicioFactura(?Product $producto): array
 {
     if (! $producto || $producto->tipo_producto !== 'servicio' || ! $producto->tipo_servicio) {
@@ -2351,7 +2362,7 @@ public function facturarConfirmada(array $data = [])
         // âœ… Permitir stock negativo: solo valida que exista y cantidad > 0
         foreach ($this->carrito as $item) {
             $prod = Product::where('empresa_id', $empresaId)
-                ->where('id_producto', $item['id_producto'])
+                ->where('id_producto', $this->idProductoFacturable($item['id_producto']))
                 ->lockForUpdate()
                 ->first();
 
@@ -2439,15 +2450,17 @@ public function facturarConfirmada(array $data = [])
             $cant   = $this->normalizarCantidad($item['cantidad'] ?? 1, $this->permiteCantidadDecimal($item));
             $sub    = round($precio * $cant, 2);
 
+            $idFacturable = $this->idProductoFacturable($item['id_producto']);
+
             $producto = Product::where('empresa_id', $empresaId)
-                ->where('id_producto', $item['id_producto'])
+                ->where('id_producto', $idFacturable)
                 ->lockForUpdate()
                 ->first();
 
             $datosServicio = $this->datosServicioFactura($producto);
 
             $factura->detalles()->create([
-                'producto_id'        => $item['id_producto'],
+                'producto_id'        => $idFacturable,
                 'descripcion_larga'  => $item['nombre'],
                 'cantidad'           => $cant,
                 'precio'             => $precio,
@@ -2859,7 +2872,7 @@ public function facturarEImprimir(array $data = [])
 
         foreach ($this->carrito as $item) {
             $prod = Product::where('empresa_id', $empresaId)
-                ->where('id_producto', $item['id_producto'])
+                ->where('id_producto', $this->idProductoFacturable($item['id_producto']))
                 ->lockForUpdate()
                 ->first();
 
@@ -2947,15 +2960,17 @@ public function facturarEImprimir(array $data = [])
             $cant   = $this->normalizarCantidad($item['cantidad'] ?? 1, $this->permiteCantidadDecimal($item));
             $sub    = round($precio * $cant, 2);
 
+            $idFacturable = $this->idProductoFacturable($item['id_producto']);
+
             $producto = Product::where('empresa_id', $empresaId)
-                ->where('id_producto', $item['id_producto'])
+                ->where('id_producto', $idFacturable)
                 ->lockForUpdate()
                 ->first();
 
             $datosServicio = $this->datosServicioFactura($producto);
 
             $factura->detalles()->create([
-                'producto_id'        => $item['id_producto'],
+                'producto_id'        => $idFacturable,
                 'descripcion_larga'  => $item['nombre'],
                 'cantidad'           => $cant,
                 'precio'             => $precio,

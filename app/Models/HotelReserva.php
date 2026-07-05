@@ -13,7 +13,7 @@ class HotelReserva extends Model
     protected $fillable = [
         'empresa_id', 'habitacion_id', 'actor_id', 'numero_reserva',
         'huesped_nombre', 'huesped_telefono', 'huesped_documento', 'numero_personas',
-        'fecha_checkin', 'fecha_checkout', 'checkin_real_at', 'checkout_real_at',
+        'climatizacion', 'fecha_checkin', 'fecha_checkout', 'checkin_real_at', 'checkout_real_at',
         'precio_noche', 'abono_monto', 'abono_medio_pago',
         'estado', 'factura_id', 'observaciones', 'creado_por',
     ];
