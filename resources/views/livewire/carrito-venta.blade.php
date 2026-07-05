@@ -763,11 +763,6 @@
                 Editar
             </button>
 
-            <button wire:click="abrirModalBuscarCliente"
-                style="width:100%;text-align:center;background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
-                🔍 Cliente
-            </button>
-
             <button wire:click="abrirModalCrearCliente"
                 style="width:100%;text-align:center;background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 + Cliente
