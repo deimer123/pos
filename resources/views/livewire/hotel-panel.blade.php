@@ -69,7 +69,55 @@
             </button>
         </div>
 
-        @if($habitaciones->isEmpty())
+        @if($filtroEstado === 'reservada')
+        {{-- Reservadas: TODAS las reservas hechas (hoy, atrasadas o a futuro),
+             no solo la activa hoy en la habitación — una pieza puede tener
+             varias reservas en fila. Se lista por reserva, no por pieza. --}}
+            @if($reservas->isEmpty())
+                <div style="text-align:center; padding:60px 20px; color:#94a3b8;">
+                    <div style="font-size:48px;">📅</div>
+                    <div style="margin-top:12px; font-size:15px; font-weight:600;">No hay reservas pendientes.</div>
+                </div>
+            @else
+            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:12px;">
+                @foreach($reservas as $r)
+                    @php $esFutura = $r->fecha_checkin->isAfter(now()->startOfDay()); @endphp
+                    <div style="background:white; border-radius:14px; padding:14px; box-shadow:0 1px 3px rgba(0,0,0,.08); border:3px solid #f59e0b;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                            <div style="font-size:18px; font-weight:900; color:#1f2937;">🚪 {{ $r->habitacion->numero ?? '?' }}</div>
+                            <span style="font-size:10px; font-weight:800; background:#fef3c7; color:#92400e; border-radius:99px; padding:3px 10px; white-space:nowrap;">
+                                {{ $esFutura ? '📅 A futuro' : '🟡 Reservada' }}
+                            </span>
+                        </div>
+                        <div style="font-weight:700; font-size:13px; color:#1f2937; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">👤 {{ $r->huesped_nombre }}</div>
+                        <div style="font-size:11px; color:#94a3b8; margin-top:3px; margin-bottom:10px;">
+                            {{ $r->fecha_checkin->format('d/m/Y') }} → {{ $r->fecha_checkout?->format('d/m/Y') ?? '¿?' }}
+                            · {{ $r->numero_personas }} pers.
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;">
+                            <span style="font-size:11px; color:#6b7280;">Total estimado</span>
+                            <span style="font-size:15px; font-weight:900; color:#16a34a;">${{ number_format($r->total_estimado, 0, ',', '.') }}</span>
+                        </div>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                            <button wire:click="confirmarCheckin({{ $r->id }})"
+                                style="flex:1; border:none; border-radius:8px; padding:7px; font-size:11px; font-weight:700; cursor:pointer; background:#f59e0b; color:white;">
+                                🔑 Entrada
+                            </button>
+                            <button wire:click="abrirEditarReserva({{ $r->id }})"
+                                style="flex:1; border:none; border-radius:8px; padding:7px; font-size:11px; font-weight:700; cursor:pointer; background:#eff6ff; color:#2563eb;">
+                                ✏️ Editar
+                            </button>
+                            <button type="button"
+                                x-on:click="Swal.fire({title:'¿Cancelar esta reserva?',text:'Esta acción no se puede deshacer.',icon:'warning',showCancelButton:true,confirmButtonText:'Sí, cancelar',cancelButtonText:'No',confirmButtonColor:'#ef4444'}).then(r=>{if(r.isConfirmed){$wire.cancelarReserva({{ $r->id }});}})"
+                                style="flex:1; border:none; border-radius:8px; padding:7px; font-size:11px; font-weight:700; cursor:pointer; background:#fef2f2; color:#ef4444;">
+                                ✕ Cancelar
+                            </button>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+            @endif
+        @elseif($habitaciones->isEmpty())
             <div style="text-align:center; padding:60px 20px; color:#94a3b8;">
                 <div style="font-size:48px;">🏨</div>
                 @if($conteoEstados['todas'] === 0)

@@ -17,7 +17,7 @@ class HotelPanel extends Component
     public string $vistaActiva = 'habitaciones';
     public string $busqueda    = '';
     public string $filtroZona  = '';
-    public string $filtroEstado = 'todas'; // 'todas' | 'libre' | 'ocupada' | 'reservada'
+    public string $filtroEstado = 'libre'; // 'todas' | 'libre' | 'ocupada' | 'reservada'
 
     // ── Modal Reserva (nueva / editar)
     public bool   $modalReserva          = false;
@@ -122,8 +122,28 @@ class HotelPanel extends Component
             'todas'     => $habitaciones->count(),
             'libre'     => $habitaciones->where('estado_actual', 'libre')->count(),
             'ocupada'   => $habitaciones->where('estado_actual', 'ocupada')->count(),
-            'reservada' => $habitaciones->where('estado_actual', 'reservada')->count(),
+            'reservada' => $this->reservas->count(),
         ];
+    }
+
+    // TODAS las reservas con estado "reservada" (apartadas para cualquier
+    // fecha, ya sea hoy/atrasadas o a futuro), no solo la que esté activa
+    // hoy en la habitación — una habitación puede tener varias reservas
+    // futuras en fila, así que esta pestaña lista reservas, no habitaciones.
+    public function getReservasProperty()
+    {
+        $empresaId = $this->empresaId();
+
+        return HotelReserva::where('empresa_id', $empresaId)
+            ->where('estado', 'reservada')
+            ->whereHas('habitacion', function ($q) use ($empresaId) {
+                $q->where('empresa_id', $empresaId)
+                    ->when($this->busqueda, fn ($qq) => $qq->where('numero', 'like', '%' . $this->busqueda . '%'))
+                    ->when($this->filtroZona, fn ($qq) => $qq->where('zona', $this->filtroZona));
+            })
+            ->with('habitacion')
+            ->orderBy('fecha_checkin')
+            ->get();
     }
 
     public function getZonasDisponiblesProperty(): array
@@ -635,6 +655,7 @@ class HotelPanel extends Component
             'todasHabitaciones' => $this->todasHabitaciones,
             'zonasDisponibles'  => $this->zonasDisponibles,
             'conteoEstados'     => $this->conteoEstados,
+            'reservas'          => $this->filtroEstado === 'reservada' && $this->vistaActiva === 'habitaciones' ? $this->reservas : collect(),
             'calendario'        => $this->vistaActiva === 'calendario' ? $this->calendario : [],
             'diasCalendario'    => $this->vistaActiva === 'calendario' ? $this->diasCalendario : [],
         ]);
