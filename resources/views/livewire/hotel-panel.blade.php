@@ -45,12 +45,61 @@
     {{-- Vista Habitaciones --}}
     @if($vistaActiva === 'habitaciones')
     <div style="flex:1; overflow-y:auto; padding:16px;">
+
+        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px;">
+            <button wire:click="$set('filtroEstado','todas')"
+                style="border:1px solid #e2e8f0; border-radius:99px; padding:5px 14px; font-size:11px; font-weight:700; cursor:pointer;
+                    background:{{ $filtroEstado === 'todas' ? '#334155' : 'white' }}; color:{{ $filtroEstado === 'todas' ? 'white' : '#334155' }};">
+                Todas ({{ $conteoEstados['todas'] }})
+            </button>
+            <button wire:click="$set('filtroEstado','libre')"
+                style="border:1px solid #86efac; border-radius:99px; padding:5px 14px; font-size:11px; font-weight:700; cursor:pointer;
+                    background:{{ $filtroEstado === 'libre' ? '#16a34a' : '#f0fdf4' }}; color:{{ $filtroEstado === 'libre' ? 'white' : '#15803d' }};">
+                🟢 Disponibles ({{ $conteoEstados['libre'] }})
+            </button>
+            <button wire:click="$set('filtroEstado','ocupada')"
+                style="border:1px solid #fca5a5; border-radius:99px; padding:5px 14px; font-size:11px; font-weight:700; cursor:pointer;
+                    background:{{ $filtroEstado === 'ocupada' ? '#dc2626' : '#fef2f2' }}; color:{{ $filtroEstado === 'ocupada' ? 'white' : '#991b1b' }};">
+                🔴 Ocupadas ({{ $conteoEstados['ocupada'] }})
+            </button>
+            <button wire:click="$set('filtroEstado','reservada')"
+                style="border:1px solid #fde68a; border-radius:99px; padding:5px 14px; font-size:11px; font-weight:700; cursor:pointer;
+                    background:{{ $filtroEstado === 'reservada' ? '#f59e0b' : '#fffbeb' }}; color:{{ $filtroEstado === 'reservada' ? 'white' : '#92400e' }};">
+                🟡 Reservadas ({{ $conteoEstados['reservada'] }})
+            </button>
+        </div>
+
         @if($habitaciones->isEmpty())
             <div style="text-align:center; padding:60px 20px; color:#94a3b8;">
                 <div style="font-size:48px;">🏨</div>
-                <div style="margin-top:12px; font-size:15px; font-weight:600;">No hay habitaciones registradas.</div>
-                <div style="font-size:12px; color:#cbd5e1; margin-top:6px;">Créalas en <strong>Administración → Hotel → Habitaciones</strong>.</div>
+                @if($conteoEstados['todas'] === 0)
+                    <div style="margin-top:12px; font-size:15px; font-weight:600;">No hay habitaciones registradas.</div>
+                    <div style="font-size:12px; color:#cbd5e1; margin-top:6px;">Créalas en <strong>Administración → Hotel → Habitaciones</strong>.</div>
+                @else
+                    <div style="margin-top:12px; font-size:15px; font-weight:600;">No hay habitaciones en este filtro.</div>
+                @endif
             </div>
+        @elseif($filtroEstado === 'libre')
+        {{-- Disponibles: tarjeta chica, solo lo esencial para dar entrada rápido --}}
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px;">
+            @foreach($habitaciones as $h)
+                <div style="background:white; border-radius:12px; padding:10px; box-shadow:0 1px 3px rgba(0,0,0,.08); border:3px solid #22c55e;">
+                    <div style="font-size:15px; font-weight:900; color:#1f2937;">🚪 {{ $h->numero }}</div>
+                    <div style="display:flex; align-items:center; gap:6px; font-size:11px; color:#6b7280; margin:4px 0 8px;">
+                        <span>👥 {{ $h->capacidad_maxima }}</span>
+                        @if($h->tiene_aire)<span>❄️</span>@endif
+                        @if($h->tiene_ventilador)<span>🌀</span>@endif
+                    </div>
+                    <div style="font-size:11px; font-weight:800; color:#7c3aed; margin-bottom:8px;">
+                        ${{ number_format($h->precio_desde, 0, ',', '.') }}/noche
+                    </div>
+                    <button wire:click="abrirNuevaReserva({{ $h->id }}, true)"
+                        style="width:100%; border:none; border-radius:8px; padding:6px; font-size:10px; font-weight:700; cursor:pointer; background:#f59e0b; color:white;">
+                        🔑 Entrada
+                    </button>
+                </div>
+            @endforeach
+        </div>
         @else
         <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:12px;">
             @foreach($habitaciones as $h)
@@ -63,7 +112,7 @@
                     $c = $colores[$h->estado_actual] ?? $colores['libre'];
                     $r = $h->reserva_activa;
                 @endphp
-                <div style="background:white; border-radius:14px; padding:14px; box-shadow:0 1px 3px rgba(0,0,0,.08); border-left:5px solid {{ $c['border'] }};">
+                <div style="background:white; border-radius:14px; padding:14px; box-shadow:0 1px 3px rgba(0,0,0,.08); border:3px solid {{ $c['border'] }};">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
                         <div>
                             <div style="font-size:18px; font-weight:900; color:#1f2937; line-height:1.15;">🚪 {{ $h->numero }}</div>

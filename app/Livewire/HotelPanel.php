@@ -17,6 +17,7 @@ class HotelPanel extends Component
     public string $vistaActiva = 'habitaciones';
     public string $busqueda    = '';
     public string $filtroZona  = '';
+    public string $filtroEstado = 'todas'; // 'todas' | 'libre' | 'ocupada' | 'reservada'
 
     // ── Modal Reserva (nueva / editar)
     public bool   $modalReserva          = false;
@@ -63,7 +64,10 @@ class HotelPanel extends Component
 
     // ── Habitaciones ──────────────────────────────────────────────────────
 
-    public function getHabitacionesProperty()
+    // Todas las habitaciones (según búsqueda/zona) con su estado calculado,
+    // SIN aplicar el filtro de estado — sirve tanto para listar como para
+    // contar cuántas hay en cada estado para los botones de filtro.
+    private function habitacionesConEstado()
     {
         $empresaId = $this->empresaId();
         $hoy = now()->toDateString();
@@ -97,6 +101,29 @@ class HotelPanel extends Component
 
             return $h;
         });
+    }
+
+    public function getHabitacionesProperty()
+    {
+        $habitaciones = $this->habitacionesConEstado();
+
+        if ($this->filtroEstado !== 'todas') {
+            $habitaciones = $habitaciones->where('estado_actual', $this->filtroEstado)->values();
+        }
+
+        return $habitaciones;
+    }
+
+    public function getConteoEstadosProperty(): array
+    {
+        $habitaciones = $this->habitacionesConEstado();
+
+        return [
+            'todas'     => $habitaciones->count(),
+            'libre'     => $habitaciones->where('estado_actual', 'libre')->count(),
+            'ocupada'   => $habitaciones->where('estado_actual', 'ocupada')->count(),
+            'reservada' => $habitaciones->where('estado_actual', 'reservada')->count(),
+        ];
     }
 
     public function getZonasDisponiblesProperty(): array
@@ -607,6 +634,7 @@ class HotelPanel extends Component
             'habitaciones'      => $this->habitaciones,
             'todasHabitaciones' => $this->todasHabitaciones,
             'zonasDisponibles'  => $this->zonasDisponibles,
+            'conteoEstados'     => $this->conteoEstados,
             'calendario'        => $this->vistaActiva === 'calendario' ? $this->calendario : [],
             'diasCalendario'    => $this->vistaActiva === 'calendario' ? $this->diasCalendario : [],
         ]);
