@@ -1962,8 +1962,8 @@ public function guardarPrefacturaConfirmada()
             ->get();
 
         $this->mostrarModalPrefacturas = true;
-        $esTaller = (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', $this->getEmpresaId())->value('usa_taller');
-        if ($this->mesaId || $esTaller) {
+        $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $this->getEmpresaId())->first();
+        if ($this->mesaId || $config?->usa_taller || $config?->usa_hotel) {
             $this->tab = 'facturas';
         }
     }

@@ -1493,8 +1493,12 @@
                             </span>
 
                             <div class="flex gap-2">
-                                @php $esTaller = (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_taller'); @endphp
-                                @if(! $mesaId && ! $esTaller)
+                                @php
+                                    $configModalFacturas = \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->first();
+                                    $esTaller = (bool) ($configModalFacturas?->usa_taller);
+                                    $esHotelModal = (bool) ($configModalFacturas?->usa_hotel);
+                                @endphp
+                                @if(! $mesaId && ! $esTaller && ! $esHotelModal)
                                 <button wire:click="setTab('prefacturas')"
                                     class="px-3 py-1.5 rounded-full text-sm font-semibold shadow-sm {{ $tab === 'prefacturas' ? 'bg-indigo-600 text-white' : 'bg-white text-indigo-700 border border-indigo-200' }}">
                                     Prefacturas
