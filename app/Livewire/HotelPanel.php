@@ -55,11 +55,32 @@ class HotelPanel extends Component
     {
         $this->calDesde = now()->toDateString();
         $this->calHasta = now()->addDays(6)->toDateString();
+        $this->cancelarReservasNoShow();
     }
 
     private function empresaId(): int
     {
         return auth()->user()->getEmpresaActualId();
+    }
+
+    // Si una reserva sigue en estado "reservada" (el huésped nunca llegó a
+    // hacer el check-in) y ya pasaron más de 24 horas desde su fecha de
+    // entrada, se cancela sola como "no show", para no dejarla acumulada
+    // para siempre en la pestaña Reservadas. Se revisa cada vez que se abre
+    // el panel de Hotel (no depende de un cron en el servidor).
+    private function cancelarReservasNoShow(): void
+    {
+        HotelReserva::where('empresa_id', $this->empresaId())
+            ->where('estado', 'reservada')
+            ->whereDate('fecha_checkin', '<', now()->subHours(24)->toDateString())
+            ->get()
+            ->each(function (HotelReserva $r) {
+                $r->update([
+                    'estado' => 'cancelada',
+                    'observaciones' => trim(($r->observaciones ? $r->observaciones . ' · ' : '')
+                        . '⚠️ Cancelada automáticamente: no se registró la entrada (no show), pasadas 24h de la fecha de entrada.'),
+                ]);
+            });
     }
 
     // ── Habitaciones ──────────────────────────────────────────────────────
