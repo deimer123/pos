@@ -4626,16 +4626,25 @@ $efectivo = ($ventasContadoEfectivo - $serviciosContadoEfectivo - $passthroughCo
     $totalVentas = $ventasContadoEfectivo + $ventasContadoTransferencia + $ventasCredito - $ventasPassthrough;
 
     // ----- VENTAS: SERVICIOS vs PRODUCTOS -----
+    // El hospedaje de hotel se factura con producto_id = 0 (no existe como
+    // Product real), así que no puede identificarse por el join a products
+    // como los demás servicios: se reconoce por su descripción fija
+    // ("Hospedaje habitación ...", ver cargarHotelReserva()) y se cuenta
+    // como servicio igual que las demás órdenes/mano de obra.
     $ventasServiciosTotal = (float) \Illuminate\Support\Facades\DB::table('factura_detalles as fd')
         ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
-        ->join('products as p', function ($j) use ($empresaId) {
-            $j->on('p.id_producto', '=', 'fd.producto_id')
-              ->where('p.empresa_id', '=', $empresaId);
-        })
         ->where('f.empresa_id', $empresaId)
         ->where('f.user_id', $userId)
         ->whereBetween('f.fecha', [$inicio, $fin])
-        ->where('p.tipo_producto', 'servicio')
+        ->where(function ($q) use ($empresaId) {
+            $q->whereExists(function ($sub) use ($empresaId) {
+                $sub->select(\Illuminate\Support\Facades\DB::raw(1))
+                    ->from('products as p')
+                    ->whereColumn('p.id_producto', 'fd.producto_id')
+                    ->where('p.empresa_id', $empresaId)
+                    ->where('p.tipo_producto', 'servicio');
+            })->orWhere('fd.descripcion_larga', 'like', 'Hospedaje habitación%');
+        })
         ->sum('fd.subtotal');
 
     $ventasProductosTotal = $totalVentas - $ventasServiciosTotal;

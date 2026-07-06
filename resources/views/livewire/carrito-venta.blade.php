@@ -2151,12 +2151,39 @@
 
                 <div class="p-4 flex-1 overflow-hidden flex flex-col" style="background:#f8fbff;min-height:0;">
 
+                @php
+                    $usaHotelCierre = (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_hotel');
+                @endphp
                 <div class="pos-cierre-resumen mb-3 bg-white rounded-lg p-3 border text-xs overflow-y-auto shadow-sm"
                     style="text-align:left;max-height:34vh;border-color:#dbeafe;min-height:0;">
                     <div class="font-semibold mb-2">Resumen</div>
 
-                    
-                    <div class="text-[11px] text-gray-500 uppercase tracking-wide">VENTAS</div>
+                    <div class="text-[11px] text-gray-500 uppercase tracking-wide">VENTAS POR TIPO</div>
+                    <div class="flex justify-between"><span>🔩 Productos</span><span
+                            class="font-semibold">${{ number_format($resumenCaja['ventas_productos'], 0, ',', '.') }}</span>
+                    </div>
+                    <div class="flex justify-between"><span>🔧 Servicios</span><span
+                            class="font-semibold">${{ number_format($resumenCaja['ventas_servicios'], 0, ',', '.') }}</span>
+                    </div>
+
+                    <div class="my-1 border-t"></div>
+
+                    <div class="flex justify-between"><span>Efectivo esperado en caja</span><span
+                            class="font-semibold">${{ number_format($resumenCaja['efectivo_esperado'] ?? ($resumenCaja['efectivo'] ?? 0), 0, ',', '.') }}</span>
+                    </div>
+                    <div class="flex justify-between"><span>Transferencia del dia</span><span
+                            class="font-semibold text-blue-700">${{ number_format($resumenCaja['transferencia'], 0, ',', '.') }}</span>
+                    </div>
+
+                    <div class="my-1 border-t"></div>
+
+                    <div class="flex justify-between"><span>Total ventas</span><span
+                            class="font-semibold">${{ number_format($resumenCaja['total_ventas'], 0, ',', '.') }}</span>
+                    </div>
+
+                    @unless($usaHotelCierre)
+
+                    <div class="mt-2 text-[11px] text-gray-500 uppercase tracking-wide">VENTAS</div>
                     <div class="flex justify-between"><span>Contado - Efectivo</span><span
                             class="font-semibold">${{ number_format($resumenCaja['ventas_contado_efectivo'], 0, ',', '.') }}</span>
                     </div>
@@ -2166,15 +2193,6 @@
                     <div class="flex justify-between"><span>Credito</span><span
                             class="font-semibold">${{ number_format($resumenCaja['ventas_credito'], 0, ',', '.') }}</span>
                     </div>
-
-                    <div class="mt-1 text-[11px] text-gray-500 uppercase tracking-wide">VENTAS POR TIPO</div>
-                    <div class="flex justify-between"><span>🔩 Productos</span><span
-                            class="font-semibold">${{ number_format($resumenCaja['ventas_productos'], 0, ',', '.') }}</span>
-                    </div>
-                    <div class="flex justify-between"><span>🔧 Servicios</span><span
-                            class="font-semibold">${{ number_format($resumenCaja['ventas_servicios'], 0, ',', '.') }}</span>
-                    </div>
-
 
                     <div class="mt-1 text-[11px] text-gray-500 uppercase tracking-wide">CARTERA</div>
                     <div class="flex justify-between"><span>Efectivo</span><span
@@ -2226,19 +2244,9 @@
                     <div class="flex justify-between border-t mt-1 pt-1"><span>Efectivo neto del dia</span><span
                             class="font-semibold {{ ($resumenCaja['efectivo'] ?? 0) < 0 ? 'text-orange-600' : 'text-green-700' }}">${{ number_format($resumenCaja['efectivo'], 0, ',', '.') }}</span>
                     </div>
-                    <div class="flex justify-between"><span>Efectivo esperado en caja</span><span
-                            class="font-semibold">${{ number_format($resumenCaja['efectivo_esperado'] ?? ($resumenCaja['efectivo'] ?? 0), 0, ',', '.') }}</span>
-                    </div>
-                    <div class="flex justify-between"><span>Transferencia del dia</span><span
-                            class="font-semibold text-blue-700">${{ number_format($resumenCaja['transferencia'], 0, ',', '.') }}</span>
-                    </div>
 
                     <div class="my-1 border-t"></div>
 
-                    
-                    <div class="flex justify-between"><span>Total ventas</span><span
-                            class="font-semibold">${{ number_format($resumenCaja['total_ventas'], 0, ',', '.') }}</span>
-                    </div>
                     @if (($resumenCaja['ventas_passthrough'] ?? 0) > 0)
                     <div class="flex justify-between text-xs text-gray-500"><span>No incluye reembolsos a
                             terceros (item manual)</span><span>${{ number_format($resumenCaja['ventas_passthrough'], 0, ',', '.') }}</span>
@@ -2250,6 +2258,7 @@
                     <div class="flex justify-between"><span>Devoluciones (con pago)</span><span
                             class="font-semibold text-red-700">-
                             ${{ number_format($resumenCaja['devoluciones_con_pago'] ?? 0, 0, ',', '.') }}</span></div>
+                    @endunless
                 </div>
 
 
