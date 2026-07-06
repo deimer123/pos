@@ -1715,7 +1715,7 @@
                                             <tbody>
                                                 @foreach ($detalleFacturaSeleccionada as $d)
                                                     <tr class="even:bg-gray-50">
-                                                        <td class="p-2 border text-center">{{ $d['producto_id'] }}
+                                                        <td class="p-2 border text-center">{{ $d['producto_id'] == 0 ? '—' : $d['producto_id'] }}
                                                         </td>
                                                         <td class="p-2 border">{{ $d['descripcion_larga'] }}</td>
                                                         <td class="p-2 border text-center">{{ $d['cantidad'] }}</td>
@@ -1924,7 +1924,7 @@
                                                         wire:click="toggleSeleccionDevolucion({{ $detId }})"
                                                         {{ $row['seleccion'] ? 'checked' : '' }}>
                                                 </td>
-                                                <td class="px-3 py-2">{{ $row['producto_id'] }}</td>
+                                                <td class="px-3 py-2">{{ $row['producto_id'] == 0 ? '—' : $row['producto_id'] }}</td>
                                                 <td class="px-3 py-2">{{ $row['descripcion'] }}</td>
                                                 <td class="px-3 py-2 text-right">{{ number_format($row['pendiente'], 2) }}</td>
                                                 <td class="px-3 py-2 text-right">{{ number_format($row['precio'], 2) }}</td>

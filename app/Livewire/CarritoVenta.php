@@ -2321,25 +2321,28 @@ public function confirmarFacturar()
 
 
 // Los items manuales del carrito (hospedaje de hotel, repuestos sueltos de
-// taller, etc.) se guardan con una clave sintética como id_producto
-// ('hotel-reserva-3', un uuid...) que no existe como Product real. Se
-// facturan con producto_id = 0 (igual que el cargo de empaque/domicilio),
-// NO con el código 10001: ese código es el de "ítems manuales/reembolsos a
-// terceros" y tiene sus propios reportes — usarlo aquí mezclaría hospedaje
-// de hotel o repuestos de taller con esos reportes. El texto real de cada
-// ítem queda en descripcion_larga.
+// taller, empaque/domicilio, etc.) se guardan con una clave sintética como
+// id_producto ('hotel-reserva-3', un uuid...) que no existe como Product
+// real: se facturan con producto_id = 0. A propósito NO se usa el 10001:
+// ese código es el de "ítems manuales/reembolsos a terceros" y tiene su
+// propia función aparte, que no se debe tocar. Tampoco se marca el
+// hospedaje como un Product con tipo_producto=servicio, porque en
+// resumenCaja() los servicios se restan del efectivo esperado (van a la
+// caja de mecánicos de Taller) — el hospedaje sí debe contar como
+// efectivo/transferencia normal de la caja de recepción.
 private function idProductoFacturable($idProducto): int
 {
     return is_numeric($idProducto) ? (int) $idProducto : 0;
 }
 
 // Si el ítem es el hospedaje de una reserva de hotel con abono ya
-// recibido, se separa ese abono en una línea aparte con el código de
-// "ítems manuales/reembolsos" (10001). Ese código ya está excluido del
-// efectivo/transferencia esperado del cierre de caja (resumenCaja()),
-// así que separar el abono ahí hace que el cajero solo tenga que cuadrar
-// contra lo que realmente cobró hoy — el abono ya entró a caja el día
-// que se recibió, como Gasto, y no se vuelve a contar aquí.
+// recibido, se separa ese abono en una línea aparte (producto_id = 0,
+// descripción "Abono ya recibido..."). Esa línea se excluye del efectivo/
+// transferencia esperado y del total de ventas del cierre de caja
+// (resumenCaja(), por su descripción — NO por el código 10001, que se deja
+// intacto), así que el cajero solo tiene que cuadrar contra lo que
+// realmente cobró hoy — el abono ya entró a caja el día que se recibió,
+// como Gasto, y no se vuelve a contar aquí.
 private function crearDetalleFactura(Factura $factura, array $item, string $idFacturable, array $datosServicio, float $precio, float $cant, float $sub): void
 {
     $esHospedaje = str_starts_with((string) $item['id_producto'], 'hotel-reserva-');
@@ -2363,7 +2366,7 @@ private function crearDetalleFactura(Factura $factura, array $item, string $idFa
         }
 
         $factura->detalles()->create([
-            'producto_id'        => 10001,
+            'producto_id'        => 0,
             'descripcion_larga'  => 'Abono ya recibido al reservar (' . $item['nombre'] . ')',
             'cantidad'           => 1,
             'precio'             => $abonoAplicado,
@@ -2381,8 +2384,8 @@ private function crearDetalleFactura(Factura $factura, array $item, string $idFa
         'producto_id'        => $idFacturable,
         'descripcion_larga'  => $item['nombre'],
         'cantidad'           => $cant,
-        'precio'             => $precio,
         'subtotal'           => $sub,
+        'precio'             => $precio,
         'descuento'          => (float) ($item['descuento'] ?? 0),
         'tipo_servicio'      => $datosServicio['tipo_servicio'],
         'porcentaje_empresa' => $datosServicio['porcentaje_empresa'],
@@ -4545,7 +4548,10 @@ $carteraOtro          = (clone $qPagosCredito)->where('medio_pago','otro')->sum(
         ->sum('fd.subtotal');
 
     // ----- ITEM MANUAL (codigo 10001): reembolso a terceros sin margen, no
-    // cuenta para nada en el efectivo esperado de la caja de productos. -----
+    // cuenta para nada en el efectivo esperado de la caja de productos.
+    // Se excluye igual el abono de hotel ya recibido al reservar (se
+    // identifica por su descripción, no por el 10001 — ese código es aparte
+    // y no se toca): ese dinero ya entró a caja el día que se recibió. -----
     $passthroughContadoEfectivo = (float) \Illuminate\Support\Facades\DB::table('factura_detalles as fd')
         ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
         ->where('f.empresa_id', $empresaId)
@@ -4553,7 +4559,8 @@ $carteraOtro          = (clone $qPagosCredito)->where('medio_pago','otro')->sum(
         ->whereBetween('f.fecha', [$inicio, $fin])
         ->where('f.tipo_pago', 'contado')
         ->where('f.medio_pago', 'efectivo')
-        ->where('fd.producto_id', '10001')
+        ->where(fn ($q) => $q->where('fd.producto_id', '10001')
+            ->orWhere('fd.descripcion_larga', 'like', 'Abono ya recibido al reservar%'))
         ->sum('fd.subtotal');
 
     $passthroughContadoTransferencia = (float) \Illuminate\Support\Facades\DB::table('factura_detalles as fd')
@@ -4563,7 +4570,8 @@ $carteraOtro          = (clone $qPagosCredito)->where('medio_pago','otro')->sum(
         ->whereBetween('f.fecha', [$inicio, $fin])
         ->where('f.tipo_pago', 'contado')
         ->where('f.medio_pago', 'transferencia')
-        ->where('fd.producto_id', '10001')
+        ->where(fn ($q) => $q->where('fd.producto_id', '10001')
+            ->orWhere('fd.descripcion_larga', 'like', 'Abono ya recibido al reservar%'))
         ->sum('fd.subtotal');
 
     // ----- DOMICILIOS (fees collected by company, to pay domiciliario) -----
@@ -4613,13 +4621,16 @@ $efectivo = ($ventasContadoEfectivo - $serviciosContadoEfectivo - $passthroughCo
     // Se facturan y se cuentan en el efectivo/cuadre de caja normalmente (el dinero
     // si entra y sale de la caja real), pero se descuentan del "total ventas"
     // informativo porque no son ventas propias: el mismo monto ya salio de la caja
-    // como gasto/salida para comprar el producto en otro lado.
+    // como gasto/salida para comprar el producto en otro lado. El abono de hotel
+    // ya recibido al reservar se excluye igual (por descripción, sin tocar el
+    // código 10001) por la misma razón: esa plata ya entró a caja antes.
     $ventasPassthrough = (float) \Illuminate\Support\Facades\DB::table('factura_detalles as fd')
         ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
         ->where('f.empresa_id', $empresaId)
         ->where('f.user_id', $userId)
         ->whereBetween('f.fecha', [$inicio, $fin])
-        ->where('fd.producto_id', '10001')
+        ->where(fn ($q) => $q->where('fd.producto_id', '10001')
+            ->orWhere('fd.descripcion_larga', 'like', 'Abono ya recibido al reservar%'))
         ->sum('fd.subtotal');
 
     // Total de ventas (informativo: contado + crÃ©dito, sin items manuales/reembolsos)
