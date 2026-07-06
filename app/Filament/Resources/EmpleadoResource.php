@@ -85,6 +85,14 @@ class EmpleadoResource extends Resource
                                 $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();
                                 $usaMesas  = $config?->usa_mesas;
                                 $usaTaller = $config?->usa_taller;
+                                $usaHotel  = $config?->usa_hotel;
+
+                                // Un hotel maneja reservas, check-in/check-out, clientes y caja
+                                // desde un solo rol: no tiene sentido mezclarlo con vendedor/
+                                // digitador/cajero.
+                                if ($usaHotel) {
+                                    return ['recepcion' => 'Recepcionista'];
+                                }
 
                                 $opciones = [];
 
@@ -111,6 +119,11 @@ class EmpleadoResource extends Resource
                                 $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();
                                 $usaMesas  = $config?->usa_mesas;
                                 $usaTaller = $config?->usa_taller;
+                                $usaHotel  = $config?->usa_hotel;
+
+                                if ($usaHotel) {
+                                    return ['recepcion' => 'Hace todo en el hotel (reservas, check-in/check-out, clientes, facturación) igual que el administrador, pero solo dentro del POS'];
+                                }
 
                                 $desc = [];
 
@@ -181,8 +194,10 @@ class EmpleadoResource extends Resource
                             'cajero' => 'Cajero',
                             'mesero' => 'Mesero',
                             'cocina' => 'Cocina',
+                            'taller' => 'Taller',
+                            'recepcion' => 'Recepcionista',
                         ];
-                        
+
                         return $record->roles
                             ->pluck('name')
                             ->map(fn($role) => $roleLabels[$role] ?? $role)
@@ -192,6 +207,7 @@ class EmpleadoResource extends Resource
                         'success' => fn ($record) => $record->hasRole('vendedor'),
                         'warning' => fn ($record) => $record->hasRole('digitador'),
                         'info' => fn ($record) => $record->hasRole('cajero'),
+                        'primary' => fn ($record) => $record->hasRole('recepcion'),
                     ]),
 
                 Tables\Columns\IconColumn::make('activo')
@@ -219,7 +235,15 @@ class EmpleadoResource extends Resource
                     ->label('Rol')
                     ->options(function () {
                         $empresaId = auth()->user()->getEmpresaActualId();
-                        $usaMesas = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_mesas');
+                        $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();
+                        $usaMesas  = $config?->usa_mesas;
+                        $usaTaller = $config?->usa_taller;
+                        $usaHotel  = $config?->usa_hotel;
+
+                        if ($usaHotel) {
+                            return ['recepcion' => 'Recepcionista'];
+                        }
+
                         $opciones = [];
                         if (! $usaMesas) {
                             $opciones['vendedor'] = 'Vendedor';
@@ -229,6 +253,9 @@ class EmpleadoResource extends Resource
                         if ($usaMesas) {
                             $opciones['mesero'] = 'Mesero';
                             $opciones['cocina'] = 'Cocina';
+                        }
+                        if ($usaTaller) {
+                            $opciones['taller'] = 'Taller';
                         }
                         return $opciones;
                     })
@@ -268,7 +295,7 @@ class EmpleadoResource extends Resource
         return parent::getEloquentQuery()
             ->where('tipo_usuario', 'empleado')
             ->where('empresa_id', auth()->user()->getEmpresaActualId())
-            ->role(['vendedor', 'digitador', 'cajero', 'mesero', 'cocina', 'taller']);
+            ->role(['vendedor', 'digitador', 'cajero', 'mesero', 'cocina', 'taller', 'recepcion']);
     }
 
     // Solo ADMIN_EMPRESA puede acceder

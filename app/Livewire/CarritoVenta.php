@@ -3513,12 +3513,9 @@ private function resolveClienteActorId(): ?int
 
 public function abrirModalCartera(): void
 {
-    if (
-    !auth()->user()->hasRole('cajero') &&
-    !auth()->user()->hasRole('admin_empresa')
-) {
-    abort(403);
-}
+    if (! auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'recepcion'])) {
+        abort(403);
+    }
 
     $this->carteraBuscar = '';
     $this->carteraClienteId = null;

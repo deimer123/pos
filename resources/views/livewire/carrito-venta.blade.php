@@ -792,7 +792,7 @@
                 + Cliente
             </button>
 
-            @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
+            @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'recepcion']))
                 <button type="button" wire:click="abrirModalCartera"
                     style="width:100%;text-align:center;background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                     Cartera
@@ -945,7 +945,7 @@
                 </button>
                 @endif
 
-                @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
+                @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'recepcion']))
                     @if ($cajaEstado === 'abierta')
                         <button type="button" class="pos-cart-menu-item pos-cart-menu-item-cash-move" wire:key="mobile-action-movimiento-caja" @click.prevent.stop="open = false; $wire.abrirMovimientoCajaModal('salida');">
                             Entrada / salida
@@ -1765,7 +1765,7 @@
                                             Imprimir
                                         </button>
 
-                                        @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
+                                        @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'recepcion']))
                                             <button x-data
                                                 x-on:click="
                     (async () => {
