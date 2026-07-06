@@ -2170,6 +2170,20 @@
                             class="font-semibold">${{ number_format($resumenCaja['ventas_servicios'], 0, ',', '.') }}</span>
                     </div>
 
+                    @if($usaHotelCierre && (($resumenCaja['abonos_hotel_efectivo'] ?? 0) + ($resumenCaja['abonos_hotel_transferencia'] ?? 0)) > 0)
+                    <div class="mt-1 text-[11px] text-gray-500 uppercase tracking-wide">ABONOS DE RESERVAS (ya en caja)</div>
+                    @if(($resumenCaja['abonos_hotel_efectivo'] ?? 0) > 0)
+                    <div class="flex justify-between"><span>💰 Efectivo</span><span
+                            class="font-semibold text-amber-700">${{ number_format($resumenCaja['abonos_hotel_efectivo'], 0, ',', '.') }}</span>
+                    </div>
+                    @endif
+                    @if(($resumenCaja['abonos_hotel_transferencia'] ?? 0) > 0)
+                    <div class="flex justify-between"><span>💰 Transferencia</span><span
+                            class="font-semibold text-amber-700">${{ number_format($resumenCaja['abonos_hotel_transferencia'], 0, ',', '.') }}</span>
+                    </div>
+                    @endif
+                    @endif
+
                     <div class="my-1 border-t"></div>
 
                     <div class="flex justify-between"><span>Efectivo esperado en caja</span><span

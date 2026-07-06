@@ -4497,6 +4497,22 @@ $carteraOtro          = (clone $qPagosCredito)->where('medio_pago','otro')->sum(
         ->where('metodo_pago', 'Efectivo')
         ->sum('monto');
 
+    // Abonos de reservas de hotel: ya están incluidos en entradasEfectivo/
+    // entradasTransferencia (por eso cuentan para el efectivo esperado),
+    // pero se calculan aparte para poder mostrarlos discriminados en el
+    // resumen de cierre de caja (no solo como "entradas" genéricas).
+    $abonosHotelEfectivo = (clone $qMovimientosCaja)
+        ->where('tipo', 'entrada')
+        ->where('categoria', 'Abono hotel')
+        ->where('metodo_pago', 'Efectivo')
+        ->sum('monto');
+
+    $abonosHotelTransferencia = (clone $qMovimientosCaja)
+        ->where('tipo', 'entrada')
+        ->where('categoria', 'Abono hotel')
+        ->whereIn('metodo_pago', ['Transferencia', 'Nequi'])
+        ->sum('monto');
+
     // Movimientos de mecanicos (liquidaciones + prestamos) van a la caja de
     // mecanicos, no a la de productos: se excluyen de las salidas del POS.
     $salidasEfectivo = (clone $qMovimientosCaja)
@@ -4675,6 +4691,9 @@ $efectivo = ($ventasContadoEfectivo - $serviciosContadoEfectivo - $passthroughCo
         'salidas_efectivo'              => $salidasEfectivo,
         'entradas_transferencia'        => $entradasTransferencia,
         'salidas_transferencia'         => $salidasTransferencia,
+
+        'abonos_hotel_efectivo'         => $abonosHotelEfectivo,
+        'abonos_hotel_transferencia'    => $abonosHotelTransferencia,
 
         // Devoluciones (siempre restadas al efectivo y al contado)
         'devoluciones_con_pago' => $devolucionesConPago,     // ðŸ'ˆ restadas al EFECTIVO y al CONTADO
