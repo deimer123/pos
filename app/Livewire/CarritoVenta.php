@@ -2333,6 +2333,63 @@ private function idProductoFacturable($idProducto): int
     return is_numeric($idProducto) ? (int) $idProducto : 0;
 }
 
+// Si el ítem es el hospedaje de una reserva de hotel con abono ya
+// recibido, se separa ese abono en una línea aparte con el código de
+// "ítems manuales/reembolsos" (10001). Ese código ya está excluido del
+// efectivo/transferencia esperado del cierre de caja (resumenCaja()),
+// así que separar el abono ahí hace que el cajero solo tenga que cuadrar
+// contra lo que realmente cobró hoy — el abono ya entró a caja el día
+// que se recibió, como Gasto, y no se vuelve a contar aquí.
+private function crearDetalleFactura(Factura $factura, array $item, string $idFacturable, array $datosServicio, float $precio, float $cant, float $sub): void
+{
+    $esHospedaje = str_starts_with((string) $item['id_producto'], 'hotel-reserva-');
+
+    if ($esHospedaje && $this->hotelReservaId && $this->hotelAbonoMonto > 0) {
+        $abonoAplicado = min($this->hotelAbonoMonto, $sub);
+        $subRestante   = round($sub - $abonoAplicado, 2);
+
+        if ($subRestante > 0) {
+            $factura->detalles()->create([
+                'producto_id'        => $idFacturable,
+                'descripcion_larga'  => $item['nombre'],
+                'cantidad'           => $cant,
+                'precio'             => round($subRestante / $cant, 2),
+                'subtotal'           => $subRestante,
+                'descuento'          => (float) ($item['descuento'] ?? 0),
+                'tipo_servicio'      => $datosServicio['tipo_servicio'],
+                'porcentaje_empresa' => $datosServicio['porcentaje_empresa'],
+                'mecanico_id'        => $datosServicio['mecanico_id'] ?? null,
+            ]);
+        }
+
+        $factura->detalles()->create([
+            'producto_id'        => 10001,
+            'descripcion_larga'  => 'Abono ya recibido al reservar (' . $item['nombre'] . ')',
+            'cantidad'           => 1,
+            'precio'             => $abonoAplicado,
+            'subtotal'           => $abonoAplicado,
+            'descuento'          => 0,
+            'tipo_servicio'      => null,
+            'porcentaje_empresa' => null,
+            'mecanico_id'        => null,
+        ]);
+
+        return;
+    }
+
+    $factura->detalles()->create([
+        'producto_id'        => $idFacturable,
+        'descripcion_larga'  => $item['nombre'],
+        'cantidad'           => $cant,
+        'precio'             => $precio,
+        'subtotal'           => $sub,
+        'descuento'          => (float) ($item['descuento'] ?? 0),
+        'tipo_servicio'      => $datosServicio['tipo_servicio'],
+        'porcentaje_empresa' => $datosServicio['porcentaje_empresa'],
+        'mecanico_id'        => $datosServicio['mecanico_id'] ?? null,
+    ]);
+}
+
 protected function datosServicioFactura(?Product $producto): array
 {
     if (! $producto || $producto->tipo_producto !== 'servicio' || ! $producto->tipo_servicio) {
@@ -2528,17 +2585,7 @@ public function facturarConfirmada(array $data = [])
 
             $datosServicio = $this->datosServicioFactura($producto);
 
-            $factura->detalles()->create([
-                'producto_id'        => $idFacturable,
-                'descripcion_larga'  => $item['nombre'],
-                'cantidad'           => $cant,
-                'precio'             => $precio,
-                'subtotal'           => $sub,
-                'descuento'          => (float)($item['descuento'] ?? 0),
-                'tipo_servicio'      => $datosServicio['tipo_servicio'],
-                'porcentaje_empresa' => $datosServicio['porcentaje_empresa'],
-                'mecanico_id'        => $datosServicio['mecanico_id'] ?? null,
-            ]);
+            $this->crearDetalleFactura($factura, $item, (string) $idFacturable, $datosServicio, $precio, $cant, $sub);
 
 if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->id_producto !== '10001') {
 
@@ -3040,17 +3087,7 @@ public function facturarEImprimir(array $data = [])
 
             $datosServicio = $this->datosServicioFactura($producto);
 
-            $factura->detalles()->create([
-                'producto_id'        => $idFacturable,
-                'descripcion_larga'  => $item['nombre'],
-                'cantidad'           => $cant,
-                'precio'             => $precio,
-                'subtotal'           => $sub,
-                'descuento'          => (float)($item['descuento'] ?? 0),
-                'tipo_servicio'      => $datosServicio['tipo_servicio'],
-                'porcentaje_empresa' => $datosServicio['porcentaje_empresa'],
-                'mecanico_id'        => $datosServicio['mecanico_id'] ?? null,
-            ]);
+            $this->crearDetalleFactura($factura, $item, (string) $idFacturable, $datosServicio, $precio, $cant, $sub);
 
 if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->id_producto !== '10001') {
 
