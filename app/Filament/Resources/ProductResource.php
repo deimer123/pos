@@ -543,17 +543,18 @@ return \App\Models\Familia::create($data)->id;
     return $table
         ->defaultSort('id', 'desc')
         ->contentGrid([
-            'sm' => 1,
-            'md' => 2,
-            'xl' => 3,
+            'sm' => 2,
+            'md' => 3,
+            'lg' => 4,
+            'xl' => 5,
         ])
         ->columns([
             Stack::make([
                 ImageColumn::make('foto')
                     ->label('')
                     ->disk('public')
-                    ->height(160)
-                    ->extraImgAttributes(['class' => 'w-full h-40 object-cover rounded-t-xl'])
+                    ->height(90)
+                    ->extraImgAttributes(['class' => 'w-full h-[90px] object-cover rounded-t-xl'])
                     ->defaultImageUrl(asset('images/sin-imagen.png')),
 
                 TextColumn::make('descripcion_larga')
@@ -573,16 +574,24 @@ return \App\Models\Familia::create($data)->id;
                         });
                     })
                     ->weight('bold')
-                    ->size('lg')
+                    ->size('sm')
                     ->lineClamp(2)
-                    ->extraAttributes(['class' => 'px-4 pt-3']),
+                    ->extraAttributes(['class' => 'px-3 pt-2']),
 
                 TextColumn::make('id_producto')
                     ->label('Código')
                     ->searchable()
-                    ->color('gray')
-                    ->size('sm')
-                    ->extraAttributes(['class' => 'px-4']),
+                    ->badge()
+                    ->color('primary')
+                    ->weight('bold')
+                    ->extraAttributes(['class' => 'px-3']),
+
+                TextColumn::make('precio_venta1')
+                    ->label('Precio')
+                    ->formatStateUsing(fn ($state) => '$ ' . number_format((float) $state, 0, ',', '.'))
+                    ->weight('bold')
+                    ->color('success')
+                    ->extraAttributes(['class' => 'px-3']),
 
                 Split::make([
                     TextColumn::make('existencias')
@@ -610,9 +619,11 @@ return \App\Models\Familia::create($data)->id;
                             'peso', 'porcion', 'litro', 'metro', 'hora' => 'warning',
                             default => 'gray',
                         }),
-                ])->extraAttributes(['class' => 'px-4 pb-4']),
-            ])->space(2),
+                ])->extraAttributes(['class' => 'px-3 pb-2']),
+            ])->space(1),
         ])
+        ->paginated([25, 50, 100, 200])
+        ->defaultPaginationPageSize(50)
 
         ->filters([
 
