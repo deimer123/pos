@@ -19,6 +19,9 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Section;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\Layout\Split;
+use Filament\Tables\Columns\Layout\Stack;
 use Filament\Notifications\Notification;
 use Filament\Forms\Form; 
 use Filament\Forms\Components\Repeater;
@@ -539,57 +542,76 @@ return \App\Models\Familia::create($data)->id;
 {
     return $table
         ->defaultSort('id', 'desc')
+        ->contentGrid([
+            'sm' => 1,
+            'md' => 2,
+            'xl' => 3,
+        ])
         ->columns([
-            TextColumn::make('id_producto')
-                ->searchable()
-                ->label('Código'),
+            Stack::make([
+                ImageColumn::make('foto')
+                    ->label('')
+                    ->disk('public')
+                    ->height(160)
+                    ->extraImgAttributes(['class' => 'w-full h-40 object-cover rounded-t-xl'])
+                    ->defaultImageUrl(asset('images/sin-imagen.png')),
 
-            
+                TextColumn::make('descripcion_larga')
+                    ->label('Nombre del Producto')
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        // Separar el término de búsqueda por espacios
+                        $fragments = preg_split('/\s+/', strtolower($search));
 
-            TextColumn::make('descripcion_larga')
-    ->label('Nombre del Producto')
-    ->searchable(query: function (Builder $query, string $search): Builder {
-        // Separar el término de búsqueda por espacios
-        $fragments = preg_split('/\s+/', strtolower($search));
+                        return $query->where(function ($query) use ($fragments) {
+                            foreach ($fragments as $fragment) {
+                                $query->whereRaw('LOWER(descripcion_larga) LIKE ?', ["%{$fragment}%"]);
+                            }
+                        })
+                        ->orWhere('id_producto', 'like', "%{$search}%")
+                        ->orWhereHas('alternateCodes', function ($q) use ($search) {
+                            $q->where('code', 'like', "%{$search}%");
+                        });
+                    })
+                    ->weight('bold')
+                    ->size('lg')
+                    ->lineClamp(2)
+                    ->extraAttributes(['class' => 'px-4 pt-3']),
 
-        return $query->where(function ($query) use ($fragments) {
-            foreach ($fragments as $fragment) {
-                $query->whereRaw('LOWER(descripcion_larga) LIKE ?', ["%{$fragment}%"]);
-            }
-        })
-        ->orWhere('id_producto', 'like', "%{$search}%")
-        ->orWhereHas('alternateCodes', function ($q) use ($search) {
-            $q->where('code', 'like', "%{$search}%");
-        });
-    }),
+                TextColumn::make('id_producto')
+                    ->label('Código')
+                    ->searchable()
+                    ->color('gray')
+                    ->size('sm')
+                    ->extraAttributes(['class' => 'px-4']),
 
-            TextColumn::make('existencias')
-            ->label('Stock')
-            ->sortable()
-            ->badge()
-            ->color(fn ($state) => match (true) {
-                $state < 0 => 'danger',
-                $state == 0 => 'warning',
-                $state > 0 => 'success',
-            })
+                Split::make([
+                    TextColumn::make('existencias')
+                        ->label('Stock')
+                        ->sortable()
+                        ->badge()
+                        ->color(fn ($state) => match (true) {
+                            $state < 0 => 'danger',
+                            $state == 0 => 'warning',
+                            $state > 0 => 'success',
+                        }),
 
-                ->alignCenter(),
-
-            TextColumn::make('vende_por')
-                ->label('Venta')
-                ->badge()
-                ->formatStateUsing(fn ($state) => match ($state) {
-                    'peso' => 'Peso',
-                    'porcion' => 'Porción',
-                    'litro' => 'Litro',
-                    'metro' => 'Metro',
-                    'hora' => 'Hora',
-                    default => 'Unidad',
-                })
-                ->color(fn ($state) => match ($state) {
-                    'peso', 'porcion', 'litro', 'metro', 'hora' => 'warning',
-                    default => 'gray',
-                }),
+                    TextColumn::make('vende_por')
+                        ->label('Venta')
+                        ->badge()
+                        ->formatStateUsing(fn ($state) => match ($state) {
+                            'peso' => 'Peso',
+                            'porcion' => 'Porción',
+                            'litro' => 'Litro',
+                            'metro' => 'Metro',
+                            'hora' => 'Hora',
+                            default => 'Unidad',
+                        })
+                        ->color(fn ($state) => match ($state) {
+                            'peso', 'porcion', 'litro', 'metro', 'hora' => 'warning',
+                            default => 'gray',
+                        }),
+                ])->extraAttributes(['class' => 'px-4 pb-4']),
+            ])->space(2),
         ])
 
         ->filters([
