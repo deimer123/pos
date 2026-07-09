@@ -623,7 +623,7 @@ return \App\Models\Familia::create($data)->id;
             ])->space(1),
         ])
         ->paginated([25, 50, 100, 200])
-        ->defaultPaginationPageSize(50)
+        ->defaultPaginationPageOption(50)
 
         ->filters([
 
