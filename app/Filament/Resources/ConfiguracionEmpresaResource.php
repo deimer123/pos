@@ -156,6 +156,7 @@ class ConfiguracionEmpresaResource extends Resource
                 ]),
 
             Forms\Components\Section::make('Facturación Electrónica')
+                ->visible(fn (?ConfiguracionEmpresa $record): bool => (bool) $record?->factus_enabled)
                 ->schema([
                     Forms\Components\TextInput::make('prefijo')
                         ->label('Prefijo')
