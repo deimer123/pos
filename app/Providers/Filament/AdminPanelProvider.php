@@ -32,6 +32,7 @@ class AdminPanelProvider extends PanelProvider
         ->path('admin')
         ->login() // ✅ Solo esto, sin auth()
         ->brandName('Sistema POS')
+        ->favicon(asset('favicon.ico'))
         ->sidebarWidth('18rem')
         ->brandLogo(fn () => view('filament.logo'))
         ->colors([
