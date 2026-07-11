@@ -242,6 +242,7 @@ class HotelPanel extends Component
         $this->resObservaciones     = '';
         $this->resAbonoMonto        = '';
         $this->resAbonoMedioPago    = 'Efectivo';
+        $this->resetValidation();
         $this->modalReserva         = true;
     }
 
@@ -264,6 +265,7 @@ class HotelPanel extends Component
         $this->resObservaciones     = $r->observaciones ?? '';
         $this->resAbonoMonto        = '';
         $this->resAbonoMedioPago    = 'Efectivo';
+        $this->resetValidation();
         $this->modalReserva         = true;
     }
 
