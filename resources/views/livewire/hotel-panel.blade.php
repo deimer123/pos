@@ -549,7 +549,7 @@
                         @if($resInmediato)
                             Si registras un abono, se descuenta del total a cobrar en la salida y queda registrado como entrada de caja.
                         @else
-                            Para asegurar la reserva se requiere un abono. Se descuenta del total a cobrar en la salida y queda registrado como entrada de caja.
+                            Para asegurar la reserva se requiere un abono (máximo ${{ number_format($this->totalEstimadoReserva, 0, ',', '.') }}, el total estimado). Se descuenta del total a cobrar en la salida y queda registrado como entrada de caja.
                         @endif
                     </div>
                 </div>

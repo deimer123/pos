@@ -531,6 +531,13 @@ class HotelPanel extends Component
             return;
         }
 
+        // El abono no puede superar lo que se estima que va a valer la
+        // estadía (solo se puede calcular cuando ya hay fecha de salida).
+        if ($this->totalEstimadoReserva > 0 && (float) $this->resAbonoMonto > $this->totalEstimadoReserva) {
+            $this->addError('resAbonoMonto', 'El abono no puede ser mayor al total estimado ($' . number_format($this->totalEstimadoReserva, 0, ',', '.') . ').');
+            return;
+        }
+
         $empresaId = $this->empresaId();
 
         $habitacion = HotelHabitacion::where('empresa_id', $empresaId)->find($this->resHabitacionId);
