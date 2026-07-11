@@ -604,6 +604,11 @@ class HotelPanel extends Component
 
     public function cancelarReserva(int $reservaId): void
     {
+        if (! auth()->user()->hasRole('admin_empresa')) {
+            $this->dispatch('notify', type: 'error', message: 'Solo el administrador de la empresa puede cancelar reservas.');
+            return;
+        }
+
         HotelReserva::where('empresa_id', $this->empresaId())->where('id', $reservaId)->update(['estado' => 'cancelada']);
         $this->dispatch('notify', type: 'success', message: 'Reserva cancelada.');
     }

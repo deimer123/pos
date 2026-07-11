@@ -107,11 +107,13 @@
                                 style="flex:1; border:none; border-radius:8px; padding:7px; font-size:11px; font-weight:700; cursor:pointer; background:#eff6ff; color:#2563eb;">
                                 ✏️ Editar
                             </button>
+                            @if(auth()->user()->hasRole('admin_empresa'))
                             <button type="button"
                                 x-on:click="Swal.fire({title:'¿Cancelar esta reserva?',text:'Esta acción no se puede deshacer.',icon:'warning',showCancelButton:true,confirmButtonText:'Sí, cancelar',cancelButtonText:'No',confirmButtonColor:'#ef4444'}).then(r=>{if(r.isConfirmed){$wire.cancelarReserva({{ $r->id }});}})"
                                 style="flex:1; border:none; border-radius:8px; padding:7px; font-size:11px; font-weight:700; cursor:pointer; background:#fef2f2; color:#ef4444;">
                                 ✕ Cancelar
                             </button>
+                            @endif
                         </div>
                     </div>
                 @endforeach
@@ -217,11 +219,13 @@
                                 style="flex:1; border:none; border-radius:8px; padding:7px; font-size:11px; font-weight:700; cursor:pointer; background:#eff6ff; color:#2563eb;">
                                 ✏️ Editar
                             </button>
+                            @if(auth()->user()->hasRole('admin_empresa'))
                             <button type="button"
                                 x-on:click="Swal.fire({title:'¿Cancelar esta reserva?',text:'Esta acción no se puede deshacer.',icon:'warning',showCancelButton:true,confirmButtonText:'Sí, cancelar',cancelButtonText:'No',confirmButtonColor:'#ef4444'}).then(r=>{if(r.isConfirmed){$wire.cancelarReserva({{ $r->id }});}})"
                                 style="flex:1; border:none; border-radius:8px; padding:7px; font-size:11px; font-weight:700; cursor:pointer; background:#fef2f2; color:#ef4444;">
                                 ✕ Cancelar
                             </button>
+                            @endif
                         @else
                             <button wire:click="irAFacturar({{ $r->id }})"
                                 style="flex:1; border:none; border-radius:8px; padding:7px; font-size:11px; font-weight:700; cursor:pointer; background:#0f766e; color:white;">
