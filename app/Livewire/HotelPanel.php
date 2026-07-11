@@ -585,11 +585,9 @@ class HotelPanel extends Component
 
             $reserva = HotelReserva::create($data);
 
-            if (! $this->resInmediato) {
-                $abono = (float) $this->resAbonoMonto;
-                if ($abono > 0) {
-                    $this->registrarAbonoReserva($reserva, $abono, $this->resAbonoMedioPago);
-                }
+            $abono = (float) $this->resAbonoMonto;
+            if ($abono > 0) {
+                $this->registrarAbonoReserva($reserva, $abono, $this->resAbonoMedioPago);
             }
         }
 

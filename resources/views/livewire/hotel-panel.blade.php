@@ -489,11 +489,11 @@
 
                 @if($resInmediato)
                 <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:10px 12px; margin-bottom:12px; font-size:11px; color:#1e40af;">
-                    ℹ️ El huésped se hospeda de una vez, no necesita abono. Puedes facturar de inmediato o dejarlo pendiente para cobrarlo cuando se vaya.
+                    ℹ️ El huésped se hospeda de una vez. Puedes facturar de inmediato, dejarlo pendiente para cobrarlo cuando se vaya, o registrar abajo lo que pague ahora (ej. la noche completa) y dejar la cuenta abierta por si consume algo más.
                 </div>
                 @endif
 
-                @if(! $reservaId && ! $resInmediato)
+                @if(! $reservaId)
                 <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:12px; margin-bottom:12px;" x-data="{
                         formato(v) { const limpio = String(v || '').replace(/\D/g, ''); return limpio ? Number(limpio).toLocaleString('es-CO') : ''; },
                         limpiar(v) { return String(v || '').replace(/\D/g, ''); }
