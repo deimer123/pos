@@ -42,6 +42,52 @@
         </div>
     </div>
 
+    {{-- Alertas: check-in que no ha llegado / salidas programadas para hoy --}}
+    @if($alertas['checkinsPendientes']->isNotEmpty() || $alertas['salidasHoy']->isNotEmpty())
+    <div style="padding:10px 16px; display:flex; flex-direction:column; gap:8px; flex-shrink:0;">
+        @if($alertas['checkinsPendientes']->isNotEmpty())
+        <div style="background:#fef3c7; border:1px solid #f59e0b; border-radius:10px; padding:8px 12px;">
+            <div style="font-size:12px; font-weight:700; color:#92400e; margin-bottom:6px;">
+                ⚠️ {{ $alertas['checkinsPendientes']->count() }} check-in pendiente(s)
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                @foreach($alertas['checkinsPendientes'] as $r)
+                <div style="background:white; border-radius:8px; padding:4px 8px; display:flex; align-items:center; gap:8px; font-size:11px;">
+                    <span>
+                        Hab. {{ $r->habitacion?->numero ?? '—' }} · {{ $r->huesped_nombre }}
+                        · esperado {{ \Illuminate\Support\Carbon::parse($r->fecha_checkin)->format('d/m') }}
+                    </span>
+                    <button type="button" wire:click="confirmarCheckin({{ $r->id }})"
+                        style="border:none; border-radius:999px; padding:3px 10px; font-size:10px; font-weight:700; cursor:pointer; background:#f59e0b; color:white;">
+                        🔑 Entrada
+                    </button>
+                </div>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
+        @if($alertas['salidasHoy']->isNotEmpty())
+        <div style="background:#dbeafe; border:1px solid #3b82f6; border-radius:10px; padding:8px 12px;">
+            <div style="font-size:12px; font-weight:700; color:#1e40af; margin-bottom:6px;">
+                🧾 {{ $alertas['salidasHoy']->count() }} salida(s) programada(s) para hoy
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                @foreach($alertas['salidasHoy'] as $r)
+                <div style="background:white; border-radius:8px; padding:4px 8px; display:flex; align-items:center; gap:8px; font-size:11px;">
+                    <span>Hab. {{ $r->habitacion?->numero ?? '—' }} · {{ $r->huesped_nombre }}</span>
+                    <button type="button" wire:click="irAFacturar({{ $r->id }})"
+                        style="border:none; border-radius:999px; padding:3px 10px; font-size:10px; font-weight:700; cursor:pointer; background:#0f766e; color:white;">
+                        🧾 Salida
+                    </button>
+                </div>
+                @endforeach
+            </div>
+        </div>
+        @endif
+    </div>
+    @endif
+
     {{-- Vista Habitaciones --}}
     @if($vistaActiva === 'habitaciones')
     <div style="flex:1; overflow-y:auto; padding:16px;">

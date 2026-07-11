@@ -183,6 +183,34 @@ class HotelPanel extends Component
     // personas) se crean y editan en Administración → Hotel → Habitaciones,
     // no aquí — este panel es solo para operar las reservas del día a día.
 
+    // Avisos para el recepcionista: huéspedes que debían llegar hoy (o antes)
+    // y aún no hicieron check-in, y huéspedes que ya están hospedados y
+    // tienen salida programada para hoy.
+    public function getAlertasProperty(): array
+    {
+        $empresaId = $this->empresaId();
+        $hoy = now()->toDateString();
+
+        $checkinsPendientes = HotelReserva::where('empresa_id', $empresaId)
+            ->where('estado', 'reservada')
+            ->whereDate('fecha_checkin', '<=', $hoy)
+            ->with('habitacion')
+            ->orderBy('fecha_checkin')
+            ->get();
+
+        $salidasHoy = HotelReserva::where('empresa_id', $empresaId)
+            ->where('estado', 'checkin')
+            ->whereDate('fecha_checkout', $hoy)
+            ->with('habitacion')
+            ->orderBy('fecha_checkout')
+            ->get();
+
+        return [
+            'checkinsPendientes' => $checkinsPendientes,
+            'salidasHoy' => $salidasHoy,
+        ];
+    }
+
     // ── Reservas ──────────────────────────────────────────────────────────
 
     public function abrirNuevaReserva(?int $habitacionId = null, bool $inmediato = false): void
@@ -684,6 +712,7 @@ class HotelPanel extends Component
             'reservas'          => $this->filtroEstado === 'reservada' && $this->vistaActiva === 'habitaciones' ? $this->reservas : collect(),
             'calendario'        => $this->vistaActiva === 'calendario' ? $this->calendario : [],
             'diasCalendario'    => $this->vistaActiva === 'calendario' ? $this->diasCalendario : [],
+            'alertas'           => $this->alertas,
         ]);
     }
 }
