@@ -112,6 +112,10 @@ class ConfiguracionEmpresa extends Model
             'restaurante' => [
                 'usa_hotel' => false, 'usa_taller' => false,
             ],
+            'panaderia' => [
+                'usa_hotel' => false, 'usa_taller' => false, 'usa_cocina' => false,
+                'usa_domicilios' => false, 'usa_peso' => false,
+            ],
             'mixto' => [],
             default => [
                 'usa_hotel' => false, 'usa_taller' => false, 'usa_mesas' => false,

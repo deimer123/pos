@@ -150,13 +150,20 @@ class ConfiguracionEmpresaResource extends Resource
             Forms\Components\Wizard\Step::make('Producto')
                 ->visible(fn (Forms\Get $get) => in_array($get('tipo_negocio'), ['tienda', 'bar', 'carniceria', 'panaderia', 'farmacia', 'servicios', 'mixto', 'otro']))
                 ->schema([
-                    Forms\Components\Toggle::make('usa_variantes')
-                        ->label('Usa variantes')
-                        ->helperText('Ejemplo: talla, color, sabor o presentación.'),
-
                     Forms\Components\Toggle::make('usa_peso')
                         ->label('Vende por peso')
-                        ->helperText('Ideal para carnicería, fruver o productos a granel.'),
+                        ->helperText('Ideal para carnicería, fruver o productos a granel.')
+                        ->visible(fn (Forms\Get $get) => $get('tipo_negocio') !== 'panaderia'),
+
+                    Forms\Components\Toggle::make('usa_mesas')
+                        ->label('Usa mesas')
+                        ->helperText('Actívalo solo si el negocio atiende por mesa.')
+                        ->visible(fn (Forms\Get $get) => $get('tipo_negocio') === 'panaderia'),
+
+                    Forms\Components\Toggle::make('usa_recetas')
+                        ->label('Usa recetas')
+                        ->helperText('Útil cuando un producto descuenta ingredientes.')
+                        ->visible(fn (Forms\Get $get) => $get('tipo_negocio') === 'panaderia'),
 
                     Forms\Components\Toggle::make('usa_servicios')
                         ->label('Vende servicios')
