@@ -101,10 +101,20 @@ class HotelPanel extends Component
             ->get();
 
         return $habitaciones->map(function (HotelHabitacion $h) use ($hoy) {
+            // Un huésped con estado "checkin" sigue ocupando la habitación hasta
+            // que se factura su salida (eso es lo único que cambia su estado a
+            // "checkout") — sin importar si su fecha_checkout planeada ya pasó
+            // o es hoy. Esa fecha solo importa para saber si una reserva
+            // "reservada" (que aún no ha llegado) sigue vigente.
             $reservaActiva = HotelReserva::where('habitacion_id', $h->id)
-                ->whereIn('estado', ['reservada', 'checkin'])
-                ->whereDate('fecha_checkin', '<=', $hoy)
-                ->where(fn ($q) => $q->whereNull('fecha_checkout')->orWhereDate('fecha_checkout', '>', $hoy))
+                ->where(function ($q) use ($hoy) {
+                    $q->where('estado', 'checkin')
+                        ->orWhere(function ($qq) use ($hoy) {
+                            $qq->where('estado', 'reservada')
+                                ->whereDate('fecha_checkin', '<=', $hoy)
+                                ->where(fn ($q3) => $q3->whereNull('fecha_checkout')->orWhereDate('fecha_checkout', '>', $hoy));
+                        });
+                })
                 ->orderBy('fecha_checkin')
                 ->first();
 
