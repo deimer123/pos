@@ -300,6 +300,20 @@
                                 style="flex:1; border:none; border-radius:8px; padding:7px; font-size:11px; font-weight:700; cursor:pointer; background:#0f766e; color:white;">
                                 🧾 Salida / Facturar
                             </button>
+                            @if($r->fecha_checkout && $r->fecha_checkout->toDateString() > now()->toDateString())
+                                @php $nochesAnticipadas = max(1, $r->fecha_checkin->diffInDays(now())); @endphp
+                                <button type="button"
+                                    x-on:click="Swal.fire({
+                                        title:'¿Salida anticipada?',
+                                        html:'El check-out planeado era el {{ $r->fecha_checkout->format('d/m/Y') }} ({{ $r->numero_noches }} noche(s)). Si el huésped se va hoy, se recalculará a <b>{{ $nochesAnticipadas }} noche(s)</b>.',
+                                        icon:'question', showCancelButton:true,
+                                        confirmButtonText:'Sí, se va hoy', cancelButtonText:'Cancelar',
+                                        confirmButtonColor:'#0f766e'
+                                    }).then(r=>{if(r.isConfirmed){$wire.registrarSalidaAnticipada({{ $r->id }});}})"
+                                    style="flex:1; border:none; border-radius:8px; padding:7px; font-size:11px; font-weight:700; cursor:pointer; background:#eef2f2; color:#0f766e; border:1px solid #0f766e;">
+                                    ⏱ Salida anticipada
+                                </button>
+                            @endif
                         @endif
                     </div>
                 </div>

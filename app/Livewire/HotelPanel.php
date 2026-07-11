@@ -671,6 +671,33 @@ class HotelPanel extends Component
         $this->redirect(route('pos') . '?hotel=' . $reservaId);
     }
 
+    // Si el huésped se va antes de la fecha_checkout planeada, hay que
+    // acortarla a hoy para que numero_noches (y por tanto el total a
+    // facturar en cargarHotelReserva()) se recalcule con las noches
+    // realmente hospedadas, no con las originalmente reservadas.
+    public function registrarSalidaAnticipada(int $reservaId): void
+    {
+        $reserva = HotelReserva::where('empresa_id', $this->empresaId())->findOrFail($reservaId);
+
+        if ($reserva->estado !== 'checkin') {
+            $this->dispatch('notify', type: 'error', message: 'Esta reserva no tiene un check-in activo.');
+            return;
+        }
+
+        $hoy = now()->toDateString();
+
+        if (! $reserva->fecha_checkout || $reserva->fecha_checkout->toDateString() <= $hoy) {
+            $this->dispatch('notify', type: 'error', message: 'Esta reserva ya no tiene una salida anticipada por registrar.');
+            return;
+        }
+
+        $reserva->update(['fecha_checkout' => $hoy]);
+
+        $this->dispatch('notify', type: 'success', message: 'Salida anticipada registrada: ' . $reserva->fresh()->numero_noches . ' noche(s). Ya puedes facturar la salida.');
+
+        $this->irAFacturar($reservaId);
+    }
+
     public function cancelarReserva(int $reservaId): void
     {
         if (! auth()->user()->hasRole('admin_empresa')) {
