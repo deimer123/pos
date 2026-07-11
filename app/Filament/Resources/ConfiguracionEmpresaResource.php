@@ -88,7 +88,6 @@ class ConfiguracionEmpresaResource extends Resource
                             'servicios' => 'Servicios',
                             'taller' => 'Taller / Mecánica',
                             'hotel' => 'Hotel',
-                            'mixto' => 'Mixto',
                             'otro' => 'Otro',
                         ])
                         ->live()
@@ -98,7 +97,7 @@ class ConfiguracionEmpresaResource extends Resource
                 ]),
 
             Forms\Components\Wizard\Step::make('Restaurante')
-                ->visible(fn (Forms\Get $get) => in_array($get('tipo_negocio'), ['restaurante', 'mixto']))
+                ->visible(fn (Forms\Get $get) => $get('tipo_negocio') === 'restaurante')
                 ->schema([
                     Forms\Components\Toggle::make('usa_mesas')
                         ->label('Usa mesas')
@@ -118,14 +117,8 @@ class ConfiguracionEmpresaResource extends Resource
                 ]),
 
             Forms\Components\Wizard\Step::make('Hotel')
-                ->visible(fn (Forms\Get $get) => in_array($get('tipo_negocio'), ['hotel', 'mixto']))
+                ->visible(fn (Forms\Get $get) => $get('tipo_negocio') === 'hotel')
                 ->schema([
-                    Forms\Components\Toggle::make('usa_hotel')
-                        ->label('Usa hotel')
-                        ->default(true)
-                        ->helperText('En negocios "Mixto" decides aquí si activas el módulo de hotel; en "Hotel" queda activo siempre.')
-                        ->visible(fn (Forms\Get $get) => $get('tipo_negocio') === 'mixto'),
-
                     Forms\Components\TimePicker::make('hotel_hora_inicio_dia')
                         ->label('Hora en que empieza el día del hotel')
                         ->seconds(false)
@@ -134,26 +127,20 @@ class ConfiguracionEmpresaResource extends Resource
                 ]),
 
             Forms\Components\Wizard\Step::make('Taller')
-                ->visible(fn (Forms\Get $get) => in_array($get('tipo_negocio'), ['taller', 'mixto']))
+                ->visible(fn (Forms\Get $get) => $get('tipo_negocio') === 'taller')
                 ->schema([
-                    Forms\Components\Toggle::make('usa_taller')
-                        ->label('Usa taller')
-                        ->default(true)
-                        ->helperText('En negocios "Mixto" decides aquí si activas el módulo de taller; en "Taller" queda activo siempre.')
-                        ->visible(fn (Forms\Get $get) => $get('tipo_negocio') === 'mixto'),
-
                     Forms\Components\Placeholder::make('taller_info')
                         ->label('')
                         ->content('Los mecánicos, servicios y órdenes de trabajo se configuran luego en los menús "Mecánicos" y "Servicios" del panel de administración.'),
                 ]),
 
             Forms\Components\Wizard\Step::make('Producto')
-                ->visible(fn (Forms\Get $get) => in_array($get('tipo_negocio'), ['tienda', 'bar', 'carniceria', 'panaderia', 'farmacia', 'servicios', 'mixto', 'otro']))
+                ->visible(fn (Forms\Get $get) => in_array($get('tipo_negocio'), ['tienda', 'bar', 'carniceria', 'panaderia', 'farmacia', 'servicios', 'otro']))
                 ->schema([
                     Forms\Components\Toggle::make('usa_peso')
                         ->label('Vende por peso')
                         ->helperText('Ideal para carnicería, fruver o productos a granel.')
-                        ->visible(fn (Forms\Get $get) => ! in_array($get('tipo_negocio'), ['panaderia', 'farmacia', 'mixto', 'servicios', 'bar'])),
+                        ->visible(fn (Forms\Get $get) => ! in_array($get('tipo_negocio'), ['panaderia', 'farmacia', 'servicios', 'bar'])),
 
                     Forms\Components\Toggle::make('usa_mesas')
                         ->label('Usa mesas')
