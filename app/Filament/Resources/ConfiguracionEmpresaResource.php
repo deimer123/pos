@@ -72,6 +72,21 @@ class ConfiguracionEmpresaResource extends Resource
                          ->visibility('public')
                         ->preserveFilenames()
                         ->maxSize(2048),
+
+                    Forms\Components\Placeholder::make('catalogo_publico_url')
+                        ->label('Catálogo público (para compartir con clientes)')
+                        ->visible(fn (?ConfiguracionEmpresa $record): bool => (bool) $record?->slug)
+                        ->content(function (?ConfiguracionEmpresa $record) {
+                            if (! $record?->slug) {
+                                return '—';
+                            }
+
+                            $url = url('/catalogo/' . $record->slug);
+
+                            return new \Illuminate\Support\HtmlString(
+                                '<a href="' . e($url) . '" target="_blank" style="color:#4f46e5; text-decoration:underline;">' . e($url) . '</a>'
+                            );
+                        }),
                 ]),
 
             Forms\Components\Wizard\Step::make('Tipo de negocio')
