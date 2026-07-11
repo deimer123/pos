@@ -710,7 +710,7 @@
             </button>
             @endif
 
-            @if($tallerOrdenId)
+            @if($tallerOrdenId && auth()->user()->puedeVerBotonPos('guardar'))
             <button
                 x-on:click="Swal.fire({title:'💾 Guardar orden taller',text:'Se guardan los productos en la orden. Puedes reabrirla desde el panel Taller.',icon:'question',showCancelButton:true,confirmButtonText:'Guardar',cancelButtonText:'Cancelar',confirmButtonColor:'#0f766e'}).then(r=>{if(r.isConfirmed){$wire.guardarOrdenTaller();}})"
                 style="flex:1 1 0; min-width:120px; background:#0f766e;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
@@ -718,6 +718,7 @@
             </button>
             @endif
 
+            @if (auth()->user()->puedeVerBotonPos('limpiar'))
             <button
                 x-on:click="
                     const hayTaller = !! $wire.get('tallerOrdenId');
@@ -731,6 +732,7 @@
                 style="flex:1 1 0; min-width:90px; background:#dc2626;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 Limpiar
             </button>
+            @endif
 
             <button type="button" @click="masAcciones = !masAcciones"
                 style="flex:1 1 0; min-width:130px; background:#334155;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;"
@@ -738,6 +740,7 @@
                 Más acciones ▾
             </button>
 
+            @if (auth()->user()->puedeVerBotonPos('editar'))
             <template x-if="masAcciones">
             <button type="button"
                 x-on:click="
@@ -747,22 +750,27 @@
                 Editar
             </button>
             </template>
+            @endif
 
+            @if (auth()->user()->puedeVerBotonPos('buscar_cliente'))
             <template x-if="masAcciones">
             <button type="button" x-on:click="masAcciones = false; $wire.abrirModalBuscarCliente();"
                 style="flex:1 1 0; min-width:110px; background:#2563eb;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 🔍 Cliente
             </button>
             </template>
+            @endif
 
+            @if (auth()->user()->puedeVerBotonPos('mas_cliente'))
             <template x-if="masAcciones">
             <button type="button" x-on:click="masAcciones = false; $wire.abrirModalCrearCliente();"
                 style="flex:1 1 0; min-width:90px; background:#7c3aed;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 + Cliente
             </button>
             </template>
+            @endif
 
-            @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion']) && $cajaEstado === 'abierta')
+            @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion']) && $cajaEstado === 'abierta' && auth()->user()->puedeVerBotonPos('entrada_salida'))
             <template x-if="masAcciones">
             <button type="button" x-on:click="masAcciones = false; $wire.abrirMovimientoCajaModal('salida');"
                 style="flex:1 1 0; min-width:110px; background:#0891b2;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
@@ -771,12 +779,14 @@
             </template>
             @endif
 
+            @if (auth()->user()->puedeVerBotonPos('ver'))
             <template x-if="masAcciones">
             <button type="button" x-on:click="masAcciones = false; $wire.verPrefacturas();"
                 style="flex:1 1 0; min-width:80px; background:#475569;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 Ver
             </button>
             </template>
+            @endif
 
         </div>
         @else
@@ -938,6 +948,7 @@
 
             <div class="pos-cart-mobile-more-menu" x-show="open" x-cloak @click.stop @click.outside="open = false" wire:key="mobile-actions-menu-{{ $cajaEstado }}">
                 @if(! $mesaId || ! $esMeseroPuroMenu)
+                @if (auth()->user()->puedeVerBotonPos('editar'))
                 <button type="button" class="pos-cart-menu-item pos-cart-menu-item-edit" wire:key="mobile-action-editar"
                     @click.prevent.stop="
                         open = false;
@@ -947,39 +958,50 @@
                     ">
                     Editar
                 </button>
+                @endif
 
+                @if (auth()->user()->puedeVerBotonPos('buscar_cliente'))
                 <button type="button" class="pos-cart-menu-item pos-cart-menu-item-search-client" wire:key="mobile-action-buscar-cliente" @click.prevent.stop="open = false; $wire.abrirModalBuscarCliente();">
                     Buscar Cliente
                 </button>
+                @endif
 
+                @if (auth()->user()->puedeVerBotonPos('mas_cliente'))
                 <button type="button" class="pos-cart-menu-item pos-cart-menu-item-create-client" wire:key="mobile-action-crear-cliente" @click.prevent.stop="open = false; $wire.abrirModalCrearCliente();">
                     Crear Cliente
                 </button>
                 @endif
+                @endif
 
                 @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'recepcion']))
                     @if ($cajaEstado === 'abierta')
+                        @if (auth()->user()->puedeVerBotonPos('entrada_salida'))
                         <button type="button" class="pos-cart-menu-item pos-cart-menu-item-cash-move" wire:key="mobile-action-movimiento-caja" @click.prevent.stop="open = false; $wire.abrirMovimientoCajaModal('salida');">
                             Entrada / salida
                         </button>
+                        @endif
                     @else
+                        @if (auth()->user()->puedeVerBotonPos('caja'))
                         <button type="button" class="pos-cart-menu-item pos-cart-menu-item-open-cash" wire:key="mobile-action-abrir-caja" @click.prevent.stop="open = false; $wire.abrirCajaModal();">
                             Abrir caja
                         </button>
+                        @endif
                     @endif
 
+                    @if (auth()->user()->puedeVerBotonPos('cartera'))
                     <button type="button" class="pos-cart-menu-item pos-cart-menu-item-wallet" wire:key="mobile-action-cartera" @click.prevent.stop="open = false; $wire.abrirModalCartera();">
                         Cartera
                     </button>
+                    @endif
                 @endif
 
-                @if(! $mesaId && ! $tallerOrdenId && ! $hotelReservaId)
+                @if(! $mesaId && ! $tallerOrdenId && ! $hotelReservaId && auth()->user()->puedeVerBotonPos('guardar'))
                 <button type="button" class="pos-cart-menu-item pos-cart-menu-item-save" wire:key="mobile-action-guardar" @click.prevent.stop="open = false; $wire.confirmarGuardarPrefactura();">
                     Guardar
                 </button>
                 @endif
 
-                @if(! $mesaId || ! $esMeseroPuroMenu)
+                @if((! $mesaId || ! $esMeseroPuroMenu) && auth()->user()->puedeVerBotonPos('ver'))
                 <button type="button" class="pos-cart-menu-item pos-cart-menu-item-view" wire:key="mobile-action-ver" @click.prevent.stop="open = false; $wire.verPrefacturas();">
                     Ver
                 </button>
