@@ -2638,6 +2638,11 @@
             const dataEvento = Array.isArray(payload) ? (payload[0] || {}) : (payload || {});
             const domObservacionesOrden = dataEvento.dom_observaciones || '';
             const totalNumero = Number(dataEvento.totalVenta ?? @js((int) ($totalGeneral ?? 0)) ?? 0);
+            // Si la reserva de hotel ya tiene un abono pagado, lo que se debe
+            // cobrar ahora es solo el saldo restante (el abono ya se registró
+            // en caja cuando se hizo la reserva) — evita cobrar dos veces.
+            const hotelAbonoMonto = Number(@js($hotelAbonoMonto ?? 0));
+            const saldoACobrar = Math.max(0, totalNumero - hotelAbonoMonto);
             const clienteVenta = dataEvento.clienteNombre || @js($clienteSeleccionadoNombre ?? 'CONSUMIDOR FINAL');
             const credito = dataEvento.creditoInfo || @js($creditoInfo ?? ['permite' => false, 'cupo_disponible' => 0, 'limite' => 0, 'deuda' => 0, 'dias' => 0]);
             const factusHabilitado = !!dataEvento.factusHabilitado;
@@ -2699,8 +2704,8 @@
                     Swal.showValidationMessage('Seleccione la fecha de vencimiento.');
                     return false;
                 }
-                if (tipoPago === 'contado' && medioPago === 'efectivo' && recibido < totalNumero) {
-                    Swal.showValidationMessage('El valor recibido no puede ser menor al total.');
+                if (tipoPago === 'contado' && medioPago === 'efectivo' && recibido < saldoACobrar) {
+                    Swal.showValidationMessage('El valor recibido no puede ser menor al saldo a cobrar.');
                     return false;
                 }
                 if (tipoPago === 'contado' && medioPago === 'transferencia' && !obs) {
@@ -2712,7 +2717,7 @@
                     tipo_pago: tipoPago,
                     medio_pago: tipoPago === 'contado' ? medioPago : null,
                     monto_recibido: tipoPago === 'contado' && medioPago === 'efectivo' ? recibido : null,
-                    vuelto: tipoPago === 'contado' && medioPago === 'efectivo' ? Math.max(0, recibido - totalNumero) : 0,
+                    vuelto: tipoPago === 'contado' && medioPago === 'efectivo' ? Math.max(0, recibido - saldoACobrar) : 0,
                     transferencia_obs: tipoPago === 'contado' && medioPago === 'transferencia' ? obs : '',
                     fecha_vencimiento: tipoPago === 'credito' ? venc : null,
                     tipo_pedido: tipoPedido,
@@ -2814,10 +2819,11 @@
                                 <div style="font-size:10px;color:#64748b;font-weight:700;">Cliente</div>
                                 <div style="font-weight:900;color:#111827;font-size:12px;line-height:1.2;">${clienteVenta}</div>
                                 ${costoEmpaqueOrden > 0 ? `<div style="font-size:10px;color:#92400e;margin-top:1px;">${tipoPedidoOrden === 'domicilio' ? '🛵' : '🥡'} Productos ${formatMoney(totalProductos)} + extra ${formatMoney(costoEmpaqueOrden)}</div>` : ''}
+                                ${hotelAbonoMonto > 0 ? `<div style="font-size:10px;color:#92400e;margin-top:1px;">🏨 Total ${formatMoney(totalNumero)} · Abono ya pagado ${formatMoney(hotelAbonoMonto)}</div>` : ''}
                             </div>
                             <div style="text-align:right;">
-                                <div style="font-size:10px;color:#64748b;font-weight:700;">${costoEmpaqueOrden > 0 ? 'TOTAL A COBRAR' : 'TOTAL'}</div>
-                                <b style="font-size:22px;color:#111827;white-space:nowrap;">${formatMoney(totalNumero)}</b>
+                                <div style="font-size:10px;color:#64748b;font-weight:700;">${(costoEmpaqueOrden > 0 || hotelAbonoMonto > 0) ? 'SALDO A COBRAR' : 'TOTAL'}</div>
+                                <b style="font-size:22px;color:#111827;white-space:nowrap;">${formatMoney(saldoACobrar)}</b>
                             </div>
                         </div>
 
@@ -2955,7 +2961,7 @@
 
                     const actualizarVuelto = () => {
                         const recibido = parseMoney(montoRecibido.value);
-                        vuelto.textContent = formatMoney(Math.max(0, recibido - totalNumero));
+                        vuelto.textContent = formatMoney(Math.max(0, recibido - saldoACobrar));
                     };
 
                     const medioWrap = document.getElementById('swal_medio_wrap');
@@ -2984,7 +2990,7 @@
                     });
                     document.querySelectorAll('[data-cash-exact]').forEach((button) => {
                         button.addEventListener('click', () => {
-                            formatearMontoInput(String(totalNumero));
+                            formatearMontoInput(String(saldoACobrar));
                             actualizarVuelto();
                         });
                     });
