@@ -1329,24 +1329,28 @@ public function imprimirPrefactura()
 }
 public function aplicarCambiosModal($cambios)
 {
-  
-    
     $empresaIdCambios = $this->getEmpresaId();
+    $maxDescuento = $this->descuentoMaximoPermitido($empresaIdCambios);
+
+    // âœ… Validar TODOS los items antes de aplicar nada: si alguno excede el
+    // descuento mÃ¡ximo permitido, se bloquea el guardado completo (no se
+    // cierra el modal ni se toca el carrito) para que el usuario lo corrija.
+    if ($maxDescuento !== null) {
+        foreach ($cambios as $datos) {
+            if (floatval($datos['descuento']) < -$maxDescuento) {
+                $this->dispatch('error', "El descuento máximo permitido es {$maxDescuento}%.");
+                return;
+            }
+        }
+    }
 
     foreach ($cambios as $id => $datos) {
         if (isset($this->carrito[$id])) {
-            // âœ… APLICAR DIRECTAMENTE LOS VALORES DEL MODAL (con el descuento clampeado al máximo permitido)
-            $descuentoSolicitado = floatval($datos['descuento']);
-            $descuentoAplicado = $this->clampDescuento($descuentoSolicitado, $empresaIdCambios);
+            // âœ… APLICAR DIRECTAMENTE LOS VALORES DEL MODAL
             $nuevoPrecio = round((float) $datos['nuevo_precio'], 2);
 
-            if ($descuentoAplicado !== $descuentoSolicitado) {
-                $precioBaseItem = floatval($this->carrito[$id]['precio']);
-                $nuevoPrecio = round($precioBaseItem * (1 + $descuentoAplicado / 100), 2);
-            }
-
             $this->carrito[$id]['nuevo_precio'] = $nuevoPrecio;
-            $this->carrito[$id]['descuento'] = $descuentoAplicado;
+            $this->carrito[$id]['descuento'] = floatval($datos['descuento']);
 
             // âœ… RECALCULAR SUBTOTAL INMEDIATAMENTE
             $cantidad = $this->normalizarCantidad($this->carrito[$id]['cantidad'] ?? 1, $this->permiteCantidadDecimal($this->carrito[$id]));
