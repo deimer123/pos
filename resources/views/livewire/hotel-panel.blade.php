@@ -561,7 +561,7 @@
                     @error('resAbonoMonto') <span style="font-size:10px; color:#ef4444; display:block; margin-top:4px;">{{ $message }}</span> @enderror
                     <div style="font-size:9px; color:#92400e; margin-top:4px;">
                         @if($resInmediato)
-                            Si registras un abono, se descuenta del total a cobrar en la salida y queda registrado como entrada de caja.
+                            Si registras un abono, se descuenta del total a cobrar en la salida y queda registrado como entrada de caja. Máximo ${{ number_format($this->precioNocheReserva, 0, ',', '.') }} (el valor de la habitación en este momento).
                         @else
                             Para asegurar la reserva se requiere un abono (máximo ${{ number_format($this->totalEstimadoReserva, 0, ',', '.') }}, el total estimado). Se descuenta del total a cobrar en la salida y queda registrado como entrada de caja.
                         @endif

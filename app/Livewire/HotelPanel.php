@@ -538,6 +538,15 @@ class HotelPanel extends Component
             return;
         }
 
+        // Entrada inmediata: como no hay fecha de salida definida todavía
+        // ("el total se calcula al hacer la salida"), lo único que se puede
+        // cobrar por adelantado es el valor de la habitación en este momento
+        // (una noche). No puede pedirse un abono mayor a eso.
+        if ($this->resInmediato && $this->precioNocheReserva > 0 && (float) $this->resAbonoMonto > $this->precioNocheReserva) {
+            $this->addError('resAbonoMonto', 'El abono no puede ser mayor al valor de la habitación en este momento ($' . number_format($this->precioNocheReserva, 0, ',', '.') . ').');
+            return;
+        }
+
         $empresaId = $this->empresaId();
 
         $habitacion = HotelHabitacion::where('empresa_id', $empresaId)->find($this->resHabitacionId);
