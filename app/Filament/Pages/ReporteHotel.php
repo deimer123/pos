@@ -14,7 +14,7 @@ class ReporteHotel extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
     protected static ?string $navigationLabel = 'Reporte de Hotel';
-    protected static ?string $navigationGroup = '🏨 Hotel';
+    protected static ?string $navigationGroup = 'Reportes';
     protected static string $view = 'filament.pages.reporte-hotel';
 
     public string $desde;
@@ -53,6 +53,24 @@ class ReporteHotel extends Page
         $hasta = Carbon::parse($this->hasta)->endOfDay();
 
         return [$desde, $hasta];
+    }
+
+    public function totalProductos(): float
+    {
+        [$desde, $hasta] = $this->rango();
+        $empresaId = $this->empresaId();
+
+        return (float) DB::table('factura_detalles as fd')
+            ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
+            ->join('products as p', function ($join) {
+                $join->on('p.id_producto', '=', 'fd.producto_id')
+                    ->on('p.empresa_id', '=', 'f.empresa_id');
+            })
+            ->where('f.empresa_id', $empresaId)
+            ->whereBetween('f.fecha', [$desde, $hasta])
+            ->where('p.tipo_producto', '!=', 'servicio')
+            ->where('fd.producto_id', '!=', '10001')
+            ->sum(DB::raw('(fd.cantidad - COALESCE(fd.devuelto_cantidad, 0)) * fd.precio'));
     }
 
     public function utilidadProductos(): float
@@ -100,9 +118,16 @@ class ReporteHotel extends Page
             ->get();
     }
 
-    public function utilidadHospedaje(): float
+    public function totalHospedaje(): float
     {
         return (float) $this->lineasHospedaje()->sum('subtotal');
+    }
+
+    public function utilidadHospedaje(): float
+    {
+        // El hospedaje no tiene "costo de producto": se factura 100% como
+        // utilidad porque los gastos del hotel se descuentan aparte (Caja/Gastos).
+        return $this->totalHospedaje();
     }
 
     public function utilidadTotal(): float

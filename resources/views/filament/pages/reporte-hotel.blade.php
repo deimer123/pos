@@ -1,8 +1,9 @@
 <x-filament::page>
     @php
-        $productos = $this->utilidadProductos();
-        $hospedaje = $this->utilidadHospedaje();
-        $total = $productos + $hospedaje;
+        $totalProductos = $this->totalProductos();
+        $utilidadProductos = $this->utilidadProductos();
+        $totalHospedaje = $this->totalHospedaje();
+        $utilidadTotal = $utilidadProductos + $totalHospedaje;
         $porHabitacion = $this->reportePorHabitacion();
         $ocupacion = $this->ocupacion();
         $money = fn ($valor) => '$ ' . number_format((float) $valor, 0, ',', '.');
@@ -24,22 +25,29 @@
     <div style="display:flex; flex-wrap:wrap; gap:16px; margin-bottom:24px;">
         <div style="flex:1 1 220px; min-width:220px;">
             <x-filament::section>
-                <div style="font-size:13px; color:#6b7280;">Utilidad Productos</div>
-                <div style="font-size:24px; font-weight:700;">{{ $money($productos) }}</div>
+                <div style="font-size:13px; color:#6b7280;">Total Productos</div>
+                <div style="font-size:24px; font-weight:700;">{{ $money($totalProductos) }}</div>
             </x-filament::section>
         </div>
 
         <div style="flex:1 1 220px; min-width:220px;">
             <x-filament::section>
-                <div style="font-size:13px; color:#6b7280;">Utilidad Hospedaje (100%)</div>
-                <div style="font-size:24px; font-weight:700;">{{ $money($hospedaje) }}</div>
+                <div style="font-size:13px; color:#6b7280;">Utilidad Productos</div>
+                <div style="font-size:24px; font-weight:700;">{{ $money($utilidadProductos) }}</div>
+            </x-filament::section>
+        </div>
+
+        <div style="flex:1 1 220px; min-width:220px;">
+            <x-filament::section>
+                <div style="font-size:13px; color:#6b7280;">Total Hospedaje (100% utilidad)</div>
+                <div style="font-size:24px; font-weight:700;">{{ $money($totalHospedaje) }}</div>
             </x-filament::section>
         </div>
 
         <div style="flex:1 1 220px; min-width:220px;">
             <x-filament::section>
                 <div style="font-size:13px; color:#6b7280;">Utilidad Total</div>
-                <div style="font-size:24px; font-weight:700;">{{ $money($total) }}</div>
+                <div style="font-size:24px; font-weight:700;">{{ $money($utilidadTotal) }}</div>
             </x-filament::section>
         </div>
 
