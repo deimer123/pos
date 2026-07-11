@@ -9,6 +9,11 @@
         @endif
     </div>
 
+    <div style="padding:12px 16px; background:white; border-bottom:1px solid #e5e7eb;">
+        <input type="text" wire:model.live.debounce.300ms="busqueda" placeholder="🔍 Buscar producto..."
+            style="width:100%; box-sizing:border-box; border:1px solid #d1d5db; border-radius:999px; padding:8px 16px; font-size:14px;">
+    </div>
+
     @if($this->familias->count() > 1)
     <div style="display:flex; gap:8px; overflow-x:auto; padding:12px 16px; background:white; border-bottom:1px solid #e5e7eb;">
         <button type="button" wire:click="$set('familiaActiva', null)"

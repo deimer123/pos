@@ -11,6 +11,7 @@ class CatalogoPublico extends Component
 {
     public string $slug;
     public ?int $familiaActiva = null;
+    public string $busqueda = '';
 
     public function mount(string $slug): void
     {
@@ -26,6 +27,7 @@ class CatalogoPublico extends Component
     {
         return Product::where('empresa_id', $this->config->empresa_id)
             ->where('mostrar_en_catalogo', true)
+            ->when($this->busqueda, fn ($q) => $q->where('descripcion_larga', 'like', '%' . $this->busqueda . '%'))
             ->with(['familia1', 'subfamilia'])
             ->orderBy('descripcion_larga')
             ->get()
