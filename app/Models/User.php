@@ -30,6 +30,7 @@ class User extends Authenticatable implements FilamentUser
         'tipo_usuario',
         'empresa_id',
         'activo',
+        'botones_ocultos_pos',
         'plan_meses',
         'plan_started_at',
         'plan_ends_at',
@@ -56,9 +57,19 @@ class User extends Authenticatable implements FilamentUser
     protected $casts = [
         'email_verified_at' => 'datetime',
         'activo' => 'boolean',
+        'botones_ocultos_pos' => 'array',
         'plan_started_at' => 'date',
         'plan_ends_at' => 'date',
     ];
+
+    public function puedeVerBotonPos(string $boton): bool
+    {
+        if ($this->hasRole('admin_empresa')) {
+            return true;
+        }
+
+        return ! in_array($boton, $this->botones_ocultos_pos ?? []);
+    }
 
     protected $appends = [
         'profile_photo_url',

@@ -7,15 +7,17 @@
                 class="flex-1 text-base bg-gray-100 border border-gray-300 rounded-full px-4 py-2 text-gray-700 font-medium cursor-not-allowed"
                 value="{{ $clienteSeleccionadoNombre ?? 'Nombre Cliente' }}" disabled />
 
+            @if (auth()->user()->puedeVerBotonPos('buscar_cliente'))
             <button wire:click="abrirModalBuscarCliente"
                 class="inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-full shadow-sm transition">
 
                 Buscar Cliente
             </button>
+            @endif
 
 
             <div class="flex items-center gap-2">
-                @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion']))
+                @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion']) && auth()->user()->puedeVerBotonPos('caja'))
                     <div class="flex items-center gap-3">
                         @if ($cajaEstado === 'abierta')
                             <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">Caja abierta</span>
@@ -653,7 +655,7 @@
                     style="background:#2563eb; color:white; border:none; border-radius:9999px; padding:0 14px; height:34px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">
                     📤 Enviar cocina
                 </button>
-                @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
+                @if ((auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa')) && auth()->user()->puedeVerBotonPos('facturar'))
                 <button onclick="window.Livewire.dispatch('mesa-facturar')"
                     class="pos-mesa-total-btn"
                     style="background:#16a34a; color:white; border:none; border-radius:9999px; padding:0 14px; height:34px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">
@@ -662,7 +664,7 @@
                 @endif
             </div>
         @else
-        @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion']))
+        @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion']) && auth()->user()->puedeVerBotonPos('facturar'))
             <button type="button" id="btn-abrir-facturar"
                 class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow"
                 wire:click="confirmarFacturar" wire:loading.attr="disabled" wire:target="confirmarFacturar">
@@ -781,24 +783,30 @@
         {{-- POS base (sin taller) --}}
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(90px, 1fr)); gap:4px; width:100%; align-items:center;">
 
+            @if (auth()->user()->puedeVerBotonPos('editar'))
             <button
                 x-on:click="if(Object.keys($wire.get('carrito') ?? {}).length===0){Swal.fire({icon:'warning',title:'Carrito vacío',text:'Agregue productos primero.'});}else{$wire.abrirModalEditar();}"
                 style="width:100%;text-align:center;background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 Editar
             </button>
+            @endif
 
+            @if (auth()->user()->puedeVerBotonPos('mas_cliente'))
             <button wire:click="abrirModalCrearCliente"
                 style="width:100%;text-align:center;background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 + Cliente
             </button>
+            @endif
 
             @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'recepcion']))
+                @if (auth()->user()->puedeVerBotonPos('cartera'))
                 <button type="button" wire:click="abrirModalCartera"
                     style="width:100%;text-align:center;background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                     Cartera
                 </button>
+                @endif
 
-                @if ($cajaEstado === 'abierta')
+                @if ($cajaEstado === 'abierta' && auth()->user()->puedeVerBotonPos('entrada_salida'))
                 <button type="button" wire:click="abrirMovimientoCajaModal('salida')"
                     style="width:100%;text-align:center;background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                     Entrada/Salida
@@ -806,6 +814,7 @@
                 @endif
             @endif
 
+            @if (auth()->user()->puedeVerBotonPos('limpiar'))
             <button
                 x-on:click="
                     const hayHotel = !! $wire.get('hotelReservaId');
@@ -819,18 +828,21 @@
                 style="width:100%;text-align:center;background:#dc2626;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 Limpiar
             </button>
+            @endif
 
-            @if(! $hotelReservaId)
+            @if(! $hotelReservaId && auth()->user()->puedeVerBotonPos('guardar'))
             <button type="button" wire:click="confirmarGuardarPrefactura"
                 style="width:100%;text-align:center;background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 Guardar
             </button>
             @endif
 
+            @if (auth()->user()->puedeVerBotonPos('ver'))
             <button wire:click="verPrefacturas"
                 style="width:100%;text-align:center;background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                 Ver
             </button>
+            @endif
 
         </div>
         @endif

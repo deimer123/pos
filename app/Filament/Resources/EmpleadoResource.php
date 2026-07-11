@@ -164,6 +164,26 @@ class EmpleadoResource extends Resource
                             ->default(fn () => auth()->user()->getEmpresaActualId()),
                     ])
                     ->columns(2),
+
+                Forms\Components\Section::make('Botones visibles en el POS')
+                    ->description('Marca los botones que NO quieres que este empleado vea en el punto de venta. Admin Empresa siempre los ve todos.')
+                    ->schema([
+                        Forms\Components\CheckboxList::make('botones_ocultos_pos')
+                            ->label('Ocultar estos botones')
+                            ->options([
+                                'facturar' => 'Facturar',
+                                'buscar_cliente' => 'Buscar Cliente',
+                                'caja' => 'Abrir/Cerrar caja',
+                                'editar' => 'Editar',
+                                'mas_cliente' => '+ Cliente',
+                                'cartera' => 'Cartera',
+                                'entrada_salida' => 'Entrada/Salida',
+                                'limpiar' => 'Limpiar',
+                                'guardar' => 'Guardar',
+                                'ver' => 'Ver',
+                            ])
+                            ->columns(2),
+                    ]),
             ]);
     }
 
