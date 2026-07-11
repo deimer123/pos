@@ -62,6 +62,8 @@ class Product extends Model
         'utilidad1',
         'id_unidad_de_medida',
         'foto',
+        'mostrar_en_catalogo',
+        'descripcion_catalogo',
         'descuento_comercial',
         'costo_iva',
         'precio_con_descuento',
@@ -77,6 +79,7 @@ class Product extends Model
         'requiere_cocina' => 'boolean',
         'peso_base' => 'decimal:3',
         'porcentaje_empresa' => 'decimal:2',
+        'mostrar_en_catalogo' => 'boolean',
     ];
 
     public function mecanico()

@@ -227,8 +227,21 @@ return \App\Models\Familia::create($data)->id;
                     
             ]),
 
-            
+
         ]),
+
+        Section::make('Catálogo público')
+            ->schema([
+                Forms\Components\Toggle::make('mostrar_en_catalogo')
+                    ->label('Mostrar en el catálogo público')
+                    ->default(true)
+                    ->helperText('Desactívalo si este producto no debe aparecer en la carta que ven tus clientes.'),
+
+                Forms\Components\Textarea::make('descripcion_catalogo')
+                    ->label('Descripción para el catálogo')
+                    ->helperText('Texto de venta que ven tus clientes (distinto al nombre interno del producto). Déjalo vacío si no aplica.')
+                    ->rows(2),
+            ]),
 
         Section::make('Modo de venta')
             ->schema([

@@ -22,6 +22,9 @@ use App\Http\Controllers\KardexController;
 // Puedes dejar esto si tienes un landing o ruta base
 Route::get('/', fn () => view('welcome'));
 
+// Catálogo público de productos por empresa (sin login, para compartir con clientes)
+Route::get('/catalogo/{slug}', \App\Livewire\CatalogoPublico::class)->name('catalogo.publico');
+
 /*
 |--------------------------------------------------------------------------
 | Redirección después del login

@@ -16,6 +16,12 @@ class EditConfiguracionEmpresa extends EditRecord
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        return array_merge($data, \App\Models\ConfiguracionEmpresa::flagsModuloParaTipo($data['tipo_negocio'] ?? 'tienda'));
+        $data = array_merge($data, \App\Models\ConfiguracionEmpresa::flagsModuloParaTipo($data['tipo_negocio'] ?? 'tienda'));
+
+        if (empty($data['slug']) && ! empty($data['nombre_empresa'])) {
+            $data['slug'] = \Illuminate\Support\Str::slug($data['nombre_empresa']) . '-' . $this->record->empresa_id;
+        }
+
+        return $data;
     }
 }

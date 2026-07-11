@@ -17,6 +17,7 @@ class ConfiguracionEmpresa extends Model
     protected $fillable = [
         'empresa_id',           // ← Asegúrate de que este campo esté aquí
         'nombre_empresa',
+        'slug',
         'representante_legal',
         'nit',
         'telefono', 

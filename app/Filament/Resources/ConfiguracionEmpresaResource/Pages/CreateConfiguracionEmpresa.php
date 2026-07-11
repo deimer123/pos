@@ -36,6 +36,10 @@ class CreateConfiguracionEmpresa extends CreateRecord
 
         $data = array_merge($data, \App\Models\ConfiguracionEmpresa::flagsModuloParaTipo($data['tipo_negocio'] ?? 'tienda'));
 
+        if (empty($data['slug']) && ! empty($data['nombre_empresa'])) {
+            $data['slug'] = \Illuminate\Support\Str::slug($data['nombre_empresa']) . '-' . $user->id;
+        }
+
         return $data;
     }
 
