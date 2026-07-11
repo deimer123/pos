@@ -37,6 +37,8 @@ class ConfiguracionEmpresa extends Model
         'permite_stock_negativo',
         'imprime_ticket',
         'mostrar_iva_separado',
+        'descuento_maximo_permitido',
+        'permite_ver_stock_no_admin',
         'prefijo',
         'rango_desde',
         'rango_hasta',
@@ -87,11 +89,35 @@ class ConfiguracionEmpresa extends Model
         'permite_stock_negativo' => 'boolean',
         'imprime_ticket' => 'boolean',
         'mostrar_iva_separado' => 'boolean',
+        'descuento_maximo_permitido' => 'decimal:2',
+        'permite_ver_stock_no_admin' => 'boolean',
     ];
 
     public function empresa()
     {
         return $this->belongsTo(\App\Models\User::class, 'empresa_id');
+    }
+
+    public static function flagsModuloParaTipo(string $tipo): array
+    {
+        return match ($tipo) {
+            'hotel' => [
+                'usa_hotel' => true, 'usa_taller' => false, 'usa_mesas' => false,
+                'usa_cocina' => false, 'usa_domicilios' => false, 'usa_recetas' => false,
+            ],
+            'taller' => [
+                'usa_taller' => true, 'usa_servicios' => true, 'usa_hotel' => false,
+                'usa_mesas' => false, 'usa_cocina' => false, 'usa_domicilios' => false, 'usa_recetas' => false,
+            ],
+            'restaurante' => [
+                'usa_hotel' => false, 'usa_taller' => false,
+            ],
+            'mixto' => [],
+            default => [
+                'usa_hotel' => false, 'usa_taller' => false, 'usa_mesas' => false,
+                'usa_cocina' => false, 'usa_domicilios' => false, 'usa_recetas' => false,
+            ],
+        };
     }
 
     public function getLogoUrlAttribute()

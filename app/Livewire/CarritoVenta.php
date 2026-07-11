@@ -232,6 +232,58 @@ class CarritoVenta extends Component
     return $user->id;
 }
 
+private function validarStockCarrito(int $empresaId): void
+{
+    $permiteNegativo = (bool) ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('permite_stock_negativo');
+
+    foreach ($this->carrito as $item) {
+        $prod = null;
+
+        if (is_numeric($item['id_producto'])) {
+            $prod = Product::where('empresa_id', $empresaId)
+                ->where('id_producto', $item['id_producto'])
+                ->lockForUpdate()
+                ->first();
+
+            if (!$prod) {
+                throw new \Exception("Producto {$item['id_producto']} no existe.");
+            }
+        }
+
+        $cant = $this->normalizarCantidad($item['cantidad'] ?? 1, $this->permiteCantidadDecimal($item));
+        if ($cant <= 0) {
+            throw new \Exception("Cantidad invÃ¡lida en {$item['id_producto']}.");
+        }
+
+        if (!$permiteNegativo && $prod && $prod->tipo_producto !== 'servicio' && $cant > (float) $prod->existencias) {
+            throw new \Exception("Stock insuficiente para \"{$prod->descripcion_larga}\": disponible {$prod->existencias}, solicitado {$cant}.");
+        }
+    }
+}
+
+private function descuentoMaximoPermitido(int $empresaId): ?float
+{
+    if (auth()->user()?->hasRole('admin_empresa')) {
+        return null; // sin límite
+    }
+
+    $max = ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('descuento_maximo_permitido');
+
+    return $max === null ? 100.0 : (float) $max;
+}
+
+private function clampDescuento(float $descuento, int $empresaId): float
+{
+    $max = $this->descuentoMaximoPermitido($empresaId);
+
+    if ($max !== null && $descuento > $max) {
+        $this->dispatch('error', "El descuento máximo permitido es {$max}%.");
+        return $max;
+    }
+
+    return max(0, $descuento);
+}
+
 private function textoUtf8($valor): string
 {
     $texto = (string) ($valor ?? '');
@@ -1231,11 +1283,12 @@ public function recalcularPorDescuento($id, $descuento)
 {
     if (isset($this->carrito[$id])) {
         $precioBase = floatval($this->carrito[$id]['precio']);
-        $nuevoPrecio = $precioBase * (1 + floatval($descuento) / 100);
-        
+        $descuento = $this->clampDescuento(floatval($descuento), $this->getEmpresaId());
+        $nuevoPrecio = $precioBase * (1 + $descuento / 100);
+
         $this->carrito[$id]['nuevo_precio'] = round($nuevoPrecio, 2);
         $this->carrito[$id]['descuento'] = $descuento;
-        
+
         $this->actualizarTotales();
     }
 }
@@ -1246,12 +1299,17 @@ public function recalcularPorPrecio($id, $nuevoPrecio)
     if (isset($this->carrito[$id])) {
         $precioBase = floatval($this->carrito[$id]['precio']);
         $descuento = $precioBase > 0 ? round((($nuevoPrecio / $precioBase) - 1) * 100, 2) : 0;
-        
+
+        $descuentoClampeado = $this->clampDescuento($descuento, $this->getEmpresaId());
+        if ($descuentoClampeado !== $descuento) {
+            $nuevoPrecio = round($precioBase * (1 + $descuentoClampeado / 100), 2);
+        }
+
         $this->carrito[$id]['nuevo_precio'] = round((float) $nuevoPrecio, 2);
-        $this->carrito[$id]['descuento'] = $descuento;
+        $this->carrito[$id]['descuento'] = $descuentoClampeado;
         $this->carrito[$id]['precio_editado_manual'] = true;
         $this->carrito[$id]['combo_activo'] = null;
-        
+
         $this->actualizarTotales();
     }
 }
@@ -1269,15 +1327,25 @@ public function aplicarCambiosModal($cambios)
 {
   
     
+    $empresaIdCambios = $this->getEmpresaId();
+
     foreach ($cambios as $id => $datos) {
         if (isset($this->carrito[$id])) {
-            // âœ… APLICAR DIRECTAMENTE LOS VALORES DEL MODAL
-            $this->carrito[$id]['nuevo_precio'] = round((float) $datos['nuevo_precio'], 2);
-            $this->carrito[$id]['descuento'] = floatval($datos['descuento']);
-            
+            // âœ… APLICAR DIRECTAMENTE LOS VALORES DEL MODAL (con el descuento clampeado al máximo permitido)
+            $descuentoSolicitado = floatval($datos['descuento']);
+            $descuentoAplicado = $this->clampDescuento($descuentoSolicitado, $empresaIdCambios);
+            $nuevoPrecio = round((float) $datos['nuevo_precio'], 2);
+
+            if ($descuentoAplicado !== $descuentoSolicitado) {
+                $precioBaseItem = floatval($this->carrito[$id]['precio']);
+                $nuevoPrecio = round($precioBaseItem * (1 + $descuentoAplicado / 100), 2);
+            }
+
+            $this->carrito[$id]['nuevo_precio'] = $nuevoPrecio;
+            $this->carrito[$id]['descuento'] = $descuentoAplicado;
+
             // âœ… RECALCULAR SUBTOTAL INMEDIATAMENTE
             $cantidad = $this->normalizarCantidad($this->carrito[$id]['cantidad'] ?? 1, $this->permiteCantidadDecimal($this->carrito[$id]));
-            $nuevoPrecio = round((float) $datos['nuevo_precio'], 2);
             $costo = floatval($this->carrito[$id]['costo']);
             $costoConIva = isset($this->carrito[$id]['costo_iva'])
                 ? floatval($this->carrito[$id]['costo_iva'])
@@ -2486,24 +2554,7 @@ public function facturarConfirmada(array $data = [])
             throw new \Exception('Falta CONSUMIDOR FINAL en esta empresa.');
         }
 
-        // âœ… Permitir stock negativo: solo valida que exista y cantidad > 0
-        foreach ($this->carrito as $item) {
-            if (is_numeric($item['id_producto'])) {
-                $prod = Product::where('empresa_id', $empresaId)
-                    ->where('id_producto', $item['id_producto'])
-                    ->lockForUpdate()
-                    ->first();
-
-                if (!$prod) {
-                    throw new \Exception("Producto {$item['id_producto']} no existe.");
-                }
-            }
-
-            $cant = $this->normalizarCantidad($item['cantidad'] ?? 1, $this->permiteCantidadDecimal($item));
-            if ($cant <= 0) {
-                throw new \Exception("Cantidad invÃ¡lida en {$item['id_producto']}.");
-            }
-        }
+        $this->validarStockCarrito($empresaId);
 
         // ===== Datos de la peticiÃ³n =====
         $tipoFactura  = $data['tipo_factura'] ?? 'salida';
@@ -2989,23 +3040,7 @@ public function facturarEImprimir(array $data = [])
             throw new \Exception('El carrito estÃ¡ vacÃ­o.');
         }
 
-        foreach ($this->carrito as $item) {
-            if (is_numeric($item['id_producto'])) {
-                $prod = Product::where('empresa_id', $empresaId)
-                    ->where('id_producto', $item['id_producto'])
-                    ->lockForUpdate()
-                    ->first();
-
-                if (!$prod) {
-                    throw new \Exception("Producto {$item['id_producto']} no existe.");
-                }
-            }
-
-            $cant = $this->normalizarCantidad($item['cantidad'] ?? 1, $this->permiteCantidadDecimal($item));
-            if ($cant <= 0) {
-                throw new \Exception("Cantidad invÃ¡lida en {$item['id_producto']}.");
-            }
-        }
+        $this->validarStockCarrito($empresaId);
 
         // ===== Datos de cabecera
         $tipoFactura  = $data['tipo_factura'] ?? 'salida';

@@ -53,6 +53,23 @@
       $value = (float) $cantidad;
       return rtrim(rtrim(number_format($value, 2, ',', '.'), '0'), ',');
   };
+
+  $mostrarIvaSeparado = (bool) ($config->mostrar_iva_separado ?? false);
+  $subtotalBaseSalida = 0;
+  $ivaTotalSalida = 0;
+  if ($mostrarIvaSeparado) {
+      $idsProductosSalida = $factura->detalles->pluck('producto_id')->filter(fn($id) => is_numeric($id))->unique();
+      $ivaPorProductoSalida = \App\Models\Product::where('empresa_id', $factura->empresa_id)
+          ->whereIn('id_producto', $idsProductosSalida)
+          ->pluck('iva_venta', 'id_producto');
+
+      foreach ($factura->detalles as $d) {
+          $ivaPctSalida = (float) ($ivaPorProductoSalida[$d->producto_id] ?? 0);
+          $baseLineaSalida = $ivaPctSalida > 0 ? round($d->subtotal / (1 + $ivaPctSalida / 100), 2) : (float) $d->subtotal;
+          $subtotalBaseSalida += $baseLineaSalida;
+          $ivaTotalSalida += round($d->subtotal - $baseLineaSalida, 2);
+      }
+  }
 @endphp
 
 <div class="header">
@@ -115,6 +132,10 @@
 
 <br>
 <div style="text-align:right;">
+  @if($mostrarIvaSeparado)
+    Subtotal: ${{ number_format($subtotalBaseSalida, 0, ',', '.') }}<br>
+    IVA: ${{ number_format($ivaTotalSalida, 0, ',', '.') }}<br>
+  @endif
   @if($costoEmpaque > 0)
     Subtotal productos: ${{ number_format($subtotalProductos, 0, ',', '.') }}<br>
     @if($esDomicilio)

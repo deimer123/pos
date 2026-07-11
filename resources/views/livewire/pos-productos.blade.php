@@ -140,10 +140,12 @@
                                 <span>${{ number_format($product->precio_venta1, 0, ',', '.') }}</span>
                                 <span style="font-size:9px; font-weight:600; color:#6366f1;">{{ $sufijoVenta }}</span>
                             </div>
+                            @if($empresaContexto['puede_ver_stock'] ?? true)
                             <div class="inline-flex items-center justify-center rounded-full border shadow-sm {{ $stockBadgeClasses }}"
                                  style="width:120px; padding:4px 8px; font-size:10px; font-weight:700; text-align:center;">
                                 Stock: {{ $stockTexto }}
                             </div>
+                            @endif
                         </div>
                         <button wire:click="agregarAlCarrito({{ $product->id_producto }})"
                                 style="width:88px; flex-shrink:0; background:#4f46e5; color:white; border:none; border-radius:9999px; padding:8px 6px; font-size:12px; font-weight:600; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.2);"
@@ -173,7 +175,7 @@
                         <div style="width:100%;">
                             <button type="button"
                                 title="{{ $product->descripcion_larga }}"
-                                @click="$dispatch('ver-nombre-producto-mobile', { nombre: @js($product->descripcion_larga), stock: @js($stockTexto) })"
+                                @click="$dispatch('ver-nombre-producto-mobile', { nombre: @js($product->descripcion_larga), stock: @js(($empresaContexto['puede_ver_stock'] ?? true) ? $stockTexto : null) })"
                                 style="width:100%; text-align:left; font-size:9px; font-weight:600; line-height:1.2; color:#334155; word-break:break-word; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; background:none; border:none; padding:0; cursor:pointer;">
                                 {{ $product->descripcion_larga }}
                             </button>
@@ -193,10 +195,12 @@
                                 <span>${{ number_format($product->precio_venta1, 0, ',', '.') }}</span>
                                 <span style="font-size:7px; font-weight:600; color:#6366f1;">{{ $sufijoVenta }}</span>
                             </div>
+                            @if($empresaContexto['puede_ver_stock'] ?? true)
                             <div class="inline-flex items-center justify-center rounded-full border shadow-sm {{ $stockBadgeClasses }}"
                                  style="width:86px; padding:3px 6px; font-size:8px; font-weight:700; text-align:center;">
                                 Stock: {{ $stockTexto }}
                             </div>
+                            @endif
                         </div>
                         <button wire:click="agregarAlCarrito({{ $product->id_producto }})"
                                 style="width:68px; flex-shrink:0; background:#4f46e5; color:white; border:none; border-radius:9999px; padding:6px 4px; font-size:10px; font-weight:600; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.2);"

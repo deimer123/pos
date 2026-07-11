@@ -31,42 +31,39 @@ class ConfiguracionEmpresaResource extends Resource
         return auth()->check() && auth()->user()->hasAnyRole(['super_admin', 'admin_empresa']);
     }
 
-    public static function form(Form $form): Form
+    protected static function wizardSteps(): array
     {
-        return $form->schema([
-            Forms\Components\Hidden::make('empresa_id')
-                ->default(auth()->id()),
-
-            Forms\Components\Section::make('Información de la Empresa')
+        return [
+            Forms\Components\Wizard\Step::make('Información de la Empresa')
                 ->schema([
                     Forms\Components\TextInput::make('nombre_empresa')
                         ->label('Nombre de la Empresa')
                         ->required()
                         ->maxLength(255),
-                        
+
                     Forms\Components\TextInput::make('representante_legal')
                         ->label('Representante Legal')
                         ->required()
                         ->maxLength(255),
-                        
+
                     Forms\Components\TextInput::make('nit')
                         ->label('NIT')
                         ->required()
                         ->maxLength(20),
-                        
+
                     Forms\Components\TextInput::make('telefono')
                         ->label('Teléfono')
                         ->tel()
                         ->maxLength(20),
-                        
+
                     Forms\Components\Textarea::make('direccion')
                         ->label('Dirección')
                         ->maxLength(500),
-                        
+
                     Forms\Components\TextInput::make('lema')
                         ->label('Lema')
                         ->maxLength(255),
-                        
+
                     Forms\Components\FileUpload::make('logo')
                         ->label('Logo')
                         ->image()
@@ -77,7 +74,7 @@ class ConfiguracionEmpresaResource extends Resource
                         ->maxSize(2048),
                 ]),
 
-            Forms\Components\Section::make('Modo de negocio')
+            Forms\Components\Wizard\Step::make('Tipo de negocio')
                 ->schema([
                     Forms\Components\Select::make('tipo_negocio')
                         ->label('Tipo de negocio')
@@ -89,71 +86,123 @@ class ConfiguracionEmpresaResource extends Resource
                             'panaderia' => 'Panadería',
                             'farmacia' => 'Farmacia',
                             'servicios' => 'Servicios',
+                            'taller' => 'Taller / Mecánica',
+                            'hotel' => 'Hotel',
                             'mixto' => 'Mixto',
                             'otro' => 'Otro',
                         ])
+                        ->live()
                         ->required()
-                        ->default('tienda'),
-
-                    Forms\Components\Grid::make(2)
-                        ->schema([
-                            Forms\Components\Toggle::make('usa_mesas')
-                                ->label('Usa mesas')
-                                ->helperText('Actívalo solo si el negocio atiende por mesa.'),
-
-                            Forms\Components\Toggle::make('usa_cocina')
-                                ->label('Usa cocina')
-                                ->helperText('Para negocios que envían pedidos a cocina.'),
-
-                            Forms\Components\Toggle::make('usa_recetas')
-                                ->label('Usa recetas')
-                                ->helperText('Útil cuando un producto descuenta ingredientes.'),
-
-                            Forms\Components\Toggle::make('usa_variantes')
-                                ->label('Usa variantes')
-                                ->helperText('Ejemplo: talla, color, sabor o presentación.'),
-
-                            Forms\Components\Toggle::make('usa_peso')
-                                ->label('Vende por peso')
-                                ->helperText('Ideal para carnicería, fruver o productos a granel.'),
-
-                            Forms\Components\Toggle::make('usa_servicios')
-                                ->label('Vende servicios')
-                                ->helperText('Para mano de obra, horas o servicios intangibles. El % de ganancia se configura en cada servicio, en el menú Servicios.'),
-
-                            Forms\Components\Toggle::make('usa_domicilios')
-                                ->label('Usa domicilios')
-                                ->helperText('Activa el módulo de pedidos a domicilio y repartidores.'),
-
-                            Forms\Components\Toggle::make('usa_taller')
-                                ->label('Usa taller')
-                                ->helperText('Activa el módulo de taller: órdenes de trabajo, vehículos y repuestos.'),
-
-                            Forms\Components\Toggle::make('usa_hotel')
-                                ->label('Usa hotel')
-                                ->live()
-                                ->helperText('Activa el módulo de hotel: habitaciones, reservas y hospedaje por noche.'),
-
-                            Forms\Components\TimePicker::make('hotel_hora_inicio_dia')
-                                ->label('Hora en que empieza el día del hotel')
-                                ->seconds(false)
-                                ->default('14:00')
-                                ->helperText('Ej: 2:00pm. Se usa para calcular las noches cuando no se define fecha de salida al reservar.')
-                                ->visible(fn (Forms\Get $get) => (bool) $get('usa_hotel')),
-
-                            Forms\Components\Toggle::make('permite_stock_negativo')
-                                ->label('Permitir stock negativo')
-                                ->helperText('Deja vender aunque no haya inventario suficiente.'),
-
-                            Forms\Components\Toggle::make('imprime_ticket')
-                                ->label('Imprime ticket')
-                                ->default(true),
-
-                            Forms\Components\Toggle::make('mostrar_iva_separado')
-                                ->label('Mostrar IVA separado')
-                                ->helperText('Sirve para pantallas y reportes con IVA desglosado.'),
-                        ]),
+                        ->default('tienda')
+                        ->helperText('Según lo que elijas, en los siguientes pasos solo verás los ajustes que aplican a tu negocio.'),
                 ]),
+
+            Forms\Components\Wizard\Step::make('Restaurante')
+                ->visible(fn (Forms\Get $get) => in_array($get('tipo_negocio'), ['restaurante', 'mixto']))
+                ->schema([
+                    Forms\Components\Toggle::make('usa_mesas')
+                        ->label('Usa mesas')
+                        ->helperText('Actívalo solo si el negocio atiende por mesa.'),
+
+                    Forms\Components\Toggle::make('usa_cocina')
+                        ->label('Usa cocina')
+                        ->helperText('Para negocios que envían pedidos a cocina.'),
+
+                    Forms\Components\Toggle::make('usa_domicilios')
+                        ->label('Usa domicilios')
+                        ->helperText('Activa el módulo de pedidos a domicilio y repartidores.'),
+
+                    Forms\Components\Toggle::make('usa_recetas')
+                        ->label('Usa recetas')
+                        ->helperText('Útil cuando un producto descuenta ingredientes.'),
+                ]),
+
+            Forms\Components\Wizard\Step::make('Hotel')
+                ->visible(fn (Forms\Get $get) => in_array($get('tipo_negocio'), ['hotel', 'mixto']))
+                ->schema([
+                    Forms\Components\Toggle::make('usa_hotel')
+                        ->label('Usa hotel')
+                        ->default(true)
+                        ->helperText('En negocios "Mixto" decides aquí si activas el módulo de hotel; en "Hotel" queda activo siempre.')
+                        ->visible(fn (Forms\Get $get) => $get('tipo_negocio') === 'mixto'),
+
+                    Forms\Components\TimePicker::make('hotel_hora_inicio_dia')
+                        ->label('Hora en que empieza el día del hotel')
+                        ->seconds(false)
+                        ->default('14:00')
+                        ->helperText('Ej: 2:00pm. Se usa para calcular las noches cuando no se define fecha de salida al reservar.'),
+                ]),
+
+            Forms\Components\Wizard\Step::make('Taller')
+                ->visible(fn (Forms\Get $get) => in_array($get('tipo_negocio'), ['taller', 'mixto']))
+                ->schema([
+                    Forms\Components\Toggle::make('usa_taller')
+                        ->label('Usa taller')
+                        ->default(true)
+                        ->helperText('En negocios "Mixto" decides aquí si activas el módulo de taller; en "Taller" queda activo siempre.')
+                        ->visible(fn (Forms\Get $get) => $get('tipo_negocio') === 'mixto'),
+
+                    Forms\Components\Placeholder::make('taller_info')
+                        ->label('')
+                        ->content('Los mecánicos, servicios y órdenes de trabajo se configuran luego en los menús "Mecánicos" y "Servicios" del panel de administración.'),
+                ]),
+
+            Forms\Components\Wizard\Step::make('Producto')
+                ->visible(fn (Forms\Get $get) => in_array($get('tipo_negocio'), ['tienda', 'bar', 'carniceria', 'panaderia', 'farmacia', 'servicios', 'mixto', 'otro']))
+                ->schema([
+                    Forms\Components\Toggle::make('usa_variantes')
+                        ->label('Usa variantes')
+                        ->helperText('Ejemplo: talla, color, sabor o presentación.'),
+
+                    Forms\Components\Toggle::make('usa_peso')
+                        ->label('Vende por peso')
+                        ->helperText('Ideal para carnicería, fruver o productos a granel.'),
+
+                    Forms\Components\Toggle::make('usa_servicios')
+                        ->label('Vende servicios')
+                        ->helperText('Para mano de obra, horas o servicios intangibles. El % de ganancia se configura en cada servicio, en el menú Servicios.'),
+                ]),
+
+            Forms\Components\Wizard\Step::make('Reglas de venta')
+                ->schema([
+                    Forms\Components\Toggle::make('permite_stock_negativo')
+                        ->label('Permitir stock negativo')
+                        ->helperText('Deja vender aunque no haya inventario suficiente. Si lo desactivas, se bloqueará la venta cuando la cantidad supere el stock disponible.'),
+
+                    Forms\Components\Toggle::make('imprime_ticket')
+                        ->label('Imprime ticket')
+                        ->default(true),
+
+                    Forms\Components\Toggle::make('mostrar_iva_separado')
+                        ->label('Mostrar IVA separado')
+                        ->helperText('Desglosa el IVA en el ticket/factura.'),
+
+                    Forms\Components\TextInput::make('descuento_maximo_permitido')
+                        ->label('Descuento máximo permitido')
+                        ->numeric()
+                        ->minValue(0)
+                        ->maxValue(100)
+                        ->suffix('%')
+                        ->default(100)
+                        ->helperText('Aplica a todos los roles excepto Admin Empresa. Deja 100 para no limitar.'),
+
+                    Forms\Components\Toggle::make('permite_ver_stock_no_admin')
+                        ->label('Vendedores/meseros/cajeros/taller pueden ver el stock')
+                        ->default(true)
+                        ->helperText('Si lo desactivas, esos roles no verán las existencias en el punto de venta.'),
+                ]),
+        ];
+    }
+
+    public static function form(Form $form): Form
+    {
+        return $form->schema([
+            Forms\Components\Hidden::make('empresa_id')
+                ->default(auth()->id()),
+
+            Forms\Components\Wizard::make(static::wizardSteps())
+                ->columnSpanFull()
+                ->skippable(false),
 
             Forms\Components\Section::make('Facturación Electrónica')
                 ->visible(fn (?ConfiguracionEmpresa $record): bool => (bool) $record?->factus_enabled)

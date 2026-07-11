@@ -73,8 +73,36 @@
 
     <div class="sep"></div>
 
+    @if($config->mostrar_iva_separado ?? false)
+      @php
+        $idsProductosTicket = $factura->detalles->pluck('producto_id')->filter(fn($id) => is_numeric($id))->unique();
+        $ivaPorProductoTicket = \App\Models\Product::where('empresa_id', $factura->empresa_id)
+          ->whereIn('id_producto', $idsProductosTicket)
+          ->pluck('iva_venta', 'id_producto');
+
+        $subtotalBaseTicket = 0;
+        $ivaTotalTicket = 0;
+        foreach ($factura->detalles as $d) {
+          $ivaPctTicket = (float) ($ivaPorProductoTicket[$d->producto_id] ?? 0);
+          $baseLineaTicket = $ivaPctTicket > 0 ? round($d->subtotal / (1 + $ivaPctTicket / 100), 2) : (float) $d->subtotal;
+          $subtotalBaseTicket += $baseLineaTicket;
+          $ivaTotalTicket += round($d->subtotal - $baseLineaTicket, 2);
+        }
+      @endphp
+    @endif
+
     {{-- Totales --}}
     <table>
+      @if($config->mostrar_iva_separado ?? false)
+      <tr>
+        <td>Subtotal</td>
+        <td class="tr">${{ number_format($subtotalBaseTicket,0,',','.') }}</td>
+      </tr>
+      <tr>
+        <td>IVA</td>
+        <td class="tr">${{ number_format($ivaTotalTicket,0,',','.') }}</td>
+      </tr>
+      @endif
       <tr>
         <td class="bold">Total</td>
         <td class="tr bold">${{ number_format($factura->total,0,',','.') }}</td>

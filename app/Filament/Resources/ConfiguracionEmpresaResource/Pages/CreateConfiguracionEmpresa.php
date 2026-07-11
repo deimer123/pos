@@ -30,10 +30,12 @@ class CreateConfiguracionEmpresa extends CreateRecord
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $user = auth()->user();
-        
+
         // Solo asignar empresa_id
         $data['empresa_id'] = $user->id;
-        
+
+        $data = array_merge($data, \App\Models\ConfiguracionEmpresa::flagsModuloParaTipo($data['tipo_negocio'] ?? 'tienda'));
+
         return $data;
     }
 

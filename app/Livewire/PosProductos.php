@@ -16,6 +16,7 @@ class PosProductos extends Component
         'usa_recetas' => false,
         'usa_servicios' => false,
         'nombre_empresa' => null,
+        'puede_ver_stock' => true,
     ];
 
     private function textoUtf8($valor): string
@@ -232,6 +233,7 @@ public function updatedSearch($value)
             'usa_recetas' => (bool) $config->usa_recetas,
             'usa_servicios' => (bool) $config->usa_servicios || (bool) $config->usa_taller,
             'nombre_empresa' => $this->textoUtf8($config->nombre_empresa),
+            'puede_ver_stock' => $user->hasRole('admin_empresa') || (bool) ($config->permite_ver_stock_no_admin ?? true),
         ];
     }
 }
