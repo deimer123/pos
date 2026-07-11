@@ -32,6 +32,11 @@ class FamiliaResource extends Resource
             Forms\Components\TextInput::make('nombre')
                 ->label('Nombre de la familia')
                 ->required(),
+
+            Forms\Components\Toggle::make('mostrar_en_catalogo')
+                ->label('Mostrar en el catálogo público')
+                ->default(true)
+                ->helperText('Desactívala para ocultar esta familia (y sus productos) del catálogo que ven tus clientes.'),
         ]);
     }
 
@@ -39,6 +44,7 @@ class FamiliaResource extends Resource
     {
         return $table->columns([
             Tables\Columns\TextColumn::make('nombre')->label('Nombre')->searchable(),
+            Tables\Columns\IconColumn::make('mostrar_en_catalogo')->label('En catálogo')->boolean(),
         ]);
     }
 

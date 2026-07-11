@@ -41,6 +41,11 @@ class SubfamiliaResource extends Resource
             Forms\Components\TextInput::make('nombre')
                 ->label('Nombre de la subfamilia')
                 ->required(),
+
+            Forms\Components\Toggle::make('mostrar_en_catalogo')
+                ->label('Mostrar en el catálogo público')
+                ->default(true)
+                ->helperText('Desactívala para ocultar esta subfamilia (y sus productos) del catálogo que ven tus clientes.'),
         ]);
     }
 
@@ -49,6 +54,7 @@ class SubfamiliaResource extends Resource
         return $table->columns([
             Tables\Columns\TextColumn::make('familia.nombre')->label('Familia'),
             Tables\Columns\TextColumn::make('nombre')->label('Nombre')->searchable(),
+            Tables\Columns\IconColumn::make('mostrar_en_catalogo')->label('En catálogo')->boolean(),
         ]);
     }
 

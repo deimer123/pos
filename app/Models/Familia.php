@@ -14,7 +14,11 @@ class Familia extends Model
     // así que NO necesitamos override de $table ni de $primaryKey
 
     // Si quieres asignar en masa:
-    protected $fillable = ['nombre', 'empresa_id'];
+    protected $fillable = ['nombre', 'empresa_id', 'mostrar_en_catalogo'];
+
+    protected $casts = [
+        'mostrar_en_catalogo' => 'boolean',
+    ];
 
     /**
      * Una Familia tiene muchas Subfamilias,

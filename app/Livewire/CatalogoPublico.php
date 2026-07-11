@@ -25,9 +25,20 @@ class CatalogoPublico extends Component
 
     public function getProductosProperty()
     {
+        $palabras = array_filter(preg_split('/\s+/', trim($this->busqueda)));
+
         return Product::where('empresa_id', $this->config->empresa_id)
             ->where('mostrar_en_catalogo', true)
-            ->when($this->busqueda, fn ($q) => $q->where('descripcion_larga', 'like', '%' . $this->busqueda . '%'))
+            ->whereHas('familia1', fn ($q) => $q->where('mostrar_en_catalogo', true))
+            ->where(function ($q) {
+                $q->whereNull('id_familia2')
+                    ->orWhereHas('subfamilia', fn ($qq) => $qq->where('mostrar_en_catalogo', true));
+            })
+            ->when(! empty($palabras), function ($q) use ($palabras) {
+                foreach ($palabras as $palabra) {
+                    $q->where('descripcion_larga', 'like', '%' . $palabra . '%');
+                }
+            })
             ->with(['familia1', 'subfamilia'])
             ->orderBy('descripcion_larga')
             ->get()
