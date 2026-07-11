@@ -109,11 +109,23 @@
                         @foreach($ocupacion['habitaciones'] as $habitacion)
                             <tr>
                                 <td style="position:sticky; left:0; background:#fff; padding:4px 12px 4px 0; font-weight:600; white-space:nowrap;">{{ $habitacion->numero }}</td>
+                                @php
+                                    $colorEstado = [
+                                        'reservada' => '#93c5fd',
+                                        'checkin' => '#fbbf24',
+                                        'checkout' => '#22c55e',
+                                    ];
+                                    $labelEstado = [
+                                        'reservada' => 'Reservada (aún no llega)',
+                                        'checkin' => 'Ocupada, sin facturar',
+                                        'checkout' => 'Ocupada y facturada',
+                                    ];
+                                @endphp
                                 @foreach($ocupacion['dias'] as $dia)
-                                    @php $ocupada = $ocupacion['ocupado'][$habitacion->id][$dia->toDateString()] ?? false; @endphp
+                                    @php $estado = $ocupacion['ocupado'][$habitacion->id][$dia->toDateString()] ?? null; @endphp
                                     <td style="padding:4px 4px; text-align:center;">
-                                        <span style="display:inline-block; width:16px; height:16px; border-radius:4px; background:{{ $ocupada ? '#22c55e' : '#e5e7eb' }};"
-                                            title="{{ $dia->format('d/m/Y') }} — {{ $ocupada ? 'Ocupada' : 'Libre' }}"></span>
+                                        <span style="display:inline-block; width:16px; height:16px; border-radius:4px; background:{{ $colorEstado[$estado] ?? '#e5e7eb' }};"
+                                            title="{{ $dia->format('d/m/Y') }} — {{ $labelEstado[$estado] ?? 'Libre' }}"></span>
                                     </td>
                                 @endforeach
                             </tr>
@@ -121,8 +133,10 @@
                     </tbody>
                 </table>
             </div>
-            <div style="margin-top:12px; display:flex; align-items:center; gap:16px; font-size:12px; color:#6b7280;">
-                <span style="display:flex; align-items:center; gap:4px;"><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#22c55e;"></span> Ocupada</span>
+            <div style="margin-top:12px; display:flex; flex-wrap:wrap; align-items:center; gap:16px; font-size:12px; color:#6b7280;">
+                <span style="display:flex; align-items:center; gap:4px;"><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#22c55e;"></span> Ocupada y facturada</span>
+                <span style="display:flex; align-items:center; gap:4px;"><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#fbbf24;"></span> Ocupada, sin facturar</span>
+                <span style="display:flex; align-items:center; gap:4px;"><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#93c5fd;"></span> Reservada (aún no llega)</span>
                 <span style="display:flex; align-items:center; gap:4px;"><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#e5e7eb;"></span> Libre</span>
             </div>
         @endif

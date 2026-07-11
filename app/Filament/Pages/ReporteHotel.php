@@ -192,7 +192,7 @@ class ReporteHotel extends Page
             ->get();
     }
 
-    /** Devuelve ['habitaciones' => Collection, 'dias' => [Carbon...], 'ocupado' => [habitacion_id][Y-m-d] => bool, 'porcentaje' => float] */
+    /** Devuelve ['habitaciones' => Collection, 'dias' => [Carbon...], 'ocupado' => [habitacion_id][Y-m-d] => 'reservada'|'checkin'|'checkout'|null, 'porcentaje' => float] */
     public function ocupacion(): array
     {
         [$desde, $hasta] = $this->rango();
@@ -216,20 +216,22 @@ class ReporteHotel extends Page
 
             foreach ($dias as $dia) {
                 $diaStr = $dia->toDateString();
-                $marcada = false;
+                $estado = null;
 
                 foreach ($reservasHabitacion as $reserva) {
                     $fin = $reserva->fecha_checkout?->toDateString() ?? $hoy;
 
                     if ($diaStr >= $reserva->fecha_checkin->toDateString() && $diaStr <= $fin) {
-                        $marcada = true;
+                        // reservada = aún no llega; checkin = hospedado sin facturar
+                        // todavía; checkout = ya se facturó su salida.
+                        $estado = $reserva->estado;
                         break;
                     }
                 }
 
-                $ocupado[$habitacion->id][$diaStr] = $marcada;
+                $ocupado[$habitacion->id][$diaStr] = $estado;
 
-                if ($marcada) {
+                if ($estado) {
                     $celdasOcupadas++;
                 }
             }
