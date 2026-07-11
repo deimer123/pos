@@ -195,6 +195,11 @@
                     @if($camasTexto)
                     <div style="font-size:10px; color:#94a3b8; margin-bottom:6px;">🛏️ {{ $camasTexto }}</div>
                     @endif
+                    @if($h->proxima_reserva)
+                    <div style="font-size:9px; font-weight:700; color:#92400e; background:#fef3c7; border-radius:6px; padding:3px 6px; margin-bottom:6px;">
+                        ⚠️ Reserva {{ $h->proxima_reserva->fecha_checkin->format('d/m') }}
+                    </div>
+                    @endif
                     <div style="font-size:11px; font-weight:800; color:#7c3aed; margin-bottom:8px;">
                         ${{ number_format($h->precio_desde, 0, ',', '.') }}/noche
                     </div>
@@ -422,6 +427,13 @@
                         <div style="font-size:10px; color:#16a34a; text-transform:uppercase; font-weight:700;">Precio habitación sola (1 persona)</div>
                         <div style="font-size:20px; font-weight:900; color:#16a34a;">${{ number_format($hSel->precio_desde, 0, ',', '.') }} / noche</div>
                     </div>
+
+                    @if($resInmediato && $this->proximaReservaSeleccionada)
+                    <div style="background:#fef3c7; border:1px solid #f59e0b; border-radius:8px; padding:10px 12px; margin-bottom:12px; font-size:11px; color:#92400e;">
+                        ⚠️ Esta habitación ya tiene una reserva para el <b>{{ $this->proximaReservaSeleccionada->fecha_checkin->format('d/m/Y') }}</b>
+                        ({{ $this->proximaReservaSeleccionada->huesped_nombre }}). Solo está disponible hasta esa fecha — avísale al huésped.
+                    </div>
+                    @endif
 
                     @if($hSel->tiene_aire || $hSel->tiene_ventilador)
                     <div style="margin-bottom:12px;">

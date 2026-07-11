@@ -467,6 +467,23 @@ class HotelPanel extends Component
         return HotelHabitacion::where('empresa_id', $this->empresaId())->find($this->resHabitacionId);
     }
 
+    // Si la habitación que se está por ocupar (entrada inmediata) ya tiene
+    // una reserva futura, hay que avisarle al recepcionista de una vez para
+    // que le informe al huésped hasta cuándo puede quedarse.
+    public function getProximaReservaSeleccionadaProperty(): ?HotelReserva
+    {
+        if (! $this->resHabitacionId) {
+            return null;
+        }
+
+        return HotelReserva::where('habitacion_id', $this->resHabitacionId)
+            ->when($this->reservaId, fn ($q) => $q->where('id', '!=', $this->reservaId))
+            ->where('estado', 'reservada')
+            ->whereDate('fecha_checkin', '>', now()->toDateString())
+            ->orderBy('fecha_checkin')
+            ->first();
+    }
+
     public function getPrecioNocheReservaProperty(): float
     {
         $habitacion = $this->habitacionSeleccionada;
