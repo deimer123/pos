@@ -179,13 +179,22 @@
         {{-- Disponibles: tarjeta chica, solo lo esencial para dar entrada rápido --}}
         <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px;">
             @foreach($habitaciones as $h)
+                @php
+                    $camas = [];
+                    if ($h->camas_dobles > 0) $camas[] = $h->camas_dobles . ' doble' . ($h->camas_dobles > 1 ? 's' : '');
+                    if ($h->camas_sencillas > 0) $camas[] = $h->camas_sencillas . ' sencilla' . ($h->camas_sencillas > 1 ? 's' : '');
+                    $camasTexto = implode(' · ', $camas);
+                @endphp
                 <div style="background:white; border-radius:12px; padding:10px; box-shadow:0 1px 3px rgba(0,0,0,.08); border:3px solid #22c55e;">
                     <div style="font-size:15px; font-weight:900; color:#1f2937;">🚪 {{ $h->numero }}</div>
-                    <div style="display:flex; align-items:center; gap:6px; font-size:11px; color:#6b7280; margin:4px 0 8px;">
+                    <div style="display:flex; align-items:center; gap:6px; font-size:11px; color:#6b7280; margin:4px 0 2px;">
                         <span>👥 {{ $h->capacidad_maxima }}</span>
                         @if($h->tiene_aire)<span>❄️</span>@endif
                         @if($h->tiene_ventilador)<span>🌀</span>@endif
                     </div>
+                    @if($camasTexto)
+                    <div style="font-size:10px; color:#94a3b8; margin-bottom:6px;">🛏️ {{ $camasTexto }}</div>
+                    @endif
                     <div style="font-size:11px; font-weight:800; color:#7c3aed; margin-bottom:8px;">
                         ${{ number_format($h->precio_desde, 0, ',', '.') }}/noche
                     </div>
@@ -221,12 +230,21 @@
                         </span>
                     </div>
 
-                    <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:#6b7280; margin-bottom:10px;">
+                    @php
+                        $camas = [];
+                        if ($h->camas_dobles > 0) $camas[] = $h->camas_dobles . ' doble' . ($h->camas_dobles > 1 ? 's' : '');
+                        if ($h->camas_sencillas > 0) $camas[] = $h->camas_sencillas . ' sencilla' . ($h->camas_sencillas > 1 ? 's' : '');
+                        $camasTexto = implode(' · ', $camas);
+                    @endphp
+                    <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:#6b7280; margin-bottom:2px;">
                         <span>👥 {{ $h->capacidad_maxima }}</span>
                         @if($h->tiene_aire)<span title="Aire disponible">❄️</span>@endif
                         @if($h->tiene_ventilador)<span title="Ventilador disponible">🌀</span>@endif
                         <span style="margin-left:auto; font-weight:800; color:#7c3aed;">${{ number_format($h->precio_desde, 0, ',', '.') }}<span style="font-weight:600; color:#a78bfa;">/noche</span></span>
                     </div>
+                    @if($camasTexto)
+                    <div style="font-size:11px; color:#94a3b8; margin-bottom:8px;">🛏️ {{ $camasTexto }}</div>
+                    @endif
 
                     @if($r)
                     <div style="background:#f8fafc; border-radius:10px; padding:10px; margin-bottom:10px;">
