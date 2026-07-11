@@ -223,8 +223,10 @@ class HotelPanel extends Component
 
     // ── Reservas ──────────────────────────────────────────────────────────
 
-    public function abrirNuevaReserva(?int $habitacionId = null, bool $inmediato = false): void
+    public function abrirNuevaReserva(?int $habitacionId = null, bool $inmediato = false, ?string $fecha = null): void
     {
+        $fechaCheckin = $fecha ?: now()->toDateString();
+
         $this->reservaId            = null;
         $this->resHabitacionId      = $habitacionId;
         $this->resHabitacionBloqueada = $habitacionId !== null;
@@ -235,8 +237,8 @@ class HotelPanel extends Component
         $this->resHuespedDocumento  = '';
         $this->resClimatizacion     = 'ninguno';
         $this->resNumeroPersonas    = '1';
-        $this->resFechaCheckin      = now()->toDateString();
-        $this->resFechaCheckout     = $inmediato ? '' : now()->addDay()->toDateString();
+        $this->resFechaCheckin      = $fechaCheckin;
+        $this->resFechaCheckout     = $inmediato ? '' : Carbon::parse($fechaCheckin)->addDay()->toDateString();
         $this->resObservaciones     = '';
         $this->resAbonoMonto        = '';
         $this->resAbonoMedioPago    = 'Efectivo';

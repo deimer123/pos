@@ -358,7 +358,7 @@
                                 @endphp
                                 <td title="{{ $res ? $res->huesped_nombre . ' (clic para ver la reserva)' : 'Libre' }}"
                                     style="padding:6px; text-align:center; border:1px solid #e2e8f0; background:{{ $bg }}; cursor:pointer;"
-                                    wire:click="{{ $res ? 'verReserva(' . $res->id . ')' : 'abrirNuevaReserva(' . $fila['habitacion']->id . ')' }}">
+                                    wire:click="{{ $res ? 'verReserva(' . $res->id . ')' : 'abrirNuevaReserva(' . $fila['habitacion']->id . ", false, '" . $celda['fecha'] . "')" }}">
                                     @if($res)
                                         <span style="font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; max-width:56px;">{{ $res->huesped_nombre }}</span>
                                     @endif
