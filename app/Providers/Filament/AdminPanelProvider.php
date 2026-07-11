@@ -67,6 +67,7 @@ class AdminPanelProvider extends PanelProvider
         ->authMiddleware([
             Authenticate::class,
             \App\Http\Middleware\RestrictVendedorFromPanel::class, // ✔️ Bloquea acceso a vendedores
+            \App\Http\Middleware\RequireConfiguracionEmpresa::class, // ✔️ Bloquea todo el panel hasta completar el wizard de configuración
         ])
         ->userMenuItems([
             UserMenuItem::make()
