@@ -274,14 +274,18 @@ private function descuentoMaximoPermitido(int $empresaId): ?float
 
 private function clampDescuento(float $descuento, int $empresaId): float
 {
+    // El % de descuento se guarda en negativo (ej. -20 = 20% off), ya que
+    // nuevo_precio = precio_base * (1 + descuento/100). El límite configurado
+    // es un porcentaje positivo ("hasta 20% de descuento"), así que se compara
+    // contra -$max. Los valores positivos (recargo/markup) no se limitan aquí.
     $max = $this->descuentoMaximoPermitido($empresaId);
 
-    if ($max !== null && $descuento > $max) {
+    if ($max !== null && $descuento < -$max) {
         $this->dispatch('error', "El descuento máximo permitido es {$max}%.");
-        return $max;
+        return -$max;
     }
 
-    return max(0, $descuento);
+    return $descuento;
 }
 
 private function textoUtf8($valor): string
