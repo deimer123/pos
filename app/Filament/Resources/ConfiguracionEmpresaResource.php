@@ -153,7 +153,7 @@ class ConfiguracionEmpresaResource extends Resource
                     Forms\Components\Toggle::make('usa_peso')
                         ->label('Vende por peso')
                         ->helperText('Ideal para carnicería, fruver o productos a granel.')
-                        ->visible(fn (Forms\Get $get) => $get('tipo_negocio') !== 'panaderia'),
+                        ->visible(fn (Forms\Get $get) => ! in_array($get('tipo_negocio'), ['panaderia', 'farmacia'])),
 
                     Forms\Components\Toggle::make('usa_mesas')
                         ->label('Usa mesas')
