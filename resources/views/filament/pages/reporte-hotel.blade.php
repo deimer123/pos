@@ -3,6 +3,7 @@
         $totalProductos = $this->totalProductos();
         $utilidadProductos = $this->utilidadProductos();
         $totalHospedaje = $this->totalHospedaje();
+        $totalGeneral = $totalProductos + $totalHospedaje;
         $utilidadTotal = $utilidadProductos + $totalHospedaje;
         $porHabitacion = $this->reportePorHabitacion();
         $ocupacion = $this->ocupacion();
@@ -32,15 +33,15 @@
 
         <div style="flex:1 1 220px; min-width:220px;">
             <x-filament::section>
-                <div style="font-size:13px; color:#6b7280;">Utilidad Productos</div>
-                <div style="font-size:24px; font-weight:700;">{{ $money($utilidadProductos) }}</div>
+                <div style="font-size:13px; color:#6b7280;">Total Hospedaje (100% utilidad)</div>
+                <div style="font-size:24px; font-weight:700;">{{ $money($totalHospedaje) }}</div>
             </x-filament::section>
         </div>
 
         <div style="flex:1 1 220px; min-width:220px;">
             <x-filament::section>
-                <div style="font-size:13px; color:#6b7280;">Total Hospedaje (100% utilidad)</div>
-                <div style="font-size:24px; font-weight:700;">{{ $money($totalHospedaje) }}</div>
+                <div style="font-size:13px; color:#6b7280;">Total (Productos + Hospedaje)</div>
+                <div style="font-size:24px; font-weight:700;">{{ $money($totalGeneral) }}</div>
             </x-filament::section>
         </div>
 
