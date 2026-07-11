@@ -528,7 +528,7 @@
                         formato(v) { const limpio = String(v || '').replace(/\D/g, ''); return limpio ? Number(limpio).toLocaleString('es-CO') : ''; },
                         limpiar(v) { return String(v || '').replace(/\D/g, ''); }
                     }">
-                    <label style="font-size:11px; font-weight:700; color:#92400e; display:block; margin-bottom:6px;">💰 Abono (opcional)</label>
+                    <label style="font-size:11px; font-weight:700; color:#92400e; display:block; margin-bottom:6px;">💰 Abono{{ $resInmediato ? ' (opcional)' : ' *' }}</label>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
                         <div>
                             <input type="text" inputmode="numeric" placeholder="0"
@@ -544,7 +544,14 @@
                             </select>
                         </div>
                     </div>
-                    <div style="font-size:9px; color:#92400e; margin-top:4px;">Si registras un abono, se descuenta del total a cobrar en la salida y queda registrado como entrada de caja.</div>
+                    @error('resAbonoMonto') <span style="font-size:10px; color:#ef4444; display:block; margin-top:4px;">{{ $message }}</span> @enderror
+                    <div style="font-size:9px; color:#92400e; margin-top:4px;">
+                        @if($resInmediato)
+                            Si registras un abono, se descuenta del total a cobrar en la salida y queda registrado como entrada de caja.
+                        @else
+                            Para asegurar la reserva se requiere un abono. Se descuenta del total a cobrar en la salida y queda registrado como entrada de caja.
+                        @endif
+                    </div>
                 </div>
                 @endif
 

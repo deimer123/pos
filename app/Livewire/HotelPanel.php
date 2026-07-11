@@ -524,6 +524,13 @@ class HotelPanel extends Component
             'resFechaCheckout.after'     => 'La fecha de salida debe ser posterior a la de entrada.',
         ]);
 
+        // Una reserva a futuro (no entrada inmediata) exige abono para
+        // asegurarla — evita que se "aparten" habitaciones sin compromiso.
+        if (! $this->reservaId && ! $this->resInmediato && (float) $this->resAbonoMonto <= 0) {
+            $this->addError('resAbonoMonto', 'Debes registrar un abono para asegurar la reserva.');
+            return;
+        }
+
         $empresaId = $this->empresaId();
 
         $habitacion = HotelHabitacion::where('empresa_id', $empresaId)->find($this->resHabitacionId);
