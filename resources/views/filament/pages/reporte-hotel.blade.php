@@ -8,92 +8,102 @@
         $money = fn ($valor) => '$ ' . number_format((float) $valor, 0, ',', '.');
     @endphp
 
-    <div class="flex flex-wrap items-end gap-4 mb-6">
+    <div style="display:flex; flex-wrap:wrap; align-items:flex-end; gap:16px; margin-bottom:24px;">
         <div>
-            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Desde</label>
+            <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:4px;">Desde</label>
             <input type="date" wire:model.live="desde"
-                class="mt-1 block rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm">
+                style="border:1px solid #d1d5db; border-radius:8px; padding:6px 10px; font-size:13px;">
         </div>
         <div>
-            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Hasta</label>
+            <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:4px;">Hasta</label>
             <input type="date" wire:model.live="hasta"
-                class="mt-1 block rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm">
+                style="border:1px solid #d1d5db; border-radius:8px; padding:6px 10px; font-size:13px;">
         </div>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <x-filament::section>
-            <div class="text-sm text-gray-500">Utilidad Productos</div>
-            <div class="text-2xl font-bold">{{ $money($productos) }}</div>
-        </x-filament::section>
+    <div style="display:flex; flex-wrap:wrap; gap:16px; margin-bottom:24px;">
+        <div style="flex:1 1 220px; min-width:220px;">
+            <x-filament::section>
+                <div style="font-size:13px; color:#6b7280;">Utilidad Productos</div>
+                <div style="font-size:24px; font-weight:700;">{{ $money($productos) }}</div>
+            </x-filament::section>
+        </div>
 
-        <x-filament::section>
-            <div class="text-sm text-gray-500">Utilidad Hospedaje (100%)</div>
-            <div class="text-2xl font-bold">{{ $money($hospedaje) }}</div>
-        </x-filament::section>
+        <div style="flex:1 1 220px; min-width:220px;">
+            <x-filament::section>
+                <div style="font-size:13px; color:#6b7280;">Utilidad Hospedaje (100%)</div>
+                <div style="font-size:24px; font-weight:700;">{{ $money($hospedaje) }}</div>
+            </x-filament::section>
+        </div>
 
-        <x-filament::section>
-            <div class="text-sm text-gray-500">Utilidad Total</div>
-            <div class="text-2xl font-bold">{{ $money($total) }}</div>
-        </x-filament::section>
+        <div style="flex:1 1 220px; min-width:220px;">
+            <x-filament::section>
+                <div style="font-size:13px; color:#6b7280;">Utilidad Total</div>
+                <div style="font-size:24px; font-weight:700;">{{ $money($total) }}</div>
+            </x-filament::section>
+        </div>
 
-        <x-filament::section>
-            <div class="text-sm text-gray-500">Ocupación del rango</div>
-            <div class="text-2xl font-bold">{{ number_format($ocupacion['porcentaje'], 2, ',', '.') }}%</div>
-        </x-filament::section>
+        <div style="flex:1 1 220px; min-width:220px;">
+            <x-filament::section>
+                <div style="font-size:13px; color:#6b7280;">Ocupación del rango</div>
+                <div style="font-size:24px; font-weight:700;">{{ number_format($ocupacion['porcentaje'], 2, ',', '.') }}%</div>
+            </x-filament::section>
+        </div>
     </div>
 
-    <x-filament::section heading="Ingresos por habitación" class="mb-8">
-        @if(empty($porHabitacion))
-            <p class="text-sm text-gray-500">No hay hospedajes facturados en este rango de fechas.</p>
-        @else
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead>
-                        <tr class="text-left border-b border-gray-200 dark:border-gray-700">
-                            <th class="py-2 pr-4">Habitación</th>
-                            <th class="py-2 pr-4">Reservas</th>
-                            <th class="py-2 pr-4">Noches</th>
-                            <th class="py-2 pr-4">Ingresos</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($porHabitacion as $fila)
-                            <tr class="border-b border-gray-100 dark:border-gray-800">
-                                <td class="py-2 pr-4 font-medium">{{ $fila['habitacion'] }}</td>
-                                <td class="py-2 pr-4">{{ $fila['reservas'] }}</td>
-                                <td class="py-2 pr-4">{{ $fila['noches'] }}</td>
-                                <td class="py-2 pr-4">{{ $money($fila['ingresos']) }}</td>
+    <div style="margin-bottom:24px;">
+        <x-filament::section heading="Ingresos por habitación">
+            @if(empty($porHabitacion))
+                <p style="font-size:13px; color:#6b7280;">No hay hospedajes facturados en este rango de fechas.</p>
+            @else
+                <div style="overflow-x:auto;">
+                    <table style="width:100%; font-size:13px; border-collapse:collapse;">
+                        <thead>
+                            <tr style="text-align:left; border-bottom:1px solid #e5e7eb;">
+                                <th style="padding:8px 16px 8px 0;">Habitación</th>
+                                <th style="padding:8px 16px 8px 0;">Reservas</th>
+                                <th style="padding:8px 16px 8px 0;">Noches</th>
+                                <th style="padding:8px 16px 8px 0;">Ingresos</th>
                             </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        @endif
-    </x-filament::section>
+                        </thead>
+                        <tbody>
+                            @foreach($porHabitacion as $fila)
+                                <tr style="border-bottom:1px solid #f3f4f6;">
+                                    <td style="padding:8px 16px 8px 0; font-weight:600;">{{ $fila['habitacion'] }}</td>
+                                    <td style="padding:8px 16px 8px 0;">{{ $fila['reservas'] }}</td>
+                                    <td style="padding:8px 16px 8px 0;">{{ $fila['noches'] }}</td>
+                                    <td style="padding:8px 16px 8px 0;">{{ $money($fila['ingresos']) }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+        </x-filament::section>
+    </div>
 
     <x-filament::section heading="Ocupación por habitación y día">
         @if($ocupacion['habitaciones']->isEmpty())
-            <p class="text-sm text-gray-500">No hay habitaciones activas configuradas.</p>
+            <p style="font-size:13px; color:#6b7280;">No hay habitaciones activas configuradas.</p>
         @else
-            <div class="overflow-x-auto">
-                <table class="text-xs border-collapse">
+            <div style="overflow-x:auto;">
+                <table style="font-size:11px; border-collapse:collapse;">
                     <thead>
                         <tr>
-                            <th class="sticky left-0 bg-white dark:bg-gray-900 py-1 pr-3 text-left">Habitación</th>
+                            <th style="position:sticky; left:0; background:#fff; padding:4px 12px 4px 0; text-align:left;">Habitación</th>
                             @foreach($ocupacion['dias'] as $dia)
-                                <th class="py-1 px-1 text-center font-normal text-gray-500">{{ $dia->format('d/m') }}</th>
+                                <th style="padding:4px 4px; text-align:center; font-weight:400; color:#6b7280;">{{ $dia->format('d/m') }}</th>
                             @endforeach
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($ocupacion['habitaciones'] as $habitacion)
                             <tr>
-                                <td class="sticky left-0 bg-white dark:bg-gray-900 py-1 pr-3 font-medium whitespace-nowrap">{{ $habitacion->numero }}</td>
+                                <td style="position:sticky; left:0; background:#fff; padding:4px 12px 4px 0; font-weight:600; white-space:nowrap;">{{ $habitacion->numero }}</td>
                                 @foreach($ocupacion['dias'] as $dia)
                                     @php $ocupada = $ocupacion['ocupado'][$habitacion->id][$dia->toDateString()] ?? false; @endphp
-                                    <td class="py-1 px-1 text-center">
-                                        <span class="inline-block w-4 h-4 rounded {{ $ocupada ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700' }}"
+                                    <td style="padding:4px 4px; text-align:center;">
+                                        <span style="display:inline-block; width:16px; height:16px; border-radius:4px; background:{{ $ocupada ? '#22c55e' : '#e5e7eb' }};"
                                             title="{{ $dia->format('d/m/Y') }} — {{ $ocupada ? 'Ocupada' : 'Libre' }}"></span>
                                     </td>
                                 @endforeach
@@ -102,9 +112,9 @@
                     </tbody>
                 </table>
             </div>
-            <div class="mt-3 flex items-center gap-4 text-xs text-gray-500">
-                <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded bg-green-500"></span> Ocupada</span>
-                <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded bg-gray-200 dark:bg-gray-700"></span> Libre</span>
+            <div style="margin-top:12px; display:flex; align-items:center; gap:16px; font-size:12px; color:#6b7280;">
+                <span style="display:flex; align-items:center; gap:4px;"><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#22c55e;"></span> Ocupada</span>
+                <span style="display:flex; align-items:center; gap:4px;"><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#e5e7eb;"></span> Libre</span>
             </div>
         @endif
     </x-filament::section>
