@@ -103,6 +103,12 @@ class ReporteHotel extends Page
             '));
     }
 
+    // Cuando una reserva tiene abono, la factura de salida se parte en dos
+    // líneas (ver CarritoVenta::crearDetalleFactura()): "Hospedaje habitación
+    // X..." por el saldo restante, y "Abono ya recibido al reservar..." por
+    // lo ya cobrado al reservar. Ambas son ingreso real de hospedaje, así que
+    // hay que sumarlas juntas — si solo se cuenta la primera, el abono queda
+    // completamente fuera del reporte.
     private function lineasHospedaje()
     {
         [$desde, $hasta] = $this->rango();
@@ -113,7 +119,10 @@ class ReporteHotel extends Page
             ->where('f.empresa_id', $empresaId)
             ->whereBetween('f.fecha', [$desde, $hasta])
             ->where('fd.producto_id', 0)
-            ->where('fd.descripcion_larga', 'like', 'Hospedaje habitación%')
+            ->where(function ($q) {
+                $q->where('fd.descripcion_larga', 'like', 'Hospedaje habitación%')
+                    ->orWhere('fd.descripcion_larga', 'like', 'Abono ya recibido al reservar%');
+            })
             ->select('fd.factura_id', 'fd.subtotal')
             ->get();
     }
@@ -151,7 +160,9 @@ class ReporteHotel extends Page
             ->get()
             ->keyBy('factura_id');
 
-        $ingresoPorFactura = $lineas->pluck('subtotal', 'factura_id');
+        // groupBy+sum (no pluck) porque una misma factura puede tener dos
+        // líneas de hospedaje (saldo + abono) cuando la reserva tuvo abono.
+        $ingresoPorFactura = $lineas->groupBy('factura_id')->map(fn ($grupo) => $grupo->sum('subtotal'));
 
         $filas = [];
 
