@@ -2003,6 +2003,8 @@ body:has(.fi-simple-layout) {
 .fi-ta-filters-above-content-ctn {
     background: #eef2ff !important;
     border-radius: 16px !important;
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
 }
 
 .producto-linea-1,
