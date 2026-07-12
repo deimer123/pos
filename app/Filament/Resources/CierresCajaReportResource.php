@@ -105,14 +105,6 @@ class CierresCajaReportResource extends Resource
                             $q->whereDate('opened_at', '<=', $date)
                         )),
 
-                Filter::make('mostrar_detalle_cards')
-                    ->label('Cards')
-                    ->form([
-                        Toggle::make('activo')
-                            ->label('Mostrar detalle de cards')
-                            ->default(false),
-                    ])
-                    ->query(fn ($query) => $query),
                 SelectFilter::make('user_id')
                     ->label('Responsable')
                     ->options(fn () =>

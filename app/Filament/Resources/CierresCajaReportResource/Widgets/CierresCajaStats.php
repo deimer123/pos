@@ -28,7 +28,7 @@ class CierresCajaStats extends BaseWidget
             $hasta ? Carbon::parse($hasta)->endOfDay() : null,
         );
 
-        $mostrarDetalle = (bool) data_get($this->tableFilters, 'mostrar_detalle_cards.activo', false);
+        $mostrarDetalle = true;
 
         $stats = [
             Stat::make('Total vendido', $this->money($totals['ventas']))
