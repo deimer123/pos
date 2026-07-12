@@ -64,4 +64,22 @@ class TallerOrden extends Model
     {
         return (float) $this->repuestos->sum('subtotal');
     }
+
+    // Normaliza el teléfono guardado (texto libre, sin formato fijo) al formato
+    // que exige un link wa.me: solo dígitos, con indicativo de país. Si ya
+    // trae 57 (u otro indicativo de más de 10 dígitos) se deja tal cual.
+    public function getTelefonoWhatsappAttribute(): ?string
+    {
+        $digitos = preg_replace('/\D/', '', (string) $this->cliente_telefono);
+
+        if (! $digitos) {
+            return null;
+        }
+
+        if (strlen($digitos) === 10) {
+            $digitos = '57' . $digitos;
+        }
+
+        return $digitos;
+    }
 }

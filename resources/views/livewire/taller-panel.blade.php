@@ -392,6 +392,20 @@
                             📄 PDF
                         </a>
 
+                        {{-- Abre WhatsApp con el número del cliente y un mensaje ya redactado
+                             (no adjunta el PDF: wa.me solo permite texto). --}}
+                        @if($orden->telefono_whatsapp)
+                        @php
+                            $mensajeWhatsapp = "Hola {$orden->cliente_nombre}, te compartimos el resumen de tu orden #"
+                                . str_pad($orden->numero_orden, 4, '0', STR_PAD_LEFT) . " ({$orden->placa}). "
+                                . "Total: $" . number_format($totalRep, 0, ',', '.') . ". Cualquier duda, contáctanos.";
+                        @endphp
+                        <a href="https://wa.me/{{ $orden->telefono_whatsapp }}?text={{ urlencode($mensajeWhatsapp) }}" target="_blank"
+                           style="flex:1; border:none; border-radius:8px; padding:6px 4px; font-size:11px; font-weight:700; cursor:pointer; background:#25D366; color:white; text-decoration:none; text-align:center;">
+                            💬 WhatsApp
+                        </a>
+                        @endif
+
                         @if($esCobrada && $orden->factura_id)
                         <a href="{{ route('factura.ver', $orden->factura_id) }}" target="_blank"
                            style="flex:1; border:none; border-radius:8px; padding:6px 4px; font-size:11px; font-weight:700; cursor:pointer; background:#16a34a; color:white; text-decoration:none; text-align:center;">
