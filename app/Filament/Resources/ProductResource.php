@@ -485,6 +485,7 @@ return \App\Models\Familia::create($data)->id;
         ->schema([
       Grid::make(2)->schema([
     Section::make('Precios Anteriores')
+        ->extraAttributes(['class' => 'producto-linea-1'])
         ->schema([
             Placeholder::make('precio_costo_anterior')
                 ->label('Precio Costo Anterior')
@@ -504,6 +505,7 @@ return \App\Models\Familia::create($data)->id;
         ->columnSpan(1), // ⚠️ clave para que se ajuste a la mitad
 
   Section::make('Códigos Alternos')
+    ->extraAttributes(['class' => 'producto-linea-2'])
     ->schema([
  Repeater::make('alternateCodes')
     ->relationship('alternateCodes')

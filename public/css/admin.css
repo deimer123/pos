@@ -1942,6 +1942,15 @@ body:has(.fi-simple-layout) {
     margin: 0 !important;
 }
 
+/* Cuando el color va sobre una Section independiente (tarjetas lado a
+   lado, no filas apiladas), se conserva el look de tarjeta redondeada. */
+.fi-section.producto-linea-1,
+.fi-section.producto-linea-2 {
+    border-radius: 22px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
 .producto-linea-1 {
     background: #eef2ff !important;
 }
