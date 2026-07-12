@@ -64,6 +64,7 @@ class VentasReportResource extends Resource
             ->defaultSort('fecha', 'desc')
             ->paginated([10, 25, 50, 100])
             ->filtersLayout(FiltersLayout::AboveContent)
+            ->filtersFormColumns(4)
             ->recordAction('detalle')
             ->filters([
                 Filter::make('fecha')

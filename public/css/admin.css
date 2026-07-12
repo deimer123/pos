@@ -1987,6 +1987,24 @@ body:has(.fi-simple-layout) {
     background: #fff7ed !important;
 }
 
+/* ======================================================
+   GLOBAL: FILAS DE TABLAS Y PANEL DE FILTROS EN TODO EL PANEL
+   (aplica automaticamente a cualquier resource, sin tocar cada uno)
+====================================================== */
+
+.fi-ta-row:nth-child(odd) {
+    background: #eef2ff !important;
+}
+
+.fi-ta-row:nth-child(even) {
+    background: #fff7ed !important;
+}
+
+.fi-ta-filters-above-content-ctn {
+    background: #eef2ff !important;
+    border-radius: 16px !important;
+}
+
 .producto-linea-1,
 .producto-linea-2 {
     border-radius: 0 !important;
