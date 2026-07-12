@@ -252,9 +252,8 @@ return \App\Models\Familia::create($data)->id;
     TextInput::make('precio_costo')
     ->label('Precio Costo')
     ->numeric()
-    ->prefix(fn ($state) => '$ ' . number_format((float) $state, 0, ',', '.'))
-    ->mask(RawJs::make('$money($input, \'.\', \',\', 0)'))
-    ->stripCharacters('.')
+    ->mask(RawJs::make('\'$\' + $money($input, \',\', \'.\', 0)'))
+    ->stripCharacters(['$', '.', ' '])
     ->lazy()
     ->default(fn ($record) => $record?->precio_costo ?? 0)
     ->afterStateHydrated(function (Get $get, Set $set) {
@@ -339,14 +338,13 @@ return \App\Models\Familia::create($data)->id;
         ->label('Precio Venta Final')
         ->numeric()
         ->required()
-        ->prefix(fn ($state) => '$ ' . number_format((float)$state, 0, ',', '.'))
-        ->mask(RawJs::make('$money($input, \'.\', \',\', 0)'))
-        ->stripCharacters('.')
+        ->mask(RawJs::make('\'$\' + $money($input, \',\', \'.\', 0)'))
+        ->stripCharacters(['$', '.', ' '])
         ->lazy()
        
         ->default(fn ($record) => $record?->precio_venta1 ?? 0)
         ->helperText(function (callable $get) {
-            $venta = (float)$get('precio_venta1');
+            $venta = (float) str_replace(['$', '.', ' '], '', (string) $get('precio_venta1'));
             $costo = (float)$get('costo_iva');
             return $venta < $costo ? '⚠️ El precio de venta no puede ser menor que el costo + IVA.' : null;
         })
@@ -822,11 +820,15 @@ public static function canAccess(): bool
 
 protected static function calcularValores(Get $get, Set $set, bool $forzarUtilidad = false): void
 {
-    $costo = (float)$get('precio_costo');
+    // precio_costo y precio_venta1 usan mascara de dinero ($ . miles), hay
+    // que limpiar esos caracteres antes de convertir a numero.
+    $limpiarDinero = fn ($valor) => (float) str_replace(['$', '.', ' '], '', (string) $valor);
+
+    $costo = $limpiarDinero($get('precio_costo'));
     $desc  = (float)$get('descuento_comercial');
     $iva   = (float)$get('iva_venta');
     $util  = (float)$get('utilidad1');
-    $venta = (float)$get('precio_venta1');
+    $venta = $limpiarDinero($get('precio_venta1'));
 
     // 1️⃣ Calcular costo con descuento e IVA
     $cDesc = round($costo * (1 - $desc / 100), 2);
