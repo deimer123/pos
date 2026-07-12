@@ -1884,7 +1884,7 @@ body:has(.fi-simple-layout) {
     height: 100% !important;
 }
 
-.producto-card > div:nth-child(4) {
+.producto-card > div:nth-child(5) {
     margin-top: auto !important;
 }
 
