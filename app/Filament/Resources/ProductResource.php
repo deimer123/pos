@@ -608,6 +608,14 @@ return \App\Models\Familia::create($data)->id;
                     ->color('success')
                     ->extraAttributes(['class' => 'px-3']),
 
+                TextColumn::make('id_producto')
+                    ->label('Código')
+                    ->searchable()
+                    ->badge()
+                    ->color('primary')
+                    ->weight('bold')
+                    ->extraAttributes(['class' => 'px-3']),
+
                 TextColumn::make('descripcion_larga')
                     ->label('Nombre del Producto')
                     ->searchable(query: function (Builder $query, string $search): Builder {
@@ -627,14 +635,6 @@ return \App\Models\Familia::create($data)->id;
                     ->weight('bold')
                     ->size('sm')
                     ->lineClamp(2)
-                    ->extraAttributes(['class' => 'px-3']),
-
-                TextColumn::make('id_producto')
-                    ->label('Código')
-                    ->searchable()
-                    ->badge()
-                    ->color('primary')
-                    ->weight('bold')
                     ->extraAttributes(['class' => 'px-3 pb-2']),
             ])->space(1)->extraAttributes(['class' => 'producto-card']),
         ])
