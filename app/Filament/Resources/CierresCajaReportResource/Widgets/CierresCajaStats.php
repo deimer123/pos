@@ -18,6 +18,11 @@ class CierresCajaStats extends BaseWidget
         return ListCierresCajaReports::class;
     }
 
+    protected function getColumns(): int
+    {
+        return 6;
+    }
+
     protected function getStats(): array
     {
         $desde = data_get($this->tableFilters, 'fecha.desde');
@@ -91,7 +96,10 @@ class CierresCajaStats extends BaseWidget
             ]);
         }
 
-        return $stats;
+        return array_map(
+            fn (Stat $stat) => $stat->extraAttributes(['class' => 'cierres-caja-stat']),
+            $stats
+        );
     }
 
     protected function money(float $value): string

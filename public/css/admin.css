@@ -2009,6 +2009,26 @@ body:has(.fi-simple-layout) {
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
 }
 
+/* ======================================================
+   REPORTE DE CIERRES DE CAJA: TARJETAS COMPACTAS
+====================================================== */
+
+.cierres-caja-stat {
+    padding: .75rem !important;
+}
+
+.cierres-caja-stat .fi-wi-stats-overview-stat-label {
+    font-size: 11px !important;
+}
+
+.cierres-caja-stat .fi-wi-stats-overview-stat-value {
+    font-size: 1.1rem !important;
+}
+
+.cierres-caja-stat .fi-wi-stats-overview-stat-description {
+    font-size: 10px !important;
+}
+
 .producto-linea-1,
 .producto-linea-2 {
     border-radius: 0 !important;
