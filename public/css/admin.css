@@ -1909,6 +1909,30 @@ body:has(.fi-simple-layout) {
     border-radius: 999px !important;
 }
 
+/* ======================================================
+   PESTAÑAS CON COLOR (formulario de producto y demas Tabs)
+====================================================== */
+
+.fi-tabs-item {
+    border-radius: 999px !important;
+    background: #eef2ff !important;
+    margin: 3px !important;
+    transition: background .15s ease, box-shadow .15s ease !important;
+}
+
+.fi-tabs-item .fi-tabs-item-label {
+    color: #4338ca !important;
+}
+
+.fi-tabs-item.fi-active {
+    background: linear-gradient(135deg, #6366f1, #4338ca) !important;
+    box-shadow: 0 6px 14px rgba(79, 70, 229, .32) !important;
+}
+
+.fi-tabs-item.fi-active .fi-tabs-item-label {
+    color: #ffffff !important;
+}
+
 .producto-linea-1,
 .producto-linea-2 {
     border-radius: 0 !important;
