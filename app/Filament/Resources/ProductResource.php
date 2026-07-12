@@ -368,7 +368,7 @@ return \App\Models\Familia::create($data)->id;
 
     Forms\Components\Tabs\Tab::make('Modo de venta')
         ->schema([
-                Grid::make(2)->schema([
+                Grid::make(2)->extraAttributes(['class' => 'producto-linea-1'])->schema([
                     Select::make('tipo_producto')
                         ->label('Tipo de producto')
                         ->options([
@@ -457,7 +457,9 @@ return \App\Models\Familia::create($data)->id;
                         ->label('Modo de venta')
                         ->content('Unidad: venta normal. Peso o porción: cantidades decimales. Servicio: sin inventario. Esto ya afecta al POS.')
                         ->columnSpanFull(),
+                ]),
 
+                Grid::make(2)->extraAttributes(['class' => 'producto-linea-2'])->schema([
                     Forms\Components\Toggle::make('maneja_inventario')
                         ->label('Maneja inventario')
                         ->default(true),
