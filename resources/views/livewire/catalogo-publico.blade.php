@@ -48,11 +48,11 @@
 
     <div style="max-width:960px; margin:0 auto; padding:16px; display:flex; align-items:flex-start; gap:16px;">
         @if($menuSubfamilias->isNotEmpty())
-        <nav style="flex:0 0 130px; position:sticky; top:16px; max-height:calc(100vh - 32px); overflow-y:auto; background:white; border-radius:12px; border:1px solid #e5e7eb; padding:10px;">
+        <nav style="flex:0 0 220px; position:sticky; top:16px; max-height:calc(100vh - 32px); overflow-y:auto; background:white; border-radius:12px; border:1px solid #e5e7eb; padding:10px;">
             <div style="font-size:10px; font-weight:800; color:#9ca3af; text-transform:uppercase; margin-bottom:6px;">Ir a</div>
             @foreach($menuSubfamilias as $subfamiliaMenu)
                 <a href="#subfam-{{ $subfamiliaMenu->id_familia2 }}"
-                    style="display:block; font-size:12px; color:#4f46e5; text-decoration:none; padding:4px 0; border-bottom:1px solid #f3f4f6; font-weight:600;">
+                    style="display:block; font-size:12px; color:#4f46e5; text-decoration:none; padding:4px 0; border-bottom:1px solid #f3f4f6; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                     {{ $subfamiliaMenu->nombre }}
                 </a>
             @endforeach
