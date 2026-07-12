@@ -200,19 +200,28 @@ class ConfiguracionEmpresaResource extends Resource
                         ->default(true)
                         ->helperText('Si lo desactivas, esos roles no verán las existencias en el punto de venta.'),
 
-                    Forms\Components\Select::make('catalogo_filtro_stock')
-                        ->label('Productos a mostrar en el catálogo público')
-                        ->options([
-                            'todos' => 'Todos (con o sin stock)',
-                            'solo_disponibles' => 'Solo con stock disponible (mayor a 0)',
-                        ])
-                        ->default('todos')
-                        ->helperText('Aplica solo a la carta pública de productos, no afecta el POS.'),
+                    Forms\Components\Fieldset::make('Catálogo público: qué mostrar')
+                        ->schema([
+                            Forms\Components\Toggle::make('catalogo_mostrar_precio')
+                                ->label('Mostrar precio')
+                                ->default(true),
 
-                    Forms\Components\Toggle::make('catalogo_mostrar_disponibilidad')
-                        ->label('Mostrar "Disponible / No disponible" en el catálogo público')
-                        ->default(false)
-                        ->helperText('No muestra la cantidad exacta, solo si hay existencias o no.'),
+                            Forms\Components\Toggle::make('catalogo_mostrar_disponibilidad')
+                                ->label('Mostrar "Disponible / No disponible"')
+                                ->default(false)
+                                ->helperText('No muestra la cantidad exacta, solo si hay existencias o no.'),
+
+                            Forms\Components\Toggle::make('catalogo_mostrar_stock_positivo')
+                                ->label('Mostrar productos con stock positivo')
+                                ->default(true)
+                                ->helperText('Productos con existencias mayores a 0.'),
+
+                            Forms\Components\Toggle::make('catalogo_mostrar_stock_negativo')
+                                ->label('Mostrar productos con stock en 0 o negativo')
+                                ->default(true)
+                                ->helperText('Útil si vendes servicios/productos que no manejan inventario real.'),
+                        ])
+                        ->columns(2),
                 ]),
         ];
     }

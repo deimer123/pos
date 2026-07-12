@@ -39,7 +39,9 @@ class CatalogoPublico extends Component
                 $q->whereNull('id_familia2')
                     ->orWhereHas('subfamilia', fn ($qq) => $qq->where('mostrar_en_catalogo', true));
             })
-            ->when($this->config->catalogo_filtro_stock === 'solo_disponibles', fn ($q) => $q->where('existencias', '>', 0))
+            ->when(! $this->config->catalogo_mostrar_stock_positivo && $this->config->catalogo_mostrar_stock_negativo, fn ($q) => $q->where('existencias', '<=', 0))
+            ->when($this->config->catalogo_mostrar_stock_positivo && ! $this->config->catalogo_mostrar_stock_negativo, fn ($q) => $q->where('existencias', '>', 0))
+            ->when(! $this->config->catalogo_mostrar_stock_positivo && ! $this->config->catalogo_mostrar_stock_negativo, fn ($q) => $q->whereRaw('1 = 0'))
             ->when(! empty($palabras), function ($q) use ($palabras) {
                 foreach ($palabras as $palabra) {
                     $q->where('descripcion_larga', 'like', '%' . $palabra . '%');

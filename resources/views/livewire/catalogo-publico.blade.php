@@ -62,7 +62,7 @@
                                         url: @js($urlImagen),
                                         nombre: @js($producto->descripcion_larga),
                                         descripcion: @js($producto->descripcion_catalogo),
-                                        precio: @js($precioTexto),
+                                        @if($this->config->catalogo_mostrar_precio) precio: @js($precioTexto), @endif
                                         @if($this->config->catalogo_mostrar_disponibilidad) disponible: @js($disponible ? 'Disponible' : 'No disponible'), @endif
                                     })"
                                     style="width:100%; height:120px; object-fit:cover; display:block; cursor:zoom-in;">
@@ -76,9 +76,11 @@
                                             {{ $disponible ? '✔ Disponible' : '✕ No disponible' }}
                                         </div>
                                     @endif
+                                    @if($this->config->catalogo_mostrar_precio)
                                     <div style="font-size:15px; font-weight:900; color:#4f46e5; margin-top:auto; padding-top:6px;">
                                         {{ $precioTexto }}
                                     </div>
+                                    @endif
                                 </div>
                             </div>
                         @endforeach
@@ -109,7 +111,7 @@
                 <div style="color:white; margin-top:12px; font-size:16px; font-weight:700;" x-text="imagenNombre"></div>
                 <div x-show="imagenDescripcion" style="color:#d1d5db; margin-top:4px; font-size:13px; max-width:400px; margin-left:auto; margin-right:auto;" x-text="imagenDescripcion"></div>
                 <div x-show="imagenDisponible" style="margin-top:6px; font-size:12px; font-weight:700;" :style="imagenDisponible === 'Disponible' ? 'color:#4ade80' : 'color:#f87171'" x-text="imagenDisponible"></div>
-                <div style="color:white; margin-top:8px; font-size:20px; font-weight:900;" x-text="imagenPrecio"></div>
+                <div x-show="imagenPrecio" style="color:white; margin-top:8px; font-size:20px; font-weight:900;" x-text="imagenPrecio"></div>
                 <button type="button" @click="imagenUrl = null"
                     style="margin-top:14px; border:none; border-radius:999px; padding:8px 20px; font-size:13px; font-weight:700; cursor:pointer; background:white; color:#1f2937;">
                     Cerrar
