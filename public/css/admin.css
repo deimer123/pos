@@ -1773,10 +1773,6 @@ body:has([action*="ventas-reports"]) .fi-ta-content {
     padding: 6px 0 !important;
 }
 
-.fi-fo-repeater-item + .fi-fo-repeater-item {
-    border-top: 1px solid #eef2f7 !important;
-}
-
 .fi-fo-repeater-item-header {
     order: 2 !important;
     padding: 0 0 0 8px !important;
