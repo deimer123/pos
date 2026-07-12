@@ -80,7 +80,6 @@ class ProductResource extends Resource
                 TextInput::make('id_producto')
     ->label('Código.')
     ->numeric()
-    ->prefix('#')
     ->extraAttributes(['class' => 'producto-codigo-badge'])
     ->default(fn () =>
     (Product::where('empresa_id', auth()->user()->getEmpresaActualId())->max('id_producto') ?? 10001) + 1

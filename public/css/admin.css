@@ -1901,14 +1901,13 @@ body:has(.fi-simple-layout) {
 }
 
 .producto-codigo-badge {
-    border: 2px solid #6366f1 !important;
-    color: #4338ca !important;
-    font-weight: 700 !important;
+    border: 2px solid #ef4444 !important;
     box-shadow: 0 6px 14px rgba(79, 70, 229, .12) !important;
 }
 
 .producto-codigo-badge input {
-    background: #eef2ff !important;
+    background: #fef9c3 !important;
+    color: #15803d !important;
     font-weight: 700 !important;
 }
 
