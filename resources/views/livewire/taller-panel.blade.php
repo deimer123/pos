@@ -392,24 +392,9 @@
                             📄 PDF
                         </a>
 
-                        {{-- Abre WhatsApp con el número del cliente y un mensaje ya redactado
-                             con el link público al PDF. Mientras el servidor no tenga un
-                             dominio real (solo IP), el cliente debe copiar/pegar el link
-                             en el navegador: WhatsApp no linkifica URLs sobre IP, y los
-                             acortadores probados (nip.io, is.gd) tampoco funcionan por
-                             bloqueos de red móvil o políticas anti-abuso. --}}
-                        @if($orden->telefono_whatsapp)
-                        @php
-                            $mensajeWhatsapp = "Hola {$orden->cliente_nombre}, te compartimos el resumen de tu orden #"
-                                . str_pad($orden->numero_orden, 4, '0', STR_PAD_LEFT) . " ({$orden->placa}). "
-                                . "Total: $" . number_format($totalRep, 0, ',', '.') . ". "
-                                . "Ver/descargar tu PDF aquí (copia y pega el link en tu navegador): " . $orden->link_pdf_publico;
-                        @endphp
-                        <a href="https://wa.me/{{ $orden->telefono_whatsapp }}?text={{ urlencode($mensajeWhatsapp) }}" target="_blank"
-                           style="flex:1; border:none; border-radius:8px; padding:6px 4px; font-size:11px; font-weight:700; cursor:pointer; background:#25D366; color:white; text-decoration:none; text-align:center;">
-                            💬 WhatsApp
-                        </a>
-                        @endif
+                        {{-- Botón de WhatsApp deshabilitado temporalmente: el link al PDF no
+                             queda clickeable sin un dominio real. Se reactiva cuando la
+                             empresa tenga su dominio apuntando al servidor. --}}
 
                         @if($esCobrada && $orden->factura_id)
                         <a href="{{ route('factura.ver', $orden->factura_id) }}" target="_blank"
