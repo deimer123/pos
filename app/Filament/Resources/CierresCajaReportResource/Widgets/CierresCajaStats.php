@@ -36,7 +36,7 @@ class CierresCajaStats extends BaseWidget
                 ->icon('heroicon-o-banknotes')
                 ->color('success'),
 
-            Stat::make('Efectivo / Transferencia / Credito / Cartera', $this->money($totals['efectivo'] + $totals['transferencia']))
+            Stat::make('Efectivo / Transferencia / Credito / Cartera', '')
                 ->description(new \Illuminate\Support\HtmlString(
                     'Efectivo ' . $this->money($totals['efectivo'])
                     . '<br>Transferencia ' . $this->money($totals['transferencia'])
@@ -82,8 +82,11 @@ class CierresCajaStats extends BaseWidget
         }
 
         return array_map(
-            fn (Stat $stat) => $stat->extraAttributes(['class' => 'cierres-caja-stat']),
-            $stats
+            fn (Stat $stat, int $i) => $stat->extraAttributes([
+                'class' => $i === 1 ? 'cierres-caja-stat cierres-caja-medios-pago' : 'cierres-caja-stat',
+            ]),
+            $stats,
+            array_keys($stats)
         );
     }
 

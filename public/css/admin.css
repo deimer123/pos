@@ -2039,6 +2039,15 @@ body:has(.fi-simple-layout) {
     font-size: 8px !important;
 }
 
+.cierres-caja-medios-pago .fi-wi-stats-overview-stat-value {
+    display: none !important;
+}
+
+.cierres-caja-medios-pago .fi-wi-stats-overview-stat-description {
+    font-size: 11px !important;
+    line-height: 1.6 !important;
+}
+
 .producto-linea-1,
 .producto-linea-2 {
     border-radius: 0 !important;
