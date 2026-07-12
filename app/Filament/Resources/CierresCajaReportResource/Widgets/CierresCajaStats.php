@@ -54,15 +54,13 @@ class CierresCajaStats extends BaseWidget
                     ->icon('heroicon-o-calculator')
                     ->color('warning'),
 
-                Stat::make('Utilidad', $this->money($totals['utilidad']))
-                    ->description('Venta - costo')
+                Stat::make('Utilidad / Utilidad %', '')
+                    ->description(new \Illuminate\Support\HtmlString(
+                        'Utilidad ' . $this->money($totals['utilidad'])
+                        . '<br>Utilidad % ' . number_format((float) $totals['utilidad_pct'], 2, ',', '.') . ' %'
+                    ))
                     ->icon('heroicon-o-chart-bar')
                     ->color($totals['utilidad'] < 0 ? 'danger' : 'success'),
-
-                Stat::make('Utilidad %', number_format((float) $totals['utilidad_pct'], 2, ',', '.') . ' %')
-                    ->description('Utilidad / venta')
-                    ->icon('heroicon-o-presentation-chart-line')
-                    ->color($totals['utilidad_pct'] < 0 ? 'danger' : 'info'),
 
                 Stat::make('Movimientos caja', $this->money($totals['movimientos_neto']))
                     ->description('Entradas ' . $this->money($totals['movimientos_entrada']) . ' | Salidas ' . $this->money($totals['movimientos_salida']))
@@ -83,7 +81,7 @@ class CierresCajaStats extends BaseWidget
 
         return array_map(
             fn (Stat $stat, int $i) => $stat->extraAttributes([
-                'class' => $i === 1 ? 'cierres-caja-stat cierres-caja-medios-pago' : 'cierres-caja-stat',
+                'class' => in_array($i, [1, 3], true) ? 'cierres-caja-stat cierres-caja-medios-pago' : 'cierres-caja-stat',
             ]),
             $stats,
             array_keys($stats)

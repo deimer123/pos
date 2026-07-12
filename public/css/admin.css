@@ -2018,7 +2018,7 @@ body:has(.fi-simple-layout) {
     gap: 6px !important;
 }
 
-.fi-wi-stats-overview-stats-ctn:has(.cierres-caja-stat) > *:nth-child(2) {
+.fi-wi-stats-overview-stats-ctn:has(.cierres-caja-stat) > *:has(.cierres-caja-medios-pago) {
     grid-column: span 2 !important;
 }
 
