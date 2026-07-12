@@ -31,7 +31,31 @@
     </div>
     @endif
 
-    <style>html { scroll-behavior: smooth; }</style>
+    <style>
+        html { scroll-behavior: smooth; }
+
+        .catalogo-layout { max-width:960px; margin:0 auto; padding:16px; display:flex; align-items:flex-start; gap:16px; }
+        .catalogo-nav { flex:0 0 220px; position:sticky; top:16px; max-height:calc(100vh - 32px); overflow-y:auto; background:white; border-radius:12px; border:1px solid #e5e7eb; padding:10px; }
+        .catalogo-nav-titulo { font-size:10px; font-weight:800; color:#9ca3af; text-transform:uppercase; margin-bottom:6px; }
+        .catalogo-nav a { display:block; font-size:12px; color:#4f46e5; text-decoration:none; padding:4px 0; border-bottom:1px solid #f3f4f6; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .catalogo-content { flex:1; min-width:0; }
+
+        @media (max-width: 768px) {
+            .catalogo-layout { flex-direction: column; padding:12px; }
+            .catalogo-nav {
+                flex: none; width: 100%; box-sizing: border-box;
+                position: static; max-height: none;
+                display: flex; overflow-x: auto; overflow-y: hidden;
+                padding: 8px 10px; gap: 6px;
+            }
+            .catalogo-nav-titulo { display: none; }
+            .catalogo-nav a {
+                display: inline-block; flex-shrink: 0;
+                background:#f3f4f6; border-radius:999px; border-bottom:none;
+                padding:6px 14px; max-width: 160px;
+            }
+        }
+    </style>
 
     @php
         // Lista de subfamilias visibles (según filtro actual) para el menú lateral.
@@ -46,20 +70,19 @@
         }
     @endphp
 
-    <div style="max-width:960px; margin:0 auto; padding:16px; display:flex; align-items:flex-start; gap:16px;">
+    <div class="catalogo-layout">
         @if($menuSubfamilias->isNotEmpty())
-        <nav style="flex:0 0 220px; position:sticky; top:16px; max-height:calc(100vh - 32px); overflow-y:auto; background:white; border-radius:12px; border:1px solid #e5e7eb; padding:10px;">
-            <div style="font-size:10px; font-weight:800; color:#9ca3af; text-transform:uppercase; margin-bottom:6px;">Ir a</div>
+        <nav class="catalogo-nav">
+            <div class="catalogo-nav-titulo">Ir a</div>
             @foreach($menuSubfamilias as $subfamiliaMenu)
-                <a href="#subfam-{{ $subfamiliaMenu->id_familia2 }}"
-                    style="display:block; font-size:12px; color:#4f46e5; text-decoration:none; padding:4px 0; border-bottom:1px solid #f3f4f6; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                <a href="#subfam-{{ $subfamiliaMenu->id_familia2 }}">
                     {{ $subfamiliaMenu->nombre }}
                 </a>
             @endforeach
         </nav>
         @endif
 
-        <div style="flex:1; min-width:0;">
+        <div class="catalogo-content">
         @forelse($this->productosFiltrados as $idFamilia => $productosFamilia)
             @php $familia = $this->familias->firstWhere('id', $idFamilia); @endphp
             <div style="margin-bottom:28px;">
