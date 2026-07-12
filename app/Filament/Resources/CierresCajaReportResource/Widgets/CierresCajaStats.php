@@ -18,11 +18,6 @@ class CierresCajaStats extends BaseWidget
         return ListCierresCajaReports::class;
     }
 
-    protected function getColumns(): int
-    {
-        return 6;
-    }
-
     protected function getStats(): array
     {
         $desde = data_get($this->tableFilters, 'fecha.desde');

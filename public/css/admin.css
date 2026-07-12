@@ -2013,6 +2013,10 @@ body:has(.fi-simple-layout) {
    REPORTE DE CIERRES DE CAJA: TARJETAS COMPACTAS
 ====================================================== */
 
+.fi-wi-stats-overview-stats-ctn:has(.cierres-caja-stat) {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) !important;
+}
+
 .cierres-caja-stat {
     padding: .75rem !important;
 }
