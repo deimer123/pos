@@ -114,7 +114,7 @@ class ProductResource extends Resource
                     ->columnSpan(1),
                     ]),
 
-            // Fila 2
+            // Fila 2: Proveedor, Departamento, Subfamilia
            Grid::make(3)->schema([
     Select::make('id_proveedor')
         ->label('Proveedor')
@@ -130,18 +130,8 @@ class ProductResource extends Resource
                 ->pluck('nombre', 'id_clip_pro');
         })
                     ->native(false)
-                    ->placeholder('Selecciona un proveedor')
-                    ->columnSpan(2),
+                    ->placeholder('Selecciona un proveedor'),
 
-                FileUpload::make('foto')
-    
-    ->directory('form-foto')
-    ->visibility('public')              
-                    ->columnSpan(1),
-            ]),
-
-            // Fila 3
-            Grid::make(3)->schema([
                 Select::make('id_familia1')
     ->label('Departamento')
     ->options(function () {
@@ -216,7 +206,10 @@ return \App\Models\Familia::create($data)->id;
     return \App\Models\Subfamilia::create($data)->id_familia2;
 })
                     ->createOptionModalHeading('Crear Subfamilia'),
+            ]),
 
+            // Fila 3: Unidad de Medida, Cuenta contable, Foto
+            Grid::make(3)->schema([
                     Select::make('id_unidad_de_medida')
                     ->label('Unidad de Medida')
                     ->options([
@@ -229,8 +222,6 @@ return \App\Models\Familia::create($data)->id;
                     ->default(1)
                     ->required()
                     ->helperText('Define la unidad para compras, inventario y kardex. No cambia la forma de vender en POS.'),
-
-            ]),
 
                 Select::make('cuenta_contable_id')
                     ->label('Cuenta contable')
@@ -247,6 +238,13 @@ return \App\Models\Familia::create($data)->id;
                     ->searchable()
                     ->preload()
                     ->placeholder('Sin asignar'),
+
+                FileUpload::make('foto')
+                    ->directory('form-foto')
+                    ->visibility('public')
+                    ->imagePreviewHeight('90')
+                    ->panelLayout('compact'),
+            ]),
 
         Grid::make(4)->schema([
     TextInput::make('precio_costo')
