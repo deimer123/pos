@@ -57,7 +57,7 @@ class CierresCajaStats extends BaseWidget
                 Stat::make('Utilidad / Utilidad %', '')
                     ->description(new \Illuminate\Support\HtmlString(
                         'Utilidad ' . $this->money($totals['utilidad'])
-                        . '<br>Utilidad % ' . number_format((float) $totals['utilidad_pct'], 2, ',', '.') . ' %'
+                        . '<br>Utilidad ' . number_format((float) $totals['utilidad_pct'], 2, ',', '.') . '%'
                     ))
                     ->icon('heroicon-o-chart-bar')
                     ->color($totals['utilidad'] < 0 ? 'danger' : 'success'),
