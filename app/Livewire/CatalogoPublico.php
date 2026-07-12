@@ -72,6 +72,6 @@ class CatalogoPublico extends Component
 
     public function render()
     {
-        return view('livewire.catalogo-publico')->layout('layouts.guest');
+        return view('livewire.catalogo-publico')->layout('layouts.catalogo');
     }
 }
