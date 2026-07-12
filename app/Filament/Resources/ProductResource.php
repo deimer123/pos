@@ -573,42 +573,6 @@ return \App\Models\Familia::create($data)->id;
                     ->extraImgAttributes(['class' => 'w-full h-[90px] object-cover rounded-t-xl'])
                     ->defaultImageUrl(asset('images/sin-imagen.png')),
 
-                TextColumn::make('descripcion_larga')
-                    ->label('Nombre del Producto')
-                    ->searchable(query: function (Builder $query, string $search): Builder {
-                        // Separar el término de búsqueda por espacios
-                        $fragments = preg_split('/\s+/', strtolower($search));
-
-                        return $query->where(function ($query) use ($fragments) {
-                            foreach ($fragments as $fragment) {
-                                $query->whereRaw('LOWER(descripcion_larga) LIKE ?', ["%{$fragment}%"]);
-                            }
-                        })
-                        ->orWhere('id_producto', 'like', "%{$search}%")
-                        ->orWhereHas('alternateCodes', function ($q) use ($search) {
-                            $q->where('code', 'like', "%{$search}%");
-                        });
-                    })
-                    ->weight('bold')
-                    ->size('sm')
-                    ->lineClamp(2)
-                    ->extraAttributes(['class' => 'px-3 pt-2']),
-
-                TextColumn::make('id_producto')
-                    ->label('Código')
-                    ->searchable()
-                    ->badge()
-                    ->color('primary')
-                    ->weight('bold')
-                    ->extraAttributes(['class' => 'px-3']),
-
-                TextColumn::make('precio_venta1')
-                    ->label('Precio')
-                    ->formatStateUsing(fn ($state) => '$ ' . number_format((float) $state, 0, ',', '.'))
-                    ->weight('bold')
-                    ->color('success')
-                    ->extraAttributes(['class' => 'px-3']),
-
                 Split::make([
                     TextColumn::make('existencias')
                         ->label('Stock')
@@ -635,7 +599,43 @@ return \App\Models\Familia::create($data)->id;
                             'peso', 'porcion', 'litro', 'metro', 'hora' => 'warning',
                             default => 'gray',
                         }),
-                ])->extraAttributes(['class' => 'px-3 pb-2']),
+                ])->extraAttributes(['class' => 'px-3 pt-2']),
+
+                TextColumn::make('precio_venta1')
+                    ->label('Precio')
+                    ->formatStateUsing(fn ($state) => '$ ' . number_format((float) $state, 0, ',', '.'))
+                    ->weight('bold')
+                    ->color('success')
+                    ->extraAttributes(['class' => 'px-3']),
+
+                TextColumn::make('descripcion_larga')
+                    ->label('Nombre del Producto')
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        // Separar el término de búsqueda por espacios
+                        $fragments = preg_split('/\s+/', strtolower($search));
+
+                        return $query->where(function ($query) use ($fragments) {
+                            foreach ($fragments as $fragment) {
+                                $query->whereRaw('LOWER(descripcion_larga) LIKE ?', ["%{$fragment}%"]);
+                            }
+                        })
+                        ->orWhere('id_producto', 'like', "%{$search}%")
+                        ->orWhereHas('alternateCodes', function ($q) use ($search) {
+                            $q->where('code', 'like', "%{$search}%");
+                        });
+                    })
+                    ->weight('bold')
+                    ->size('sm')
+                    ->lineClamp(2)
+                    ->extraAttributes(['class' => 'px-3']),
+
+                TextColumn::make('id_producto')
+                    ->label('Código')
+                    ->searchable()
+                    ->badge()
+                    ->color('primary')
+                    ->weight('bold')
+                    ->extraAttributes(['class' => 'px-3 pb-2']),
             ])->space(1)->extraAttributes(['class' => 'producto-card']),
         ])
         ->paginated([25, 50, 100, 200])
