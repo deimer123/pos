@@ -962,10 +962,10 @@ TextInput::make('precio_venta')
                     padding:1rem;
                     margin-top:1.5rem;
                     box-shadow:0 8px 18px rgba(6,95,70,.12);
+                    display:block;
                 ',
             ])
-            ->columnSpanFull()
-            ->extraAttributes(['style' => 'font-size:18px;']),
+            ->columnSpanFull(),
 
         // 🔹 Observaciones
         Section::make('📝 Observaciones')
