@@ -1965,6 +1965,7 @@ body:has(.fi-simple-layout) {
 ====================================================== */
 
 .combo-franja-azul {
+    width: 100% !important;
     border-radius: 22px !important;
     overflow: hidden !important;
     box-shadow: -10px 0 18px -6px rgba(79, 70, 229, .45) !important;

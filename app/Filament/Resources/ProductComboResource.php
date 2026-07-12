@@ -41,8 +41,9 @@ class ProductComboResource extends Resource
     {
         $empresaId = auth()->user()->getEmpresaActualId();
 
-        return $form->schema([
+        return $form->columns(1)->schema([
             Forms\Components\Group::make()
+                ->columnSpanFull()
                 ->extraAttributes(['class' => 'combo-franja-azul'])
                 ->schema([
 
