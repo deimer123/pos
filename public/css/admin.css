@@ -1875,12 +1875,20 @@ body:has(.fi-simple-layout) {
    TARJETAS DE PRODUCTOS: COLOR Y FRANJA AZUL
 ====================================================== */
 
+.fi-ta-content-grid {
+    align-items: stretch !important;
+}
+
 .fi-ta-record:has(.producto-card) {
     background: #eef2ff !important;
     border-left: 4px solid #6366f1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
 }
 
 .producto-card {
+    flex: 1 1 auto !important;
     height: 100% !important;
 }
 
