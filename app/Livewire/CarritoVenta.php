@@ -861,8 +861,11 @@ public function asignarConsumidorFinalPorDefecto()
 {
     $empresaId = $this->getEmpresaId();
 
-    // Si usa_taller, exigir que haya una orden activa antes de agregar productos
-    $usaTaller = (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_taller');
+    // Si usa_taller Y el usuario opera el POS de Taller (rol taller/admin_empresa),
+    // exigir que haya una orden activa antes de agregar productos. Para otros
+    // roles (ej. vendedor) el negocio se ve como una tienda normal, sin esta regla.
+    $usaTaller = (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_taller')
+        && auth()->user()->hasAnyRole(['taller', 'admin_empresa']);
     if ($usaTaller && ! $this->tallerOrdenId) {
         $this->dispatch('error', 'Debes crear un ingreso de taller primero (botón "Ingresar").');
         return;
