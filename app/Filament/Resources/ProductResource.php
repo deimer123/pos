@@ -69,7 +69,7 @@ class ProductResource extends Resource
         ->columnSpanFull()
         ->tabs([
 
-    Forms\Components\Tabs\Tab::make('Información')
+    Forms\Components\Tabs\Tab::make('Información, precios e impuestos')
         ->schema([
             // Fila 1
             Grid::make([
@@ -229,9 +229,124 @@ return \App\Models\Familia::create($data)->id;
                     ->default(1)
                     ->required()
                     ->helperText('Define la unidad para compras, inventario y kardex. No cambia la forma de vender en POS.'),
-                    
+
             ]),
 
+                Select::make('cuenta_contable_id')
+                    ->label('Cuenta contable')
+                    ->options(function () {
+                        $empresaId = auth()->user()->getEmpresaActualId();
+
+                        return CuentaContable::query()
+                            ->where('empresa_id', $empresaId)
+                            ->orderBy('codigo')
+                            ->get()
+                            ->mapWithKeys(fn ($c) => [$c->id => $c->codigo . ' - ' . $c->nombre])
+                            ->toArray();
+                    })
+                    ->searchable()
+                    ->preload()
+                    ->placeholder('Sin asignar'),
+
+        Grid::make(4)->schema([
+    TextInput::make('precio_costo')
+    ->label('Precio Costo')
+    ->numeric()
+    ->prefix(fn ($state) => '$ ' . number_format((float) $state, 0, ',', '.'))
+    ->lazy()
+    ->default(fn ($record) => $record?->precio_costo ?? 0)
+    ->afterStateHydrated(function (Get $get, Set $set) {
+        // 👉 se ejecuta al cargar el edit, calcula valores iniciales
+        static::calcularValores($get, $set);
+    })
+    ->afterStateUpdated(fn ($state, Get $get, Set $set) => static::calcularValores($get, $set)),
+
+    TextInput::make('descuento_comercial')
+        ->label('% Descuento Comercial')
+        ->numeric()
+        ->suffix('%')
+        ->required()
+        ->lazy()
+        ->default(fn ($record) => $record?->descuento_comercial ?? 0)
+        
+        ->afterStateUpdated(fn ($state, Get $get, Set $set) => static::calcularValores($get, $set)),
+
+    TextInput::make('precio_con_descuento')
+        ->label('Costo con Descuento')
+        ->prefix(fn ($state) => '$ ' . number_format((float)$state, 0, ',', '.'))
+        ->disabled()
+       ->reactive()
+        ->dehydrated(true),
+
+         Select::make('iva_compra')
+                ->label('IVA Compra')
+                ->required()
+                ->options([
+                    '0.00' => 'Excluido (0%)',
+                    '5.00' => 'Gravado (5%)',
+                    '16.00' => 'Gravado (16%)',
+                    '19.00' => 'Gravado (19%)',
+                    '8.00' => 'Impoconsumo (8%)',
+                ])
+                ->lazy()
+                ->default('19.00')
+                 ->dehydrateStateUsing(fn ($state) => (float) $state) // 👈 convierte al guardar
+    ->afterStateHydrated(fn($state, $set) => $set('iva_venta', number_format(floatval($state), 2, '.', ''))), // ✅ Al editar, lo muestra correctamente
+
+    Select::make('iva_venta')
+        ->label('IVA Venta')
+        ->required()
+        ->options([
+            '0.00'  => 'Excluido (0%)',
+            '5.00'  => 'Gravado (5%)',
+            '8.00'  => 'Gravado (8%)',
+            '16.00' => 'Gravado (16%)',
+            '19.00' => 'Gravado (19%)',
+        ])
+        ->default('19.00')
+        ->reactive()
+        ->dehydrateStateUsing(fn ($state) => (float)$state)
+        ->afterStateHydrated(fn ($state, Set $set) => 
+            $set('iva_venta', number_format((float)$state, 2, '.', ''))
+        )
+        ->afterStateUpdated(fn ($state, Get $get, Set $set) => static::calcularValores($get, $set)),
+
+    TextInput::make('costo_iva')
+        ->label('Costo + IVA Venta')
+        ->prefix(fn ($state) => '$ ' . number_format((float)$state, 0, ',', '.'))
+        ->disabled()
+        ->reactive()        
+        ->dehydrated(true)
+        ->default(fn ($record) => 
+            round(floatval($record?->precio_con_descuento ?? 0) * (1 + floatval($record?->iva_venta ?? 0)), 2)
+        ),
+
+    TextInput::make('utilidad1')
+        ->label('Utilidad %')
+        ->numeric()
+        ->suffix('%')
+        ->required()
+        ->lazy()
+        
+        ->default(fn ($record) => $record?->utilidad1 ?? 0)
+        ->afterStateUpdated(fn ($state, Get $get, Set $set) => static::calcularValores($get, $set, true)),
+
+    TextInput::make('precio_venta1')
+        ->label('Precio Venta Final')
+        ->numeric()
+        ->required()
+        ->prefix(fn ($state) => '$ ' . number_format((float)$state, 0, ',', '.'))
+        ->lazy()
+       
+        ->default(fn ($record) => $record?->precio_venta1 ?? 0)
+        ->helperText(function (callable $get) {
+            $venta = (float)$get('precio_venta1');
+            $costo = (float)$get('costo_iva');
+            return $venta < $costo ? '⚠️ El precio de venta no puede ser menor que el costo + IVA.' : null;
+        })
+        ->afterStateUpdated(fn ($state, Get $get, Set $set) => static::calcularValores($get, $set)),
+
+        ]),
         ]),
 
     Forms\Components\Tabs\Tab::make('Catálogo público')
@@ -358,125 +473,6 @@ return \App\Models\Familia::create($data)->id;
                         ->helperText('Peso de referencia del producto cuando se vende por peso.')
                         ->default(null),
                 ]),
-        ]),
-
-    Forms\Components\Tabs\Tab::make('Contabilidad, precios e impuestos')
-        ->schema([
-                Select::make('cuenta_contable_id')
-                    ->label('Cuenta contable')
-                    ->options(function () {
-                        $empresaId = auth()->user()->getEmpresaActualId();
-
-                        return CuentaContable::query()
-                            ->where('empresa_id', $empresaId)
-                            ->orderBy('codigo')
-                            ->get()
-                            ->mapWithKeys(fn ($c) => [$c->id => $c->codigo . ' - ' . $c->nombre])
-                            ->toArray();
-                    })
-                    ->searchable()
-                    ->preload()
-                    ->placeholder('Sin asignar'),
-
-        Grid::make(4)->schema([
-    TextInput::make('precio_costo')
-    ->label('Precio Costo')
-    ->numeric()
-    ->prefix(fn ($state) => '$ ' . number_format((float) $state, 0, ',', '.'))
-    ->lazy()
-    ->default(fn ($record) => $record?->precio_costo ?? 0)
-    ->afterStateHydrated(function (Get $get, Set $set) {
-        // 👉 se ejecuta al cargar el edit, calcula valores iniciales
-        static::calcularValores($get, $set);
-    })
-    ->afterStateUpdated(fn ($state, Get $get, Set $set) => static::calcularValores($get, $set)),
-
-    TextInput::make('descuento_comercial')
-        ->label('% Descuento Comercial')
-        ->numeric()
-        ->suffix('%')
-        ->required()
-        ->lazy()
-        ->default(fn ($record) => $record?->descuento_comercial ?? 0)
-        
-        ->afterStateUpdated(fn ($state, Get $get, Set $set) => static::calcularValores($get, $set)),
-
-    TextInput::make('precio_con_descuento')
-        ->label('Costo con Descuento')
-        ->prefix(fn ($state) => '$ ' . number_format((float)$state, 0, ',', '.'))
-        ->disabled()
-       ->reactive()
-        ->dehydrated(true),
-
-         Select::make('iva_compra')
-                ->label('IVA Compra')
-                ->required()
-                ->options([
-                    '0.00' => 'Excluido (0%)',
-                    '5.00' => 'Gravado (5%)',
-                    '16.00' => 'Gravado (16%)',
-                    '19.00' => 'Gravado (19%)',
-                    '8.00' => 'Impoconsumo (8%)',
-                ])
-                ->lazy()
-                ->default('19.00')
-                 ->dehydrateStateUsing(fn ($state) => (float) $state) // 👈 convierte al guardar
-    ->afterStateHydrated(fn($state, $set) => $set('iva_venta', number_format(floatval($state), 2, '.', ''))), // ✅ Al editar, lo muestra correctamente
-
-    Select::make('iva_venta')
-        ->label('IVA Venta')
-        ->required()
-        ->options([
-            '0.00'  => 'Excluido (0%)',
-            '5.00'  => 'Gravado (5%)',
-            '8.00'  => 'Gravado (8%)',
-            '16.00' => 'Gravado (16%)',
-            '19.00' => 'Gravado (19%)',
-        ])
-        ->default('19.00')
-        ->reactive()
-        ->dehydrateStateUsing(fn ($state) => (float)$state)
-        ->afterStateHydrated(fn ($state, Set $set) => 
-            $set('iva_venta', number_format((float)$state, 2, '.', ''))
-        )
-        ->afterStateUpdated(fn ($state, Get $get, Set $set) => static::calcularValores($get, $set)),
-
-    TextInput::make('costo_iva')
-        ->label('Costo + IVA Venta')
-        ->prefix(fn ($state) => '$ ' . number_format((float)$state, 0, ',', '.'))
-        ->disabled()
-        ->reactive()        
-        ->dehydrated(true)
-        ->default(fn ($record) => 
-            round(floatval($record?->precio_con_descuento ?? 0) * (1 + floatval($record?->iva_venta ?? 0)), 2)
-        ),
-
-    TextInput::make('utilidad1')
-        ->label('Utilidad %')
-        ->numeric()
-        ->suffix('%')
-        ->required()
-        ->lazy()
-        
-        ->default(fn ($record) => $record?->utilidad1 ?? 0)
-        ->afterStateUpdated(fn ($state, Get $get, Set $set) => static::calcularValores($get, $set, true)),
-
-    TextInput::make('precio_venta1')
-        ->label('Precio Venta Final')
-        ->numeric()
-        ->required()
-        ->prefix(fn ($state) => '$ ' . number_format((float)$state, 0, ',', '.'))
-        ->lazy()
-       
-        ->default(fn ($record) => $record?->precio_venta1 ?? 0)
-        ->helperText(function (callable $get) {
-            $venta = (float)$get('precio_venta1');
-            $costo = (float)$get('costo_iva');
-            return $venta < $costo ? '⚠️ El precio de venta no puede ser menor que el costo + IVA.' : null;
-        })
-        ->afterStateUpdated(fn ($state, Get $get, Set $set) => static::calcularValores($get, $set)),
-
-        ]),
         ]),
 
     Forms\Components\Tabs\Tab::make('Precios anteriores y códigos alternos')
