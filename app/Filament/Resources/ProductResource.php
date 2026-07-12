@@ -64,7 +64,12 @@ class ProductResource extends Resource
     Hidden::make('empresa_id')
     ->default(auth()->user()->getEmpresaActualId())
     ->dehydrated(),
-    Section::make('Información del producto')
+
+    Forms\Components\Tabs::make('ProductoTabs')
+        ->columnSpanFull()
+        ->tabs([
+
+    Forms\Components\Tabs\Tab::make('Información')
         ->schema([
             // Fila 1
             Grid::make([
@@ -227,11 +232,10 @@ return \App\Models\Familia::create($data)->id;
                     
             ]),
 
-
         ]),
 
-        Section::make('Catálogo público')
-            ->schema([
+    Forms\Components\Tabs\Tab::make('Catálogo público')
+        ->schema([
                 Forms\Components\Toggle::make('mostrar_en_catalogo')
                     ->label('Mostrar en el catálogo público')
                     ->default(true)
@@ -241,10 +245,10 @@ return \App\Models\Familia::create($data)->id;
                     ->label('Descripción para el catálogo')
                     ->helperText('Texto de venta que ven tus clientes (distinto al nombre interno del producto). Déjalo vacío si no aplica.')
                     ->rows(2),
-            ]),
+        ]),
 
-        Section::make('Modo de venta')
-            ->schema([
+    Forms\Components\Tabs\Tab::make('Modo de venta')
+        ->schema([
                 Grid::make(2)->schema([
                     Select::make('tipo_producto')
                         ->label('Tipo de producto')
@@ -354,10 +358,10 @@ return \App\Models\Familia::create($data)->id;
                         ->helperText('Peso de referencia del producto cuando se vende por peso.')
                         ->default(null),
                 ]),
-            ]),
+        ]),
 
-        Section::make('Contabilidad')
-            ->schema([
+    Forms\Components\Tabs\Tab::make('Contabilidad, precios e impuestos')
+        ->schema([
                 Select::make('cuenta_contable_id')
                     ->label('Cuenta contable')
                     ->options(function () {
@@ -373,10 +377,7 @@ return \App\Models\Familia::create($data)->id;
                     ->searchable()
                     ->preload()
                     ->placeholder('Sin asignar'),
-            ]),
 
-          Section::make('Impuestos y precios')
-    ->schema([
         Grid::make(4)->schema([
     TextInput::make('precio_costo')
     ->label('Precio Costo')
@@ -476,9 +477,11 @@ return \App\Models\Familia::create($data)->id;
         ->afterStateUpdated(fn ($state, Get $get, Set $set) => static::calcularValores($get, $set)),
 
         ]),
-    ]),
+        ]),
 
-      Grid::make(2)->schema([  
+    Forms\Components\Tabs\Tab::make('Precios anteriores y códigos alternos')
+        ->schema([
+      Grid::make(2)->schema([
     Section::make('Precios Anteriores')
         ->schema([
             Placeholder::make('precio_costo_anterior')
@@ -548,10 +551,13 @@ return \App\Models\Familia::create($data)->id;
     ])
         ->columnSpan(1), // ⚠️ igual aquí
 
-       
+
 ])
+        ]),
+
+    ]),
             ]);
-         
+
     }
 
     public static function table(Tables\Table $table): Tables\Table
