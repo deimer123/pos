@@ -290,7 +290,7 @@ class CompraResource extends Resource
     ->schema([
 
         /* ------- Línea 1: Código + Nombre ------- */
-        Forms\Components\Grid::make(12)->schema([
+        Forms\Components\Grid::make(14)->schema([
 
          TextInput::make('codigo_ingresado')
     ->label('Código')
