@@ -31,7 +31,35 @@
     </div>
     @endif
 
-    <div style="max-width:720px; margin:0 auto; padding:16px;">
+    <style>html { scroll-behavior: smooth; }</style>
+
+    @php
+        // Lista de subfamilias visibles (según filtro actual) para el menú lateral.
+        $menuSubfamilias = collect();
+        foreach ($this->productosFiltrados as $idFamilia => $productosFamilia) {
+            foreach ($productosFamilia->groupBy(fn($p) => $p->id_familia2) as $idSubfamilia => $productosSub) {
+                $subfamilia = $productosSub->first()->subfamilia;
+                if ($subfamilia) {
+                    $menuSubfamilias->push($subfamilia);
+                }
+            }
+        }
+    @endphp
+
+    <div style="max-width:960px; margin:0 auto; padding:16px; display:flex; align-items:flex-start; gap:16px;">
+        @if($menuSubfamilias->isNotEmpty())
+        <nav style="flex:0 0 130px; position:sticky; top:16px; max-height:calc(100vh - 32px); overflow-y:auto; background:white; border-radius:12px; border:1px solid #e5e7eb; padding:10px;">
+            <div style="font-size:10px; font-weight:800; color:#9ca3af; text-transform:uppercase; margin-bottom:6px;">Ir a</div>
+            @foreach($menuSubfamilias as $subfamiliaMenu)
+                <a href="#subfam-{{ $subfamiliaMenu->id_familia2 }}"
+                    style="display:block; font-size:12px; color:#4f46e5; text-decoration:none; padding:4px 0; border-bottom:1px solid #f3f4f6; font-weight:600;">
+                    {{ $subfamiliaMenu->nombre }}
+                </a>
+            @endforeach
+        </nav>
+        @endif
+
+        <div style="flex:1; min-width:0;">
         @forelse($this->productosFiltrados as $idFamilia => $productosFamilia)
             @php $familia = $this->familias->firstWhere('id', $idFamilia); @endphp
             <div style="margin-bottom:28px;">
@@ -42,7 +70,7 @@
                 @foreach($productosFamilia->groupBy(fn($p) => $p->id_familia2) as $idSubfamilia => $productosSub)
                     @php $subfamilia = $productosSub->first()->subfamilia; @endphp
                     @if($subfamilia)
-                        <div style="font-size:12px; font-weight:700; color:#6b7280; text-transform:uppercase; margin:14px 0 8px;">
+                        <div id="subfam-{{ $subfamilia->id_familia2 }}" style="font-size:12px; font-weight:700; color:#6b7280; text-transform:uppercase; margin:14px 0 8px; scroll-margin-top:16px;">
                             {{ $subfamilia->nombre }}
                         </div>
                     @endif
@@ -71,16 +99,19 @@
                                     @if($producto->descripcion_catalogo)
                                         <div style="font-size:11px; color:#6b7280; margin-top:4px; line-height:1.3;">{{ $producto->descripcion_catalogo }}</div>
                                     @endif
-                                    @if($this->config->catalogo_mostrar_disponibilidad)
-                                        <div style="font-size:10px; font-weight:700; margin-top:6px; color:{{ $disponible ? '#16a34a' : '#dc2626' }};">
-                                            {{ $disponible ? '✔ Disponible' : '✕ No disponible' }}
+
+                                    <div style="margin-top:auto; padding-top:6px;">
+                                        @if($this->config->catalogo_mostrar_disponibilidad)
+                                            <div style="font-size:10px; font-weight:700; margin-bottom:2px; color:{{ $disponible ? '#16a34a' : '#dc2626' }};">
+                                                {{ $disponible ? '✔ Disponible' : '✕ No disponible' }}
+                                            </div>
+                                        @endif
+                                        @if($this->config->catalogo_mostrar_precio)
+                                        <div style="font-size:15px; font-weight:900; color:#4f46e5;">
+                                            {{ $precioTexto }}
                                         </div>
-                                    @endif
-                                    @if($this->config->catalogo_mostrar_precio)
-                                    <div style="font-size:15px; font-weight:900; color:#4f46e5; margin-top:auto; padding-top:6px;">
-                                        {{ $precioTexto }}
+                                        @endif
                                     </div>
-                                    @endif
                                 </div>
                             </div>
                         @endforeach
@@ -93,6 +124,7 @@
                 <div style="margin-top:12px; font-size:14px;">Todavía no hay productos disponibles en el catálogo.</div>
             </div>
         @endforelse
+        </div>
     </div>
 
     <div x-data="{ imagenUrl: null, imagenNombre: null, imagenDescripcion: null, imagenPrecio: null, imagenDisponible: null }"
