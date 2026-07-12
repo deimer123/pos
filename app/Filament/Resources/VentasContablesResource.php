@@ -76,7 +76,7 @@ class VentasContablesResource extends Resource
                     ->label('Factura')
                     ->formatStateUsing(fn (Factura $record): string => $record->numero_visual)
                     ->sortable(),
-                Tables\Columns\TextColumn::make('fecha')->label('Fecha')->dateTime('d/m/Y H:i')->sortable(),
+                Tables\Columns\TextColumn::make('fecha')->label('Fecha')->dateTime('d/m/Y H:i')->sortable()->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('cliente.nombre')->label('Cliente')->placeholder('Consumidor final')->searchable()->limit(28),
                 Tables\Columns\TextColumn::make('tipo_factura')->label('Tipo')->badge(),
                 Tables\Columns\TextColumn::make('ventas_con_iva')
@@ -88,7 +88,8 @@ class VentasContablesResource extends Resource
                             ->sum('subtotal');
                     })
                     ->formatStateUsing($money)
-                    ->alignRight(),
+                    ->alignRight()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('ventas_sin_iva')
                     ->label('Ventas sin IVA')
                     ->getStateUsing(function (Factura $record): float {
@@ -98,7 +99,8 @@ class VentasContablesResource extends Resource
                             ->sum('subtotal');
                     })
                     ->formatStateUsing($money)
-                    ->alignRight(),
+                    ->alignRight()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('ingresos_servicios')
                     ->label('Otros servicios (4200)')
                     ->getStateUsing(function (Factura $record): float {
@@ -107,7 +109,8 @@ class VentasContablesResource extends Resource
                             ->sum('subtotal');
                     })
                     ->formatStateUsing($money)
-                    ->alignRight(),
+                    ->alignRight()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('iva_total')
                     ->label('IVA')
                     ->getStateUsing(function (Factura $record): float {
@@ -117,7 +120,8 @@ class VentasContablesResource extends Resource
                         });
                     })
                     ->formatStateUsing($money)
-                    ->alignRight(),
+                    ->alignRight()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('total')->label('Total')->formatStateUsing($money)->alignRight(),
                 Tables\Columns\TextColumn::make('saldo')->label('Saldo')->formatStateUsing($money)->alignRight(),
             ]);

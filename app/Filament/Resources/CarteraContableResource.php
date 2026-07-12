@@ -78,15 +78,16 @@ class CarteraContableResource extends Resource
                     ->label('Factura')
                     ->formatStateUsing(fn (Factura $record): string => $record->numero_visual)
                     ->sortable(),
-                Tables\Columns\TextColumn::make('fecha')->label('Fecha')->dateTime('d/m/Y H:i')->sortable(),
+                Tables\Columns\TextColumn::make('fecha')->label('Fecha')->dateTime('d/m/Y H:i')->sortable()->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('cliente.nombre')->label('Cliente')->placeholder('Consumidor final')->searchable()->limit(28),
                 Tables\Columns\TextColumn::make('fecha_vencimiento')->label('Vence')->date('d/m/Y')->placeholder('-'),
-                Tables\Columns\TextColumn::make('total')->label('Total')->formatStateUsing($money)->alignRight(),
+                Tables\Columns\TextColumn::make('total')->label('Total')->formatStateUsing($money)->alignRight()->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('pagado')
                     ->label('Pagado')
                     ->getStateUsing(fn (Factura $record): float => (float) $record->pagos->sum('monto'))
                     ->formatStateUsing($money)
-                    ->alignRight(),
+                    ->alignRight()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('saldo')->label('Saldo')->formatStateUsing($money)->alignRight(),
                 Tables\Columns\TextColumn::make('estado_pago')->label('Estado')->badge(),
             ]);

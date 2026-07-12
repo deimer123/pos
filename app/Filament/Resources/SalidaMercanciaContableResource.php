@@ -66,11 +66,11 @@ class SalidaMercanciaContableResource extends Resource
             ])
             ->columns([
                 Tables\Columns\TextColumn::make('factura.id')->label('Factura')->formatStateUsing(fn (FacturaDetalle $record): string => $record->factura?->numero_visual ?? '-')->sortable(),
-                Tables\Columns\TextColumn::make('factura.fecha')->label('Fecha')->dateTime('d/m/Y H:i')->sortable(),
+                Tables\Columns\TextColumn::make('factura.fecha')->label('Fecha')->dateTime('d/m/Y H:i')->sortable()->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('factura.cliente.nombre')->label('Cliente')->placeholder('Consumidor final')->limit(24),
-                Tables\Columns\TextColumn::make('producto.id_producto')->label('Código')->placeholder('-'),
+                Tables\Columns\TextColumn::make('producto.id_producto')->label('Código')->placeholder('-')->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('descripcion_larga')->label('Producto')->formatStateUsing(fn (FacturaDetalle $record): string => $record->descripcion_larga ?? $record->producto?->descripcion_larga ?? '-')->wrap(),
-                Tables\Columns\TextColumn::make('producto.cuentaContable.codigo')->label('Cuenta contable')->placeholder('-'),
+                Tables\Columns\TextColumn::make('producto.cuentaContable.codigo')->label('Cuenta contable')->placeholder('-')->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('cantidad')->label('Cantidad')->alignRight(),
                 Tables\Columns\TextColumn::make('precio')->label('Precio')->formatStateUsing($money)->alignRight(),
                 Tables\Columns\TextColumn::make('subtotal')->label('Subtotal')->formatStateUsing($money)->alignRight(),

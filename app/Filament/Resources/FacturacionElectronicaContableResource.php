@@ -65,12 +65,12 @@ class FacturacionElectronicaContableResource extends Resource
             ])
             ->columns([
                 Tables\Columns\TextColumn::make('id')->label('Factura')->formatStateUsing(fn (Factura $record): string => $record->numero_visual)->sortable(),
-                Tables\Columns\TextColumn::make('fecha')->label('Fecha')->dateTime('d/m/Y H:i')->sortable(),
+                Tables\Columns\TextColumn::make('fecha')->label('Fecha')->dateTime('d/m/Y H:i')->sortable()->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('cliente.nombre')->label('Cliente')->placeholder('Consumidor final')->searchable()->limit(30),
-                Tables\Columns\TextColumn::make('factus_number')->label('Factus #')->placeholder('-'),
-                Tables\Columns\TextColumn::make('factus_cufe')->label('CUFE')->placeholder('-')->wrap(),
+                Tables\Columns\TextColumn::make('factus_number')->label('Factus #')->placeholder('-')->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('factus_cufe')->label('CUFE')->placeholder('-')->wrap()->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('factus_status')->label('Estado')->badge()->placeholder('-'),
-                Tables\Columns\TextColumn::make('total')->label('Total')->formatStateUsing($money)->alignRight(),
+                Tables\Columns\TextColumn::make('total')->label('Total')->formatStateUsing($money)->alignRight()->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('saldo')->label('Saldo')->formatStateUsing($money)->alignRight(),
             ]);
     }

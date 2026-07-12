@@ -86,22 +86,24 @@ class InventarioContableResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('id_producto')->label('Código')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('descripcion_larga')->label('Nombre')->searchable()->wrap(),
-                Tables\Columns\TextColumn::make('cuentaContable.codigo')->label('Cuenta contable')->placeholder('-'),
+                Tables\Columns\TextColumn::make('cuentaContable.codigo')->label('Cuenta contable')->placeholder('-')->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('existencias')->label('Existencias')->sortable()->alignRight(),
                 Tables\Columns\TextColumn::make('precio_costo')->label('Costo unitario')->formatStateUsing($money)->alignRight(),
-                Tables\Columns\TextColumn::make('iva_compra')->label('IVA compra %')->alignRight(),
+                Tables\Columns\TextColumn::make('iva_compra')->label('IVA compra %')->alignRight()->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('costo_iva')
                     ->label('Costo + IVA')
                     ->getStateUsing(fn (Product $record) => round(((float) $record->precio_costo) * (1 + (((float) ($record->iva_compra ?? 0)) / 100)), 2))
                     ->formatStateUsing($money)
-                    ->alignRight(),
-                Tables\Columns\TextColumn::make('iva_venta')->label('IVA venta %')->alignRight(),
+                    ->alignRight()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('iva_venta')->label('IVA venta %')->alignRight()->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('precio_venta1')->label('Valor venta')->formatStateUsing($money)->alignRight(),
                 Tables\Columns\TextColumn::make('total_venta')
                     ->label('Valor venta x existencias')
                     ->getStateUsing(fn (Product $record) => ((float) $record->precio_venta1) * ((float) $record->existencias))
                     ->formatStateUsing($money)
-                    ->alignRight(),
+                    ->alignRight()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ]);
     }
 
