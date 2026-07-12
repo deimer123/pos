@@ -1949,6 +1949,14 @@ body:has(.fi-simple-layout) {
     display: none !important;
 }
 
+/* Si el encabezado no tiene ningun boton de accion (paginas de
+   Crear/Editar), se oculta por completo para que no deje espacio
+   vacio arriba del contenido. En paginas con botones (ej: "Crear" en
+   los listados) el encabezado sigue visible. */
+.fi-header:not(:has(.fi-btn)) {
+    display: none !important;
+}
+
 .producto-linea-1,
 .producto-linea-2 {
     border-radius: 0 !important;
