@@ -320,6 +320,37 @@ class TallerPanel extends Component
         $this->redirect(route('pos') . '?taller=' . $id);
     }
 
+    // Arma el mensaje de WhatsApp acortando el link del PDF con is.gd (el
+    // usuario aceptó explícitamente que ese link firmado, válido 30 días,
+    // quede registrado en ese servicio para que WhatsApp lo detecte como
+    // link clickeable, ya que la URL directa sobre IP no se linkifica).
+    public function generarLinkWhatsapp(int $id): string
+    {
+        $orden = TallerOrden::where('empresa_id', $this->empresaId())->with('repuestos')->findOrFail($id);
+
+        $linkPdf = $orden->link_pdf_publico;
+
+        try {
+            $respuesta = \Illuminate\Support\Facades\Http::timeout(3)->get('https://is.gd/create.php', [
+                'format' => 'simple',
+                'url'    => $linkPdf,
+            ]);
+            $cuerpo = trim($respuesta->body());
+            if ($respuesta->successful() && str_starts_with($cuerpo, 'http')) {
+                $linkPdf = $cuerpo;
+            }
+        } catch (\Throwable $e) {
+            // Si el acortador falla, se usa el link largo tal cual.
+        }
+
+        $mensaje = "Hola {$orden->cliente_nombre}, te compartimos el resumen de tu orden #"
+            . str_pad($orden->numero_orden, 4, '0', STR_PAD_LEFT) . " ({$orden->placa}). "
+            . "Total: $" . number_format($orden->total_repuestos, 0, ',', '.') . ". "
+            . "Ver/descargar tu PDF aquí: " . $linkPdf;
+
+        return 'https://wa.me/' . $orden->telefono_whatsapp . '?text=' . urlencode($mensaje);
+    }
+
     public function eliminarOrden(int $id): void
     {
         TallerOrden::where('empresa_id', $this->empresaId())->findOrFail($id)->delete();

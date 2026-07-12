@@ -85,28 +85,13 @@ class TallerOrden extends Model
     }
 
     // Link público y firmado al PDF (válido 30 días), pensado para compartir
-    // por WhatsApp. Cuando el servidor solo tiene IP (sin dominio), WhatsApp
-    // no reconoce el link como clickeable, así que se genera con un host
-    // "159-89-81-81.nip.io": un servicio de DNS gratuito que resuelve ese
-    // nombre de vuelta a la misma IP, sin mandar ningún dato a terceros.
+    // por WhatsApp.
     public function getLinkPdfPublicoAttribute(): string
     {
-        $appUrl = config('app.url');
-        $host   = parse_url($appUrl, PHP_URL_HOST) ?? 'localhost';
-        $scheme = parse_url($appUrl, PHP_URL_SCHEME) ?: 'http';
-
-        if (preg_match('/^\d{1,3}(\.\d{1,3}){3}$/', $host)) {
-            $host = str_replace('.', '-', $host) . '.nip.io';
-        }
-
-        URL::forceRootUrl("{$scheme}://{$host}");
-        $link = URL::temporarySignedRoute(
+        return URL::temporarySignedRoute(
             'taller.orden.pdf.publico',
             now()->addDays(30),
             ['id' => $this->id]
         );
-        URL::forceRootUrl($appUrl);
-
-        return $link;
     }
 }
