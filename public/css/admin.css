@@ -1765,16 +1765,30 @@ body:has([action*="ventas-reports"]) .fi-ta-content {
 ====================================================== */
 
 .fi-fo-repeater-item {
-    padding: 10px 12px !important;
-    border-radius: 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 6px 0 !important;
 }
 
-.fi-fo-repeater-item-content {
-    gap: 6px !important;
+.fi-fo-repeater-item + .fi-fo-repeater-item {
+    border-top: 1px solid #eef2f7 !important;
 }
 
 .fi-fo-repeater-item-header {
-    margin-bottom: 4px !important;
+    order: 2 !important;
+    padding: 0 0 0 8px !important;
+    border: none !important;
+    flex: 0 0 auto !important;
+}
+
+.fi-fo-repeater-item-content {
+    order: 1 !important;
+    padding: 0 !important;
+    border: none !important;
+    flex: 1 1 auto !important;
 }
 
 /* ======================================================
