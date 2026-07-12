@@ -1975,6 +1975,18 @@ body:has(.fi-simple-layout) {
     gap: 0 !important;
 }
 
+/* ======================================================
+   INVENTARIO DE PRODUCTOS: FILAS CON COLOR
+====================================================== */
+
+.inventario-general-row:nth-child(odd) {
+    background: #eef2ff !important;
+}
+
+.inventario-general-row:nth-child(even) {
+    background: #fff7ed !important;
+}
+
 .producto-linea-1,
 .producto-linea-2 {
     border-radius: 0 !important;

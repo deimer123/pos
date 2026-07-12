@@ -77,6 +77,7 @@ class InventarioGeneralResource extends Resource
                     ->where('empresa_id', $empresaId)
             )
             ->striped()
+            ->recordClasses(fn () => 'inventario-general-row')
             ->paginated([10, 25, 50, 100])
             ->defaultSort('existencias', 'asc')
             ->filtersLayout(FiltersLayout::AboveContent)
