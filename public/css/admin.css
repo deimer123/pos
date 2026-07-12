@@ -2003,7 +2003,9 @@ body:has(.fi-simple-layout) {
 .fi-ta-filters-above-content-ctn {
     background: #eef2ff !important;
     border-radius: 16px !important;
-    display: grid !important;
+}
+
+.fi-ta-filters .fi-fo-component-ctn {
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
 }
 
