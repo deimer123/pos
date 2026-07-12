@@ -955,11 +955,13 @@ TextInput::make('precio_venta')
                     background:#ecfdf5;
                     color:#065f46;
                     font-weight:700;
-                    font-size:1.1rem;
+                    font-size:1.4rem;
                     text-align:center;
-                    border-radius:8px;
-                    padding:.6rem;
-                    margin-top:.5rem;
+                    border-radius:12px;
+                    border:2px solid #6ee7b7;
+                    padding:1rem;
+                    margin-top:1.5rem;
+                    box-shadow:0 8px 18px rgba(6,95,70,.12);
                 ',
             ])
             ->columnSpanFull()
