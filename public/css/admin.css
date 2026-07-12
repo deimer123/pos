@@ -1760,4 +1760,39 @@ body:has([action*="ventas-reports"]) .fi-ta-content {
     }
 }
 
+/* ======================================================
+   REPEATERS COMPACTOS (ej. Códigos Alternos)
+====================================================== */
+
+.fi-fo-repeater-item {
+    padding: 10px 12px !important;
+    border-radius: 12px !important;
+}
+
+.fi-fo-repeater-item-content {
+    gap: 6px !important;
+}
+
+.fi-fo-repeater-item-header {
+    margin-bottom: 4px !important;
+}
+
+/* ======================================================
+   TARJETAS DE METRICAS CON COLOR (dashboard)
+====================================================== */
+
+.fi-wi-stats-overview-stat {
+    background: linear-gradient(135deg, #eef2ff 0%, #f8fbff 100%) !important;
+    border: 1px solid rgba(79, 70, 229, .14) !important;
+}
+
+.fi-wi-stats-overview-stat-label {
+    color: var(--pos-primary) !important;
+    font-weight: 700 !important;
+}
+
+.fi-wi-stats-overview-stat-value {
+    color: #1e1b4b !important;
+}
+
 
