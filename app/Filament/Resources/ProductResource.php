@@ -75,7 +75,7 @@ class ProductResource extends Resource
             Grid::make([
                 'default' => 12,
                 'sm' => 12,
-            ])->schema([
+            ])->extraAttributes(['class' => 'producto-linea-1'])->schema([
                 TextInput::make('id_producto')
     ->label('Código.')
     ->numeric()
@@ -115,7 +115,7 @@ class ProductResource extends Resource
                     ]),
 
             // Fila 2: Proveedor, Departamento, Subfamilia
-           Grid::make(3)->schema([
+           Grid::make(3)->extraAttributes(['class' => 'producto-linea-2'])->schema([
     Select::make('id_proveedor')
         ->label('Proveedor')
         ->searchable()
@@ -209,7 +209,7 @@ return \App\Models\Familia::create($data)->id;
             ]),
 
             // Fila 3: Unidad de Medida, Cuenta contable, Foto
-            Grid::make(3)->schema([
+            Grid::make(3)->extraAttributes(['class' => 'producto-linea-1'])->schema([
                     Select::make('id_unidad_de_medida')
                     ->label('Unidad de Medida')
                     ->options([
@@ -246,7 +246,7 @@ return \App\Models\Familia::create($data)->id;
                     ->panelLayout('compact'),
             ]),
 
-        Grid::make(4)->schema([
+        Grid::make(4)->extraAttributes(['class' => 'producto-linea-2'])->schema([
     TextInput::make('precio_costo')
     ->label('Precio Costo')
     ->numeric()
@@ -290,7 +290,9 @@ return \App\Models\Familia::create($data)->id;
                 ->default('19.00')
                  ->dehydrateStateUsing(fn ($state) => (float) $state) // 👈 convierte al guardar
     ->afterStateHydrated(fn($state, $set) => $set('iva_venta', number_format(floatval($state), 2, '.', ''))), // ✅ Al editar, lo muestra correctamente
+        ]),
 
+        Grid::make(4)->extraAttributes(['class' => 'producto-linea-1'])->schema([
     Select::make('iva_venta')
         ->label('IVA Venta')
         ->required()

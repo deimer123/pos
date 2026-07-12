@@ -1892,6 +1892,28 @@ body:has(.fi-simple-layout) {
     height: 100% !important;
 }
 
+/* ======================================================
+   COLORES ALTERNADOS: FORMULARIO DE PRODUCTO
+====================================================== */
+
+.fi-fo-component-ctn:has(.producto-linea-1) {
+    gap: 0 !important;
+}
+
+.producto-linea-1,
+.producto-linea-2 {
+    border-radius: 0 !important;
+    padding: 10px !important;
+    margin: 0 !important;
+}
+
+.producto-linea-1 {
+    background: #eef2ff !important;
+}
+
+.producto-linea-2 {
+    background: #fff7ed !important;
+}
 
 /* ======================================================
    TARJETAS DE METRICAS CON COLOR (dashboard)
