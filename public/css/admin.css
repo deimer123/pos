@@ -1905,10 +1905,13 @@ body:has(.fi-simple-layout) {
     box-shadow: 0 6px 14px rgba(79, 70, 229, .12) !important;
 }
 
-.producto-codigo-badge input {
+.producto-codigo-badge input,
+.producto-codigo-badge input:disabled {
     background: #fef9c3 !important;
     color: #15803d !important;
+    -webkit-text-fill-color: #15803d !important;
     font-weight: 700 !important;
+    text-align: center !important;
 }
 
 /* ======================================================
