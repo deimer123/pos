@@ -78,7 +78,7 @@ class CompraResource extends Resource
                 Section::make('Datos de la compra')
                     ->model(\App\Models\Compra::class)
                     ->schema([
-                        Grid::make(12)->schema([
+                        Grid::make(12)->extraAttributes(['class' => 'compra-datos-linea-1'])->schema([
 
                                                 /* ================== PROVEEDOR ================== */
                                                 Select::make('proveedor_id')
@@ -169,6 +169,9 @@ class CompraResource extends Resource
                                                         }
                                                     })
                                                     ->columnSpan(4),
+                        ]),
+
+                        Grid::make(12)->extraAttributes(['class' => 'compra-datos-linea-2'])->schema([
 
                                                 DatePicker::make('fecha')
                                                     ->label('Fecha')
@@ -849,8 +852,9 @@ TextInput::make('precio_venta')
 
                 /* ======================== TOTALES ======================== */
                 Card::make()
-    ->columns(3)
     ->schema([
+
+        Grid::make(3)->extraAttributes(['class' => 'compra-tot-linea-1'])->schema([
 
         // 🔹 Ítems y cantidades
         Placeholder::make('tot_items')
@@ -879,6 +883,9 @@ TextInput::make('precio_venta')
                 return '$ ' . number_format($descuento, 0, ',', '.');
             })
             ->extraAttributes(['style' => 'color:#b91c1c;font-weight:600;']),
+        ]),
+
+        Grid::make(3)->extraAttributes(['class' => 'compra-tot-linea-2'])->schema([
 
         // 🔹 Subtotal antes de descuentos
          Placeholder::make('tot_sub')
@@ -923,6 +930,7 @@ TextInput::make('precio_venta')
                 return '$ ' . number_format($iva, 0, ',', '.');
             })
             ->extraAttributes(['style' => 'color:#ca8a04;font-weight:600;']),
+        ]),
 
         // 🔹 Total general (con descuento + IVA)
        Placeholder::make('tot_tot')

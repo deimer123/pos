@@ -1824,6 +1824,37 @@ body:has([action*="ventas-reports"]) .fi-ta-content {
 }
 
 /* ======================================================
+   COLORES: DATOS DE LA COMPRA Y TOTALES
+====================================================== */
+
+.fi-fo-component-ctn:has(.compra-datos-linea-1) {
+    gap: 0 !important;
+}
+
+.fi-fo-component-ctn:has(.compra-tot-linea-1) {
+    gap: 0 !important;
+}
+
+.compra-datos-linea-1,
+.compra-datos-linea-2,
+.compra-tot-linea-1,
+.compra-tot-linea-2 {
+    border-radius: 0 !important;
+    padding: 10px !important;
+    margin: 0 !important;
+}
+
+.compra-datos-linea-1,
+.compra-tot-linea-1 {
+    background: #eef2ff !important;
+}
+
+.compra-datos-linea-2,
+.compra-tot-linea-2 {
+    background: #fff7ed !important;
+}
+
+/* ======================================================
    TARJETAS DE METRICAS CON COLOR (dashboard)
 ====================================================== */
 
