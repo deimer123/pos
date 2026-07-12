@@ -1957,6 +1957,20 @@ body:has(.fi-simple-layout) {
     display: none !important;
 }
 
+/* ======================================================
+   FORMULARIO DE COMBOS: FRANJA/SOMBRA AZUL LATERAL
+====================================================== */
+
+.combo-franja-azul {
+    border-radius: 22px !important;
+    overflow: hidden !important;
+    box-shadow: -10px 0 18px -6px rgba(79, 70, 229, .45) !important;
+}
+
+.fi-fo-component-ctn:has(.combo-franja-azul) {
+    gap: 0 !important;
+}
+
 .producto-linea-1,
 .producto-linea-2 {
     border-radius: 0 !important;

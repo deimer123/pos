@@ -42,6 +42,11 @@ class ProductComboResource extends Resource
         $empresaId = auth()->user()->getEmpresaActualId();
 
         return $form->schema([
+            Forms\Components\Group::make()
+                ->extraAttributes(['class' => 'combo-franja-azul'])
+                ->schema([
+
+            Forms\Components\Grid::make(2)->extraAttributes(['class' => 'producto-linea-1'])->schema([
             Forms\Components\Select::make('product_id')
                 ->label('Producto')
                 ->options(
@@ -60,7 +65,9 @@ class ProductComboResource extends Resource
                 ->label('Nombre del combo (opcional)')
                 ->placeholder('Ej: Promo 3x2, Happy Hour...')
                 ->maxLength(100),
+            ]),
 
+            Forms\Components\Grid::make(2)->extraAttributes(['class' => 'producto-linea-2'])->schema([
             Forms\Components\TextInput::make('cantidad_minima')
                 ->label('Cantidad mínima para activar')
                 ->numeric()
@@ -171,10 +178,15 @@ class ProductComboResource extends Resource
 
                     return new \Illuminate\Support\HtmlString($html);
                 }),
+            ]),
 
+            Forms\Components\Grid::make(1)->extraAttributes(['class' => 'producto-linea-1'])->schema([
             Forms\Components\Toggle::make('activo')
                 ->label('Activo')
                 ->default(true),
+            ]),
+
+            ]),
 
             Forms\Components\Hidden::make('empresa_id')
                 ->default($empresaId),
