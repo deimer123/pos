@@ -3,7 +3,6 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\ProductResource\Pages;
-use Filament\Support\RawJs;
 use App\Models\Product;
 use App\Models\CuentaContable;
 use App\Models\Actor;
@@ -252,8 +251,7 @@ return \App\Models\Familia::create($data)->id;
     TextInput::make('precio_costo')
     ->label('Precio Costo')
     ->numeric()
-    ->mask(RawJs::make('\'$\' + $money($input, \',\', \'.\', 0)'))
-    ->stripCharacters(['$', '.', ' '])
+    ->prefix(fn ($state) => '$ ' . number_format((float) $state, 0, ',', '.'))
     ->lazy()
     ->default(fn ($record) => $record?->precio_costo ?? 0)
     ->afterStateHydrated(function (Get $get, Set $set) {
@@ -274,8 +272,7 @@ return \App\Models\Familia::create($data)->id;
 
     TextInput::make('precio_con_descuento')
         ->label('Costo con Descuento')
-        ->mask(RawJs::make('\'$\' + $money($input, \',\', \'.\', 0)'))
-        ->stripCharacters(['$', '.', ' '])
+        ->prefix(fn ($state) => '$ ' . number_format((float)$state, 0, ',', '.'))
         ->disabled()
        ->reactive()
         ->dehydrated(true),
@@ -317,8 +314,7 @@ return \App\Models\Familia::create($data)->id;
 
     TextInput::make('costo_iva')
         ->label('Costo + IVA Venta')
-        ->mask(RawJs::make('\'$\' + $money($input, \',\', \'.\', 0)'))
-        ->stripCharacters(['$', '.', ' '])
+        ->prefix(fn ($state) => '$ ' . number_format((float)$state, 0, ',', '.'))
         ->disabled()
         ->reactive()
         ->dehydrated(true)
@@ -340,14 +336,13 @@ return \App\Models\Familia::create($data)->id;
         ->label('Precio Venta Final')
         ->numeric()
         ->required()
-        ->mask(RawJs::make('\'$\' + $money($input, \',\', \'.\', 0)'))
-        ->stripCharacters(['$', '.', ' '])
+        ->prefix(fn ($state) => '$ ' . number_format((float)$state, 0, ',', '.'))
         ->lazy()
-       
+
         ->default(fn ($record) => $record?->precio_venta1 ?? 0)
         ->helperText(function (callable $get) {
-            $venta = (float) str_replace(['$', '.', ' '], '', (string) $get('precio_venta1'));
-            $costo = (float) str_replace(['$', '.', ' '], '', (string) $get('costo_iva'));
+            $venta = (float)$get('precio_venta1');
+            $costo = (float)$get('costo_iva');
             return $venta < $costo ? '⚠️ El precio de venta no puede ser menor que el costo + IVA.' : null;
         })
         ->afterStateUpdated(fn ($state, Get $get, Set $set) => static::calcularValores($get, $set)),
@@ -822,15 +817,11 @@ public static function canAccess(): bool
 
 protected static function calcularValores(Get $get, Set $set, bool $forzarUtilidad = false): void
 {
-    // precio_costo y precio_venta1 usan mascara de dinero ($ . miles), hay
-    // que limpiar esos caracteres antes de convertir a numero.
-    $limpiarDinero = fn ($valor) => (float) str_replace(['$', '.', ' '], '', (string) $valor);
-
-    $costo = $limpiarDinero($get('precio_costo'));
+    $costo = (float)$get('precio_costo');
     $desc  = (float)$get('descuento_comercial');
     $iva   = (float)$get('iva_venta');
     $util  = (float)$get('utilidad1');
-    $venta = $limpiarDinero($get('precio_venta1'));
+    $venta = (float)$get('precio_venta1');
 
     // 1️⃣ Calcular costo con descuento e IVA
     $cDesc = round($costo * (1 - $desc / 100), 2);
