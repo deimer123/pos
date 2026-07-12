@@ -78,7 +78,7 @@
                 </span>
                 @php
                     $cfgEmpresa = \App\Models\ConfiguracionEmpresa::where('empresa_id', $u->getEmpresaActualId())->first();
-                    $usaTallerLayout = (bool) ($cfgEmpresa?->usa_taller ?? false);
+                    $usaTallerLayout = (bool) ($cfgEmpresa?->usa_taller ?? false) && $u->hasAnyRole(['taller', 'admin_empresa']);
                     $usaMesasLayout  = (bool) ($cfgEmpresa?->usa_mesas ?? false);
                     $usaHotelLayout  = (bool) ($cfgEmpresa?->usa_hotel ?? false);
                 @endphp

@@ -691,7 +691,7 @@
 
     <div class="pos-desktop-cart-actions flex items-center justify-between">
         @if(! $mesaId)
-        @php $usaTallerPos = (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_taller'); @endphp
+        @php $usaTallerPos = (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_taller') && auth()->user()->hasAnyRole(['taller', 'admin_empresa']); @endphp
         @if($usaTallerPos)
         {{-- POS con Taller: sin Cartera ni Guardar (prefactura). Solo Ingresar/Ver lobby,
              Guardar orden y Limpiar quedan sueltos; el resto se agrupa en "Más acciones". --}}
@@ -938,7 +938,7 @@
 
     @php
         $esMeseroPuroMenu = auth()->user()->hasRole('mesero') && ! auth()->user()->hasAnyRole(['cajero','admin_empresa','vendedor']);
-        $usaTallerPosMobile = (! $mesaId) && (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_taller');
+        $usaTallerPosMobile = (! $mesaId) && (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_taller') && auth()->user()->hasAnyRole(['taller', 'admin_empresa']);
     @endphp
     @if(! $usaTallerPosMobile)
     <div class="pos-cart-mobile-more" x-data="{ open: false }" wire:key="mobile-actions-root-{{ $cajaEstado }}">
