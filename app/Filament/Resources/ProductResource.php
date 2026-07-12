@@ -79,8 +79,9 @@ class ProductResource extends Resource
                 TextInput::make('id_producto')
     ->label('Código.')
     ->numeric()
-    ->default(fn () => 
-    (Product::where('empresa_id', auth()->user()->getEmpresaActualId())->max('id_producto') ?? 10001) + 1 
+    ->prefix('#')
+    ->default(fn () =>
+    (Product::where('empresa_id', auth()->user()->getEmpresaActualId())->max('id_producto') ?? 10001) + 1
 )
     ->disabled(true)
     ->dehydrated()
