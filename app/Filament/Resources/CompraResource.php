@@ -800,7 +800,7 @@ TextInput::make('precio_venta')
         ->lazy()
         ->step(fn (Get $get) => $get('permite_decimal_cantidad') ? '0.01' : '1')
         ->inputMode(fn (Get $get) => $get('permite_decimal_cantidad') ? 'decimal' : 'numeric')
-        ->helperText(fn (Get $get) => $get('permite_decimal_cantidad') ? 'Acepta decimales para peso, fraccion o medida continua.' : 'Usa cantidades enteras para venta por unidad.')
+        ->helperText(fn (Get $get) => $get('permite_decimal_cantidad') ? 'Acepta decimales.' : 'Solo enteros.')
         ->extraInputAttributes([
             'class' => 'h-8 text-xs text-center',
             'style' => 'max-width:120px',
@@ -1076,12 +1076,12 @@ TextInput::make('precio_venta')
     protected static function modoVentaLabel(string $modo): string
     {
         return match ($modo) {
-            'peso' => 'Compra para venta por peso',
-            'porcion' => 'Compra para venta por porcion',
-            'litro' => 'Compra para venta por litro',
-            'metro' => 'Compra para venta por metro',
-            'hora' => 'Compra para venta por hora',
-            default => 'Compra para venta por unidad',
+            'peso' => 'Por peso',
+            'porcion' => 'Por porción',
+            'litro' => 'Por litro',
+            'metro' => 'Por metro',
+            'hora' => 'Por hora',
+            default => 'Por unidad',
         };
     }
 
