@@ -291,7 +291,7 @@ class CompraResource extends Resource
     ->schema([
 
         /* ------- Línea 1: Código + Nombre ------- */
-        Forms\Components\Grid::make(14)->schema([
+        Forms\Components\Grid::make(14)->extraAttributes(['class' => 'compra-linea-1'])->schema([
 
          TextInput::make('codigo_ingresado')
     ->label('Código')
@@ -685,7 +685,7 @@ Placeholder::make('existencias_inline')
         
 
         /* - Línea 2: Costo + D% + Costo c/desc + IVA + Costo+IVA - */
-        Forms\Components\Grid::make(20)->schema([
+        Forms\Components\Grid::make(20)->extraAttributes(['class' => 'compra-linea-2'])->schema([
     // ─────────────── Costo y Descuento ───────────────
  TextInput::make('costo_unitario')
     ->label('Costo')
@@ -750,9 +750,13 @@ TextInput::make('costo_mas_iva_input')
     ->formatStateUsing(fn ($state) => '$ ' . number_format((float) $state, 0, ',', '.'))
     ->extraInputAttributes(['class' => 'h-8 text-xs text-right'])
     ->columnSpan(5),
+        ]),
 
-    TextInput::make('precio_venta_act') 
-    ->label('P. Venta Actual') 
+        /* - Línea 3: P. Venta Actual + Utili% + Nuevo P. Venta + Cant + Total - */
+        Forms\Components\Grid::make(20)->extraAttributes(['class' => 'compra-linea-3'])->schema([
+
+    TextInput::make('precio_venta_act')
+    ->label('P. Venta Actual')
     ->numeric() 
     ->default(0) 
     ->disabled() 

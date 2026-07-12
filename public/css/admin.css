@@ -1797,12 +1797,26 @@ body:has([action*="ventas-reports"]) .fi-ta-content {
 
 .compra-detalles-repeater .fi-fo-repeater-item {
     border-left: 4px solid #6366f1 !important;
-    background: #f8fafc !important;
 }
 
-.compra-detalles-repeater .fi-fo-repeater-item:nth-child(even) {
+.compra-linea-1,
+.compra-linea-2,
+.compra-linea-3 {
+    border-radius: 10px !important;
+    padding: 10px !important;
+    margin-bottom: 8px !important;
+}
+
+.compra-linea-1 {
     background: #eef2ff !important;
-    border-left-color: #f59e0b !important;
+}
+
+.compra-linea-2 {
+    background: #fff7ed !important;
+}
+
+.compra-linea-3 {
+    background: #f0fdf4 !important;
 }
 
 /* ======================================================
