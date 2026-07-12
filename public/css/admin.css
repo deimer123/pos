@@ -430,9 +430,23 @@ body,
     overflow: visible !important;
 }
 
-.fi-ta-ctn {
+.fi-ta-ctn,
+.fi-ta-content {
     overflow-x: auto !important;
     overflow-y: hidden !important;
+}
+
+.fi-ta-content::-webkit-scrollbar {
+    height: 14px !important;
+}
+
+.fi-ta-content::-webkit-scrollbar-track {
+    background: #eef2ff !important;
+}
+
+.fi-ta-content::-webkit-scrollbar-thumb {
+    background: #6366f1 !important;
+    border-radius: 8px !important;
 }
 
 .fi-dropdown-panel,
