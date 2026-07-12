@@ -75,13 +75,6 @@ class CompraResource extends Resource
             ->statePath('data')
             ->schema([
 
-            Forms\Components\Tabs::make('CompraTabs')
-                ->columnSpanFull()
-                ->tabs([
-
-            Forms\Components\Tabs\Tab::make('Datos de la compra')
-                ->schema([
-
                 Section::make('Datos de la compra')
                     ->model(\App\Models\Compra::class)
                     ->extraAttributes(['class' => 'compra-franja-azul'])
@@ -207,11 +200,6 @@ class CompraResource extends Resource
                       ->disabled(fn (?Compra $record) => $record?->estado === 'anulada')
 
                     ->collapsible(),
-
-                ]),
-
-            Forms\Components\Tabs\Tab::make('Ítems')
-                ->schema([
 
                 /* ======================== ÍTEMS ========================= */
                 Section::make('Ítems')
@@ -864,11 +852,6 @@ TextInput::make('precio_venta')
 
                     ]),
 
-                ]),
-
-            Forms\Components\Tabs\Tab::make('Totales')
-                ->schema([
-
                 /* ======================== TOTALES ======================== */
                 Card::make()
     ->extraAttributes(['class' => 'compra-franja-azul'])
@@ -1020,11 +1003,6 @@ TextInput::make('precio_venta')
             ),
     ]),
                     ]),
-
-                ]),
-
-            ]),
-
             ]);
     }
 
