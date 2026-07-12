@@ -1900,6 +1900,15 @@ body:has(.fi-simple-layout) {
     gap: 0 !important;
 }
 
+.producto-codigo-badge {
+    background: #eef2ff !important;
+    border: 1px solid #6366f1 !important;
+    color: #4338ca !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    border-radius: 999px !important;
+}
+
 .producto-linea-1,
 .producto-linea-2 {
     border-radius: 0 !important;
