@@ -1795,10 +1795,6 @@ body:has([action*="ventas-reports"]) .fi-ta-content {
    SEPARAR VISUALMENTE CADA ITEM DE COMPRAS
 ====================================================== */
 
-.compra-detalles-repeater .fi-fo-repeater-item {
-    border-left: 4px solid #6366f1 !important;
-}
-
 .compra-franja-azul {
     border-left: 4px solid #6366f1 !important;
 }

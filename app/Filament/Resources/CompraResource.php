@@ -203,6 +203,7 @@ class CompraResource extends Resource
 
                 /* ======================== ÍTEMS ========================= */
                 Section::make('Ítems')
+                    ->extraAttributes(['class' => 'compra-franja-azul'])
                     ->schema([
                  Repeater::make('detalles')
     ->relationship()
