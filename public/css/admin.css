@@ -1941,6 +1941,14 @@ body:has(.fi-simple-layout) {
     box-shadow: -10px 0 18px -6px rgba(79, 70, 229, .45) !important;
 }
 
+/* ======================================================
+   QUITAR TITULO DE PAGINA (Crear X / Editar X) EN TODO EL PANEL
+====================================================== */
+
+.fi-header-heading {
+    display: none !important;
+}
+
 .producto-linea-1,
 .producto-linea-2 {
     border-radius: 0 !important;
