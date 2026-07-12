@@ -77,6 +77,7 @@ class CompraResource extends Resource
 
                 Section::make('Datos de la compra')
                     ->model(\App\Models\Compra::class)
+                    ->extraAttributes(['class' => 'compra-franja-azul'])
                     ->schema([
                         Grid::make(12)->extraAttributes(['class' => 'compra-datos-linea-1'])->schema([
 
@@ -852,6 +853,7 @@ TextInput::make('precio_venta')
 
                 /* ======================== TOTALES ======================== */
                 Card::make()
+    ->extraAttributes(['class' => 'compra-franja-azul'])
     ->schema([
 
         Grid::make(3)->extraAttributes(['class' => 'compra-tot-linea-1'])->schema([
