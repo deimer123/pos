@@ -135,6 +135,17 @@ Route::middleware(['auth'])->get('/taller/pdf/orden/{id}', function ($id) {
     return $pdf->stream('orden-' . str_pad($orden->numero_orden, 4, '0', STR_PAD_LEFT) . '.pdf');
 })->name('taller.orden.pdf');
 
+// PDF público de una orden (para compartir por WhatsApp): sin login, protegido
+// por firma criptográfica de Laravel (no por el id, que sí es adivinable).
+// Solo es válido el link generado por la app; cualquier otro id/firma falla.
+Route::middleware(['signed'])->get('/taller/pdf/publico/{id}', function ($id) {
+    $orden  = \App\Models\TallerOrden::with('repuestos')->findOrFail($id);
+    $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $orden->empresa_id)->first();
+    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.taller-orden', compact('orden', 'config'))
+        ->setPaper([0, 0, 612, 792]);
+    return $pdf->stream('orden-' . str_pad($orden->numero_orden, 4, '0', STR_PAD_LEFT) . '.pdf');
+})->name('taller.orden.pdf.publico');
+
 // PDF del listado (reporte)
 Route::middleware(['auth'])->get('/taller/pdf/reporte', function (\Illuminate\Http\Request $request) {
     $empresaId = auth()->user()->getEmpresaActualId();

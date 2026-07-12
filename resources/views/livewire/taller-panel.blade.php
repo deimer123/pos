@@ -393,12 +393,20 @@
                         </a>
 
                         {{-- Abre WhatsApp con el número del cliente y un mensaje ya redactado
-                             (no adjunta el PDF: wa.me solo permite texto). --}}
+                             que incluye un link público y seguro al PDF (firmado con
+                             clave del servidor: no se puede adivinar ni ver el de otro
+                             cliente cambiando el número en la URL). --}}
                         @if($orden->telefono_whatsapp)
                         @php
+                            $linkPdfPublico = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+                                'taller.orden.pdf.publico',
+                                now()->addDays(30),
+                                ['id' => $orden->id]
+                            );
                             $mensajeWhatsapp = "Hola {$orden->cliente_nombre}, te compartimos el resumen de tu orden #"
                                 . str_pad($orden->numero_orden, 4, '0', STR_PAD_LEFT) . " ({$orden->placa}). "
-                                . "Total: $" . number_format($totalRep, 0, ',', '.') . ". Cualquier duda, contáctanos.";
+                                . "Total: $" . number_format($totalRep, 0, ',', '.') . ". "
+                                . "Ver/descargar tu PDF aquí: " . $linkPdfPublico;
                         @endphp
                         <a href="https://wa.me/{{ $orden->telefono_whatsapp }}?text={{ urlencode($mensajeWhatsapp) }}" target="_blank"
                            style="flex:1; border:none; border-radius:8px; padding:6px 4px; font-size:11px; font-weight:700; cursor:pointer; background:#25D366; color:white; text-decoration:none; text-align:center;">
