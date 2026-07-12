@@ -1764,11 +1764,11 @@ body:has([action*="ventas-reports"]) .fi-ta-content {
    REPEATERS COMPACTOS (ej. Códigos Alternos)
 ====================================================== */
 
-.fi-fo-repeater .grid {
+.codigos-alternos-repeater .grid {
     gap: 6px !important;
 }
 
-.fi-fo-repeater-item {
+.codigos-alternos-repeater .fi-fo-repeater-item {
     display: flex !important;
     align-items: center !important;
     background: transparent !important;
@@ -1777,14 +1777,14 @@ body:has([action*="ventas-reports"]) .fi-ta-content {
     padding: 2px 0 !important;
 }
 
-.fi-fo-repeater-item-header {
+.codigos-alternos-repeater .fi-fo-repeater-item-header {
     order: 2 !important;
     padding: 0 0 0 8px !important;
     border: none !important;
     flex: 0 0 auto !important;
 }
 
-.fi-fo-repeater-item-content {
+.codigos-alternos-repeater .fi-fo-repeater-item-content {
     order: 1 !important;
     padding: 0 !important;
     border: none !important;

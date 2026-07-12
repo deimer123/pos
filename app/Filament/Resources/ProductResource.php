@@ -506,6 +506,7 @@ return \App\Models\Familia::create($data)->id;
     ->defaultItems(0)
     ->createItemButtonLabel('Agregar código alterno')
     ->grid(2)
+    ->extraAttributes(['class' => 'codigos-alternos-repeater'])
     ->schema([
         Hidden::make('id'), // ✅ capturamos el id del registro existente (null si es nuevo)
 
