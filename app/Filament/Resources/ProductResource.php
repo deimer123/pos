@@ -353,6 +353,7 @@ return \App\Models\Familia::create($data)->id;
 
     Forms\Components\Tabs\Tab::make('Catálogo público')
         ->schema([
+            Grid::make(1)->extraAttributes(['class' => 'producto-linea-1'])->schema([
                 Forms\Components\Toggle::make('mostrar_en_catalogo')
                     ->label('Mostrar en el catálogo público')
                     ->default(true)
@@ -362,6 +363,7 @@ return \App\Models\Familia::create($data)->id;
                     ->label('Descripción para el catálogo')
                     ->helperText('Texto de venta que ven tus clientes (distinto al nombre interno del producto). Déjalo vacío si no aplica.')
                     ->rows(2),
+            ]),
         ]),
 
     Forms\Components\Tabs\Tab::make('Modo de venta')
