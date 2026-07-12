@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\ProductResource\Pages;
+use Filament\Support\RawJs;
 use App\Models\Product;
 use App\Models\CuentaContable;
 use App\Models\Actor;
@@ -252,6 +253,8 @@ return \App\Models\Familia::create($data)->id;
     ->label('Precio Costo')
     ->numeric()
     ->prefix(fn ($state) => '$ ' . number_format((float) $state, 0, ',', '.'))
+    ->mask(RawJs::make('$money($input, \'.\', \',\', 0)'))
+    ->stripCharacters('.')
     ->lazy()
     ->default(fn ($record) => $record?->precio_costo ?? 0)
     ->afterStateHydrated(function (Get $get, Set $set) {
@@ -337,6 +340,8 @@ return \App\Models\Familia::create($data)->id;
         ->numeric()
         ->required()
         ->prefix(fn ($state) => '$ ' . number_format((float)$state, 0, ',', '.'))
+        ->mask(RawJs::make('$money($input, \'.\', \',\', 0)'))
+        ->stripCharacters('.')
         ->lazy()
        
         ->default(fn ($record) => $record?->precio_venta1 ?? 0)
