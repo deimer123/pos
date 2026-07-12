@@ -52,18 +52,32 @@
                             @php
                                 $tieneImagen = !empty($producto->foto) && $producto->foto !== 'NULL';
                                 $urlImagen = $tieneImagen ? asset('storage/' . $producto->foto) : asset('images/sin-imagen.png');
+                                $disponible = (float) $producto->existencias > 0;
+                                $precioTexto = '$' . number_format((float) $producto->precio_venta1, 0, ',', '.');
                             @endphp
-                            <div style="background:white; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.08);">
+                            <div style="background:white; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.08); display:flex; flex-direction:column;">
                                 <img src="{{ $urlImagen }}" alt="{{ $producto->descripcion_larga }}"
-                                    x-data @click="$dispatch('ver-imagen-catalogo', { url: @js($urlImagen), nombre: @js($producto->descripcion_larga) })"
+                                    x-data
+                                    @click="$dispatch('ver-imagen-catalogo', {
+                                        url: @js($urlImagen),
+                                        nombre: @js($producto->descripcion_larga),
+                                        descripcion: @js($producto->descripcion_catalogo),
+                                        precio: @js($precioTexto),
+                                        @if($this->config->catalogo_mostrar_disponibilidad) disponible: @js($disponible ? 'Disponible' : 'No disponible'), @endif
+                                    })"
                                     style="width:100%; height:120px; object-fit:cover; display:block; cursor:zoom-in;">
-                                <div style="padding:10px;">
+                                <div style="padding:10px; display:flex; flex-direction:column; flex:1;">
                                     <div style="font-size:13px; font-weight:700; color:#1f2937; line-height:1.3;">{{ $producto->descripcion_larga }}</div>
                                     @if($producto->descripcion_catalogo)
                                         <div style="font-size:11px; color:#6b7280; margin-top:4px; line-height:1.3;">{{ $producto->descripcion_catalogo }}</div>
                                     @endif
-                                    <div style="font-size:15px; font-weight:900; color:#4f46e5; margin-top:6px;">
-                                        ${{ number_format((float) $producto->precio_venta1, 0, ',', '.') }}
+                                    @if($this->config->catalogo_mostrar_disponibilidad)
+                                        <div style="font-size:10px; font-weight:700; margin-top:6px; color:{{ $disponible ? '#16a34a' : '#dc2626' }};">
+                                            {{ $disponible ? '✔ Disponible' : '✕ No disponible' }}
+                                        </div>
+                                    @endif
+                                    <div style="font-size:15px; font-weight:900; color:#4f46e5; margin-top:auto; padding-top:6px;">
+                                        {{ $precioTexto }}
                                     </div>
                                 </div>
                             </div>
@@ -79,13 +93,23 @@
         @endforelse
     </div>
 
-    <div x-data="{ imagenUrl: null, imagenNombre: null }" @ver-imagen-catalogo.window="imagenUrl = $event.detail.url; imagenNombre = $event.detail.nombre">
+    <div x-data="{ imagenUrl: null, imagenNombre: null, imagenDescripcion: null, imagenPrecio: null, imagenDisponible: null }"
+        @ver-imagen-catalogo.window="
+            imagenUrl = $event.detail.url;
+            imagenNombre = $event.detail.nombre;
+            imagenDescripcion = $event.detail.descripcion;
+            imagenPrecio = $event.detail.precio;
+            imagenDisponible = $event.detail.disponible;
+        ">
         <div x-show="imagenUrl" x-transition x-cloak
             style="position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:50; display:flex; align-items:center; justify-content:center; padding:20px;"
             @click="imagenUrl = null">
             <div style="max-width:90vw; max-height:90vh; text-align:center;" @click.stop>
-                <img :src="imagenUrl" style="max-width:100%; max-height:80vh; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.4);">
-                <div style="color:white; margin-top:10px; font-size:14px;" x-text="imagenNombre"></div>
+                <img :src="imagenUrl" style="max-width:100%; max-height:70vh; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.4);">
+                <div style="color:white; margin-top:12px; font-size:16px; font-weight:700;" x-text="imagenNombre"></div>
+                <div x-show="imagenDescripcion" style="color:#d1d5db; margin-top:4px; font-size:13px; max-width:400px; margin-left:auto; margin-right:auto;" x-text="imagenDescripcion"></div>
+                <div x-show="imagenDisponible" style="margin-top:6px; font-size:12px; font-weight:700;" :style="imagenDisponible === 'Disponible' ? 'color:#4ade80' : 'color:#f87171'" x-text="imagenDisponible"></div>
+                <div style="color:white; margin-top:8px; font-size:20px; font-weight:900;" x-text="imagenPrecio"></div>
                 <button type="button" @click="imagenUrl = null"
                     style="margin-top:14px; border:none; border-radius:999px; padding:8px 20px; font-size:13px; font-weight:700; cursor:pointer; background:white; color:#1f2937;">
                     Cerrar

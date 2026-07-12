@@ -199,6 +199,20 @@ class ConfiguracionEmpresaResource extends Resource
                         ->label('Vendedores/meseros/cajeros/taller pueden ver el stock')
                         ->default(true)
                         ->helperText('Si lo desactivas, esos roles no verán las existencias en el punto de venta.'),
+
+                    Forms\Components\Select::make('catalogo_filtro_stock')
+                        ->label('Productos a mostrar en el catálogo público')
+                        ->options([
+                            'todos' => 'Todos (con o sin stock)',
+                            'solo_disponibles' => 'Solo con stock disponible (mayor a 0)',
+                        ])
+                        ->default('todos')
+                        ->helperText('Aplica solo a la carta pública de productos, no afecta el POS.'),
+
+                    Forms\Components\Toggle::make('catalogo_mostrar_disponibilidad')
+                        ->label('Mostrar "Disponible / No disponible" en el catálogo público')
+                        ->default(false)
+                        ->helperText('No muestra la cantidad exacta, solo si hay existencias o no.'),
                 ]),
         ];
     }

@@ -40,6 +40,8 @@ class ConfiguracionEmpresa extends Model
         'mostrar_iva_separado',
         'descuento_maximo_permitido',
         'permite_ver_stock_no_admin',
+        'catalogo_filtro_stock',
+        'catalogo_mostrar_disponibilidad',
         'prefijo',
         'rango_desde',
         'rango_hasta',
@@ -90,6 +92,7 @@ class ConfiguracionEmpresa extends Model
         'permite_stock_negativo' => 'boolean',
         'imprime_ticket' => 'boolean',
         'mostrar_iva_separado' => 'boolean',
+        'catalogo_mostrar_disponibilidad' => 'boolean',
         'descuento_maximo_permitido' => 'decimal:2',
         'permite_ver_stock_no_admin' => 'boolean',
     ];

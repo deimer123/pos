@@ -23,6 +23,11 @@ class CatalogoPublico extends Component
         return ConfiguracionEmpresa::where('slug', $this->slug)->firstOrFail();
     }
 
+    public function title(): string
+    {
+        return 'Catálogo de Productos - ' . ($this->config->nombre_empresa ?? '');
+    }
+
     public function getProductosProperty()
     {
         $palabras = array_filter(preg_split('/\s+/', trim($this->busqueda)));
@@ -34,6 +39,7 @@ class CatalogoPublico extends Component
                 $q->whereNull('id_familia2')
                     ->orWhereHas('subfamilia', fn ($qq) => $qq->where('mostrar_en_catalogo', true));
             })
+            ->when($this->config->catalogo_filtro_stock === 'solo_disponibles', fn ($q) => $q->where('existencias', '>', 0))
             ->when(! empty($palabras), function ($q) use ($palabras) {
                 foreach ($palabras as $palabra) {
                     $q->where('descripcion_larga', 'like', '%' . $palabra . '%');
