@@ -274,7 +274,8 @@ return \App\Models\Familia::create($data)->id;
 
     TextInput::make('precio_con_descuento')
         ->label('Costo con Descuento')
-        ->prefix(fn ($state) => '$ ' . number_format((float)$state, 0, ',', '.'))
+        ->mask(RawJs::make('\'$\' + $money($input, \',\', \'.\', 0)'))
+        ->stripCharacters(['$', '.', ' '])
         ->disabled()
        ->reactive()
         ->dehydrated(true),
@@ -316,9 +317,10 @@ return \App\Models\Familia::create($data)->id;
 
     TextInput::make('costo_iva')
         ->label('Costo + IVA Venta')
-        ->prefix(fn ($state) => '$ ' . number_format((float)$state, 0, ',', '.'))
+        ->mask(RawJs::make('\'$\' + $money($input, \',\', \'.\', 0)'))
+        ->stripCharacters(['$', '.', ' '])
         ->disabled()
-        ->reactive()        
+        ->reactive()
         ->dehydrated(true)
         ->default(fn ($record) => 
             round(floatval($record?->precio_con_descuento ?? 0) * (1 + floatval($record?->iva_venta ?? 0)), 2)
@@ -345,7 +347,7 @@ return \App\Models\Familia::create($data)->id;
         ->default(fn ($record) => $record?->precio_venta1 ?? 0)
         ->helperText(function (callable $get) {
             $venta = (float) str_replace(['$', '.', ' '], '', (string) $get('precio_venta1'));
-            $costo = (float)$get('costo_iva');
+            $costo = (float) str_replace(['$', '.', ' '], '', (string) $get('costo_iva'));
             return $venta < $costo ? '⚠️ El precio de venta no puede ser menor que el costo + IVA.' : null;
         })
         ->afterStateUpdated(fn ($state, Get $get, Set $set) => static::calcularValores($get, $set)),
