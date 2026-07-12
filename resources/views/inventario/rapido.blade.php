@@ -464,7 +464,7 @@ textarea {
 }
 
 #nombre {
-    width: 500px;   /* ðŸ”¥ mÃ¡s grande */
+    width: 500px;   /* más grande */
     font-size: 15px;
     font-weight: bold;
     background: #eef4ff;
@@ -777,7 +777,7 @@ async function cargar() {
 
 function resaltarFila(index) {
 
-    // esperar a que estÃ© renderizada
+    // esperar a que esté renderizada
     setTimeout(() => {
         let filas = document.querySelectorAll('#tabla tr');
 
@@ -1489,7 +1489,7 @@ async function cerrarSesion() {
 
     } catch (e) {
         console.error(e);
-        alert('Error al cerrar sesiÃ³n');
+        alert('Error al cerrar sesión');
     }
 }
 
@@ -1507,11 +1507,11 @@ window.fetch = async (...args) => {
 
     if (response.status === 401 || response.status === 419) {
 
-        alert('SesiÃ³n expirada. Debes iniciar sesiÃ³n nuevamente.');
+        alert('Sesión expirada. Debes iniciar sesión nuevamente.');
 
         window.location.href = '/admin/login';
 
-        return Promise.reject('SesiÃ³n expirada');
+        return Promise.reject('Sesión expirada');
     }
 
     return response;
@@ -1552,9 +1552,9 @@ reiniciarTemporizador();
 </script>
 <div id="modalSesion" class="modal-sesion">
     <div class="modal-contenido">
-        <h3>âš ï¸ SesiÃ³n expirada</h3>
-        <p>Tu sesiÃ³n ha finalizado por inactividad.</p>
-        <button onclick="irLogin()">Iniciar sesiÃ³n</button>
+        <h3>⚠️ Sesión expirada</h3>
+        <p>Tu sesión ha finalizado por inactividad.</p>
+        <button onclick="irLogin()">Iniciar sesión</button>
     </div>
 </div>
 
