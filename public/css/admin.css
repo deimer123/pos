@@ -1792,6 +1792,20 @@ body:has([action*="ventas-reports"]) .fi-ta-content {
 }
 
 /* ======================================================
+   SEPARAR VISUALMENTE CADA ITEM DE COMPRAS
+====================================================== */
+
+.compra-detalles-repeater .fi-fo-repeater-item {
+    border-left: 4px solid #6366f1 !important;
+    background: #f8fafc !important;
+}
+
+.compra-detalles-repeater .fi-fo-repeater-item:nth-child(even) {
+    background: #eef2ff !important;
+    border-left-color: #f59e0b !important;
+}
+
+/* ======================================================
    TARJETAS DE METRICAS CON COLOR (dashboard)
 ====================================================== */
 

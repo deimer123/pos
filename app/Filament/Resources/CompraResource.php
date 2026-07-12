@@ -202,6 +202,7 @@ class CompraResource extends Resource
                     ->schema([
                  Repeater::make('detalles')
     ->relationship()
+    ->extraAttributes(['class' => 'compra-detalles-repeater'])
     // 🔒 en ANULADA: inputs deshabilitados y sin agregar/eliminar
     ->disabled(fn (Get $get) => static::compraEstaAnulada($get))
     ->addable(fn (Get $get) => ! static::compraEstaAnulada($get))
