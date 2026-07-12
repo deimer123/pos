@@ -1802,9 +1802,9 @@ body:has([action*="ventas-reports"]) .fi-ta-content {
 .compra-linea-1,
 .compra-linea-2,
 .compra-linea-3 {
-    border-radius: 10px !important;
+    border-radius: 0 !important;
     padding: 10px !important;
-    margin-bottom: 8px !important;
+    margin: 0 !important;
 }
 
 .compra-linea-1 {
@@ -1816,7 +1816,7 @@ body:has([action*="ventas-reports"]) .fi-ta-content {
 }
 
 .compra-linea-3 {
-    background: #f0fdf4 !important;
+    background: #eef2ff !important;
 }
 
 /* ======================================================
