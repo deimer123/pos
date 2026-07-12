@@ -331,16 +331,20 @@ class TallerPanel extends Component
         $linkPdf = $orden->link_pdf_publico;
 
         try {
-            $respuesta = \Illuminate\Support\Facades\Http::timeout(3)->get('https://is.gd/create.php', [
+            $respuesta = \Illuminate\Support\Facades\Http::timeout(5)->get('https://is.gd/create.php', [
                 'format' => 'simple',
                 'url'    => $linkPdf,
             ]);
             $cuerpo = trim($respuesta->body());
             if ($respuesta->successful() && str_starts_with($cuerpo, 'http')) {
                 $linkPdf = $cuerpo;
+            } else {
+                \Illuminate\Support\Facades\Log::warning('is.gd no devolvió un link corto', ['respuesta' => $cuerpo]);
+                $this->dispatch('warning', 'No se pudo acortar el link (se usará el largo). Detalle: ' . $cuerpo);
             }
         } catch (\Throwable $e) {
-            // Si el acortador falla, se usa el link largo tal cual.
+            \Illuminate\Support\Facades\Log::warning('Fallo al acortar link de WhatsApp: ' . $e->getMessage());
+            $this->dispatch('warning', 'No se pudo acortar el link (se usará el largo). Detalle: ' . $e->getMessage());
         }
 
         $mensaje = "Hola {$orden->cliente_nombre}, te compartimos el resumen de tu orden #"
