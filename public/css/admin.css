@@ -1854,6 +1854,17 @@ body:has([action*="ventas-reports"]) .fi-ta-content {
     background: #fff7ed !important;
 }
 
+.compra-tot-linea-1 > div:not(:last-child),
+.compra-tot-linea-2 > div:not(:last-child) {
+    border-right: 1px solid rgba(15, 23, 42, .12) !important;
+    padding-right: 12px !important;
+}
+
+.compra-tot-linea-1 > div:not(:first-child),
+.compra-tot-linea-2 > div:not(:first-child) {
+    padding-left: 12px !important;
+}
+
 /* ======================================================
    TARJETAS DE METRICAS CON COLOR (dashboard)
 ====================================================== */
