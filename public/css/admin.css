@@ -2014,23 +2014,25 @@ body:has(.fi-simple-layout) {
 ====================================================== */
 
 .fi-wi-stats-overview-stats-ctn:has(.cierres-caja-stat) {
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) !important;
+    grid-template-columns: repeat(11, minmax(0, 1fr)) !important;
+    gap: 6px !important;
 }
 
 .cierres-caja-stat {
-    padding: .75rem !important;
+    padding: .4rem !important;
 }
 
 .cierres-caja-stat .fi-wi-stats-overview-stat-label {
-    font-size: 11px !important;
+    font-size: 9px !important;
+    white-space: normal !important;
 }
 
 .cierres-caja-stat .fi-wi-stats-overview-stat-value {
-    font-size: 1.1rem !important;
+    font-size: .85rem !important;
 }
 
 .cierres-caja-stat .fi-wi-stats-overview-stat-description {
-    font-size: 10px !important;
+    font-size: 8px !important;
 }
 
 .producto-linea-1,
