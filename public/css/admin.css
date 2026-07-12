@@ -1894,6 +1894,8 @@ body:has(.fi-simple-layout) {
 
 .producto-card > div:nth-child(2) {
     min-height: 40px !important;
+    display: flex !important;
+    align-items: flex-start !important;
 }
 
 .producto-card > div:nth-child(5) {
