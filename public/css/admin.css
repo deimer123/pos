@@ -2014,8 +2014,12 @@ body:has(.fi-simple-layout) {
 ====================================================== */
 
 .fi-wi-stats-overview-stats-ctn:has(.cierres-caja-stat) {
-    grid-template-columns: repeat(11, minmax(0, 1fr)) !important;
+    grid-template-columns: repeat(9, minmax(0, 1fr)) !important;
     gap: 6px !important;
+}
+
+.fi-wi-stats-overview-stats-ctn:has(.cierres-caja-stat) > *:nth-child(2) {
+    grid-column: span 2 !important;
 }
 
 .cierres-caja-stat {

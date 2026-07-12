@@ -36,29 +36,19 @@ class CierresCajaStats extends BaseWidget
                 ->icon('heroicon-o-banknotes')
                 ->color('success'),
 
-            Stat::make('Efectivo', $this->money($totals['efectivo']))
-                ->description('Ventas, cartera y movimientos')
+            Stat::make('Efectivo / Transferencia / Credito / Cartera', $this->money($totals['efectivo'] + $totals['transferencia']))
+                ->description(
+                    'Efectivo ' . $this->money($totals['efectivo'])
+                    . ' | Transferencia ' . $this->money($totals['transferencia'])
+                    . ' | Credito ' . $this->money($totals['ventas_credito'])
+                    . ' | Cartera ' . $this->money($totals['cartera'])
+                )
                 ->icon('heroicon-o-banknotes')
                 ->color('success'),
-
-            Stat::make('Transferencia', $this->money($totals['transferencia']))
-                ->description('Ventas, cartera y movimientos')
-                ->icon('heroicon-o-arrow-path')
-                ->color('info'),
-
-            Stat::make('Credito', $this->money($totals['ventas_credito']))
-                ->description('Ventas a credito')
-                ->icon('heroicon-o-credit-card')
-                ->color('warning'),
         ];
 
         if ($mostrarDetalle) {
             $stats = array_merge($stats, [
-                Stat::make('Cartera', $this->money($totals['cartera']))
-                    ->description('Efectivo ' . $this->money($totals['cartera_efectivo']) . ' | Transf. ' . $this->money($totals['cartera_transferencia']))
-                    ->icon('heroicon-o-receipt-refund')
-                    ->color('primary'),
-
                 Stat::make('Costo de venta', $this->money($totals['costo']))
                     ->description('Costo con IVA incluido')
                     ->icon('heroicon-o-calculator')
