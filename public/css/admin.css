@@ -1799,6 +1799,10 @@ body:has([action*="ventas-reports"]) .fi-ta-content {
     border-left: 4px solid #6366f1 !important;
 }
 
+.fi-fo-component-ctn:has(.compra-linea-1) {
+    gap: 0 !important;
+}
+
 .compra-linea-1,
 .compra-linea-2,
 .compra-linea-3 {
