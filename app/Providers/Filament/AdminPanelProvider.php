@@ -66,6 +66,7 @@ class AdminPanelProvider extends PanelProvider
         ])
         ->authMiddleware([
             Authenticate::class,
+            \App\Http\Middleware\EnforceSessionUniqueness::class, // ✔️ Cierra la sesión si el usuario entra desde otro lugar
             \App\Http\Middleware\RestrictVendedorFromPanel::class, // ✔️ Bloquea acceso a vendedores
             \App\Http\Middleware\RequireConfiguracionEmpresa::class, // ✔️ Bloquea todo el panel hasta completar el wizard de configuración
         ])

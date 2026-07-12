@@ -111,3 +111,52 @@
     setInterval(verificar, 1000);
 })();
 </script>
+
+{{-- Sesión única global (misma pestaña que se muestra en el POS): si el
+     usuario entra desde otra pestaña o dispositivo con la misma cuenta,
+     esta pestaña se cierra sola, sin esperar a que haga clic en algo. --}}
+@auth
+<script>
+(function () {
+    if (window.location.pathname.includes('/admin/login')) return;
+
+    const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const TAB_ID = Math.random().toString(36).substr(2, 20) + Date.now();
+
+    fetch('/register-tab', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'X-CSRF-TOKEN': CSRF, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tab_id: TAB_ID })
+    }).then(iniciarVerificacion).catch(iniciarVerificacion);
+
+    function iniciarVerificacion() {
+        setInterval(function () {
+            if (document.getElementById('_sesion_aviso')) return;
+            fetch('/check-tab?tab_id=' + TAB_ID, {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' }
+            }).then(function (r) {
+                if (r.status === 401) mostrarAvisoSesion();
+            }).catch(function () {});
+        }, 5000);
+    }
+
+    function mostrarAvisoSesion() {
+        if (document.getElementById('_sesion_aviso')) return;
+        const div = document.createElement('div');
+        div.id = '_sesion_aviso';
+        div.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99999;display:flex;align-items:center;justify-content:center;';
+        div.innerHTML = `<div style="background:#1f2937;border:2px solid #ef4444;border-radius:12px;padding:32px 40px;text-align:center;max-width:400px;">
+            <div style="font-size:40px;margin-bottom:12px;">🔒</div>
+            <h2 style="color:#f87171;margin:0 0 10px;font-size:18px;">Sesión cerrada</h2>
+            <p style="color:#d1d5db;font-size:14px;margin:0 0 20px;">Tu sesión fue abierta en otro lugar.<br>Solo se permite una sesión activa a la vez.</p>
+            <button onclick="window.location.replace('/sesion-desactivada')"
+                style="background:#ef4444;color:white;border:none;border-radius:8px;padding:10px 24px;font-size:14px;font-weight:700;cursor:pointer;">
+                Cerrar sesión
+            </button>
+        </div>`;
+        document.body.appendChild(div);
+    }
+})();
+</script>
+@endauth
