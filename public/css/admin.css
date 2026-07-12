@@ -430,9 +430,9 @@ body,
     overflow: visible !important;
 }
 
-.fi-ta-ctn,
-.fi-ta-table {
-    overflow: hidden !important;
+.fi-ta-ctn {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
 }
 
 .fi-dropdown-panel,
