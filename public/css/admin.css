@@ -1722,10 +1722,6 @@ body:has([action*="ventas-reports"]) .fi-ta-table {
     min-width: 0 !important;
 }
 
-body:has([href*="ventas-reports"]) .fi-ta-content,
-body:has([action*="ventas-reports"]) .fi-ta-content {
-    overflow-x: hidden !important;
-}
 
 @media (max-width: 480px) {
     .fi-simple-layout {
