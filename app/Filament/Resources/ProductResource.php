@@ -636,7 +636,7 @@ return \App\Models\Familia::create($data)->id;
                             default => 'gray',
                         }),
                 ])->extraAttributes(['class' => 'px-3 pb-2']),
-            ])->space(1),
+            ])->space(1)->extraAttributes(['class' => 'producto-card']),
         ])
         ->paginated([25, 50, 100, 200])
         ->defaultPaginationPageOption(50)
