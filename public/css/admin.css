@@ -1764,13 +1764,17 @@ body:has([action*="ventas-reports"]) .fi-ta-content {
    REPEATERS COMPACTOS (ej. Códigos Alternos)
 ====================================================== */
 
+.fi-fo-repeater .grid {
+    gap: 6px !important;
+}
+
 .fi-fo-repeater-item {
     display: flex !important;
     align-items: center !important;
     background: transparent !important;
     box-shadow: none !important;
     border-radius: 0 !important;
-    padding: 6px 0 !important;
+    padding: 2px 0 !important;
 }
 
 .fi-fo-repeater-item-header {
