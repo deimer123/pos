@@ -29,4 +29,9 @@ class ListReporteServicios extends ListRecords
             ReporteServiciosStats::class,
         ];
     }
+
+    public function getHeaderWidgetsColumns(): int | string | array
+    {
+        return 1;
+    }
 }

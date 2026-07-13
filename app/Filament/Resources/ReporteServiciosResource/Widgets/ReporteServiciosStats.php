@@ -17,6 +17,11 @@ class ReporteServiciosStats extends BaseWidget
         return ListReporteServicios::class;
     }
 
+    protected function getColumns(): int
+    {
+        return 4;
+    }
+
     protected function getStats(): array
     {
         $registros = $this->getPageTableQuery()->get();
@@ -38,7 +43,7 @@ class ReporteServiciosStats extends BaseWidget
         $montoLiquidado  = (float) $registrosPropio->whereIn('id', $idsLiquidados)->sum(fn ($r) => $r->valor_tercero);
         $montoPendiente  = (float) $registrosPropio->whereNotIn('id', $idsLiquidados)->sum(fn ($r) => $r->valor_tercero);
 
-        return [
+        $stats = [
             Stat::make('Total facturado en servicios', $this->money($totalFacturado))
                 ->icon('heroicon-o-wrench-screwdriver')
                 ->color('primary'),
@@ -63,6 +68,11 @@ class ReporteServiciosStats extends BaseWidget
                 ->icon('heroicon-o-clock')
                 ->color('danger'),
         ];
+
+        return array_map(
+            fn (Stat $stat) => $stat->extraAttributes(['class' => 'reporte-servicios-stat']),
+            $stats
+        );
     }
 
     protected function money(float $value): string
