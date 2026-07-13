@@ -87,33 +87,6 @@ class ConfiguracionEmpresaResource extends Resource
                                  ->visibility('public')
                                 ->preserveFilenames()
                                 ->maxSize(2048),
-
-                            Forms\Components\Placeholder::make('catalogo_publico_url')
-                                ->label('Catálogo público (para compartir con clientes)')
-                                ->visible(fn (?ConfiguracionEmpresa $record): bool => (bool) $record?->slug)
-                                ->content(function (?ConfiguracionEmpresa $record) {
-                                    if (! $record?->slug) {
-                                        return '—';
-                                    }
-
-                                    $url = url('/catalogo/' . $record->slug);
-
-                                    return new \Illuminate\Support\HtmlString(
-                                        '<a href="' . e($url) . '" target="_blank" style="color:#4f46e5; text-decoration:underline;">' . e($url) . '</a>'
-                                    );
-                                }),
-                        ]),
-
-                    Forms\Components\Grid::make(1)
-                        ->extraAttributes(['class' => 'producto-linea-1'])
-                        ->schema([
-                            Forms\Components\TextInput::make('slug')
-                                ->label('Nombre del catálogo (URL)')
-                                ->prefix(url('/catalogo') . '/')
-                                ->maxLength(255)
-                                ->unique(table: ConfiguracionEmpresa::class, column: 'slug', ignoreRecord: true)
-                                ->helperText('Solo letras, números y guiones. Si lo dejas vacío, se genera automáticamente a partir del nombre de la empresa.')
-                                ->dehydrateStateUsing(fn (?string $state) => filled($state) ? \Illuminate\Support\Str::slug($state) : null),
                         ]),
                 ]),
 
