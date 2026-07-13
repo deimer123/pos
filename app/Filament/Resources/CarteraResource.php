@@ -69,6 +69,7 @@ class CarteraResource extends Resource
                     ->where('empresa_id', $empresaId)
                     ->where('tipo_pago', 'credito')
             )
+            ->recordClasses(fn () => 'cartera-row')
             ->defaultSort('fecha_vencimiento', 'asc')
             ->paginated([10, 25, 50, 100])
             ->filtersLayout(FiltersLayout::AboveContent)
