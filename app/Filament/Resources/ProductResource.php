@@ -471,13 +471,6 @@ return \App\Models\Familia::create($data)->id;
                     Forms\Components\Toggle::make('requiere_cocina')
                         ->label('Requiere cocina')
                         ->helperText('Marca el producto para flujo de cocina o preparación.'),
-
-                    TextInput::make('peso_base')
-                        ->label('Peso base')
-                        ->numeric()
-                        ->step('0.001')
-                        ->helperText('Peso de referencia del producto cuando se vende por peso.')
-                        ->default(null),
                 ]),
         ]),
 
