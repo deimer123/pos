@@ -2172,11 +2172,11 @@ body:has(.fi-simple-layout) {
 ====================================================== */
 
 .fi-sidebar {
-    background: linear-gradient(180deg, #eef2ff 0%, #e0e7ff 100%) !important;
+    background: linear-gradient(180deg, #e0e7ff 0%, #c7d2fe 100%) !important;
 }
 
 .fi-topbar {
-    background: linear-gradient(90deg, #eef2ff 0%, #e0e7ff 100%) !important;
+    background: linear-gradient(90deg, #e0e7ff 0%, #c7d2fe 100%) !important;
 }
 
 
