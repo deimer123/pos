@@ -43,6 +43,8 @@ class ReporteServiciosStats extends BaseWidget
         $montoLiquidado  = (float) $registrosPropio->whereIn('id', $idsLiquidados)->sum(fn ($r) => $r->valor_tercero);
         $montoPendiente  = (float) $registrosPropio->whereNotIn('id', $idsLiquidados)->sum(fn ($r) => $r->valor_tercero);
 
+        $totalServiciosTerceros = (float) $registros->where('tipo_servicio', 'tercero')->sum('subtotal');
+
         $stats = [
             Stat::make('Total facturado en servicios', $this->money($totalFacturado))
                 ->icon('heroicon-o-wrench-screwdriver')
@@ -57,6 +59,11 @@ class ReporteServiciosStats extends BaseWidget
                 ->description('No es ganancia de la empresa')
                 ->icon('heroicon-o-arrow-uturn-right')
                 ->color('warning'),
+
+            Stat::make('Servicios a terceros', $this->money($totalServiciosTerceros))
+                ->description('Informativo, no participa en liquidación')
+                ->icon('heroicon-o-information-circle')
+                ->color('gray'),
 
             Stat::make('Ya liquidado a mecánicos', $this->money($montoLiquidado))
                 ->description('Servicios propios ya pagados')

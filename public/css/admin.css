@@ -2076,7 +2076,7 @@ body:has(.fi-simple-layout) {
 .fi-wi-stats-overview-stats-ctn.fi-wi-stats-overview-stats-ctn:has(.reporte-servicios-stat) {
     width: 100% !important;
     gap: 8px !important;
-    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
 }
 
 .reporte-servicios-stat {
