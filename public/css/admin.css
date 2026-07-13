@@ -1991,12 +1991,7 @@ body:has(.fi-simple-layout) {
     background: #fff7ed !important;
 }
 
-.fi-ta-ctn:has(.inventario-general-marker),
-.fi-ta-ctn:has(.ventas-report-marker),
-.fi-ta-ctn:has(.ventas-por-vendedor-marker),
-.fi-ta-ctn:has(.cierres-caja-marker),
-.fi-ta-ctn:has(.devoluciones-report-marker),
-.fi-ta-ctn:has(.cartera-marker) {
+.fi-ta-ctn {
     border-radius: 22px !important;
     overflow: hidden !important;
     box-shadow: -10px 0 18px -6px rgba(79, 70, 229, .45) !important;
