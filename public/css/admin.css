@@ -1991,6 +1991,12 @@ body:has(.fi-simple-layout) {
     background: #fff7ed !important;
 }
 
+.fi-ta-ctn:has(.inventario-general-row) {
+    border-radius: 22px !important;
+    overflow: hidden !important;
+    box-shadow: -10px 0 18px -6px rgba(79, 70, 229, .45) !important;
+}
+
 /* ======================================================
    GLOBAL: FILAS DE TABLAS Y PANEL DE FILTROS EN TODO EL PANEL
    (aplica automaticamente a cualquier resource, sin tocar cada uno)
