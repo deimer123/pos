@@ -62,6 +62,7 @@ class DevolucionesReportResource extends Resource
                     ->with(['factura.cliente', 'cliente', 'user', 'detalles'])
                     ->where('empresa_id', $empresaId)
             )
+            ->recordClasses(fn () => 'devoluciones-report-row')
             ->defaultSort('fecha', 'desc')
             ->paginated([10, 25, 50, 100])
             ->filtersLayout(FiltersLayout::AboveContent)
