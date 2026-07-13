@@ -61,7 +61,7 @@
     </div>
 
     <div style="margin-bottom:24px;">
-        <x-filament::section heading="Ingresos por habitación" class="combo-franja-azul producto-linea-1">
+        <x-filament::section heading="Ingresos por habitación" class="combo-franja-azul">
             @if(empty($porHabitacion))
                 <p style="font-size:13px; color:#6b7280;">No hay hospedajes facturados en este rango de fechas.</p>
             @else
@@ -92,7 +92,7 @@
         </x-filament::section>
     </div>
 
-    <x-filament::section heading="Ocupación por habitación y día" class="combo-franja-azul producto-linea-1">
+    <x-filament::section heading="Ocupación por habitación y día" class="combo-franja-azul">
         @if($ocupacion['habitaciones']->isEmpty())
             <p style="font-size:13px; color:#6b7280;">No hay habitaciones activas configuradas.</p>
         @else
@@ -100,7 +100,7 @@
                 <table style="font-size:11px; border-collapse:collapse;">
                     <thead>
                         <tr>
-                            <th style="position:sticky; left:0; background:#eef2ff; padding:4px 12px 4px 0; text-align:left;">Habitación</th>
+                            <th style="position:sticky; left:0; background:#fff; padding:4px 12px 4px 0; text-align:left;">Habitación</th>
                             @foreach($ocupacion['dias'] as $dia)
                                 <th style="padding:4px 4px; text-align:center; font-weight:400; color:#6b7280;">{{ $dia->format('d/m') }}</th>
                             @endforeach
