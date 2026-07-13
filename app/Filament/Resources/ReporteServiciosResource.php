@@ -68,7 +68,7 @@ class ReporteServiciosResource extends Resource
                 FacturaDetalle::query()
                     ->whereNotNull('tipo_servicio')
                     ->whereHas('factura', fn ($q) => $q->where('empresa_id', $empresaId))
-                    ->with(['factura.cliente'])
+                    ->with(['factura.cliente', 'mecanico'])
             )
             ->defaultSort('id', 'desc')
             ->paginated([10, 25, 50, 100])
@@ -155,6 +155,13 @@ class ReporteServiciosResource extends Resource
                     ->badge()
                     ->formatStateUsing(fn ($state) => $state === 'propio' ? 'Propio' : 'Tercero')
                     ->color(fn ($state) => $state === 'propio' ? 'success' : 'warning'),
+
+                Tables\Columns\TextColumn::make('mecanico.nombre')
+                    ->label('Mecánico')
+                    ->size('xs')
+                    ->formatStateUsing(fn ($state, FacturaDetalle $record) => $record->tipo_servicio === 'propio' ? ($state ?? 'Sin asignar') : '-')
+                    ->badge()
+                    ->color(fn ($state, FacturaDetalle $record) => $record->tipo_servicio === 'propio' && ! $record->mecanico_id ? 'danger' : 'gray'),
 
                 Tables\Columns\TextColumn::make('porcentaje_empresa')
                     ->label('% Empresa')
