@@ -103,6 +103,18 @@ class ConfiguracionEmpresaResource extends Resource
                                     );
                                 }),
                         ]),
+
+                    Forms\Components\Grid::make(1)
+                        ->extraAttributes(['class' => 'producto-linea-1'])
+                        ->schema([
+                            Forms\Components\TextInput::make('slug')
+                                ->label('Nombre del catálogo (URL)')
+                                ->prefix(url('/catalogo') . '/')
+                                ->maxLength(255)
+                                ->unique(table: ConfiguracionEmpresa::class, column: 'slug', ignoreRecord: true)
+                                ->helperText('Solo letras, números y guiones. Si lo dejas vacío, se genera automáticamente a partir del nombre de la empresa.')
+                                ->dehydrateStateUsing(fn (?string $state) => filled($state) ? \Illuminate\Support\Str::slug($state) : null),
+                        ]),
                 ]),
 
             Forms\Components\Wizard\Step::make('Tipo de negocio')
