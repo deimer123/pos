@@ -82,20 +82,22 @@ class CatalogoResource extends Resource
                                 }),
                         ]),
 
-                    Forms\Components\Grid::make(1)
-                        ->extraAttributes(['class' => 'producto-linea-1'])
-                        ->schema([
-                            Forms\Components\Select::make('productos')
-                                ->relationship(
-                                    name: 'productos',
-                                    titleAttribute: 'descripcion_larga',
-                                    modifyQueryUsing: fn (Builder $query) => $query->where('empresa_id', auth()->user()->getEmpresaActualId()),
+                    Forms\Components\Repeater::make('itemsProductos')
+                        ->relationship('itemsProductos')
+                        ->label('Productos incluidos en este catálogo')
+                        ->addActionLabel('+ Agregar producto')
+                        ->defaultItems(0)
+                        ->simple(
+                            Forms\Components\Select::make('product_id')
+                                ->label('Producto')
+                                ->options(
+                                    fn () => \App\Models\Product::where('empresa_id', auth()->user()->getEmpresaActualId())
+                                        ->orderBy('descripcion_larga')
+                                        ->pluck('descripcion_larga', 'id')
                                 )
-                                ->label('Productos incluidos en este catálogo')
-                                ->multiple()
                                 ->searchable()
-                                ->helperText('Elige uno por uno los productos que quieres mostrar en este catálogo.'),
-                        ]),
+                                ->required()
+                        ),
                 ]),
         ]);
     }
