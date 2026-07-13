@@ -29,4 +29,9 @@ class ListCierresCajaReports extends ListRecords
             CierresCajaStats::class,
         ];
     }
+
+    public function getHeaderWidgetsColumns(): int | string | array
+    {
+        return 1;
+    }
 }
