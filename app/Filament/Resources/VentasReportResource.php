@@ -61,6 +61,7 @@ class VentasReportResource extends Resource
                     ->with(['cliente', 'vendedorAsignado', 'cajero'])
                     ->where('empresa_id', $empresaId)
             )
+            ->recordClasses(fn () => 'ventas-report-row')
             ->defaultSort('fecha', 'desc')
             ->paginated([10, 25, 50, 100])
             ->filtersLayout(FiltersLayout::AboveContent)
