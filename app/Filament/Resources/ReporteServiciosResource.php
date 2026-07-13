@@ -4,7 +4,10 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ReporteServiciosResource\Pages;
 use App\Models\FacturaDetalle;
+use App\Models\Mecanico;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Enums\FiltersLayout;
@@ -92,6 +95,32 @@ class ReporteServiciosResource extends Resource
                         'tercero' => 'Tercero',
                     ])
                     ->placeholder('Todos'),
+            ])
+            ->actions([
+                Tables\Actions\Action::make('asignar_mecanico')
+                    ->label('Asignar mecánico')
+                    ->icon('heroicon-o-wrench-screwdriver')
+                    ->color('warning')
+                    ->visible(fn (FacturaDetalle $record) => $record->tipo_servicio === 'propio' && $record->mecanico_id === null)
+                    ->form([
+                        Select::make('mecanico_id')
+                            ->label('Mecánico')
+                            ->options(fn () => Mecanico::where('empresa_id', $empresaId)
+                                ->where('activo', true)
+                                ->orderBy('nombre')
+                                ->pluck('nombre', 'id'))
+                            ->searchable()
+                            ->required(),
+                    ])
+                    ->action(function (FacturaDetalle $record, array $data) {
+                        $record->update(['mecanico_id' => $data['mecanico_id']]);
+                    })
+                    ->successNotification(
+                        Notification::make()
+                            ->title('Mecánico asignado')
+                            ->body('Ya puedes liquidar este servicio desde Taller → Mecánicos.')
+                            ->success()
+                    ),
             ])
             ->columns([
                 Tables\Columns\TextColumn::make('factura.fecha')
