@@ -91,14 +91,22 @@ class CatalogoResource extends Resource
                         ->simple(
                             Forms\Components\Select::make('product_id')
                                 ->label('Producto')
-                                ->options(
-                                    fn () => \App\Models\Product::where('empresa_id', auth()->user()->getEmpresaActualId())
+                                ->live()
+                                ->options(function (Forms\Get $get, ?string $state) {
+                                    $yaAgregados = collect($get('../../itemsProductos'))
+                                        ->pluck('product_id')
+                                        ->filter()
+                                        ->reject(fn ($id) => (string) $id === (string) $state)
+                                        ->all();
+
+                                    return \App\Models\Product::where('empresa_id', auth()->user()->getEmpresaActualId())
+                                        ->when($yaAgregados, fn ($q) => $q->whereNotIn('id', $yaAgregados))
                                         ->orderBy('descripcion_larga')
                                         ->get()
                                         ->mapWithKeys(fn ($producto) => [
                                             $producto->id => $producto->descripcion_larga . ' — $' . number_format((float) $producto->precio_venta1, 0, ',', '.'),
-                                        ])
-                                )
+                                        ]);
+                                })
                                 ->searchable()
                                 ->required()
                         ),
