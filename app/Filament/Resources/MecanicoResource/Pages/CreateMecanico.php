@@ -14,4 +14,12 @@ class CreateMecanico extends CreateRecord
         $data['empresa_id'] = auth()->user()->getEmpresaActualId();
         return $data;
     }
+
+    protected function getFormActions(): array
+    {
+        return [
+            $this->getCreateFormAction(),
+            $this->getCancelFormAction(),
+        ];
+    }
 }

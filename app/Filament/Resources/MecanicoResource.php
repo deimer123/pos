@@ -40,27 +40,35 @@ class MecanicoResource extends Resource
     public static function form(Form $form): Form
     {
         return $form->schema([
-            Forms\Components\Section::make('Datos del mecánico')->schema([
-                Forms\Components\Grid::make(2)->schema([
-                    Forms\Components\TextInput::make('nombre')
-                        ->label('Nombre completo')
-                        ->required()
-                        ->maxLength(150),
+            Forms\Components\Section::make('Datos del mecánico')
+                ->extraAttributes(['class' => 'combo-franja-azul'])
+                ->schema([
+                    Forms\Components\Grid::make(2)
+                        ->extraAttributes(['class' => 'producto-linea-1'])
+                        ->schema([
+                            Forms\Components\TextInput::make('nombre')
+                                ->label('Nombre completo')
+                                ->required()
+                                ->maxLength(150),
 
-                    Forms\Components\TextInput::make('cedula')
-                        ->label('Cédula')
-                        ->maxLength(20),
+                            Forms\Components\TextInput::make('cedula')
+                                ->label('Cédula')
+                                ->maxLength(20),
+                        ]),
 
-                    Forms\Components\TextInput::make('telefono')
-                        ->label('Teléfono')
-                        ->tel()
-                        ->maxLength(20),
+                    Forms\Components\Grid::make(2)
+                        ->extraAttributes(['class' => 'producto-linea-2'])
+                        ->schema([
+                            Forms\Components\TextInput::make('telefono')
+                                ->label('Teléfono')
+                                ->tel()
+                                ->maxLength(20),
 
-                    Forms\Components\Toggle::make('activo')
-                        ->label('Activo')
-                        ->default(true),
+                            Forms\Components\Toggle::make('activo')
+                                ->label('Activo')
+                                ->default(true),
+                        ]),
                 ]),
-            ]),
         ]);
     }
 
