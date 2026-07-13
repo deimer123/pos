@@ -2131,6 +2131,9 @@ body:has(.fi-simple-layout) {
 .fi-wi-stats-overview-stat {
     background: linear-gradient(135deg, #eef2ff 0%, #f8fbff 100%) !important;
     border: 1px solid rgba(79, 70, 229, .14) !important;
+    border-radius: 16px !important;
+    box-shadow: -8px 0 16px -8px rgba(79, 70, 229, .35) !important;
+    overflow: hidden !important;
 }
 
 .fi-wi-stats-overview-stat-label {
