@@ -281,66 +281,68 @@ class ConfiguracionEmpresaResource extends Resource
                         ->columns(2),
                 ]),
 
-            Forms\Components\Wizard\Step::make('Facturación Electrónica')
-                ->visible(fn (?ConfiguracionEmpresa $record): bool => (bool) $record?->factus_enabled)
+        ];
+    }
+
+    protected static function facturacionElectronicaSchema(): array
+    {
+        return [
+            Forms\Components\Grid::make(2)
+                ->extraAttributes(['class' => 'producto-linea-1'])
                 ->schema([
-                    Forms\Components\Grid::make(2)
-                        ->extraAttributes(['class' => 'producto-linea-1'])
-                        ->schema([
-                            Forms\Components\TextInput::make('prefijo')
-                                ->label('Prefijo')
-                                ->maxLength(10),
+                    Forms\Components\TextInput::make('prefijo')
+                        ->label('Prefijo')
+                        ->maxLength(10),
 
-                            Forms\Components\TextInput::make('numero_resolucion')
-                                ->label('Número de Resolución')
-                                ->maxLength(50),
-                        ]),
+                    Forms\Components\TextInput::make('numero_resolucion')
+                        ->label('Número de Resolución')
+                        ->maxLength(50),
+                ]),
 
-                    Forms\Components\Grid::make(2)
-                        ->extraAttributes(['class' => 'producto-linea-2'])
-                        ->schema([
-                            Forms\Components\TextInput::make('rango_desde')
-                                ->label('Rango Desde')
-                                ->numeric(),
+            Forms\Components\Grid::make(2)
+                ->extraAttributes(['class' => 'producto-linea-2'])
+                ->schema([
+                    Forms\Components\TextInput::make('rango_desde')
+                        ->label('Rango Desde')
+                        ->numeric(),
 
-                            Forms\Components\TextInput::make('rango_hasta')
-                                ->label('Rango Hasta')
-                                ->numeric(),
-                        ]),
+                    Forms\Components\TextInput::make('rango_hasta')
+                        ->label('Rango Hasta')
+                        ->numeric(),
+                ]),
 
-                    Forms\Components\Grid::make(2)
-                        ->extraAttributes(['class' => 'producto-linea-1'])
-                        ->schema([
-                            Forms\Components\TextInput::make('rango_actual')
-                                ->label('Rango Actual')
-                                ->numeric(),
+            Forms\Components\Grid::make(2)
+                ->extraAttributes(['class' => 'producto-linea-1'])
+                ->schema([
+                    Forms\Components\TextInput::make('rango_actual')
+                        ->label('Rango Actual')
+                        ->numeric(),
 
-                            Forms\Components\TextInput::make('llave')
-                                ->label('Llave')
-                                ->maxLength(255),
-                        ]),
+                    Forms\Components\TextInput::make('llave')
+                        ->label('Llave')
+                        ->maxLength(255),
+                ]),
 
-                    Forms\Components\Grid::make(2)
-                        ->extraAttributes(['class' => 'producto-linea-2'])
-                        ->schema([
-                            Forms\Components\DatePicker::make('fecha_inicio')
-                                ->label('Fecha Inicio'),
+            Forms\Components\Grid::make(2)
+                ->extraAttributes(['class' => 'producto-linea-2'])
+                ->schema([
+                    Forms\Components\DatePicker::make('fecha_inicio')
+                        ->label('Fecha Inicio'),
 
-                            Forms\Components\DatePicker::make('fecha_fin')
-                                ->label('Fecha Fin'),
-                        ]),
+                    Forms\Components\DatePicker::make('fecha_fin')
+                        ->label('Fecha Fin'),
+                ]),
 
-                    Forms\Components\Grid::make(2)
-                        ->extraAttributes(['class' => 'producto-linea-1'])
-                        ->schema([
-                            Forms\Components\Toggle::make('expirado')
-                                ->label('Expirado')
-                                ->default(false),
+            Forms\Components\Grid::make(2)
+                ->extraAttributes(['class' => 'producto-linea-1'])
+                ->schema([
+                    Forms\Components\Toggle::make('expirado')
+                        ->label('Expirado')
+                        ->default(false),
 
-                            Forms\Components\Toggle::make('activo')
-                                ->label('Activo')
-                                ->default(true),
-                        ]),
+                    Forms\Components\Toggle::make('activo')
+                        ->label('Activo')
+                        ->default(true),
                 ]),
         ];
     }
@@ -351,10 +353,21 @@ class ConfiguracionEmpresaResource extends Resource
             Forms\Components\Hidden::make('empresa_id')
                 ->default(auth()->id()),
 
-            Forms\Components\Wizard::make(static::wizardSteps())
+            Forms\Components\Tabs::make('ConfiguracionEmpresaTabs')
                 ->columnSpanFull()
-                ->skippable(false)
-                ->extraAttributes(['class' => 'combo-franja-azul']),
+                ->extraAttributes(['class' => 'combo-franja-azul'])
+                ->tabs([
+                    Forms\Components\Tabs\Tab::make('Configuración')
+                        ->schema([
+                            Forms\Components\Wizard::make(static::wizardSteps())
+                                ->columnSpanFull()
+                                ->skippable(false),
+                        ]),
+
+                    Forms\Components\Tabs\Tab::make('Facturación Electrónica')
+                        ->visible(fn (?ConfiguracionEmpresa $record): bool => (bool) $record?->factus_enabled)
+                        ->schema(static::facturacionElectronicaSchema()),
+                ]),
         ]);
     }
 
