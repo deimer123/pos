@@ -32,7 +32,7 @@
         </div>
 
         <div style="flex:1 1 220px; min-width:220px;">
-            <x-filament::section class="combo-franja-azul producto-linea-2">
+            <x-filament::section class="combo-franja-azul producto-linea-1">
                 <div style="font-size:13px; color:#6b7280;">Total Hospedaje (100% utilidad)</div>
                 <div style="font-size:24px; font-weight:700; color:#065f46;">{{ $money($totalHospedaje) }}</div>
             </x-filament::section>
@@ -46,7 +46,7 @@
         </div>
 
         <div style="flex:1 1 220px; min-width:220px;">
-            <x-filament::section class="combo-franja-azul producto-linea-2">
+            <x-filament::section class="combo-franja-azul producto-linea-1">
                 <div style="font-size:13px; color:#6b7280;">Utilidad Total</div>
                 <div style="font-size:24px; font-weight:700; color:{{ $utilidadTotal < 0 ? '#dc2626' : '#065f46' }};">{{ $money($utilidadTotal) }}</div>
             </x-filament::section>
@@ -61,7 +61,7 @@
     </div>
 
     <div style="margin-bottom:24px;">
-        <x-filament::section heading="Ingresos por habitación">
+        <x-filament::section heading="Ingresos por habitación" class="combo-franja-azul producto-linea-1">
             @if(empty($porHabitacion))
                 <p style="font-size:13px; color:#6b7280;">No hay hospedajes facturados en este rango de fechas.</p>
             @else
@@ -91,7 +91,7 @@
         </x-filament::section>
     </div>
 
-    <x-filament::section heading="Ocupación por habitación y día">
+    <x-filament::section heading="Ocupación por habitación y día" class="combo-franja-azul producto-linea-1">
         @if($ocupacion['habitaciones']->isEmpty())
             <p style="font-size:13px; color:#6b7280;">No hay habitaciones activas configuradas.</p>
         @else
@@ -99,7 +99,7 @@
                 <table style="font-size:11px; border-collapse:collapse;">
                     <thead>
                         <tr>
-                            <th style="position:sticky; left:0; background:#fff; padding:4px 12px 4px 0; text-align:left;">Habitación</th>
+                            <th style="position:sticky; left:0; background:#eef2ff; padding:4px 12px 4px 0; text-align:left;">Habitación</th>
                             @foreach($ocupacion['dias'] as $dia)
                                 <th style="padding:4px 4px; text-align:center; font-weight:400; color:#6b7280;">{{ $dia->format('d/m') }}</th>
                             @endforeach
@@ -108,7 +108,7 @@
                     <tbody>
                         @foreach($ocupacion['habitaciones'] as $habitacion)
                             <tr>
-                                <td style="position:sticky; left:0; background:#fff; padding:4px 12px 4px 0; font-weight:600; white-space:nowrap;">{{ $habitacion->numero }}</td>
+                                <td style="position:sticky; left:0; background:#eef2ff; padding:4px 12px 4px 0; font-weight:600; white-space:nowrap;">{{ $habitacion->numero }}</td>
                                 @php
                                     $colorEstado = [
                                         'reservada' => '#93c5fd',
