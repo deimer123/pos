@@ -77,7 +77,8 @@
                         </thead>
                         <tbody>
                             @foreach($porHabitacion as $fila)
-                                <tr style="border-bottom:1px solid #f3f4f6;">
+                                @php $filaBg = $loop->odd ? '#eef2ff' : '#fff7ed'; @endphp
+                                <tr style="border-bottom:1px solid #f3f4f6; background:{{ $filaBg }};">
                                     <td style="padding:8px 16px 8px 0; font-weight:600;">{{ $fila['habitacion'] }}</td>
                                     <td style="padding:8px 16px 8px 0;">{{ $fila['reservas'] }}</td>
                                     <td style="padding:8px 16px 8px 0;">{{ $fila['noches'] }}</td>
@@ -107,8 +108,9 @@
                     </thead>
                     <tbody>
                         @foreach($ocupacion['habitaciones'] as $habitacion)
-                            <tr>
-                                <td style="position:sticky; left:0; background:#eef2ff; padding:4px 12px 4px 0; font-weight:600; white-space:nowrap;">{{ $habitacion->numero }}</td>
+                            @php $filaBg = $loop->odd ? '#eef2ff' : '#fff7ed'; @endphp
+                            <tr style="background:{{ $filaBg }};">
+                                <td style="position:sticky; left:0; background:{{ $filaBg }}; padding:4px 12px 4px 0; font-weight:600; white-space:nowrap;">{{ $habitacion->numero }}</td>
                                 @php
                                     $colorEstado = [
                                         'reservada' => '#93c5fd',
