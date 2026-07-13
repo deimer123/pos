@@ -71,6 +71,7 @@ class ServicioResource extends Resource
             Section::make('Datos del servicio')
                 ->icon('heroicon-o-wrench-screwdriver')
                 ->description('Define el servicio, quién lo ejecuta y cuánto cuesta.')
+                ->extraAttributes(['class' => 'combo-franja-azul'])
                 ->schema([
                     Grid::make(1)
                         ->extraAttributes(['class' => 'producto-linea-1'])
