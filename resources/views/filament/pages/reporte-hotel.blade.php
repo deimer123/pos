@@ -25,37 +25,37 @@
 
     <div style="display:flex; flex-wrap:wrap; gap:16px; margin-bottom:24px;">
         <div style="flex:1 1 220px; min-width:220px;">
-            <x-filament::section>
+            <x-filament::section class="combo-franja-azul producto-linea-1">
                 <div style="font-size:13px; color:#6b7280;">Total Productos</div>
-                <div style="font-size:24px; font-weight:700;">{{ $money($totalProductos) }}</div>
+                <div style="font-size:24px; font-weight:700; color:#4338ca;">{{ $money($totalProductos) }}</div>
             </x-filament::section>
         </div>
 
         <div style="flex:1 1 220px; min-width:220px;">
-            <x-filament::section>
+            <x-filament::section class="combo-franja-azul producto-linea-2">
                 <div style="font-size:13px; color:#6b7280;">Total Hospedaje (100% utilidad)</div>
-                <div style="font-size:24px; font-weight:700;">{{ $money($totalHospedaje) }}</div>
+                <div style="font-size:24px; font-weight:700; color:#065f46;">{{ $money($totalHospedaje) }}</div>
             </x-filament::section>
         </div>
 
         <div style="flex:1 1 220px; min-width:220px;">
-            <x-filament::section>
+            <x-filament::section class="combo-franja-azul producto-linea-1">
                 <div style="font-size:13px; color:#6b7280;">Total (Productos + Hospedaje)</div>
-                <div style="font-size:24px; font-weight:700;">{{ $money($totalGeneral) }}</div>
+                <div style="font-size:24px; font-weight:700; color:#4338ca;">{{ $money($totalGeneral) }}</div>
             </x-filament::section>
         </div>
 
         <div style="flex:1 1 220px; min-width:220px;">
-            <x-filament::section>
+            <x-filament::section class="combo-franja-azul producto-linea-2">
                 <div style="font-size:13px; color:#6b7280;">Utilidad Total</div>
-                <div style="font-size:24px; font-weight:700;">{{ $money($utilidadTotal) }}</div>
+                <div style="font-size:24px; font-weight:700; color:{{ $utilidadTotal < 0 ? '#dc2626' : '#065f46' }};">{{ $money($utilidadTotal) }}</div>
             </x-filament::section>
         </div>
 
         <div style="flex:1 1 220px; min-width:220px;">
-            <x-filament::section>
+            <x-filament::section class="combo-franja-azul producto-linea-1">
                 <div style="font-size:13px; color:#6b7280;">Ocupación del rango</div>
-                <div style="font-size:24px; font-weight:700;">{{ number_format($ocupacion['porcentaje'], 2, ',', '.') }}%</div>
+                <div style="font-size:24px; font-weight:700; color:#d97706;">{{ number_format($ocupacion['porcentaje'], 2, ',', '.') }}%</div>
             </x-filament::section>
         </div>
     </div>
