@@ -49,8 +49,9 @@ class GastoResource extends Resource
             Section::make('Movimiento')
                 ->description('Registra entradas y salidas que afectan la caja o quedan como soporte administrativo.')
                 ->icon('heroicon-o-arrows-right-left')
+                ->extraAttributes(['class' => 'combo-franja-azul'])
                 ->schema([
-                    Grid::make(2)->schema([
+                    Grid::make(2)->extraAttributes(['class' => 'producto-linea-1'])->schema([
                         Select::make('tipo')
                             ->label('Tipo')
                             ->options([
@@ -66,7 +67,9 @@ class GastoResource extends Resource
                             ->searchable()
                             ->native(false)
                             ->required(),
+                    ]),
 
+                    Grid::make(2)->extraAttributes(['class' => 'producto-linea-2'])->schema([
                         TextInput::make('descripcion')
                             ->placeholder('Ej: moto carguero, compra de bolsas, base adicional')
                             ->required()
@@ -78,7 +81,9 @@ class GastoResource extends Resource
                             ->mask('999.999.999')
                             ->stripCharacters('.')
                             ->required(),
+                    ]),
 
+                    Grid::make(2)->extraAttributes(['class' => 'producto-linea-1'])->schema([
                         DatePicker::make('fecha')
                             ->default(now())
                             ->required(),
@@ -90,11 +95,12 @@ class GastoResource extends Resource
                             ->required(),
                     ]),
 
-                    Textarea::make('observacion')
-                        ->placeholder('Detalle corto del movimiento o soporte interno')
-                        ->columnSpanFull()
-                        ->rows(3)
-                        ->required(),
+                    Grid::make(1)->extraAttributes(['class' => 'producto-linea-2'])->schema([
+                        Textarea::make('observacion')
+                            ->placeholder('Detalle corto del movimiento o soporte interno')
+                            ->rows(3)
+                            ->required(),
+                    ]),
                 ])
                 ->columns(1),
         ]);
