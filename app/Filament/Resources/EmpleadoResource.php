@@ -33,51 +33,66 @@ class EmpleadoResource extends Resource
         return $form
             ->schema([
                 Forms\Components\Section::make('Información Personal')
+                    ->extraAttributes(['class' => 'combo-franja-azul'])
                     ->schema([
-                        Forms\Components\TextInput::make('name')
-                            ->label('Nombre Completo')
-                            ->required()
-                            ->maxLength(255),
+                        Forms\Components\Grid::make(2)
+                            ->extraAttributes(['class' => 'producto-linea-1'])
+                            ->schema([
+                                Forms\Components\TextInput::make('name')
+                                    ->label('Nombre Completo')
+                                    ->required()
+                                    ->maxLength(255),
 
-                        Forms\Components\TextInput::make('email')
-                            ->label('Correo Electrónico')
-                            ->email()
-                            ->required()
-                            ->unique(User::class, 'email', ignoreRecord: true)
-                            ->validationMessages([
-        'unique' => 'Este correo ya existe.',
-    ])
-                            ->maxLength(255),
+                                Forms\Components\TextInput::make('email')
+                                    ->label('Correo Electrónico')
+                                    ->email()
+                                    ->required()
+                                    ->unique(User::class, 'email', ignoreRecord: true)
+                                    ->validationMessages([
+                                        'unique' => 'Este correo ya existe.',
+                                    ])
+                                    ->maxLength(255),
+                            ]),
 
-                        Forms\Components\TextInput::make('telefono')
-                            ->label('Teléfono')
-                            ->maxLength(255),
+                        Forms\Components\Grid::make(2)
+                            ->extraAttributes(['class' => 'producto-linea-2'])
+                            ->schema([
+                                Forms\Components\TextInput::make('telefono')
+                                    ->label('Teléfono')
+                                    ->maxLength(255),
 
-                        Forms\Components\Textarea::make('direccion')
-                            ->label('Dirección')
-                            ->maxLength(500),
-                            
-                    ])
-                    ->columns(2),
+                                Forms\Components\Textarea::make('direccion')
+                                    ->label('Dirección')
+                                    ->maxLength(500),
+                            ]),
+                    ]),
 
                 Forms\Components\Section::make('Acceso y Roles')
+                    ->extraAttributes(['class' => 'combo-franja-azul'])
                     ->schema([
-                        Forms\Components\TextInput::make('password')
-                            ->label('Contraseña')
-                            ->password()
-                            ->required(fn (string $context): bool => $context === 'create')
-                            ->minLength(8)
-                            ->same('passwordConfirmation')
-                            ->dehydrated(fn ($state) => filled($state))
-                            ->dehydrateStateUsing(fn ($state) => Hash::make($state)),
+                        Forms\Components\Grid::make(2)
+                            ->extraAttributes(['class' => 'producto-linea-1'])
+                            ->schema([
+                                Forms\Components\TextInput::make('password')
+                                    ->label('Contraseña')
+                                    ->password()
+                                    ->required(fn (string $context): bool => $context === 'create')
+                                    ->minLength(8)
+                                    ->same('passwordConfirmation')
+                                    ->dehydrated(fn ($state) => filled($state))
+                                    ->dehydrateStateUsing(fn ($state) => Hash::make($state)),
 
-                        Forms\Components\TextInput::make('passwordConfirmation')
-                            ->label('Confirmar Contraseña')
-                            ->password()
-                            ->required(fn (string $context): bool => $context === 'create')
-                            ->minLength(8)
-                            ->dehydrated(false),
+                                Forms\Components\TextInput::make('passwordConfirmation')
+                                    ->label('Confirmar Contraseña')
+                                    ->password()
+                                    ->required(fn (string $context): bool => $context === 'create')
+                                    ->minLength(8)
+                                    ->dehydrated(false),
+                            ]),
 
+                        Forms\Components\Group::make()
+                            ->extraAttributes(['class' => 'producto-linea-2'])
+                            ->schema([
                         Forms\Components\CheckboxList::make('roles')
                             ->label('Roles del Empleado')
                             ->options(function () {
@@ -152,23 +167,29 @@ class EmpleadoResource extends Resource
                                     $component->state($record->roles->pluck('name')->toArray());
                                 }
                             }),
+                            ]),
 
-                        Forms\Components\Toggle::make('activo')
-                            ->label('Usuario Activo')
-                            ->default(true),
+                        Forms\Components\Grid::make(2)
+                            ->extraAttributes(['class' => 'producto-linea-1'])
+                            ->schema([
+                                Forms\Components\Toggle::make('activo')
+                                    ->label('Usuario Activo')
+                                    ->default(true),
 
-                        Forms\Components\Hidden::make('tipo_usuario')
-                            ->default('empleado'),
+                                Forms\Components\Hidden::make('tipo_usuario')
+                                    ->default('empleado'),
 
-                        Forms\Components\Hidden::make('empresa_id')
-                            ->default(fn () => auth()->user()->getEmpresaActualId()),
-                    ])
-                    ->columns(2),
+                                Forms\Components\Hidden::make('empresa_id')
+                                    ->default(fn () => auth()->user()->getEmpresaActualId()),
+                            ]),
+                    ]),
 
                 Forms\Components\Section::make('Botones visibles en el POS')
                     ->description('Marca los botones que NO quieres que este empleado vea en el punto de venta. Admin Empresa siempre los ve todos.')
+                    ->extraAttributes(['class' => 'combo-franja-azul'])
                     ->schema([
                         Forms\Components\CheckboxList::make('botones_ocultos_pos')
+                            ->extraAttributes(['class' => 'producto-linea-2'])
                             ->label('Ocultar estos botones')
                             ->options([
                                 'facturar' => 'Facturar',
