@@ -1881,7 +1881,8 @@ body:has(.fi-simple-layout) {
 
 .fi-ta-record:has(.producto-card) {
     background: #eef2ff !important;
-    border-left: 4px solid #6366f1 !important;
+    border-radius: 22px !important;
+    box-shadow: -10px 0 18px -6px rgba(79, 70, 229, .45) !important;
     display: flex !important;
     flex-direction: column !important;
     height: 100% !important;
