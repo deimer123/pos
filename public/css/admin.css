@@ -1802,7 +1802,9 @@ body:has(.fi-simple-layout) {
 ====================================================== */
 
 .compra-franja-azul {
-    border-left: 4px solid #6366f1 !important;
+    border-radius: 22px !important;
+    overflow: hidden !important;
+    box-shadow: -10px 0 18px -6px rgba(79, 70, 229, .45) !important;
 }
 
 .fi-fo-component-ctn:has(.compra-linea-1) {
