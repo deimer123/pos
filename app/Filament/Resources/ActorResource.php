@@ -40,6 +40,7 @@ class ActorResource extends Resource
                     ->required(),
 
                 Forms\Components\Section::make('Identificación y Contacto')
+                    ->extraAttributes(['class' => 'combo-franja-azul'])
                     ->schema([
                         Forms\Components\Grid::make(3)
                             ->extraAttributes(['class' => 'producto-linea-1'])
@@ -110,6 +111,7 @@ class ActorResource extends Resource
                     ]),
 
                 Forms\Components\Section::make('Ubicación')
+                    ->extraAttributes(['class' => 'combo-franja-azul'])
                     ->schema([
                         Forms\Components\Grid::make(2)
                             ->extraAttributes(['class' => 'producto-linea-2'])
@@ -150,6 +152,7 @@ class ActorResource extends Resource
                     ]),
 
                 Forms\Components\Section::make('Información Tributaria')
+                    ->extraAttributes(['class' => 'combo-franja-azul'])
                     ->schema([
                         Forms\Components\Grid::make(3)
                             ->extraAttributes(['class' => 'producto-linea-1'])
@@ -183,6 +186,7 @@ class ActorResource extends Resource
                 //   CRÉDITO (solo admin_empresa y clientes)
                 // ======================
                 Forms\Components\Section::make('Crédito')
+                    ->extraAttributes(['class' => 'combo-franja-azul'])
                     ->visible(function (callable $get) {
                         $esCliente = in_array($get('clasificacion'), ['cliente', 'cliente_proveedor']);
                         $esAdminEmpresa = auth()->user()?->hasRole('admin_empresa') === true;
