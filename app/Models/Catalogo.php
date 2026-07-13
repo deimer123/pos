@@ -44,4 +44,14 @@ class Catalogo extends Model
     {
         return $this->belongsToMany(Subfamilia::class, 'catalogo_subfamilia', 'catalogo_id', 'subfamilia_id', 'id', 'id_familia2');
     }
+
+    public function itemsFamilias()
+    {
+        return $this->hasMany(CatalogoFamilia::class, 'catalogo_id');
+    }
+
+    public function itemsSubfamilias()
+    {
+        return $this->hasMany(CatalogoSubfamilia::class, 'catalogo_id');
+    }
 }

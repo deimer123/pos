@@ -97,8 +97,8 @@ class CatalogoResource extends Resource
                                 ->required()
                                 ->live()
                                 ->afterStateUpdated(function (Forms\Set $set) {
-                                    $set('familias', []);
-                                    $set('subfamilias', []);
+                                    $set('itemsFamilias', []);
+                                    $set('itemsSubfamilias', []);
                                     $set('itemsProductos', []);
                                 }),
                         ]),
@@ -108,27 +108,59 @@ class CatalogoResource extends Resource
                         ->visible(fn (Forms\Get $get) => $get('tipo_seleccion') === 'todos')
                         ->content('Se mostrarán todos los productos visibles de la empresa. No necesitas elegir nada más aquí.'),
 
-                    Forms\Components\Select::make('familias')
-                        ->relationship(
-                            name: 'familias',
-                            titleAttribute: 'nombre',
-                            modifyQueryUsing: fn (Builder $query) => $query->where('empresa_id', auth()->user()->getEmpresaActualId()),
-                        )
+                    Forms\Components\Repeater::make('itemsFamilias')
+                        ->relationship('itemsFamilias')
                         ->label('Familias incluidas en este catálogo')
-                        ->multiple()
-                        ->searchable()
-                        ->visible(fn (Forms\Get $get) => $get('tipo_seleccion') === 'familias'),
+                        ->addActionLabel('+ Agregar familia')
+                        ->defaultItems(0)
+                        ->grid(2)
+                        ->visible(fn (Forms\Get $get) => $get('tipo_seleccion') === 'familias')
+                        ->simple(
+                            Forms\Components\Select::make('familia_id')
+                                ->label('Familia')
+                                ->live()
+                                ->options(function (Forms\Get $get, ?string $state) {
+                                    $yaAgregadas = collect($get('../../itemsFamilias'))
+                                        ->pluck('familia_id')
+                                        ->filter()
+                                        ->reject(fn ($id) => (string) $id === (string) $state)
+                                        ->all();
 
-                    Forms\Components\Select::make('subfamilias')
-                        ->relationship(
-                            name: 'subfamilias',
-                            titleAttribute: 'nombre',
-                            modifyQueryUsing: fn (Builder $query) => $query->where('empresa_id', auth()->user()->getEmpresaActualId()),
-                        )
+                                    return \App\Models\Familia::where('empresa_id', auth()->user()->getEmpresaActualId())
+                                        ->when($yaAgregadas, fn ($q) => $q->whereNotIn('id', $yaAgregadas))
+                                        ->orderBy('nombre')
+                                        ->pluck('nombre', 'id');
+                                })
+                                ->searchable()
+                                ->required()
+                        ),
+
+                    Forms\Components\Repeater::make('itemsSubfamilias')
+                        ->relationship('itemsSubfamilias')
                         ->label('Subfamilias incluidas en este catálogo')
-                        ->multiple()
-                        ->searchable()
-                        ->visible(fn (Forms\Get $get) => $get('tipo_seleccion') === 'subfamilias'),
+                        ->addActionLabel('+ Agregar subfamilia')
+                        ->defaultItems(0)
+                        ->grid(2)
+                        ->visible(fn (Forms\Get $get) => $get('tipo_seleccion') === 'subfamilias')
+                        ->simple(
+                            Forms\Components\Select::make('subfamilia_id')
+                                ->label('Subfamilia')
+                                ->live()
+                                ->options(function (Forms\Get $get, ?string $state) {
+                                    $yaAgregadas = collect($get('../../itemsSubfamilias'))
+                                        ->pluck('subfamilia_id')
+                                        ->filter()
+                                        ->reject(fn ($id) => (string) $id === (string) $state)
+                                        ->all();
+
+                                    return \App\Models\Subfamilia::where('empresa_id', auth()->user()->getEmpresaActualId())
+                                        ->when($yaAgregadas, fn ($q) => $q->whereNotIn('id_familia2', $yaAgregadas))
+                                        ->orderBy('nombre')
+                                        ->pluck('nombre', 'id_familia2');
+                                })
+                                ->searchable()
+                                ->required()
+                        ),
 
                     Forms\Components\Repeater::make('itemsProductos')
                         ->relationship('itemsProductos')
