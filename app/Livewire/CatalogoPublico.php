@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Models\Catalogo;
 use App\Models\ConfiguracionEmpresa;
 use App\Models\Familia;
 use App\Models\Product;
@@ -18,14 +19,25 @@ class CatalogoPublico extends Component
         $this->slug = $slug;
     }
 
+    public function getCatalogoProperty(): ?Catalogo
+    {
+        return Catalogo::where('slug', $this->slug)->where('activo', true)->first();
+    }
+
     public function getConfigProperty(): ConfiguracionEmpresa
     {
+        if ($this->catalogo) {
+            return ConfiguracionEmpresa::where('empresa_id', $this->catalogo->empresa_id)->firstOrFail();
+        }
+
         return ConfiguracionEmpresa::where('slug', $this->slug)->firstOrFail();
     }
 
     public function title(): string
     {
-        return 'Catálogo de Productos - ' . ($this->config->nombre_empresa ?? '');
+        $titulo = 'Catálogo de Productos - ' . ($this->config->nombre_empresa ?? '');
+
+        return $this->catalogo ? $titulo . ' - ' . $this->catalogo->nombre : $titulo;
     }
 
     public function getProductosProperty()
@@ -39,6 +51,7 @@ class CatalogoPublico extends Component
                 $q->whereNull('id_familia2')
                     ->orWhereHas('subfamilia', fn ($qq) => $qq->where('mostrar_en_catalogo', true));
             })
+            ->when($this->catalogo, fn ($q) => $q->whereHas('catalogos', fn ($qq) => $qq->where('catalogos.id', $this->catalogo->id)))
             ->when(! $this->config->catalogo_mostrar_stock_positivo && $this->config->catalogo_mostrar_stock_negativo, fn ($q) => $q->where('existencias', '<=', 0))
             ->when($this->config->catalogo_mostrar_stock_positivo && ! $this->config->catalogo_mostrar_stock_negativo, fn ($q) => $q->where('existencias', '>', 0))
             ->when(! $this->config->catalogo_mostrar_stock_positivo && ! $this->config->catalogo_mostrar_stock_negativo, fn ($q) => $q->whereRaw('1 = 0'))

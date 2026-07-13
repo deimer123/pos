@@ -150,7 +150,12 @@ public function cuentaContable(): BelongsTo
     {
         return $this->hasMany(ProductoVariante::class, 'product_id', 'id');
     }
-    
+
+    public function catalogos()
+    {
+        return $this->belongsToMany(Catalogo::class, 'catalogo_producto', 'product_id', 'catalogo_id');
+    }
+
     public function permiteCantidadDecimal(): bool
     {
         $vendePor = strtolower(trim((string) ($this->vende_por ?? '')));
