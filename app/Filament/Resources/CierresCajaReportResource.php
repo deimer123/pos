@@ -133,7 +133,8 @@ class CierresCajaReportResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('id')
                     ->label('Turno')
-                    ->sortable(),
+                    ->sortable()
+                    ->extraHeaderAttributes(['class' => 'cierres-caja-marker']),
 
                 Tables\Columns\TextColumn::make('usuario.name')
                     ->label('Responsable')

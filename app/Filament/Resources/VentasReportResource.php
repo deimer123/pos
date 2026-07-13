@@ -124,7 +124,8 @@ class VentasReportResource extends Resource
                     ->formatStateUsing(fn (Factura $record): string => $record->numero_visual)
                     ->width('70px')
                     ->sortable()
-                    ->searchable(),
+                    ->searchable()
+                    ->extraHeaderAttributes(['class' => 'ventas-report-marker']),
 
                 Tables\Columns\TextColumn::make('fecha')
                     ->label('Fecha')

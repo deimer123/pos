@@ -154,7 +154,8 @@ class CarteraResource extends Resource
                     ->label('Factura')
                     ->formatStateUsing(fn (Factura $record): string => $record->numero_visual)
                     ->sortable()
-                    ->searchable(),
+                    ->searchable()
+                    ->extraHeaderAttributes(['class' => 'cartera-marker']),
 
                 Tables\Columns\TextColumn::make('fecha')
                     ->label('Fecha')

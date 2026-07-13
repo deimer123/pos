@@ -150,7 +150,8 @@ class InventarioGeneralResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->size('xs')
-                    ->extraCellAttributes(['class' => $nowrapCellClass]),
+                    ->extraCellAttributes(['class' => $nowrapCellClass])
+                    ->extraHeaderAttributes(['class' => 'inventario-general-marker']),
 
                 Tables\Columns\TextColumn::make('descripcion_larga')
                     ->label('Producto')

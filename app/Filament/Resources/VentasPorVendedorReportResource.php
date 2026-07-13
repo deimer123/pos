@@ -119,7 +119,8 @@ class VentasPorVendedorReportResource extends Resource
                 Tables\Columns\TextColumn::make('vendedor_nombre')
                     ->label('Vendedor')
                     ->searchable()
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->extraHeaderAttributes(['class' => 'ventas-por-vendedor-marker']),
 
                 Tables\Columns\TextColumn::make('total_facturas')
                     ->label('Facturas')

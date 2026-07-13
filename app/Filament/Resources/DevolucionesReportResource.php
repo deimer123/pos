@@ -132,7 +132,8 @@ class DevolucionesReportResource extends Resource
                     ->label('Devolucion')
                     ->formatStateUsing(fn (Devolucion $record): string => $record->numero_visual)
                     ->sortable()
-                    ->searchable(),
+                    ->searchable()
+                    ->extraHeaderAttributes(['class' => 'devoluciones-report-marker']),
 
                 Tables\Columns\TextColumn::make('fecha')
                     ->label('Fecha')
