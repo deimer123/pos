@@ -93,7 +93,10 @@ class CatalogoResource extends Resource
                                 ->options(
                                     fn () => \App\Models\Product::where('empresa_id', auth()->user()->getEmpresaActualId())
                                         ->orderBy('descripcion_larga')
-                                        ->pluck('descripcion_larga', 'id')
+                                        ->get()
+                                        ->mapWithKeys(fn ($producto) => [
+                                            $producto->id => $producto->descripcion_larga . ' — $' . number_format((float) $producto->precio_venta1, 0, ',', '.'),
+                                        ])
                                 )
                                 ->searchable()
                                 ->required()
