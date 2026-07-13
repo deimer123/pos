@@ -1975,6 +1975,22 @@ body:has(.fi-simple-layout) {
     box-shadow: -10px 0 18px -6px rgba(79, 70, 229, .45) !important;
 }
 
+/* El overflow:hidden de arriba recorta las esquinas cuadradas de las filas
+   con color (producto-linea-1/2), pero tambien recorta el panel de
+   resultados de cualquier Select buscable que quede dentro. Mientras el
+   dropdown esta abierto, se deja escapar el recorte para que se vea. */
+.combo-franja-azul:has([x-float]),
+.combo-franja-azul:has(.fi-select-input + div),
+.combo-franja-azul:has(.choices__list--dropdown) {
+    overflow: visible !important;
+}
+
+.fi-fo-tabs-tab:has([x-float]),
+.fi-fo-tabs-tab:has(.fi-select-input + div),
+.fi-fo-tabs-tab:has(.choices__list--dropdown) {
+    overflow: visible !important;
+}
+
 .fi-fo-component-ctn:has(.combo-franja-azul) {
     gap: 0 !important;
 }
