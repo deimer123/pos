@@ -36,171 +36,228 @@ class ConfiguracionEmpresaResource extends Resource
         return [
             Forms\Components\Wizard\Step::make('Información de la Empresa')
                 ->schema([
-                    Forms\Components\TextInput::make('nombre_empresa')
-                        ->label('Nombre de la Empresa')
-                        ->required()
-                        ->maxLength(255),
+                    Forms\Components\Grid::make(2)
+                        ->extraAttributes(['class' => 'producto-linea-1'])
+                        ->schema([
+                            Forms\Components\TextInput::make('nombre_empresa')
+                                ->label('Nombre de la Empresa')
+                                ->required()
+                                ->maxLength(255),
 
-                    Forms\Components\TextInput::make('representante_legal')
-                        ->label('Representante Legal')
-                        ->required()
-                        ->maxLength(255),
+                            Forms\Components\TextInput::make('representante_legal')
+                                ->label('Representante Legal')
+                                ->required()
+                                ->maxLength(255),
+                        ]),
 
-                    Forms\Components\TextInput::make('nit')
-                        ->label('NIT')
-                        ->required()
-                        ->maxLength(20),
+                    Forms\Components\Grid::make(2)
+                        ->extraAttributes(['class' => 'producto-linea-2'])
+                        ->schema([
+                            Forms\Components\TextInput::make('nit')
+                                ->label('NIT')
+                                ->required()
+                                ->maxLength(20),
 
-                    Forms\Components\TextInput::make('telefono')
-                        ->label('Teléfono')
-                        ->tel()
-                        ->maxLength(20),
+                            Forms\Components\TextInput::make('telefono')
+                                ->label('Teléfono')
+                                ->tel()
+                                ->maxLength(20),
+                        ]),
 
-                    Forms\Components\Textarea::make('direccion')
-                        ->label('Dirección')
-                        ->maxLength(500),
+                    Forms\Components\Grid::make(2)
+                        ->extraAttributes(['class' => 'producto-linea-1'])
+                        ->schema([
+                            Forms\Components\Textarea::make('direccion')
+                                ->label('Dirección')
+                                ->maxLength(500),
 
-                    Forms\Components\TextInput::make('lema')
-                        ->label('Lema')
-                        ->maxLength(255),
+                            Forms\Components\TextInput::make('lema')
+                                ->label('Lema')
+                                ->maxLength(255),
+                        ]),
 
-                    Forms\Components\FileUpload::make('logo')
-                        ->label('Logo')
-                        ->image()
-                        ->directory('logos')        // se guarda como logos/archivo.jpg
-                         ->disk('public')
-                         ->visibility('public')
-                        ->preserveFilenames()
-                        ->maxSize(2048),
+                    Forms\Components\Grid::make(2)
+                        ->extraAttributes(['class' => 'producto-linea-2'])
+                        ->schema([
+                            Forms\Components\FileUpload::make('logo')
+                                ->label('Logo')
+                                ->image()
+                                ->directory('logos')        // se guarda como logos/archivo.jpg
+                                 ->disk('public')
+                                 ->visibility('public')
+                                ->preserveFilenames()
+                                ->maxSize(2048),
 
-                    Forms\Components\Placeholder::make('catalogo_publico_url')
-                        ->label('Catálogo público (para compartir con clientes)')
-                        ->visible(fn (?ConfiguracionEmpresa $record): bool => (bool) $record?->slug)
-                        ->content(function (?ConfiguracionEmpresa $record) {
-                            if (! $record?->slug) {
-                                return '—';
-                            }
+                            Forms\Components\Placeholder::make('catalogo_publico_url')
+                                ->label('Catálogo público (para compartir con clientes)')
+                                ->visible(fn (?ConfiguracionEmpresa $record): bool => (bool) $record?->slug)
+                                ->content(function (?ConfiguracionEmpresa $record) {
+                                    if (! $record?->slug) {
+                                        return '—';
+                                    }
 
-                            $url = url('/catalogo/' . $record->slug);
+                                    $url = url('/catalogo/' . $record->slug);
 
-                            return new \Illuminate\Support\HtmlString(
-                                '<a href="' . e($url) . '" target="_blank" style="color:#4f46e5; text-decoration:underline;">' . e($url) . '</a>'
-                            );
-                        }),
+                                    return new \Illuminate\Support\HtmlString(
+                                        '<a href="' . e($url) . '" target="_blank" style="color:#4f46e5; text-decoration:underline;">' . e($url) . '</a>'
+                                    );
+                                }),
+                        ]),
                 ]),
 
             Forms\Components\Wizard\Step::make('Tipo de negocio')
                 ->schema([
-                    Forms\Components\Select::make('tipo_negocio')
-                        ->label('Tipo de negocio')
-                        ->options([
-                            'tienda' => 'Tienda / Almacén',
-                            'restaurante' => 'Restaurante',
-                            'bar' => 'Bar',
-                            'carniceria' => 'Carnicería',
-                            'panaderia' => 'Panadería',
-                            'farmacia' => 'Farmacia',
-                            'servicios' => 'Servicios',
-                            'taller' => 'Taller / Mecánica',
-                            'hotel' => 'Hotel',
-                            'otro' => 'Otro',
-                        ])
-                        ->live()
-                        ->required()
-                        ->default('tienda')
-                        ->helperText('Según lo que elijas, en los siguientes pasos solo verás los ajustes que aplican a tu negocio.'),
+                    Forms\Components\Grid::make(1)
+                        ->extraAttributes(['class' => 'producto-linea-1'])
+                        ->schema([
+                            Forms\Components\Select::make('tipo_negocio')
+                                ->label('Tipo de negocio')
+                                ->options([
+                                    'tienda' => 'Tienda / Almacén',
+                                    'restaurante' => 'Restaurante',
+                                    'bar' => 'Bar',
+                                    'carniceria' => 'Carnicería',
+                                    'panaderia' => 'Panadería',
+                                    'farmacia' => 'Farmacia',
+                                    'servicios' => 'Servicios',
+                                    'taller' => 'Taller / Mecánica',
+                                    'hotel' => 'Hotel',
+                                    'otro' => 'Otro',
+                                ])
+                                ->live()
+                                ->required()
+                                ->default('tienda')
+                                ->helperText('Según lo que elijas, en los siguientes pasos solo verás los ajustes que aplican a tu negocio.'),
+                        ]),
                 ]),
 
             Forms\Components\Wizard\Step::make('Restaurante')
                 ->visible(fn (Forms\Get $get) => $get('tipo_negocio') === 'restaurante')
                 ->schema([
-                    Forms\Components\Toggle::make('usa_mesas')
-                        ->label('Usa mesas')
-                        ->helperText('Actívalo solo si el negocio atiende por mesa.'),
+                    Forms\Components\Grid::make(2)
+                        ->extraAttributes(['class' => 'producto-linea-1'])
+                        ->schema([
+                            Forms\Components\Toggle::make('usa_mesas')
+                                ->label('Usa mesas')
+                                ->helperText('Actívalo solo si el negocio atiende por mesa.'),
 
-                    Forms\Components\Toggle::make('usa_cocina')
-                        ->label('Usa cocina')
-                        ->helperText('Para negocios que envían pedidos a cocina.'),
+                            Forms\Components\Toggle::make('usa_cocina')
+                                ->label('Usa cocina')
+                                ->helperText('Para negocios que envían pedidos a cocina.'),
+                        ]),
 
-                    Forms\Components\Toggle::make('usa_domicilios')
-                        ->label('Usa domicilios')
-                        ->helperText('Activa el módulo de pedidos a domicilio y repartidores.'),
+                    Forms\Components\Grid::make(2)
+                        ->extraAttributes(['class' => 'producto-linea-2'])
+                        ->schema([
+                            Forms\Components\Toggle::make('usa_domicilios')
+                                ->label('Usa domicilios')
+                                ->helperText('Activa el módulo de pedidos a domicilio y repartidores.'),
 
-                    Forms\Components\Toggle::make('usa_recetas')
-                        ->label('Usa recetas')
-                        ->helperText('Útil cuando un producto descuenta ingredientes.'),
+                            Forms\Components\Toggle::make('usa_recetas')
+                                ->label('Usa recetas')
+                                ->helperText('Útil cuando un producto descuenta ingredientes.'),
+                        ]),
                 ]),
 
             Forms\Components\Wizard\Step::make('Hotel')
                 ->visible(fn (Forms\Get $get) => $get('tipo_negocio') === 'hotel')
                 ->schema([
-                    Forms\Components\TimePicker::make('hotel_hora_inicio_dia')
-                        ->label('Hora en que empieza el día del hotel')
-                        ->seconds(false)
-                        ->default('14:00')
-                        ->helperText('Ej: 2:00pm. Se usa para calcular las noches cuando no se define fecha de salida al reservar.'),
+                    Forms\Components\Grid::make(1)
+                        ->extraAttributes(['class' => 'producto-linea-1'])
+                        ->schema([
+                            Forms\Components\TimePicker::make('hotel_hora_inicio_dia')
+                                ->label('Hora en que empieza el día del hotel')
+                                ->seconds(false)
+                                ->default('14:00')
+                                ->helperText('Ej: 2:00pm. Se usa para calcular las noches cuando no se define fecha de salida al reservar.'),
+                        ]),
                 ]),
 
             Forms\Components\Wizard\Step::make('Taller')
                 ->visible(fn (Forms\Get $get) => $get('tipo_negocio') === 'taller')
                 ->schema([
-                    Forms\Components\Placeholder::make('taller_info')
-                        ->label('')
-                        ->content('Los mecánicos, servicios y órdenes de trabajo se configuran luego en los menús "Mecánicos" y "Servicios" del panel de administración.'),
+                    Forms\Components\Grid::make(1)
+                        ->extraAttributes(['class' => 'producto-linea-1'])
+                        ->schema([
+                            Forms\Components\Placeholder::make('taller_info')
+                                ->label('')
+                                ->content('Los mecánicos, servicios y órdenes de trabajo se configuran luego en los menús "Mecánicos" y "Servicios" del panel de administración.'),
+                        ]),
                 ]),
 
             Forms\Components\Wizard\Step::make('Producto')
                 ->visible(fn (Forms\Get $get) => in_array($get('tipo_negocio'), ['tienda', 'bar', 'carniceria', 'panaderia', 'farmacia', 'servicios', 'otro']))
                 ->schema([
-                    Forms\Components\Toggle::make('usa_peso')
-                        ->label('Vende por peso')
-                        ->helperText('Ideal para carnicería, fruver o productos a granel.')
-                        ->visible(fn (Forms\Get $get) => ! in_array($get('tipo_negocio'), ['panaderia', 'farmacia', 'servicios', 'bar'])),
+                    Forms\Components\Grid::make(2)
+                        ->extraAttributes(['class' => 'producto-linea-1'])
+                        ->schema([
+                            Forms\Components\Toggle::make('usa_peso')
+                                ->label('Vende por peso')
+                                ->helperText('Ideal para carnicería, fruver o productos a granel.')
+                                ->visible(fn (Forms\Get $get) => ! in_array($get('tipo_negocio'), ['panaderia', 'farmacia', 'servicios', 'bar'])),
 
-                    Forms\Components\Toggle::make('usa_mesas')
-                        ->label('Usa mesas')
-                        ->helperText('Actívalo solo si el negocio atiende por mesa.')
-                        ->visible(fn (Forms\Get $get) => in_array($get('tipo_negocio'), ['panaderia', 'bar'])),
+                            Forms\Components\Toggle::make('usa_mesas')
+                                ->label('Usa mesas')
+                                ->helperText('Actívalo solo si el negocio atiende por mesa.')
+                                ->visible(fn (Forms\Get $get) => in_array($get('tipo_negocio'), ['panaderia', 'bar'])),
+                        ]),
 
-                    Forms\Components\Toggle::make('usa_recetas')
-                        ->label('Usa recetas')
-                        ->helperText('Útil cuando un producto descuenta ingredientes.')
-                        ->visible(fn (Forms\Get $get) => in_array($get('tipo_negocio'), ['panaderia', 'bar'])),
+                    Forms\Components\Grid::make(2)
+                        ->extraAttributes(['class' => 'producto-linea-2'])
+                        ->schema([
+                            Forms\Components\Toggle::make('usa_recetas')
+                                ->label('Usa recetas')
+                                ->helperText('Útil cuando un producto descuenta ingredientes.')
+                                ->visible(fn (Forms\Get $get) => in_array($get('tipo_negocio'), ['panaderia', 'bar'])),
 
-                    Forms\Components\Toggle::make('usa_servicios')
-                        ->label('Vende servicios')
-                        ->helperText('Para mano de obra, horas o servicios intangibles. El % de ganancia se configura en cada servicio, en el menú Servicios.'),
+                            Forms\Components\Toggle::make('usa_servicios')
+                                ->label('Vende servicios')
+                                ->helperText('Para mano de obra, horas o servicios intangibles. El % de ganancia se configura en cada servicio, en el menú Servicios.'),
+                        ]),
                 ]),
 
             Forms\Components\Wizard\Step::make('Reglas de venta')
                 ->schema([
-                    Forms\Components\Toggle::make('permite_stock_negativo')
-                        ->label('Permitir stock negativo')
-                        ->helperText('Deja vender aunque no haya inventario suficiente. Si lo desactivas, se bloqueará la venta cuando la cantidad supere el stock disponible.'),
+                    Forms\Components\Grid::make(2)
+                        ->extraAttributes(['class' => 'producto-linea-1'])
+                        ->schema([
+                            Forms\Components\Toggle::make('permite_stock_negativo')
+                                ->label('Permitir stock negativo')
+                                ->helperText('Deja vender aunque no haya inventario suficiente. Si lo desactivas, se bloqueará la venta cuando la cantidad supere el stock disponible.'),
 
-                    Forms\Components\Toggle::make('imprime_ticket')
-                        ->label('Imprime ticket')
-                        ->default(true),
+                            Forms\Components\Toggle::make('imprime_ticket')
+                                ->label('Imprime ticket')
+                                ->default(true),
+                        ]),
 
-                    Forms\Components\Toggle::make('mostrar_iva_separado')
-                        ->label('Mostrar IVA separado')
-                        ->helperText('Desglosa el IVA en el ticket/factura.'),
+                    Forms\Components\Grid::make(2)
+                        ->extraAttributes(['class' => 'producto-linea-2'])
+                        ->schema([
+                            Forms\Components\Toggle::make('mostrar_iva_separado')
+                                ->label('Mostrar IVA separado')
+                                ->helperText('Desglosa el IVA en el ticket/factura.'),
 
-                    Forms\Components\TextInput::make('descuento_maximo_permitido')
-                        ->label('Descuento máximo permitido')
-                        ->numeric()
-                        ->minValue(0)
-                        ->maxValue(100)
-                        ->suffix('%')
-                        ->default(100)
-                        ->helperText('Aplica a todos los roles excepto Admin Empresa. Deja 100 para no limitar.'),
+                            Forms\Components\TextInput::make('descuento_maximo_permitido')
+                                ->label('Descuento máximo permitido')
+                                ->numeric()
+                                ->minValue(0)
+                                ->maxValue(100)
+                                ->suffix('%')
+                                ->default(100)
+                                ->helperText('Aplica a todos los roles excepto Admin Empresa. Deja 100 para no limitar.'),
+                        ]),
 
-                    Forms\Components\Toggle::make('permite_ver_stock_no_admin')
-                        ->label('Vendedores/meseros/cajeros/taller pueden ver el stock')
-                        ->default(true)
-                        ->helperText('Si lo desactivas, esos roles no verán las existencias en el punto de venta.'),
+                    Forms\Components\Grid::make(1)
+                        ->extraAttributes(['class' => 'producto-linea-1'])
+                        ->schema([
+                            Forms\Components\Toggle::make('permite_ver_stock_no_admin')
+                                ->label('Vendedores/meseros/cajeros/taller pueden ver el stock')
+                                ->default(true)
+                                ->helperText('Si lo desactivas, esos roles no verán las existencias en el punto de venta.'),
+                        ]),
 
                     Forms\Components\Fieldset::make('Catálogo público: qué mostrar')
+                        ->extraAttributes(['class' => 'producto-linea-2'])
                         ->schema([
                             Forms\Components\Toggle::make('catalogo_mostrar_precio')
                                 ->label('Mostrar precio')
@@ -223,6 +280,68 @@ class ConfiguracionEmpresaResource extends Resource
                         ])
                         ->columns(2),
                 ]),
+
+            Forms\Components\Wizard\Step::make('Facturación Electrónica')
+                ->visible(fn (?ConfiguracionEmpresa $record): bool => (bool) $record?->factus_enabled)
+                ->schema([
+                    Forms\Components\Grid::make(2)
+                        ->extraAttributes(['class' => 'producto-linea-1'])
+                        ->schema([
+                            Forms\Components\TextInput::make('prefijo')
+                                ->label('Prefijo')
+                                ->maxLength(10),
+
+                            Forms\Components\TextInput::make('numero_resolucion')
+                                ->label('Número de Resolución')
+                                ->maxLength(50),
+                        ]),
+
+                    Forms\Components\Grid::make(2)
+                        ->extraAttributes(['class' => 'producto-linea-2'])
+                        ->schema([
+                            Forms\Components\TextInput::make('rango_desde')
+                                ->label('Rango Desde')
+                                ->numeric(),
+
+                            Forms\Components\TextInput::make('rango_hasta')
+                                ->label('Rango Hasta')
+                                ->numeric(),
+                        ]),
+
+                    Forms\Components\Grid::make(2)
+                        ->extraAttributes(['class' => 'producto-linea-1'])
+                        ->schema([
+                            Forms\Components\TextInput::make('rango_actual')
+                                ->label('Rango Actual')
+                                ->numeric(),
+
+                            Forms\Components\TextInput::make('llave')
+                                ->label('Llave')
+                                ->maxLength(255),
+                        ]),
+
+                    Forms\Components\Grid::make(2)
+                        ->extraAttributes(['class' => 'producto-linea-2'])
+                        ->schema([
+                            Forms\Components\DatePicker::make('fecha_inicio')
+                                ->label('Fecha Inicio'),
+
+                            Forms\Components\DatePicker::make('fecha_fin')
+                                ->label('Fecha Fin'),
+                        ]),
+
+                    Forms\Components\Grid::make(2)
+                        ->extraAttributes(['class' => 'producto-linea-1'])
+                        ->schema([
+                            Forms\Components\Toggle::make('expirado')
+                                ->label('Expirado')
+                                ->default(false),
+
+                            Forms\Components\Toggle::make('activo')
+                                ->label('Activo')
+                                ->default(true),
+                        ]),
+                ]),
         ];
     }
 
@@ -234,49 +353,8 @@ class ConfiguracionEmpresaResource extends Resource
 
             Forms\Components\Wizard::make(static::wizardSteps())
                 ->columnSpanFull()
-                ->skippable(false),
-
-            Forms\Components\Section::make('Facturación Electrónica')
-                ->visible(fn (?ConfiguracionEmpresa $record): bool => (bool) $record?->factus_enabled)
-                ->schema([
-                    Forms\Components\TextInput::make('prefijo')
-                        ->label('Prefijo')
-                        ->maxLength(10),
-                        
-                    Forms\Components\TextInput::make('rango_desde')
-                        ->label('Rango Desde')
-                        ->numeric(),
-                        
-                    Forms\Components\TextInput::make('rango_hasta')
-                        ->label('Rango Hasta')
-                        ->numeric(),
-                        
-                    Forms\Components\TextInput::make('rango_actual')
-                        ->label('Rango Actual')
-                        ->numeric(),
-                        
-                    Forms\Components\TextInput::make('numero_resolucion')
-                        ->label('Número de Resolución')
-                        ->maxLength(50),
-                        
-                    Forms\Components\DatePicker::make('fecha_inicio')
-                        ->label('Fecha Inicio'),
-                        
-                    Forms\Components\DatePicker::make('fecha_fin')
-                        ->label('Fecha Fin'),
-                        
-                    Forms\Components\TextInput::make('llave')
-                        ->label('Llave')
-                        ->maxLength(255),
-                        
-                    Forms\Components\Toggle::make('expirado')
-                        ->label('Expirado')
-                        ->default(false),
-                        
-                    Forms\Components\Toggle::make('activo')
-                        ->label('Activo')
-                        ->default(true),
-                ]),
+                ->skippable(false)
+                ->extraAttributes(['class' => 'combo-franja-azul']),
         ]);
     }
 
