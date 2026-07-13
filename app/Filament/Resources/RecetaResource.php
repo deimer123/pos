@@ -55,104 +55,123 @@ class RecetaResource extends Resource
         $empresaId = auth()->user()->getEmpresaActualId();
 
         return $form->schema([
+            Forms\Components\Hidden::make('empresa_id')
+                ->default($empresaId),
+
             Forms\Components\Section::make('Información de la receta')
-                ->columns(2)
+                ->extraAttributes(['class' => 'combo-franja-azul'])
                 ->schema([
-                    Forms\Components\Hidden::make('empresa_id')
-                        ->default($empresaId),
-
-                    Forms\Components\Select::make('product_id')
-                        ->label('Producto que se vende')
-                        ->options(
-                            Product::where('empresa_id', $empresaId)
-                                ->orderBy('descripcion_larga')
-                                ->pluck('descripcion_larga', 'id')
-                        )
-                        ->searchable()
-                        ->required()
-                        ->columnSpanFull(),
-
-                    Forms\Components\TextInput::make('nombre')
-                        ->label('Nombre de la receta (opcional)')
-                        ->placeholder('Ej: Bandeja paisa, Cóctel mojito...')
-                        ->maxLength(150),
-
-                    Forms\Components\TextInput::make('rendimiento')
-                        ->label('Rendimiento (porciones que produce)')
-                        ->numeric()
-                        ->default(1)
-                        ->minValue(0.001)
-                        ->step(0.001)
-                        ->required(),
-
-                    Forms\Components\Select::make('unidad_rendimiento')
-                        ->label('Unidad de rendimiento')
-                        ->options([
-                            'unidad'  => 'Unidad',
-                            'porcion' => 'Porción',
-                            'litro'   => 'Litro',
-                            'kg'      => 'Kilogramo',
-                        ])
-                        ->default('unidad')
-                        ->required(),
-
-                    Forms\Components\Toggle::make('activo')
-                        ->label('Activa')
-                        ->default(true),
-                ]),
-
-            Forms\Components\Section::make('Ingredientes')
-                ->description('Define los ingredientes y cantidades que se descuentan del inventario al vender este producto.')
-                ->schema([
-                    Forms\Components\Repeater::make('items')
-                        ->relationship('items')
-                        ->label('')
-                        ->columns(4)
-                        ->defaultItems(1)
-                        ->addActionLabel('+ Agregar ingrediente')
+                    Forms\Components\Grid::make(1)
+                        ->extraAttributes(['class' => 'producto-linea-1'])
                         ->schema([
-                            Forms\Components\Hidden::make('empresa_id')
-                                ->default($empresaId),
-
-                            Forms\Components\Select::make('ingrediente_product_id')
-                                ->label('Ingrediente')
+                            Forms\Components\Select::make('product_id')
+                                ->label('Producto que se vende')
                                 ->options(
                                     Product::where('empresa_id', $empresaId)
                                         ->orderBy('descripcion_larga')
                                         ->pluck('descripcion_larga', 'id')
                                 )
                                 ->searchable()
-                                ->required()
-                                ->columnSpan(2),
+                                ->required(),
+                        ]),
 
-                            Forms\Components\TextInput::make('cantidad')
-                                ->label('Cantidad')
+                    Forms\Components\Grid::make(2)
+                        ->extraAttributes(['class' => 'producto-linea-2'])
+                        ->schema([
+                            Forms\Components\TextInput::make('nombre')
+                                ->label('Nombre de la receta (opcional)')
+                                ->placeholder('Ej: Bandeja paisa, Cóctel mojito...')
+                                ->maxLength(150),
+
+                            Forms\Components\TextInput::make('rendimiento')
+                                ->label('Rendimiento (porciones que produce)')
                                 ->numeric()
+                                ->default(1)
                                 ->minValue(0.001)
                                 ->step(0.001)
                                 ->required(),
+                        ]),
 
-                            Forms\Components\Select::make('unidad')
-                                ->label('Unidad')
+                    Forms\Components\Grid::make(2)
+                        ->extraAttributes(['class' => 'producto-linea-1'])
+                        ->schema([
+                            Forms\Components\Select::make('unidad_rendimiento')
+                                ->label('Unidad de rendimiento')
                                 ->options([
-                                    'unidad' => 'Unidad',
-                                    'kg'     => 'Kilogramo',
-                                    'gr'     => 'Gramo',
-                                    'litro'  => 'Litro',
-                                    'ml'     => 'Mililitro',
-                                    'porcion'=> 'Porción',
+                                    'unidad'  => 'Unidad',
+                                    'porcion' => 'Porción',
+                                    'litro'   => 'Litro',
+                                    'kg'      => 'Kilogramo',
                                 ])
                                 ->default('unidad')
                                 ->required(),
 
-                            Forms\Components\TextInput::make('merma')
-                                ->label('Merma (%)')
-                                ->numeric()
-                                ->default(0)
-                                ->minValue(0)
-                                ->maxValue(100)
-                                ->step(0.1)
-                                ->helperText('Porcentaje de pérdida del ingrediente'),
+                            Forms\Components\Toggle::make('activo')
+                                ->label('Activa')
+                                ->default(true),
+                        ]),
+                ]),
+
+            Forms\Components\Section::make('Ingredientes')
+                ->description('Define los ingredientes y cantidades que se descuentan del inventario al vender este producto.')
+                ->extraAttributes(['class' => 'combo-franja-azul'])
+                ->schema([
+                    Forms\Components\Repeater::make('items')
+                        ->relationship('items')
+                        ->label('')
+                        ->defaultItems(1)
+                        ->addActionLabel('+ Agregar ingrediente')
+                        ->schema([
+                            Forms\Components\Hidden::make('empresa_id')
+                                ->default($empresaId),
+
+                            Forms\Components\Grid::make(4)
+                                ->extraAttributes(['class' => 'producto-linea-1'])
+                                ->schema([
+                                    Forms\Components\Select::make('ingrediente_product_id')
+                                        ->label('Ingrediente')
+                                        ->options(
+                                            Product::where('empresa_id', $empresaId)
+                                                ->orderBy('descripcion_larga')
+                                                ->pluck('descripcion_larga', 'id')
+                                        )
+                                        ->searchable()
+                                        ->required()
+                                        ->columnSpan(2),
+
+                                    Forms\Components\TextInput::make('cantidad')
+                                        ->label('Cantidad')
+                                        ->numeric()
+                                        ->minValue(0.001)
+                                        ->step(0.001)
+                                        ->required(),
+
+                                    Forms\Components\Select::make('unidad')
+                                        ->label('Unidad')
+                                        ->options([
+                                            'unidad' => 'Unidad',
+                                            'kg'     => 'Kilogramo',
+                                            'gr'     => 'Gramo',
+                                            'litro'  => 'Litro',
+                                            'ml'     => 'Mililitro',
+                                            'porcion'=> 'Porción',
+                                        ])
+                                        ->default('unidad')
+                                        ->required(),
+                                ]),
+
+                            Forms\Components\Grid::make(1)
+                                ->extraAttributes(['class' => 'producto-linea-2'])
+                                ->schema([
+                                    Forms\Components\TextInput::make('merma')
+                                        ->label('Merma (%)')
+                                        ->numeric()
+                                        ->default(0)
+                                        ->minValue(0)
+                                        ->maxValue(100)
+                                        ->step(0.1)
+                                        ->helperText('Porcentaje de pérdida del ingrediente'),
+                                ]),
                         ]),
                 ]),
         ]);

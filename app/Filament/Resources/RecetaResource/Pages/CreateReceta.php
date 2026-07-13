@@ -8,4 +8,12 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateReceta extends CreateRecord
 {
     protected static string $resource = RecetaResource::class;
+
+    protected function getFormActions(): array
+    {
+        return [
+            $this->getCreateFormAction(),
+            $this->getCancelFormAction(),
+        ];
+    }
 }
