@@ -53,38 +53,49 @@ class MesaResource extends Resource
         $empresaId = auth()->user()->getEmpresaActualId();
 
         return $form->schema([
+            Forms\Components\Hidden::make('empresa_id')->default($empresaId),
+
             Forms\Components\Section::make('Datos de la mesa')
-                ->columns(2)
+                ->extraAttributes(['class' => 'combo-franja-azul'])
                 ->schema([
-                    Forms\Components\Hidden::make('empresa_id')->default($empresaId),
+                    Forms\Components\Grid::make(2)
+                        ->extraAttributes(['class' => 'producto-linea-1'])
+                        ->schema([
+                            Forms\Components\TextInput::make('codigo')
+                                ->label('Código')
+                                ->required()
+                                ->maxLength(20)
+                                ->placeholder('M1, B2, T3...'),
 
-                    Forms\Components\TextInput::make('codigo')
-                        ->label('Código')
-                        ->required()
-                        ->maxLength(20)
-                        ->placeholder('M1, B2, T3...'),
+                            Forms\Components\TextInput::make('nombre')
+                                ->label('Nombre')
+                                ->required()
+                                ->maxLength(100)
+                                ->placeholder('Mesa 1, Barra 2, Terraza 3...'),
+                        ]),
 
-                    Forms\Components\TextInput::make('nombre')
-                        ->label('Nombre')
-                        ->required()
-                        ->maxLength(100)
-                        ->placeholder('Mesa 1, Barra 2, Terraza 3...'),
+                    Forms\Components\Grid::make(2)
+                        ->extraAttributes(['class' => 'producto-linea-2'])
+                        ->schema([
+                            Forms\Components\TextInput::make('zona')
+                                ->label('Zona')
+                                ->maxLength(100)
+                                ->placeholder('Salón principal, Terraza, Barra...'),
 
-                    Forms\Components\TextInput::make('zona')
-                        ->label('Zona')
-                        ->maxLength(100)
-                        ->placeholder('Salón principal, Terraza, Barra...'),
+                            Forms\Components\TextInput::make('capacidad')
+                                ->label('Capacidad (personas)')
+                                ->numeric()
+                                ->minValue(1)
+                                ->maxValue(50),
+                        ]),
 
-                    Forms\Components\TextInput::make('capacidad')
-                        ->label('Capacidad (personas)')
-                        ->numeric()
-                        ->minValue(1)
-                        ->maxValue(50),
-
-                    Forms\Components\Toggle::make('activo')
-                        ->label('Activa')
-                        ->default(true)
-                        ->columnSpanFull(),
+                    Forms\Components\Grid::make(1)
+                        ->extraAttributes(['class' => 'producto-linea-1'])
+                        ->schema([
+                            Forms\Components\Toggle::make('activo')
+                                ->label('Activa')
+                                ->default(true),
+                        ]),
                 ]),
         ]);
     }
