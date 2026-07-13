@@ -2038,16 +2038,16 @@ body:has(.fi-simple-layout) {
 }
 
 .cierres-caja-stat .fi-wi-stats-overview-stat-label {
-    font-size: 11px !important;
+    font-size: 13px !important;
     white-space: normal !important;
 }
 
 .cierres-caja-stat .fi-wi-stats-overview-stat-value {
-    font-size: 1.05rem !important;
+    font-size: 1.2rem !important;
 }
 
 .cierres-caja-stat .fi-wi-stats-overview-stat-description {
-    font-size: 10px !important;
+    font-size: 12px !important;
 }
 
 .cierres-caja-medios-pago .fi-wi-stats-overview-stat-value {
@@ -2055,8 +2055,8 @@ body:has(.fi-simple-layout) {
 }
 
 .cierres-caja-medios-pago .fi-wi-stats-overview-stat-description {
-    font-size: 13px !important;
-    line-height: 1.6 !important;
+    font-size: 15px !important;
+    line-height: 1.7 !important;
 }
 
 .producto-linea-1,

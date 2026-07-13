@@ -35,6 +35,9 @@ class CierresCajaStats extends BaseWidget
 
         $mostrarDetalle = true;
 
+        $linea = fn (string $label, string $value) => '<span style="color:#6b7280;">' . $label . '</span> '
+            . '<span style="color:#065f46;font-weight:700;">' . $value . '</span>';
+
         $stats = [
             Stat::make('Total vendido', $this->money($totals['ventas']))
                 ->description('Contado y credito')
@@ -43,10 +46,10 @@ class CierresCajaStats extends BaseWidget
 
             Stat::make('Efectivo / Transferencia / Credito / Cartera', '')
                 ->description(new \Illuminate\Support\HtmlString(
-                    'Efectivo ' . $this->money($totals['efectivo'])
-                    . '<br>Transferencia ' . $this->money($totals['transferencia'])
-                    . '<br>Credito ' . $this->money($totals['ventas_credito'])
-                    . '<br>Cartera ' . $this->money($totals['cartera'])
+                    $linea('Efectivo', $this->money($totals['efectivo']))
+                    . '<br>' . $linea('Transferencia', $this->money($totals['transferencia']))
+                    . '<br>' . $linea('Credito', $this->money($totals['ventas_credito']))
+                    . '<br>' . $linea('Cartera', $this->money($totals['cartera']))
                 ))
                 ->icon('heroicon-o-banknotes')
                 ->color('success'),
@@ -61,8 +64,8 @@ class CierresCajaStats extends BaseWidget
 
                 Stat::make('Utilidad / Utilidad %', '')
                     ->description(new \Illuminate\Support\HtmlString(
-                        'Utilidad ' . $this->money($totals['utilidad'])
-                        . '<br>Utilidad ' . number_format((float) $totals['utilidad_pct'], 2, ',', '.') . '%'
+                        $linea('Utilidad', $this->money($totals['utilidad']))
+                        . '<br>' . $linea('Utilidad', number_format((float) $totals['utilidad_pct'], 2, ',', '.') . '%')
                     ))
                     ->icon('heroicon-o-chart-bar')
                     ->color($totals['utilidad'] < 0 ? 'danger' : 'success'),
