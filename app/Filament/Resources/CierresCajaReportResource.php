@@ -80,6 +80,7 @@ class CierresCajaReportResource extends Resource
                             )
                     )
             )
+            ->recordClasses(fn () => 'cierres-caja-row')
             ->defaultSort('opened_at', 'desc')
             ->paginated([10, 25, 50, 100])
             ->filtersLayout(FiltersLayout::AboveContent)
