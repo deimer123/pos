@@ -11,7 +11,9 @@ use Filament\Forms\Form;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use App\Filament\Resources\SubfamiliaResource\Pages;
-use Filament\Forms\Components\Hidden; // ← importa Hidden
+use Filament\Forms\Components\Grid;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Section;
 
 class SubfamiliaResource extends Resource
 {
@@ -30,22 +32,35 @@ class SubfamiliaResource extends Resource
              Hidden::make('empresa_id')
     ->default(fn () => auth()->user()->getEmpresaActualId())
     ->dehydrated(),
-            Forms\Components\Select::make('id_familia1')
-                ->label('Familia')
-                ->options(function () {
-                    return Familia::where('empresa_id', auth()->user()->getEmpresaActualId())->pluck('nombre', 'id');
-                })
-                ->required()
-                ->searchable(),
 
-            Forms\Components\TextInput::make('nombre')
-                ->label('Nombre de la subfamilia')
-                ->required(),
+            Section::make('Subfamilia')
+                ->extraAttributes(['class' => 'combo-franja-azul'])
+                ->schema([
+                    Grid::make(2)
+                        ->extraAttributes(['class' => 'producto-linea-1'])
+                        ->schema([
+                            Forms\Components\Select::make('id_familia1')
+                                ->label('Familia')
+                                ->options(function () {
+                                    return Familia::where('empresa_id', auth()->user()->getEmpresaActualId())->pluck('nombre', 'id');
+                                })
+                                ->required()
+                                ->searchable(),
 
-            Forms\Components\Toggle::make('mostrar_en_catalogo')
-                ->label('Mostrar en el catálogo público')
-                ->default(true)
-                ->helperText('Desactívala para ocultar esta subfamilia (y sus productos) del catálogo que ven tus clientes.'),
+                            Forms\Components\TextInput::make('nombre')
+                                ->label('Nombre de la subfamilia')
+                                ->required(),
+                        ]),
+
+                    Grid::make(1)
+                        ->extraAttributes(['class' => 'producto-linea-2'])
+                        ->schema([
+                            Forms\Components\Toggle::make('mostrar_en_catalogo')
+                                ->label('Mostrar en el catálogo público')
+                                ->default(true)
+                                ->helperText('Desactívala para ocultar esta subfamilia (y sus productos) del catálogo que ven tus clientes.'),
+                        ]),
+                ]),
         ]);
     }
 
