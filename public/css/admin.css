@@ -2167,4 +2167,16 @@ body:has(.fi-simple-layout) {
     color: #1e1b4b !important;
 }
 
+/* ======================================================
+   COLOR AZUL SUAVE: BARRA LATERAL Y BARRA SUPERIOR
+====================================================== */
+
+.fi-sidebar {
+    background: linear-gradient(180deg, #eef2ff 0%, #e0e7ff 100%) !important;
+}
+
+.fi-topbar {
+    background: linear-gradient(90deg, #eef2ff 0%, #e0e7ff 100%) !important;
+}
+
 
