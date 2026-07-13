@@ -14,10 +14,20 @@ class Catalogo extends Model
         'slug',
         'activo',
         'tipo_seleccion',
+        'mostrar_foto',
+        'mostrar_precio',
+        'mostrar_disponibilidad',
+        'mostrar_stock_positivo',
+        'mostrar_stock_negativo',
     ];
 
     protected $casts = [
         'activo' => 'boolean',
+        'mostrar_foto' => 'boolean',
+        'mostrar_precio' => 'boolean',
+        'mostrar_disponibilidad' => 'boolean',
+        'mostrar_stock_positivo' => 'boolean',
+        'mostrar_stock_negativo' => 'boolean',
     ];
 
     public function empresa()

@@ -40,6 +40,31 @@ class CatalogoPublico extends Component
         return $this->catalogo ? $titulo . ' - ' . $this->catalogo->nombre : $titulo;
     }
 
+    public function getMostrarFotoProperty(): bool
+    {
+        return $this->catalogo ? (bool) $this->catalogo->mostrar_foto : true;
+    }
+
+    public function getMostrarPrecioProperty(): bool
+    {
+        return $this->catalogo ? (bool) $this->catalogo->mostrar_precio : (bool) $this->config->catalogo_mostrar_precio;
+    }
+
+    public function getMostrarDisponibilidadProperty(): bool
+    {
+        return $this->catalogo ? (bool) $this->catalogo->mostrar_disponibilidad : (bool) $this->config->catalogo_mostrar_disponibilidad;
+    }
+
+    public function getMostrarStockPositivoProperty(): bool
+    {
+        return $this->catalogo ? (bool) $this->catalogo->mostrar_stock_positivo : (bool) $this->config->catalogo_mostrar_stock_positivo;
+    }
+
+    public function getMostrarStockNegativoProperty(): bool
+    {
+        return $this->catalogo ? (bool) $this->catalogo->mostrar_stock_negativo : (bool) $this->config->catalogo_mostrar_stock_negativo;
+    }
+
     public function getProductosProperty()
     {
         $palabras = array_filter(preg_split('/\s+/', trim($this->busqueda)));
@@ -54,9 +79,9 @@ class CatalogoPublico extends Component
             ->when($this->catalogo?->tipo_seleccion === 'familias', fn ($q) => $q->whereIn('id_familia1', $this->catalogo->familias->pluck('id')))
             ->when($this->catalogo?->tipo_seleccion === 'subfamilias', fn ($q) => $q->whereIn('id_familia2', $this->catalogo->subfamilias->pluck('id_familia2')))
             ->when($this->catalogo?->tipo_seleccion === 'detallado', fn ($q) => $q->whereHas('catalogos', fn ($qq) => $qq->where('catalogos.id', $this->catalogo->id)))
-            ->when(! $this->config->catalogo_mostrar_stock_positivo && $this->config->catalogo_mostrar_stock_negativo, fn ($q) => $q->where('existencias', '<=', 0))
-            ->when($this->config->catalogo_mostrar_stock_positivo && ! $this->config->catalogo_mostrar_stock_negativo, fn ($q) => $q->where('existencias', '>', 0))
-            ->when(! $this->config->catalogo_mostrar_stock_positivo && ! $this->config->catalogo_mostrar_stock_negativo, fn ($q) => $q->whereRaw('1 = 0'))
+            ->when(! $this->mostrarStockPositivo && $this->mostrarStockNegativo, fn ($q) => $q->where('existencias', '<=', 0))
+            ->when($this->mostrarStockPositivo && ! $this->mostrarStockNegativo, fn ($q) => $q->where('existencias', '>', 0))
+            ->when(! $this->mostrarStockPositivo && ! $this->mostrarStockNegativo, fn ($q) => $q->whereRaw('1 = 0'))
             ->when(! empty($palabras), function ($q) use ($palabras) {
                 foreach ($palabras as $palabra) {
                     $q->where('descripcion_larga', 'like', '%' . $palabra . '%');

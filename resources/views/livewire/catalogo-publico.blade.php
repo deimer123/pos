@@ -107,16 +107,18 @@
                                 $precioTexto = '$' . number_format((float) $producto->precio_venta1, 0, ',', '.');
                             @endphp
                             <div style="background:white; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.08); display:flex; flex-direction:column;">
+                                @if($this->mostrarFoto)
                                 <img src="{{ $urlImagen }}" alt="{{ $producto->descripcion_larga }}"
                                     x-data
                                     @click="$dispatch('ver-imagen-catalogo', {
                                         url: @js($urlImagen),
                                         nombre: @js($producto->descripcion_larga),
                                         descripcion: @js($producto->descripcion_catalogo),
-                                        @if($this->config->catalogo_mostrar_precio) precio: @js($precioTexto), @endif
-                                        @if($this->config->catalogo_mostrar_disponibilidad) disponible: @js($disponible ? 'Disponible' : 'No disponible'), @endif
+                                        @if($this->mostrarPrecio) precio: @js($precioTexto), @endif
+                                        @if($this->mostrarDisponibilidad) disponible: @js($disponible ? 'Disponible' : 'No disponible'), @endif
                                     })"
                                     style="width:100%; height:120px; object-fit:cover; display:block; cursor:zoom-in;">
+                                @endif
                                 <div style="padding:10px; display:flex; flex-direction:column; flex:1;">
                                     <div style="font-size:13px; font-weight:700; color:#1f2937; line-height:1.3;">{{ $producto->descripcion_larga }}</div>
                                     @if($producto->descripcion_catalogo)
@@ -124,12 +126,12 @@
                                     @endif
 
                                     <div style="margin-top:auto; padding-top:6px;">
-                                        @if($this->config->catalogo_mostrar_disponibilidad)
+                                        @if($this->mostrarDisponibilidad)
                                             <div style="font-size:10px; font-weight:700; margin-bottom:2px; color:{{ $disponible ? '#16a34a' : '#dc2626' }};">
                                                 {{ $disponible ? '✔ Disponible' : '✕ No disponible' }}
                                             </div>
                                         @endif
-                                        @if($this->config->catalogo_mostrar_precio)
+                                        @if($this->mostrarPrecio)
                                         <div style="font-size:15px; font-weight:900; color:#4f46e5;">
                                             {{ $precioTexto }}
                                         </div>

@@ -82,6 +82,34 @@ class CatalogoResource extends Resource
                                 }),
                         ]),
 
+                    Forms\Components\Fieldset::make('Catálogo público: qué mostrar')
+                        ->extraAttributes(['class' => 'producto-linea-1'])
+                        ->schema([
+                            Forms\Components\Toggle::make('mostrar_foto')
+                                ->label('Mostrar foto del producto')
+                                ->default(true),
+
+                            Forms\Components\Toggle::make('mostrar_precio')
+                                ->label('Mostrar precio')
+                                ->default(true),
+
+                            Forms\Components\Toggle::make('mostrar_disponibilidad')
+                                ->label('Mostrar "Disponible / No disponible"')
+                                ->default(false)
+                                ->helperText('No muestra la cantidad exacta, solo si hay existencias o no.'),
+
+                            Forms\Components\Toggle::make('mostrar_stock_positivo')
+                                ->label('Mostrar productos con stock positivo')
+                                ->default(true)
+                                ->helperText('Productos con existencias mayores a 0.'),
+
+                            Forms\Components\Toggle::make('mostrar_stock_negativo')
+                                ->label('Mostrar productos con stock en 0 o negativo')
+                                ->default(true)
+                                ->helperText('Útil si vendes servicios/productos que no manejan inventario real.'),
+                        ])
+                        ->columns(2),
+
                     Forms\Components\Grid::make(1)
                         ->extraAttributes(['class' => 'producto-linea-1'])
                         ->schema([
