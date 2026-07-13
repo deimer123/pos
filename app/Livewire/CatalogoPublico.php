@@ -51,7 +51,9 @@ class CatalogoPublico extends Component
                 $q->whereNull('id_familia2')
                     ->orWhereHas('subfamilia', fn ($qq) => $qq->where('mostrar_en_catalogo', true));
             })
-            ->when($this->catalogo, fn ($q) => $q->whereHas('catalogos', fn ($qq) => $qq->where('catalogos.id', $this->catalogo->id)))
+            ->when($this->catalogo?->tipo_seleccion === 'familias', fn ($q) => $q->whereIn('id_familia1', $this->catalogo->familias->pluck('id')))
+            ->when($this->catalogo?->tipo_seleccion === 'subfamilias', fn ($q) => $q->whereIn('id_familia2', $this->catalogo->subfamilias->pluck('id_familia2')))
+            ->when($this->catalogo?->tipo_seleccion === 'detallado', fn ($q) => $q->whereHas('catalogos', fn ($qq) => $qq->where('catalogos.id', $this->catalogo->id)))
             ->when(! $this->config->catalogo_mostrar_stock_positivo && $this->config->catalogo_mostrar_stock_negativo, fn ($q) => $q->where('existencias', '<=', 0))
             ->when($this->config->catalogo_mostrar_stock_positivo && ! $this->config->catalogo_mostrar_stock_negativo, fn ($q) => $q->where('existencias', '>', 0))
             ->when(! $this->config->catalogo_mostrar_stock_positivo && ! $this->config->catalogo_mostrar_stock_negativo, fn ($q) => $q->whereRaw('1 = 0'))

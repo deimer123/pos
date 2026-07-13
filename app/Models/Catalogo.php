@@ -13,6 +13,7 @@ class Catalogo extends Model
         'nombre',
         'slug',
         'activo',
+        'tipo_seleccion',
     ];
 
     protected $casts = [
@@ -32,5 +33,15 @@ class Catalogo extends Model
     public function itemsProductos()
     {
         return $this->hasMany(CatalogoProducto::class, 'catalogo_id');
+    }
+
+    public function familias()
+    {
+        return $this->belongsToMany(Familia::class, 'catalogo_familia', 'catalogo_id', 'familia_id');
+    }
+
+    public function subfamilias()
+    {
+        return $this->belongsToMany(Subfamilia::class, 'catalogo_subfamilia', 'catalogo_id', 'subfamilia_id', 'id', 'id_familia2');
     }
 }

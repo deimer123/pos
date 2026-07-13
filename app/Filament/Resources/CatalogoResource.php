@@ -82,12 +82,61 @@ class CatalogoResource extends Resource
                                 }),
                         ]),
 
+                    Forms\Components\Grid::make(1)
+                        ->extraAttributes(['class' => 'producto-linea-1'])
+                        ->schema([
+                            Forms\Components\Select::make('tipo_seleccion')
+                                ->label('¿Qué productos incluye este catálogo?')
+                                ->options([
+                                    'todos' => 'Todos los productos de la empresa',
+                                    'familias' => 'Por familias',
+                                    'subfamilias' => 'Por subfamilias',
+                                    'detallado' => 'Elegir producto por producto',
+                                ])
+                                ->default('detallado')
+                                ->required()
+                                ->live()
+                                ->afterStateUpdated(function (Forms\Set $set) {
+                                    $set('familias', []);
+                                    $set('subfamilias', []);
+                                    $set('itemsProductos', []);
+                                }),
+                        ]),
+
+                    Forms\Components\Placeholder::make('tipo_seleccion_todos_info')
+                        ->label('')
+                        ->visible(fn (Forms\Get $get) => $get('tipo_seleccion') === 'todos')
+                        ->content('Se mostrarán todos los productos visibles de la empresa. No necesitas elegir nada más aquí.'),
+
+                    Forms\Components\Select::make('familias')
+                        ->relationship(
+                            name: 'familias',
+                            titleAttribute: 'nombre',
+                            modifyQueryUsing: fn (Builder $query) => $query->where('empresa_id', auth()->user()->getEmpresaActualId()),
+                        )
+                        ->label('Familias incluidas en este catálogo')
+                        ->multiple()
+                        ->searchable()
+                        ->visible(fn (Forms\Get $get) => $get('tipo_seleccion') === 'familias'),
+
+                    Forms\Components\Select::make('subfamilias')
+                        ->relationship(
+                            name: 'subfamilias',
+                            titleAttribute: 'nombre',
+                            modifyQueryUsing: fn (Builder $query) => $query->where('empresa_id', auth()->user()->getEmpresaActualId()),
+                        )
+                        ->label('Subfamilias incluidas en este catálogo')
+                        ->multiple()
+                        ->searchable()
+                        ->visible(fn (Forms\Get $get) => $get('tipo_seleccion') === 'subfamilias'),
+
                     Forms\Components\Repeater::make('itemsProductos')
                         ->relationship('itemsProductos')
                         ->label('Productos incluidos en este catálogo')
                         ->addActionLabel('+ Agregar producto')
                         ->defaultItems(0)
                         ->grid(2)
+                        ->visible(fn (Forms\Get $get) => $get('tipo_seleccion') === 'detallado')
                         ->simple(
                             Forms\Components\Select::make('product_id')
                                 ->label('Producto')
@@ -127,9 +176,19 @@ class CatalogoResource extends Resource
                     ->label('URL')
                     ->searchable(),
 
+                Tables\Columns\TextColumn::make('tipo_seleccion')
+                    ->label('Tipo')
+                    ->formatStateUsing(fn (?string $state) => match ($state) {
+                        'todos' => 'Todos los productos',
+                        'familias' => 'Por familias',
+                        'subfamilias' => 'Por subfamilias',
+                        default => 'Producto por producto',
+                    })
+                    ->badge(),
+
                 Tables\Columns\TextColumn::make('productos_count')
                     ->counts('productos')
-                    ->label('Productos'),
+                    ->label('Productos (detallado)'),
 
                 Tables\Columns\IconColumn::make('activo')
                     ->label('Activo')
