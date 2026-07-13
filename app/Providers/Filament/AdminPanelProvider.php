@@ -88,9 +88,14 @@ class AdminPanelProvider extends PanelProvider
         )
         ->renderHook(
     'panels::head.end',
-    fn () => '
-        <link rel="stylesheet" href="/css/admin.css?v=' . filemtime(public_path('css/admin.css')) . '">
-    '
+    function () {
+        $cssPath = public_path('css/admin.css');
+        clearstatcache(true, $cssPath);
+
+        return '
+        <link rel="stylesheet" href="/css/admin.css?v=' . filemtime($cssPath) . '">
+    ';
+    }
 )
        
 
