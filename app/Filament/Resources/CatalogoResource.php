@@ -233,7 +233,11 @@ class CatalogoResource extends Resource
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('slug')
-                    ->label('URL')
+                    ->label('Enlace público')
+                    ->formatStateUsing(fn (?string $state) => $state ? url('/catalogo/' . $state) : '—')
+                    ->url(fn (?Catalogo $record) => $record?->slug ? url('/catalogo/' . $record->slug) : null)
+                    ->openUrlInNewTab()
+                    ->color('primary')
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('tipo_seleccion')
