@@ -87,6 +87,7 @@ class CatalogoResource extends Resource
                         ->label('Productos incluidos en este catálogo')
                         ->addActionLabel('+ Agregar producto')
                         ->defaultItems(0)
+                        ->grid(2)
                         ->simple(
                             Forms\Components\Select::make('product_id')
                                 ->label('Producto')
