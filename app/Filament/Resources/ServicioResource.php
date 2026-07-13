@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\ServicioResource\Pages;
 use App\Models\Mecanico;
 use App\Models\Product;
+use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
@@ -70,86 +71,100 @@ class ServicioResource extends Resource
             Section::make('Datos del servicio')
                 ->icon('heroicon-o-wrench-screwdriver')
                 ->description('Define el servicio, quién lo ejecuta y cuánto cuesta.')
-                ->columns(2)
                 ->schema([
-                    TextInput::make('descripcion_larga')
-                        ->label('Nombre del servicio')
-                        ->prefixIcon('heroicon-o-tag')
-                        ->required()
-                        ->maxLength(255)
-                        ->lazy()
-                        ->columnSpanFull()
-                        ->rule(function (callable $get) {
-                            return function ($attribute, $value, $fail) use ($get) {
-                                $idProducto = $get('id_producto');
-                                $empresaId = (int) auth()->user()->getEmpresaActualId();
-                                $query = Product::where('descripcion_larga', $value)
-                                    ->where('empresa_id', $empresaId);
-                                if ($idProducto) {
-                                    $query->where('id_producto', '<>', $idProducto);
-                                }
-                                if ($query->exists()) {
-                                    $fail('Ese nombre ya está registrado en tu empresa, por favor escoge otro.');
-                                }
-                            };
-                        }),
+                    Grid::make(1)
+                        ->extraAttributes(['class' => 'producto-linea-1'])
+                        ->schema([
+                            TextInput::make('descripcion_larga')
+                                ->label('Nombre del servicio')
+                                ->prefixIcon('heroicon-o-tag')
+                                ->required()
+                                ->maxLength(255)
+                                ->lazy()
+                                ->rule(function (callable $get) {
+                                    return function ($attribute, $value, $fail) use ($get) {
+                                        $idProducto = $get('id_producto');
+                                        $empresaId = (int) auth()->user()->getEmpresaActualId();
+                                        $query = Product::where('descripcion_larga', $value)
+                                            ->where('empresa_id', $empresaId);
+                                        if ($idProducto) {
+                                            $query->where('id_producto', '<>', $idProducto);
+                                        }
+                                        if ($query->exists()) {
+                                            $fail('Ese nombre ya está registrado en tu empresa, por favor escoge otro.');
+                                        }
+                                    };
+                                }),
+                        ]),
 
-                    Select::make('tipo_servicio')
-                        ->label('Tipo de servicio')
-                        ->native(false)
-                        ->options([
-                            'propio'  => '🔧 Propio (lo hace la empresa / sus mecánicos)',
-                            'tercero' => '🤝 De tercero (no es ganancia de la empresa)',
-                        ])
-                        ->required()
-                        ->live()
-                        ->helperText('Propio: la empresa se queda con un % de ganancia. Tercero: solo se cobra y se contabiliza aparte.'),
+                    Grid::make(2)
+                        ->extraAttributes(['class' => 'producto-linea-2'])
+                        ->schema([
+                            Select::make('tipo_servicio')
+                                ->label('Tipo de servicio')
+                                ->native(false)
+                                ->options([
+                                    'propio'  => '🔧 Propio (lo hace la empresa / sus mecánicos)',
+                                    'tercero' => '🤝 De tercero (no es ganancia de la empresa)',
+                                ])
+                                ->required()
+                                ->live()
+                                ->helperText('Propio: la empresa se queda con un % de ganancia. Tercero: solo se cobra y se contabiliza aparte.'),
 
-                    TextInput::make('precio_venta1')
-                        ->label('Valor del servicio')
-                        ->numeric()
-                        ->minValue(0)
-                        ->required()
-                        ->prefix('$')
-                        ->helperText('Valor sugerido. Se puede editar al facturar en el POS.'),
+                            TextInput::make('precio_venta1')
+                                ->label('Valor del servicio')
+                                ->numeric()
+                                ->minValue(0)
+                                ->required()
+                                ->prefix('$')
+                                ->helperText('Valor sugerido. Se puede editar al facturar en el POS.'),
+                        ]),
 
-                    TextInput::make('porcentaje_empresa')
-                        ->label('% de ganancia para la empresa')
-                        ->numeric()
-                        ->minValue(0)
-                        ->maxValue(100)
-                        ->suffix('%')
-                        ->visible(fn (Get $get) => $get('tipo_servicio') === 'propio')
-                        ->required(fn (Get $get) => $get('tipo_servicio') === 'propio')
-                        ->helperText('Puede variar de un servicio a otro.'),
+                    Grid::make(2)
+                        ->extraAttributes(['class' => 'producto-linea-1'])
+                        ->schema([
+                            TextInput::make('porcentaje_empresa')
+                                ->label('% de ganancia para la empresa')
+                                ->numeric()
+                                ->minValue(0)
+                                ->maxValue(100)
+                                ->suffix('%')
+                                ->visible(fn (Get $get) => $get('tipo_servicio') === 'propio')
+                                ->required(fn (Get $get) => $get('tipo_servicio') === 'propio')
+                                ->helperText('Puede variar de un servicio a otro.'),
 
-                    Select::make('mecanico_id')
-                        ->label('Mecánico')
-                        ->native(false)
-                        ->options(fn () => Mecanico::where('empresa_id', auth()->user()->getEmpresaActualId())
-                            ->where('activo', true)
-                            ->pluck('nombre', 'id'))
-                        ->searchable()
-                        ->visible(fn (Get $get) => $get('tipo_servicio') === 'propio')
-                        ->required(fn (Get $get) => $get('tipo_servicio') === 'propio')
-                        ->helperText('Quién lo ejecuta, para poder liquidarle su parte.'),
+                            Select::make('mecanico_id')
+                                ->label('Mecánico')
+                                ->native(false)
+                                ->options(fn () => Mecanico::where('empresa_id', auth()->user()->getEmpresaActualId())
+                                    ->where('activo', true)
+                                    ->pluck('nombre', 'id'))
+                                ->searchable()
+                                ->visible(fn (Get $get) => $get('tipo_servicio') === 'propio')
+                                ->required(fn (Get $get) => $get('tipo_servicio') === 'propio')
+                                ->helperText('Quién lo ejecuta, para poder liquidarle su parte.'),
 
-                    TextInput::make('tercero_nombre')
-                        ->label('Nombre del tercero')
-                        ->prefixIcon('heroicon-o-user')
-                        ->maxLength(255)
-                        ->columnSpanFull()
-                        ->visible(fn (Get $get) => $get('tipo_servicio') === 'tercero')
-                        ->required(fn (Get $get) => $get('tipo_servicio') === 'tercero')
-                        ->helperText('A quién se le paga este servicio (no es ganancia de la empresa).'),
+                            TextInput::make('tercero_nombre')
+                                ->label('Nombre del tercero')
+                                ->prefixIcon('heroicon-o-user')
+                                ->maxLength(255)
+                                ->columnSpanFull()
+                                ->visible(fn (Get $get) => $get('tipo_servicio') === 'tercero')
+                                ->required(fn (Get $get) => $get('tipo_servicio') === 'tercero')
+                                ->helperText('A quién se le paga este servicio (no es ganancia de la empresa).'),
+                        ]),
 
-                    TextInput::make('iva_venta')
-                        ->label('IVA venta (%)')
-                        ->numeric()
-                        ->minValue(0)
-                        ->maxValue(100)
-                        ->default(0)
-                        ->suffix('%'),
+                    Grid::make(1)
+                        ->extraAttributes(['class' => 'producto-linea-2'])
+                        ->schema([
+                            TextInput::make('iva_venta')
+                                ->label('IVA venta (%)')
+                                ->numeric()
+                                ->minValue(0)
+                                ->maxValue(100)
+                                ->default(0)
+                                ->suffix('%'),
+                        ]),
                 ]),
         ]);
     }
