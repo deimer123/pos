@@ -35,171 +35,187 @@ class ActorResource extends Resource
                     ->default(fn () => (Actor::max('id_clip_pro') ?? 10000) + 1)
                     ->dehydrated(),
 
-                Forms\Components\Section::make('Clasificación')
-                    ->columns(2)
-                    ->schema([
-                        Forms\Components\Select::make('clasificacion')
-                            ->label('Clasificación')
-                            ->options([
-                                'cliente'           => 'Cliente',
-                                'proveedor'         => 'Proveedor',
-                                'cliente_proveedor' => 'Cliente - Proveedor',
-                            ])
-                            ->required()
-                            ->reactive()
-                            ->afterStateUpdated(function ($state, callable $set) {
-                                $set('tipo', match ($state) {
-                                    'cliente'           => 1,
-                                    'proveedor'         => 3,
-                                    'cliente_proveedor' => 2,
-                                    default             => null,
-                                });
-                            }),
-
-                        Forms\Components\Hidden::make('tipo')
-                            ->dehydrated()
-                            ->required(),
-                    ]),
+                Forms\Components\Hidden::make('tipo')
+                    ->dehydrated()
+                    ->required(),
 
                 Forms\Components\Section::make('Identificación y Contacto')
-                    ->columns(2)
                     ->schema([
-                        Forms\Components\Select::make('tipo_documento_id')
-                            ->label('Tipo de documento')
-                            ->options(fn (): array => TipoDocumento::query()
-                                ->whereNotNull('nombre')
-                                ->orderBy('nombre')
-                                ->get()
-                                ->mapWithKeys(fn (TipoDocumento $tipo) => [
-                                    $tipo->getKey() => (string) $tipo->nombre,
-                                ])
-                                ->all())
-                            ->searchable()
-                            ->preload()
-                            ->required(),
+                        Forms\Components\Grid::make(3)
+                            ->extraAttributes(['class' => 'producto-linea-1'])
+                            ->schema([
+                                Forms\Components\Select::make('clasificacion')
+                                    ->label('Clasificación')
+                                    ->options([
+                                        'cliente'           => 'Cliente',
+                                        'proveedor'         => 'Proveedor',
+                                        'cliente_proveedor' => 'Cliente - Proveedor',
+                                    ])
+                                    ->required()
+                                    ->reactive()
+                                    ->afterStateUpdated(function ($state, callable $set) {
+                                        $set('tipo', match ($state) {
+                                            'cliente'           => 1,
+                                            'proveedor'         => 3,
+                                            'cliente_proveedor' => 2,
+                                            default             => null,
+                                        });
+                                    }),
 
-                        Forms\Components\TextInput::make('identificacion')
-                            ->label('Número de documento')
-                            ->required(),
+                                Forms\Components\Select::make('tipo_documento_id')
+                                    ->label('Tipo de documento')
+                                    ->options(fn (): array => TipoDocumento::query()
+                                        ->whereNotNull('nombre')
+                                        ->orderBy('nombre')
+                                        ->get()
+                                        ->mapWithKeys(fn (TipoDocumento $tipo) => [
+                                            $tipo->getKey() => (string) $tipo->nombre,
+                                        ])
+                                        ->all())
+                                    ->searchable()
+                                    ->preload()
+                                    ->required(),
 
-                        Forms\Components\TextInput::make('nombre')
-                            ->label('Nombre')
-                            ->required(),
+                                Forms\Components\TextInput::make('identificacion')
+                                    ->label('Número de documento')
+                                    ->required(),
+                            ]),
 
-                        Forms\Components\TextInput::make('razon_social')
-                            ->label('Razón Social'),
+                        Forms\Components\Grid::make(3)
+                            ->extraAttributes(['class' => 'producto-linea-2'])
+                            ->schema([
+                                Forms\Components\TextInput::make('nombre')
+                                    ->label('Nombre')
+                                    ->required(),
 
-                        Forms\Components\TextInput::make('direccion')
-                            ->label('Dirección')
-                            ->required(),
+                                Forms\Components\TextInput::make('razon_social')
+                                    ->label('Razón Social'),
 
-                        Forms\Components\TextInput::make('telefono')
-                            ->label('Teléfono')
-                            ->required(),
+                                Forms\Components\TextInput::make('direccion')
+                                    ->label('Dirección')
+                                    ->required(),
+                            ]),
 
-                        Forms\Components\TextInput::make('email')
-                            ->label('Correo electrónico')
-                            ->email(),
+                        Forms\Components\Grid::make(3)
+                            ->extraAttributes(['class' => 'producto-linea-1'])
+                            ->schema([
+                                Forms\Components\TextInput::make('telefono')
+                                    ->label('Teléfono')
+                                    ->required(),
+
+                                Forms\Components\TextInput::make('email')
+                                    ->label('Correo electrónico')
+                                    ->email(),
+                            ]),
                     ]),
 
                 Forms\Components\Section::make('Ubicación')
-                    ->columns(2)
                     ->schema([
-                        Forms\Components\Select::make('departamento_id')
-                            ->label('Departamento')
-                            ->options(fn (): array => Departamento::query()
-                                ->whereNotNull('nombre')
-                                ->orderBy('nombre')
-                                ->get()
-                                ->mapWithKeys(fn (Departamento $departamento) => [
-                                    $departamento->getKey() => (string) $departamento->nombre,
-                                ])
-                                ->all())
-                            ->searchable()
-                            ->preload()
-                            ->live()
-                            ->required()
-                            ->afterStateUpdated(fn (callable $set) => $set('ciudad_id', null)),
+                        Forms\Components\Grid::make(2)
+                            ->extraAttributes(['class' => 'producto-linea-2'])
+                            ->schema([
+                                Forms\Components\Select::make('departamento_id')
+                                    ->label('Departamento')
+                                    ->options(fn (): array => Departamento::query()
+                                        ->whereNotNull('nombre')
+                                        ->orderBy('nombre')
+                                        ->get()
+                                        ->mapWithKeys(fn (Departamento $departamento) => [
+                                            $departamento->getKey() => (string) $departamento->nombre,
+                                        ])
+                                        ->all())
+                                    ->searchable()
+                                    ->preload()
+                                    ->live()
+                                    ->required()
+                                    ->afterStateUpdated(fn (callable $set) => $set('ciudad_id', null)),
 
-                        Forms\Components\Select::make('ciudad_id')
-                            ->label('Ciudad')
-                            ->options(fn (callable $get): array => Ciudad::query()
-                                ->where('departamento_id', $get('departamento_id'))
-                                ->whereNotNull('nombre')
-                                ->orderBy('nombre')
-                                ->get()
-                                ->mapWithKeys(fn (Ciudad $ciudad) => [
-                                    $ciudad->getKey() => (string) $ciudad->nombre,
-                                ])
-                                ->all())
-                            ->searchable()
-                            ->live()
-                            ->required()
-                            ->disabled(fn (callable $get) => empty($get('departamento_id')))
-                            ->placeholder('Selecciona primero un departamento'),
+                                Forms\Components\Select::make('ciudad_id')
+                                    ->label('Ciudad')
+                                    ->options(fn (callable $get): array => Ciudad::query()
+                                        ->where('departamento_id', $get('departamento_id'))
+                                        ->whereNotNull('nombre')
+                                        ->orderBy('nombre')
+                                        ->get()
+                                        ->mapWithKeys(fn (Ciudad $ciudad) => [
+                                            $ciudad->getKey() => (string) $ciudad->nombre,
+                                        ])
+                                        ->all())
+                                    ->searchable()
+                                    ->live()
+                                    ->required()
+                                    ->disabled(fn (callable $get) => empty($get('departamento_id')))
+                                    ->placeholder('Selecciona primero un departamento'),
+                            ]),
                     ]),
 
                 Forms\Components\Section::make('Información Tributaria')
-                    ->columns(3)
                     ->schema([
-                        Forms\Components\Select::make('tipo_persona')
-                            ->label('Tipo de persona')
-                            ->options([
-                                'natural'  => 'Natural',
-                                'juridica' => 'Jurídica',
-                            ])
-                            ->default('natural'),
+                        Forms\Components\Grid::make(3)
+                            ->extraAttributes(['class' => 'producto-linea-1'])
+                            ->schema([
+                                Forms\Components\Select::make('tipo_persona')
+                                    ->label('Tipo de persona')
+                                    ->options([
+                                        'natural'  => 'Natural',
+                                        'juridica' => 'Jurídica',
+                                    ])
+                                    ->default('natural'),
 
-                        Forms\Components\Select::make('regimen_tributario')
-                            ->label('Régimen')
-                            ->options([
-                                'comun'        => 'Común',
-                                'simplificado' => 'Simplificado',
-                                'especial'     => 'Especial',
-                                'otro'         => 'Otro',
-                            ])
-                            ->required(),
+                                Forms\Components\Select::make('regimen_tributario')
+                                    ->label('Régimen')
+                                    ->options([
+                                        'comun'        => 'Común',
+                                        'simplificado' => 'Simplificado',
+                                        'especial'     => 'Especial',
+                                        'otro'         => 'Otro',
+                                    ])
+                                    ->required(),
 
-                        Forms\Components\Select::make('responsable_iva')
-                            ->label('¿Responsable de IVA?')
-                            ->boolean()
-                            ->required(),
+                                Forms\Components\Select::make('responsable_iva')
+                                    ->label('¿Responsable de IVA?')
+                                    ->boolean()
+                                    ->required(),
+                            ]),
                     ]),
 
                 // ======================
                 //   CRÉDITO (solo admin_empresa y clientes)
                 // ======================
                 Forms\Components\Section::make('Crédito')
-                    ->columns(3)
                     ->visible(function (callable $get) {
                         $esCliente = in_array($get('clasificacion'), ['cliente', 'cliente_proveedor']);
                         $esAdminEmpresa = auth()->user()?->hasRole('admin_empresa') === true;
                         return $esCliente && $esAdminEmpresa;
                     })
                     ->schema([
-                        Forms\Components\Toggle::make('permite_credito')
-                            ->label('Permitir pago a crédito')
-                            ->inline(false)
-                            ->reactive()
-                            ->default(false),
+                        Forms\Components\Grid::make(3)
+                            ->extraAttributes(['class' => 'producto-linea-2'])
+                            ->schema([
+                                Forms\Components\Toggle::make('permite_credito')
+                                    ->label('Permitir pago a crédito')
+                                    ->inline(false)
+                                    ->reactive()
+                                    ->default(false),
 
-                        Forms\Components\TextInput::make('dias_credito')
-                            ->label('Días de crédito')
-                            ->numeric()
-                            ->minValue(0)
-                            ->default(0)
-                            ->disabled(fn (callable $get) => ! $get('permite_credito'))
-                            ->required(fn (callable $get) => (bool) $get('permite_credito')),
+                                Forms\Components\TextInput::make('dias_credito')
+                                    ->label('Días de crédito')
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->default(0)
+                                    ->disabled(fn (callable $get) => ! $get('permite_credito'))
+                                    ->required(fn (callable $get) => (bool) $get('permite_credito')),
 
-                        Forms\Components\TextInput::make('limite_credito')
-                            ->label('Límite de crédito')
-                            ->numeric()
-                            ->minValue(0)
-                            ->default(0)
-                            ->lazy()
-                            ->prefix(fn ($state) => '$ ' . number_format((float) $state, 0, ',', '.'))
-                            ->disabled(fn (callable $get) => ! $get('permite_credito'))
-                            ->required(fn (callable $get) => (bool) $get('permite_credito')),
+                                Forms\Components\TextInput::make('limite_credito')
+                                    ->label('Límite de crédito')
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->default(0)
+                                    ->lazy()
+                                    ->prefix(fn ($state) => '$ ' . number_format((float) $state, 0, ',', '.'))
+                                    ->disabled(fn (callable $get) => ! $get('permite_credito'))
+                                    ->required(fn (callable $get) => (bool) $get('permite_credito')),
+                            ]),
                     ]),
             ]),
         ]);
