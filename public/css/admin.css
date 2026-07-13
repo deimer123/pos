@@ -2023,9 +2023,10 @@ body:has(.fi-simple-layout) {
     width: 100% !important;
 }
 
-.fi-wi-stats-overview-stats-ctn:has(.cierres-caja-stat) {
+.fi-wi-stats-overview-stats-ctn.fi-wi-stats-overview-stats-ctn:has(.cierres-caja-stat) {
     width: 100% !important;
     gap: 6px !important;
+    grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
 }
 
 .fi-wi-stats-overview-stats-ctn:has(.cierres-caja-stat) > *:has(.cierres-caja-medios-pago) {

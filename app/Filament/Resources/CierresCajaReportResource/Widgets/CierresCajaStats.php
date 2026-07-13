@@ -20,7 +20,7 @@ class CierresCajaStats extends BaseWidget
 
     protected function getColumns(): int
     {
-        return 7;
+        return 4;
     }
 
     protected function getStats(): array
