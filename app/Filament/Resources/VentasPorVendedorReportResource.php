@@ -75,6 +75,7 @@ class VentasPorVendedorReportResource extends Resource
                     ->groupBy(DB::raw($responsableExpression), 'users.name')
                     ->orderByDesc('total_ventas')
             )
+            ->recordClasses(fn () => 'ventas-por-vendedor-row')
             ->defaultSort('total_ventas', 'desc')
             ->paginated(false)
             ->filtersLayout(FiltersLayout::AboveContent)
