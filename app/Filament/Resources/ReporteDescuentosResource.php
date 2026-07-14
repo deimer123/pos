@@ -47,7 +47,7 @@ class ReporteDescuentosResource extends Resource
         return auth()->check() && auth()->user()->hasRole('admin_empresa');
     }
 
-    public static function baseQuery(int $empresaId)
+    public static function baseQuery(int $empresaId, bool $soloConDescuento = true)
     {
         return FacturaDetalle::query()
             ->selectRaw('MIN(factura_detalles.id) as id')
@@ -60,8 +60,18 @@ class ReporteDescuentosResource extends Resource
             ->whereHas('factura', fn ($q) => $q->where('empresa_id', $empresaId))
             ->whereHas('producto', fn ($q) => $q->where('tipo_producto', 'producto')->where('empresa_id', $empresaId))
             ->where('factura_detalles.producto_id', '!=', '10001')
-            ->where('factura_detalles.descuento', '<', 0)
+            ->when($soloConDescuento, fn ($q) => $q->where('factura_detalles.descuento', '<', 0))
             ->groupBy('factura_detalles.producto_id');
+    }
+
+    /**
+     * Igual que baseQuery(), pero incluye TODAS las ventas de productos
+     * (con y sin descuento), para poder comparar contra el subconjunto
+     * que sí tuvo descuento.
+     */
+    public static function baseQueryTodos(int $empresaId)
+    {
+        return static::baseQuery($empresaId, soloConDescuento: false);
     }
 
     public static function table(Table $table): Table

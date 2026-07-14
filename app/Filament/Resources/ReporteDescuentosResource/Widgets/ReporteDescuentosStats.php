@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ReporteDescuentosResource\Widgets;
 
+use App\Filament\Resources\ReporteDescuentosResource;
 use App\Filament\Resources\ReporteDescuentosResource\Pages\ListReporteDescuentos;
 use Filament\Widgets\Concerns\InteractsWithPageTable;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
@@ -18,28 +19,48 @@ class ReporteDescuentosStats extends BaseWidget
 
     protected function getColumns(): int
     {
-        return 4;
+        return 5;
     }
 
     protected function getStats(): array
     {
-        $registros = $this->getPageTableQuery()->get();
+        $empresaId = auth()->user()->getEmpresaActualId();
+        $fechaFiltro = $this->tableFilters['fecha'] ?? [];
+        $desde = $fechaFiltro['desde'] ?? null;
+        $hasta = $fechaFiltro['hasta'] ?? null;
 
-        $totalProductos = $registros->count();
-        $totalUnidades = (float) $registros->sum('cantidad_total');
-        $totalDescontado = (float) $registros->sum('valor_descontado');
-        $totalConDescuento = (float) $registros->sum('valor_con_descuento');
-        $descuentoPromedio = $totalProductos > 0
-            ? (float) $registros->avg(fn ($r) => abs((float) $r->descuento_promedio))
+        $registrosConDescuento = $this->getPageTableQuery()->get();
+
+        $registrosTodos = ReporteDescuentosResource::baseQueryTodos($empresaId)
+            ->when($desde, fn ($q, $fecha) => $q->whereHas('factura', fn ($f) => $f->whereDate('fecha', '>=', $fecha)))
+            ->when($hasta, fn ($q, $fecha) => $q->whereHas('factura', fn ($f) => $f->whereDate('fecha', '<=', $fecha)))
+            ->get();
+
+        $totalProductosConDescuento = $registrosConDescuento->count();
+        $totalUnidadesTodas = (float) $registrosTodos->sum('cantidad_total');
+        $totalUnidadesConDescuento = (float) $registrosConDescuento->sum('cantidad_total');
+        $totalDescontado = (float) $registrosConDescuento->sum('valor_descontado');
+        $totalVendidoTodo = (float) $registrosTodos->sum('valor_con_descuento');
+        $totalVendidoConDescuento = (float) $registrosConDescuento->sum('valor_con_descuento');
+        $totalVendidoSinDescuento = $totalVendidoTodo - $totalVendidoConDescuento;
+        $descuentoPromedio = $totalProductosConDescuento > 0
+            ? (float) $registrosConDescuento->avg(fn ($r) => abs((float) $r->descuento_promedio))
             : 0;
 
         return [
-            Stat::make('Productos con descuento', number_format($totalProductos, 0, ',', '.'))
+            Stat::make('Productos vendidos', number_format($totalUnidadesTodas, 0, ',', '.'))
+                ->description('Con o sin descuento')
+                ->icon('heroicon-o-shopping-bag')
+                ->color('gray'),
+
+            Stat::make('Productos vendidos con descuento', number_format($totalUnidadesConDescuento, 0, ',', '.'))
+                ->description($totalProductosConDescuento . ' productos distintos')
                 ->icon('heroicon-o-tag')
                 ->color('primary'),
 
-            Stat::make('Unidades vendidas con descuento', number_format($totalUnidades, 0, ',', '.'))
-                ->icon('heroicon-o-cube')
+            Stat::make('Valor vendido sin descuento', $this->money($totalVendidoSinDescuento))
+                ->description('A precio normal')
+                ->icon('heroicon-o-banknotes')
                 ->color('gray'),
 
             Stat::make('Total descontado', $this->money($totalDescontado))
@@ -47,9 +68,9 @@ class ReporteDescuentosStats extends BaseWidget
                 ->icon('heroicon-o-arrow-trending-down')
                 ->color('danger'),
 
-            Stat::make('Total vendido con descuento', $this->money($totalConDescuento))
+            Stat::make('Total vendido con descuento', $this->money($totalVendidoConDescuento))
                 ->description('% promedio: ' . number_format($descuentoPromedio, 2, ',', '.') . ' %')
-                ->icon('heroicon-o-banknotes')
+                ->icon('heroicon-o-receipt-percent')
                 ->color('success'),
         ];
     }
