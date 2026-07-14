@@ -170,6 +170,8 @@
                         },
                     });
 
+                    Catalogo.descontarStockVisual(idProducto, 1);
+
                     const producto = Catalogo.getCatalogo().find((p) => String(p.id_producto) === String(idProducto));
 
                     window.Swal?.fire({
@@ -228,6 +230,8 @@
                         },
                     });
 
+                    Catalogo.descontarStockVisual(idProducto, 1);
+
                     window.Swal?.fire({
                         icon: 'success',
                         title: 'Agregado (pendiente de sincronizar)',
@@ -283,6 +287,8 @@
                             items,
                         },
                     });
+
+                    Catalogo.descontarStockVisual(idProducto, 1);
 
                     window.Swal?.fire({
                         icon: 'success',
@@ -383,6 +389,10 @@
 
                 window.addEventListener('pos-catalogo-sincronizado', () => {
                     actualizarInfoSync();
+                    renderizar();
+                });
+
+                window.addEventListener('pos-catalogo-stock-cambio', () => {
                     renderizar();
                 });
 

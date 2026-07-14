@@ -9,6 +9,8 @@ export default defineConfig({
                 'resources/js/app.js',
                 'resources/js/pos-catalogo-offline.js',
                 'resources/js/pos-offline-queue.js',
+                'resources/js/pos-offline-auth.js',
+                'resources/js/pos-clientes-offline.js',
             ],
             refresh: true,
         }),

@@ -13,7 +13,7 @@
                 value="{{ $clienteSeleccionadoNombre ?? 'Nombre Cliente' }}" disabled />
 
             @if (auth()->user()->puedeVerBotonPos('buscar_cliente'))
-            <button wire:click="abrirModalBuscarCliente"
+            <button type="button" id="btn-buscar-cliente"
                 class="inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-full shadow-sm transition">
 
                 Buscar Cliente
@@ -3335,22 +3335,70 @@ function abrirIngresoTaller(nombreCliente, telefonoCliente) {
             }));
         }
 
-        function mostrarCarritoVendidoOffline() {
+        function mostrarCarritoVendidoOffline(datosTicket) {
             window.__posCarritoOffline = {};
 
             const contenedor = document.querySelector('.pos-cart-table-scroll');
             if (!contenedor) return;
 
+            const botonImprimir = datosTicket
+                ? '<button type="button" id="btn-offline-imprimir-ticket" style="background:#0f766e; color:white; border:none; border-radius:9999px; padding:8px 16px; font-size:12px; font-weight:700; cursor:pointer; margin-right:8px;">🖨️ Imprimir ticket</button>'
+                : '';
+
             contenedor.innerHTML = '<div style="padding:32px 16px; text-align:center; color:#166534;">'
                 + '<div style="font-size:40px; margin-bottom:8px;">🕓</div>'
                 + '<div style="font-weight:700; margin-bottom:4px;">Venta guardada sin conexion</div>'
                 + '<div style="font-size:12px; color:#64748b; margin-bottom:14px;">Se va a facturar sola apenas vuelva el internet.</div>'
+                + botonImprimir
                 + '<button type="button" id="btn-offline-nueva-venta" style="background:#4f46e5; color:white; border:none; border-radius:9999px; padding:8px 16px; font-size:12px; font-weight:700; cursor:pointer;">Iniciar otra venta</button>'
                 + '</div>';
 
             document.getElementById('btn-offline-nueva-venta')?.addEventListener('click', () => {
                 window.location.reload();
             });
+
+            document.getElementById('btn-offline-imprimir-ticket')?.addEventListener('click', () => {
+                imprimirTicketProvisional(datosTicket);
+            });
+        }
+
+        function imprimirTicketProvisional(datosTicket) {
+            const empresa = window.posEmpresaContexto || {};
+            const fecha = new Date().toLocaleString('es-CO');
+
+            let filas = '';
+            let total = 0;
+
+            (datosTicket.items || []).forEach((item) => {
+                const precio = item.nuevo_precio ?? item.precio;
+                const subtotal = precio * item.cantidad;
+                total += subtotal;
+                filas += '<tr><td colspan="2">' + posEscapeHtml(item.nombre) + '</td></tr>'
+                    + '<tr><td>' + item.cantidad + ' x $' + Math.round(precio).toLocaleString('es-CO') + '</td>'
+                    + '<td style="text-align:right;">$' + Math.round(subtotal).toLocaleString('es-CO') + '</td></tr>';
+            });
+
+            const html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Ticket provisional</title>'
+                + '<style>body{font-family:monospace;font-size:12px;width:250px;margin:auto;color:#111;}'
+                + '.header,.footer{text-align:center;}.items td{padding:2px 0;vertical-align:top;}'
+                + '.advertencia{text-align:center;font-weight:bold;font-size:13px;margin:12px 0;text-transform:uppercase;border:2px dashed #b91c1c;color:#b91c1c;padding:8px;}'
+                + '.sep{margin:6px 0;}@media print{@page{size:auto;margin:0;}body{margin:0;}}</style></head>'
+                + '<body onload="window.print()">'
+                + '<div class="header"><div style="font-weight:700;">' + posEscapeHtml(empresa.nombre_empresa || 'EMPRESA') + '</div>'
+                + '<div class="sep">------------------------</div>'
+                + 'Fecha: ' + fecha + '<br>'
+                + 'Pago: ' + posEscapeHtml(datosTicket.medioPago || 'contado') + '<br>'
+                + '<div class="sep">------------------------</div></div>'
+                + '<table class="items" width="100%">' + filas + '</table>'
+                + '<br><div style="text-align:right;"><strong>Total: $' + Math.round(total).toLocaleString('es-CO') + '</strong></div>'
+                + '<div class="advertencia">⚠️ Pendiente de sincronizar<br>No es un documento fiscal valido</div>'
+                + '<div class="footer">Se reemplaza por el ticket real al recuperar internet.</div>'
+                + '</body></html>';
+
+            const ventana = window.open('', '_blank', 'width=320,height=600');
+            if (!ventana) return;
+            ventana.document.write(html);
+            ventana.document.close();
         }
 
         async function cobrarSinConexion() {
@@ -3372,12 +3420,14 @@ function abrirIngresoTaller(nombreCliente, telefonoCliente) {
 
                 if (!medioPago) return;
 
+                const itemsTaller = itemsParaOffline();
+
                 await window.PosOfflineQueue.agregarOperacion({
                     tipo: 'taller_facturar',
                     payload: { taller_orden_id: window.posTallerOrdenId, medio_pago: medioPago },
                 });
 
-                mostrarCarritoVendidoOffline();
+                mostrarCarritoVendidoOffline({ items: itemsTaller, medioPago });
                 return;
             }
 
@@ -3398,12 +3448,14 @@ function abrirIngresoTaller(nombreCliente, telefonoCliente) {
 
                 if (!medioPago) return;
 
+                const itemsHotel = itemsParaOffline();
+
                 await window.PosOfflineQueue.agregarOperacion({
                     tipo: 'hotel_facturar',
                     payload: { hotel_reserva_id: window.posHotelReservaId, medio_pago: medioPago },
                 });
 
-                mostrarCarritoVendidoOffline();
+                mostrarCarritoVendidoOffline({ items: itemsHotel, medioPago });
                 return;
             }
 
@@ -3428,12 +3480,20 @@ function abrirIngresoTaller(nombreCliente, telefonoCliente) {
 
             if (!medioPago) return;
 
-            await window.PosOfflineQueue.agregarOperacion({
-                tipo: 'venta',
-                payload: { carrito: items, medio_pago: medioPago },
-            });
+            const opcionesVenta = { tipo: 'venta', payload: { carrito: items, medio_pago: medioPago } };
+            const cliente = window.posClienteOfflineSeleccionado;
 
-            mostrarCarritoVendidoOffline();
+            if (cliente?.id) {
+                opcionesVenta.payload.cliente_id = cliente.id;
+            } else if (cliente?.uuid) {
+                opcionesVenta.payload.cliente_id_uuid_ref = cliente.uuid;
+                opcionesVenta.dependeDe = cliente.uuid;
+            }
+
+            await window.PosOfflineQueue.agregarOperacion(opcionesVenta);
+
+            window.posClienteOfflineSeleccionado = null;
+            mostrarCarritoVendidoOffline({ items, medioPago });
         }
 
         boton.addEventListener('click', () => {
@@ -3516,13 +3576,19 @@ function abrirIngresoTaller(nombreCliente, telefonoCliente) {
         return window.__posCarritoOffline;
     }
 
+    function posClampDescuento(descuentoPositivo) {
+        const max = window.PosCatalogoOffline?.descuentoMaximoPermitidoLocal();
+        const valor = Math.max(0, Number(descuentoPositivo) || 0);
+        return (max === null || max === undefined) ? valor : Math.min(valor, max);
+    }
+
     function posRenderCarritoOffline() {
         const contenedor = document.querySelector('.pos-cart-table-scroll');
         if (!contenedor) return;
 
-        const items = Object.values(window.__posCarritoOffline || {});
+        const entradas = Object.entries(window.__posCarritoOffline || {});
 
-        if (items.length === 0) {
+        if (entradas.length === 0) {
             contenedor.innerHTML = '<div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:48px 16px; color:#94a3b8;">'
                 + '<div style="font-size:40px; margin-bottom:10px;">🛒</div>'
                 + '<div style="font-size:13px; font-weight:600;">Sin productos en la orden</div>'
@@ -3530,20 +3596,38 @@ function abrirIngresoTaller(nombreCliente, telefonoCliente) {
         } else {
             let total = 0;
 
-            contenedor.innerHTML = items.map((item) => {
+            contenedor.innerHTML = entradas.map(([key, item]) => {
                 const subtotal = (item.nuevo_precio ?? item.precio) * item.cantidad;
+                const descuentoPositivo = Math.abs(item.descuento || 0);
                 total += subtotal;
 
                 return '<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:10px;display:flex;align-items:center;gap:8px;">'
                     + '<div style="flex:1;min-width:0;font-size:13px;font-weight:700;color:#1e293b;">' + posEscapeHtml(item.nombre) + '</div>'
                     + '<div style="font-size:11px;color:#92400e;font-weight:700;white-space:nowrap;">🕓 offline</div>'
                     + '<div style="font-size:12px;color:#64748b;white-space:nowrap;">x' + item.cantidad + '</div>'
-                    + '<div style="font-size:14px;font-weight:800;color:#0f766e;white-space:nowrap;">' + posFormatoMoneda(subtotal) + '</div>'
+                    + '<div style="display:flex;align-items:center;gap:2px;white-space:nowrap;">'
+                    + '<input type="number" class="pos-carrito-offline-descuento" data-key="' + key + '" value="' + descuentoPositivo + '" min="0" max="100" step="0.01" style="width:48px;font-size:12px;text-align:center;border:1px solid #fdba74;border-radius:6px;padding:2px;">'
+                    + '<span style="font-size:11px;color:#92400e;">% dto</span>'
+                    + '</div>'
+                    + '<div style="font-size:14px;font-weight:800;color:#0f766e;white-space:nowrap;min-width:80px;text-align:right;">' + posFormatoMoneda(subtotal) + '</div>'
                     + '</div>';
             }).join('');
 
             const totalEl = document.getElementById('pos-total-general');
             if (totalEl) totalEl.textContent = posFormatoMoneda(total);
+
+            contenedor.querySelectorAll('.pos-carrito-offline-descuento').forEach((input) => {
+                input.addEventListener('change', () => {
+                    const item = window.__posCarritoOffline?.[input.dataset.key];
+                    if (!item) return;
+
+                    const descuentoPositivo = posClampDescuento(input.value);
+                    item.descuento = -descuentoPositivo;
+                    item.nuevo_precio = item.precio * (1 + item.descuento / 100);
+
+                    posRenderCarritoOffline();
+                });
+            });
         }
     }
 
@@ -3577,6 +3661,144 @@ function abrirIngresoTaller(nombreCliente, telefonoCliente) {
             };
         }
 
+        window.PosCatalogoOffline?.descontarStockVisual(idProducto, 1);
         posRenderCarritoOffline();
     };
+</script>
+
+<script>
+    // Buscar/crear cliente sin conexion (boton "Buscar Cliente"). El
+    // cliente elegido queda en window.posClienteOfflineSeleccionado y se
+    // usa al cobrar la venta offline (ver cobrarSinConexion arriba). Si es
+    // un cliente recien creado offline, todavia no tiene id real -- se
+    // referencia por el uuid de esa operacion (depende_de) hasta que se
+    // sincroniza.
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.__posClienteOfflineInicializado) return;
+        window.__posClienteOfflineInicializado = true;
+
+        const boton = document.getElementById('btn-buscar-cliente');
+        if (!boton) return;
+
+        function wireCarritoCliente() {
+            const el = boton.closest('[wire\\:id]');
+            return el ? window.Livewire.find(el.getAttribute('wire:id')) : null;
+        }
+
+        function actualizarNombreClienteVisible(nombre) {
+            const input = document.querySelector('.pos-cart-header input[disabled]');
+            if (input) input.value = nombre;
+        }
+
+        async function crearClienteOffline() {
+            const { value: datos } = await window.Swal.fire({
+                title: 'Crear cliente nuevo (sin conexión)',
+                html:
+                    '<input id="cof-nombre" class="swal2-input" placeholder="Nombre completo">' +
+                    '<input id="cof-identificacion" class="swal2-input" placeholder="Cédula / NIT">' +
+                    '<input id="cof-telefono" class="swal2-input" placeholder="Teléfono (opcional)">' +
+                    '<input id="cof-direccion" class="swal2-input" placeholder="Dirección (opcional)">',
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: 'Crear',
+                cancelButtonText: 'Cancelar',
+                preConfirm: () => {
+                    const nombre = document.getElementById('cof-nombre').value.trim();
+                    const identificacion = document.getElementById('cof-identificacion').value.trim();
+
+                    if (!nombre || !identificacion) {
+                        window.Swal.showValidationMessage('Nombre e identificación son obligatorios.');
+                        return false;
+                    }
+
+                    return {
+                        nombre,
+                        identificacion,
+                        telefono: document.getElementById('cof-telefono').value.trim() || null,
+                        direccion: document.getElementById('cof-direccion').value.trim() || null,
+                    };
+                },
+            });
+
+            if (!datos) return;
+
+            const uuid = await window.PosOfflineQueue.agregarOperacion({
+                tipo: 'cliente_crear',
+                payload: { datos },
+            });
+
+            window.posClienteOfflineSeleccionado = { uuid, nombre: datos.nombre };
+            actualizarNombreClienteVisible(datos.nombre + ' (pendiente de sincronizar)');
+
+            window.Swal.fire({
+                icon: 'success',
+                title: 'Cliente guardado',
+                text: 'Se crea de verdad al recuperar internet.',
+                timer: 2000,
+                showConfirmButton: false,
+            });
+        }
+
+        async function buscarClienteOffline() {
+            let seleccionado = null;
+
+            await window.Swal.fire({
+                title: 'Buscar cliente (sin conexión)',
+                html:
+                    '<input id="cof-buscar" type="text" class="swal2-input" placeholder="Nombre o cédula...">' +
+                    '<div id="cof-resultados" style="max-height:260px;overflow-y:auto;text-align:left;margin-top:8px;"></div>' +
+                    '<button type="button" id="cof-nuevo" style="margin-top:10px;width:100%;background:#4f46e5;color:white;border:none;border-radius:8px;padding:8px;font-size:13px;font-weight:700;cursor:pointer;">+ Crear cliente nuevo</button>',
+                showConfirmButton: false,
+                showCancelButton: true,
+                cancelButtonText: 'Cerrar',
+                didOpen: () => {
+                    const input = document.getElementById('cof-buscar');
+                    const resultados = document.getElementById('cof-resultados');
+
+                    function render() {
+                        const lista = window.PosClientesOffline?.buscarClientesLocal(input.value) || [];
+
+                        resultados.innerHTML = lista.length
+                            ? lista.map((c) => (
+                                '<div class="cof-item" data-id="' + c.id + '" data-nombre="' + posEscapeHtml(c.nombre) + '" '
+                                + 'style="padding:8px;border-bottom:1px solid #e5e7eb;cursor:pointer;text-align:left;">'
+                                + '<div style="font-weight:700;font-size:13px;">' + posEscapeHtml(c.nombre) + '</div>'
+                                + '<div style="font-size:11px;color:#64748b;">Cédula: ' + posEscapeHtml(c.identificacion || '-') + '</div>'
+                                + '</div>'
+                            )).join('')
+                            : '<div style="padding:12px;text-align:center;color:#94a3b8;font-size:12px;">Sin resultados</div>';
+
+                        resultados.querySelectorAll('.cof-item').forEach((el) => {
+                            el.addEventListener('click', () => {
+                                seleccionado = { id: el.dataset.id, nombre: el.dataset.nombre };
+                                window.Swal.close();
+                            });
+                        });
+                    }
+
+                    input.addEventListener('input', render);
+                    render();
+
+                    document.getElementById('cof-nuevo').addEventListener('click', () => {
+                        window.Swal.close();
+                        crearClienteOffline();
+                    });
+                },
+            });
+
+            if (seleccionado) {
+                window.posClienteOfflineSeleccionado = seleccionado;
+                actualizarNombreClienteVisible(seleccionado.nombre);
+            }
+        }
+
+        boton.addEventListener('click', () => {
+            if (navigator.onLine === false) {
+                buscarClienteOffline();
+                return;
+            }
+
+            wireCarritoCliente()?.call('abrirModalBuscarCliente');
+        });
+    });
 </script>

@@ -59,6 +59,12 @@ async function sincronizarCatalogo() {
         catalogoEnMemoria = productos;
         localStorage.setItem(SYNC_AT_KEY, String(Date.now()));
 
+        if (data.descuento_maximo_permitido === null || data.descuento_maximo_permitido === undefined) {
+            localStorage.removeItem('pos_descuento_maximo_permitido');
+        } else {
+            localStorage.setItem('pos_descuento_maximo_permitido', String(data.descuento_maximo_permitido));
+        }
+
         window.dispatchEvent(new CustomEvent('pos-catalogo-sincronizado', {
             detail: { total: productos.length },
         }));
@@ -158,6 +164,25 @@ function buscarCoincidenciaExacta(codigo) {
 
 function getCatalogo() {
     return catalogoEnMemoria;
+}
+
+/**
+ * Descuenta visualmente (solo en memoria, no en IndexedDB ni en el
+ * servidor) el stock de un producto al agregarlo a cualquier carrito
+ * offline, para que el mismo dispositivo no siga ofreciendo stock que el
+ * ya vendio tentativamente. El numero real se corrige solo al sincronizar.
+ */
+function descontarStockVisual(idProducto, cantidad) {
+    const producto = catalogoEnMemoria.find((p) => String(p.id_producto) === String(idProducto));
+    if (!producto) return;
+
+    if (producto.receta) {
+        producto.receta.porciones_disponibles = Math.max(0, Number(producto.receta.porciones_disponibles || 0) - cantidad);
+    } else {
+        producto.existencias = Math.max(0, Number(producto.existencias || 0) - cantidad);
+    }
+
+    window.dispatchEvent(new CustomEvent('pos-catalogo-stock-cambio'));
 }
 
 // ---------------------------------------------------------------------
@@ -324,6 +349,11 @@ function inicializarEventosGrid(contenedorEl, onAgregar) {
     });
 }
 
+function descuentoMaximoPermitidoLocal() {
+    const valor = localStorage.getItem('pos_descuento_maximo_permitido');
+    return valor === null ? null : Number(valor);
+}
+
 window.PosCatalogoOffline = {
     cargarCatalogoLocal,
     sincronizarCatalogo,
@@ -332,4 +362,6 @@ window.PosCatalogoOffline = {
     getCatalogo,
     renderizarProductos,
     inicializarEventosGrid,
+    descuentoMaximoPermitidoLocal,
+    descontarStockVisual,
 };

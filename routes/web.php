@@ -11,6 +11,8 @@ use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\KardexController;
 use App\Http\Controllers\PosCatalogoController;
 use App\Http\Controllers\PosSyncController;
+use App\Http\Controllers\PosAuthOfflineController;
+use App\Http\Controllers\PosClientesController;
 
 
 
@@ -338,11 +340,21 @@ Route::middleware(['auth', 'no.cocina.en.pos'])->group(function () {
     Route::view('/pos', 'pos')
         ->name('pos');
 
+    Route::post('/pos/activar-offline', [PosAuthOfflineController::class, 'confirmarPassword'])
+        ->middleware('throttle:10,1')
+        ->name('pos.activar-offline');
+
     Route::get('/pos/catalogo.json', [PosCatalogoController::class, 'index'])
         ->name('pos.catalogo');
 
+    Route::get('/pos/clientes.json', [PosClientesController::class, 'index'])
+        ->name('pos.clientes');
+
     Route::post('/pos/sync/venta', [PosSyncController::class, 'venta'])
         ->name('pos.sync.venta');
+
+    Route::post('/pos/sync/cliente-crear', [PosSyncController::class, 'clienteCrear'])
+        ->name('pos.sync.cliente-crear');
 
     Route::post('/pos/sync/mesa-item', [PosSyncController::class, 'mesaItem'])
         ->name('pos.sync.mesa-item');

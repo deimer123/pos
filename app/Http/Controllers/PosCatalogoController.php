@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ConfiguracionEmpresa;
 use App\Models\Product;
 use App\Models\ProductCombo;
 use App\Models\Receta;
@@ -103,8 +104,17 @@ class PosCatalogoController extends Controller
             })
             ->values();
 
+        // Mismo criterio que CarritoVenta::descuentoMaximoPermitido(): sin
+        // limite para admin_empresa, si no el maximo configurado (o 100%
+        // por defecto). Se manda aqui para poder clamplear el descuento
+        // localmente cuando se agrega un producto al carrito offline.
+        $descuentoMaximoPermitido = auth()->user()->hasRole('admin_empresa')
+            ? null
+            : (float) (ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('descuento_maximo_permitido') ?? 100.0);
+
         return response()->json([
             'productos' => $productos,
+            'descuento_maximo_permitido' => $descuentoMaximoPermitido,
             'sincronizado_en' => now()->toIso8601String(),
         ]);
     }

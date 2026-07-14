@@ -10,6 +10,7 @@ import { abrirDB, STORE_OPERACIONES } from './pos-offline-db.js';
 // tipo -> ruta del endpoint de sincronizacion en el servidor
 const ENDPOINTS = {
     venta: '/pos/sync/venta',
+    cliente_crear: '/pos/sync/cliente-crear',
     mesa_item: '/pos/sync/mesa-item',
     mesa_facturar: '/pos/sync/mesa-facturar',
     taller_crear: '/pos/sync/taller-crear',

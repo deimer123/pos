@@ -6,9 +6,11 @@
  */
 
 export const DB_NAME = 'pos_offline';
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 export const STORE_PRODUCTOS = 'productos';
 export const STORE_OPERACIONES = 'operaciones';
+export const STORE_CLIENTES = 'clientes';
+export const STORE_AUTH_OFFLINE = 'auth_offline';
 
 let dbPromise = null;
 
@@ -29,6 +31,14 @@ export function abrirDB() {
                 const store = db.createObjectStore(STORE_OPERACIONES, { keyPath: 'uuid' });
                 store.createIndex('estado', 'estado');
                 store.createIndex('creado_en', 'creado_en');
+            }
+
+            if (!db.objectStoreNames.contains(STORE_CLIENTES)) {
+                db.createObjectStore(STORE_CLIENTES, { keyPath: 'id' });
+            }
+
+            if (!db.objectStoreNames.contains(STORE_AUTH_OFFLINE)) {
+                db.createObjectStore(STORE_AUTH_OFFLINE, { keyPath: 'user_id' });
             }
         };
 

@@ -7,12 +7,14 @@ use App\Models\HotelReserva;
 use App\Models\Mesa;
 use App\Models\OperacionOfflineSincronizada;
 use App\Models\TallerOrden;
+use App\Services\Clientes\GuardarClienteService;
 use App\Services\Hotel\GuardarReservaService;
 use App\Services\Mesas\AgregarItemMesaService;
 use App\Services\Taller\GuardarOrdenTallerService;
 use App\Services\Ventas\FacturarVentaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Recibe las operaciones que el POS guardo localmente mientras no habia
@@ -322,6 +324,32 @@ class PosSyncController extends Controller
         $this->registrarSincronizada($data['uuid'], 'hotel_facturar', $empresaId, $factura->id);
 
         return $this->respuestaFactura($factura->id);
+    }
+
+    public function clienteCrear(Request $request, GuardarClienteService $service): JsonResponse
+    {
+        $data = $request->validate([
+            'uuid' => 'required|uuid',
+            'datos' => 'required|array',
+        ]);
+
+        $empresaId = auth()->user()->getEmpresaActualId();
+
+        if ($existente = $this->buscarSincronizada($data['uuid'])) {
+            return response()->json(['id' => $existente->resultado_id]);
+        }
+
+        try {
+            $cliente = $service->crearRapido($empresaId, $data['datos']);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => implode(' ', $e->validator->errors()->all())], 422);
+        } catch (\Throwable $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        $this->registrarSincronizada($data['uuid'], 'cliente_crear', $empresaId, $cliente->id);
+
+        return response()->json(['id' => $cliente->id, 'nombre' => $cliente->nombre]);
     }
 
     /**
