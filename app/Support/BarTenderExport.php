@@ -42,13 +42,19 @@ class BarTenderExport
             default => 'C:\POS\BarTender\etiquetas_2x50x25_con_precio.btw',
         };
 
-        $bat = implode("\r\n", [
+        // El CSV en base64 se escribe en trozos pequenos (uno por linea)
+        // porque cmd.exe tiene un limite de ~8191 caracteres por linea de
+        // comando: si se manda todo el base64 de una sola vez como
+        // argumento a PowerShell, con compras grandes se corta la linea y
+        // el CSV nunca se llega a crear (error #6241 de BarTender).
+        $lineasBat = [
             '@echo off',
             'setlocal',
             'title POS - Imprimir etiquetas BarTender',
             '',
             'set "BTW_FILE=' . $plantilla . '"',
             'set "CSV_FILE=%TEMP%\\bartender_' . $nombreArchivo . '.csv"',
+            'set "B64_FILE=%TEMP%\\bartender_' . $nombreArchivo . '.b64"',
             'set "BARTENDER_EXE="',
             '',
             'for %%P in ("C:\\Program Files\\Seagull\\BarTender 2022\\bartend.exe" "C:\\Program Files\\Seagull\\BarTender 2021\\bartend.exe" "C:\\Program Files\\Seagull\\BarTender 2020\\bartend.exe" "C:\\Program Files (x86)\\Seagull\\BarTender Suite\\bartend.exe") do if exist %%~P set "BARTENDER_EXE=%%~P"',
@@ -74,7 +80,17 @@ class BarTenderExport
             '  exit /b 1',
             ')',
             '',
-            'powershell -NoProfile -ExecutionPolicy Bypass -Command "[IO.File]::WriteAllBytes($env:CSV_FILE, [Convert]::FromBase64String(' . "'" . $csvBase64 . "'" . '))"',
+            'if exist "%B64_FILE%" del "%B64_FILE%"',
+        ];
+
+        foreach (str_split($csvBase64, 500) as $chunk) {
+            $lineasBat[] = 'echo ' . $chunk . '>>"%B64_FILE%"';
+        }
+
+        $lineasBat = array_merge($lineasBat, [
+            '',
+            'powershell -NoProfile -ExecutionPolicy Bypass -Command "$b64 = (Get-Content -Raw $env:B64_FILE) -replace \'\s\',\'\'; [IO.File]::WriteAllBytes($env:CSV_FILE, [Convert]::FromBase64String($b64))"',
+            'del "%B64_FILE%"',
             '',
             'echo Archivo de datos creado:',
             'echo %CSV_FILE%',
@@ -84,6 +100,8 @@ class BarTenderExport
             'exit /b 0',
             '',
         ]);
+
+        $bat = implode("\r\n", $lineasBat);
 
         return response()->streamDownload(function () use ($bat) {
             echo $bat;
