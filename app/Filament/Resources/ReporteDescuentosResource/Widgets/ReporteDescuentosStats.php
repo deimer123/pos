@@ -45,6 +45,9 @@ class ReporteDescuentosStats extends BaseWidget
         $descuentoPromedio = $totalProductosConDescuento > 0
             ? (float) $registrosConDescuento->avg(fn ($r) => abs((float) $r->descuento_promedio))
             : 0;
+        $porcentajeUnidadesConDescuento = $totalUnidadesTodas > 0
+            ? ($totalUnidadesConDescuento / $totalUnidadesTodas) * 100
+            : 0;
 
         $stats = [
             Stat::make('Productos vendidos', number_format($totalUnidadesTodas, 0, ',', '.'))
@@ -53,7 +56,7 @@ class ReporteDescuentosStats extends BaseWidget
                 ->color('gray'),
 
             Stat::make('Productos vendidos con descuento', number_format($totalUnidadesConDescuento, 0, ',', '.'))
-                ->description($totalProductosConDescuento . ' productos distintos')
+                ->description($totalProductosConDescuento . ' productos distintos · ' . number_format($porcentajeUnidadesConDescuento, 2, ',', '.') . ' % del total')
                 ->icon('heroicon-o-tag')
                 ->color('primary'),
 
