@@ -681,7 +681,7 @@
         @endif
         <div class="text-right">
             <span class="text-indigo-700 font-bold text-sm align-middle">TOTAL:</span>
-            <span class="text-gray-900 font-extrabold text-2xl sm:text-3xl align-middle">
+            <span id="pos-total-general" class="text-gray-900 font-extrabold text-2xl sm:text-3xl align-middle">
                 ${{ number_format($totalGeneral ?? 0, 0, ',', '.') }}
             </span>
         </div>
@@ -3310,6 +3310,14 @@ function abrirIngresoTaller(nombreCliente, telefonoCliente) {
         }
 
         function itemsParaOffline() {
+            // Si se agrego algun producto mientras estaba offline, el
+            // carrito local (window.__posCarritoOffline) manda porque ya
+            // incluye eso; si no, se usa el carrito tal cual lo tenia
+            // Livewire al momento de perder la conexion.
+            if (window.__posCarritoOffline && Object.keys(window.__posCarritoOffline).length > 0) {
+                return Object.values(window.__posCarritoOffline);
+            }
+
             const wire = wireCarrito();
             const carrito = wire ? wire.get('carrito') : {};
 
@@ -3328,6 +3336,8 @@ function abrirIngresoTaller(nombreCliente, telefonoCliente) {
         }
 
         function mostrarCarritoVendidoOffline() {
+            window.__posCarritoOffline = {};
+
             const contenedor = document.querySelector('.pos-cart-table-scroll');
             if (!contenedor) return;
 
@@ -3469,4 +3479,104 @@ function abrirIngresoTaller(nombreCliente, telefonoCliente) {
             });
         };
     });
+</script>
+
+<script>
+    // Agregar productos al carrito de la venta simple (sin mesa/taller/
+    // hotel) estando offline. Se puede armar 100% en el navegador porque,
+    // a diferencia de mesas/taller/hotel, agregar un producto al carrito
+    // normal no escribe nada en la base de datos hasta facturar.
+    function posFormatoMoneda(valor) {
+        return '$' + Math.round(Number(valor) || 0).toLocaleString('es-CO');
+    }
+
+    function posCarritoOfflineActual() {
+        if (!window.__posCarritoOffline) {
+            const el = document.querySelector('.pos-cart-table-scroll')?.closest('[wire\\:id]');
+            const wire = el ? window.Livewire.find(el.getAttribute('wire:id')) : null;
+            const carritoActual = wire ? wire.get('carrito') : {};
+
+            window.__posCarritoOffline = {};
+            Object.values(carritoActual || {}).forEach((item) => {
+                window.__posCarritoOffline[String(item.id_producto)] = {
+                    id_producto: item.id_producto,
+                    nombre: item.nombre,
+                    cantidad: item.cantidad,
+                    precio: item.precio,
+                    nuevo_precio: item.nuevo_precio,
+                    descuento: item.descuento ?? 0,
+                    permite_decimal: item.permite_decimal,
+                    vende_por: item.vende_por,
+                    permite_fraccion: item.permite_fraccion,
+                    id_unidad_de_medida: item.id_unidad_de_medida,
+                };
+            });
+        }
+
+        return window.__posCarritoOffline;
+    }
+
+    function posRenderCarritoOffline() {
+        const contenedor = document.querySelector('.pos-cart-table-scroll');
+        if (!contenedor) return;
+
+        const items = Object.values(window.__posCarritoOffline || {});
+
+        if (items.length === 0) {
+            contenedor.innerHTML = '<div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:48px 16px; color:#94a3b8;">'
+                + '<div style="font-size:40px; margin-bottom:10px;">🛒</div>'
+                + '<div style="font-size:13px; font-weight:600;">Sin productos en la orden</div>'
+                + '</div>';
+        } else {
+            let total = 0;
+
+            contenedor.innerHTML = items.map((item) => {
+                const subtotal = (item.nuevo_precio ?? item.precio) * item.cantidad;
+                total += subtotal;
+
+                return '<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:10px;display:flex;align-items:center;gap:8px;">'
+                    + '<div style="flex:1;min-width:0;font-size:13px;font-weight:700;color:#1e293b;">' + posEscapeHtml(item.nombre) + '</div>'
+                    + '<div style="font-size:11px;color:#92400e;font-weight:700;white-space:nowrap;">🕓 offline</div>'
+                    + '<div style="font-size:12px;color:#64748b;white-space:nowrap;">x' + item.cantidad + '</div>'
+                    + '<div style="font-size:14px;font-weight:800;color:#0f766e;white-space:nowrap;">' + posFormatoMoneda(subtotal) + '</div>'
+                    + '</div>';
+            }).join('');
+
+            const totalEl = document.getElementById('pos-total-general');
+            if (totalEl) totalEl.textContent = posFormatoMoneda(total);
+        }
+    }
+
+    function posEscapeHtml(texto) {
+        return String(texto ?? '').replace(/[&<>"']/g, (c) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+        })[c]);
+    }
+
+    window.posAgregarProductoOffline = function (idProducto) {
+        const producto = window.PosCatalogoOffline?.getCatalogo().find((p) => String(p.id_producto) === String(idProducto));
+        if (!producto) return;
+
+        const carrito = posCarritoOfflineActual();
+        const key = String(idProducto);
+
+        if (carrito[key]) {
+            carrito[key].cantidad += 1;
+        } else {
+            carrito[key] = {
+                id_producto: producto.id_producto,
+                nombre: producto.descripcion_larga,
+                cantidad: 1,
+                precio: producto.precio_venta1,
+                nuevo_precio: producto.precio_venta1,
+                descuento: 0,
+                permite_decimal: producto.vende_por !== 'unidad',
+                vende_por: producto.vende_por,
+                permite_fraccion: false,
+                id_unidad_de_medida: producto.id_unidad_de_medida,
+            };
+        }
+
+        posRenderCarritoOffline();
+    };
 </script>

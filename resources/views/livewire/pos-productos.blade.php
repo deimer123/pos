@@ -310,14 +310,11 @@
                             return;
                         }
 
-                        if (window.Swal) {
-                            window.Swal.fire({
-                                icon: 'warning',
-                                title: 'Sin conexion',
-                                text: 'No se puede agregar al carrito sin conexion.',
-                                timer: 2200,
-                                showConfirmButton: false,
-                            });
+                        // Venta simple sin conexion: el carrito se arma
+                        // localmente (no toca la base de datos hasta
+                        // facturar), ver carrito-venta.blade.php.
+                        if (window.posAgregarProductoOffline) {
+                            window.posAgregarProductoOffline(idProducto);
                         }
                         return;
                     }
