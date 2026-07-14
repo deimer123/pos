@@ -102,6 +102,28 @@ class AdminPanelProvider extends PanelProvider
         ->renderHook(
     'panels::body.end',
     fn () => view('filament.session-check')
+)
+        ->renderHook(
+    'panels::body.end',
+    fn () => '
+        <script>
+            (function () {
+                function aplicarColorPanel() {
+                    var sidebar = document.querySelector(".fi-sidebar");
+                    var topbar = document.querySelector(".fi-topbar");
+                    if (sidebar) {
+                        sidebar.style.setProperty("background", "linear-gradient(180deg, #e0e7ff 0%, #c7d2fe 100%)", "important");
+                    }
+                    if (topbar) {
+                        topbar.style.setProperty("background", "linear-gradient(90deg, #e0e7ff 0%, #c7d2fe 100%)", "important");
+                    }
+                }
+                document.addEventListener("DOMContentLoaded", aplicarColorPanel);
+                document.addEventListener("livewire:navigated", aplicarColorPanel);
+                aplicarColorPanel();
+            })();
+        </script>
+    '
 );
 
 
