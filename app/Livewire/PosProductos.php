@@ -37,8 +37,6 @@ class PosProductos extends Component
 
         return iconv('Windows-1252', 'UTF-8//IGNORE', $texto) ?: '';
     }
-    public $search = '';
-    public $filtroTipo = '';
     public $mostrarModal = false;
     public $mostrarModalProductoManual = false;
     public $productoTemporal = [
@@ -61,55 +59,24 @@ class PosProductos extends Component
         $this->cargarContextoEmpresa();
     }
 
-    protected $listeners = ['limpiar-input-busqueda' => 'limpiarBusqueda', 'agregarManual'];
+    protected $listeners = ['agregarManual'];
 
+    /**
+     * La lista de productos ya no se consulta aqui: el navegador la busca
+     * localmente sobre el catalogo cacheado (ver resources/js/pos-catalogo-offline.js
+     * y GET /pos/catalogo.json). Este componente solo sigue manejando
+     * "Agregar al carrito", el producto manual y su modal.
+     */
     public function render()
     {
-        $user = auth()->user();
-        
-        // ✅ OBTENER EL empresa_id CORRECTO
-        $empresaId = $this->getEmpresaId($user);
-        
-        $busqueda = '%' . str_replace(' ', '%', $this->search) . '%';
-
-        $query = Product::query()
-            ->where('empresa_id', $empresaId)
-            ->where('id_producto', '!=', '10001')
-            ->when($this->filtroTipo, function ($q) {
-                if ($this->filtroTipo === 'receta') {
-                    $q->whereHas('recetas', fn($r) => $r->where('activo', true));
-                } elseif ($this->filtroTipo === 'combo') {
-                    $q->whereHas('combos');
-                } else {
-                    $q->where('tipo_producto', $this->filtroTipo);
-                }
-            })
-            ->when($this->search, function ($q) use ($busqueda) {
-                $q->where(function ($q) use ($busqueda) {
-                    $q->where('descripcion_larga', 'like', $busqueda)
-                        ->orWhere('id_producto', 'like', $busqueda)
-                        ->orWhereHas('alternateCodes', function ($subq) use ($busqueda) {
-                            $subq->where('code', 'like', $busqueda);
-                        });
-                });
-            })
-            ->orderByRaw('existencias > 0 DESC') // 🟢 primero los que tienen stock
-            ->orderByDesc('existencias')         // 🔽 luego por mayor cantidad
-            ->with(['alternateCodes', 'mecanico'])
-            ->withCount('variantes')
-            ->take(40)
-            ->get()
-            ->map(function ($product) {
-                $product->descripcion_larga = $this->textoUtf8($product->descripcion_larga);
-                $product->foto = $this->textoUtf8($product->foto);
-
-                return $product;
-            });
-
         return view('livewire.pos-productos', [
-            'products' => $query,
             'empresaContexto' => $this->empresaContexto,
         ]);
+    }
+
+    public function abrirModalProductoManual()
+    {
+        $this->mostrarModalProductoManual = true;
     }
 
     public function agregarAlCarrito($idProducto)
@@ -128,40 +95,6 @@ class PosProductos extends Component
 
     $this->dispatch('productoAgregado', $producto->id_producto);
 }
-
-public function updatedSearch($value)
-{
-    if ($value === '10001') {
-        $this->mostrarModalProductoManual = true;
-        $this->dispatch('limpiar-input-busqueda');
-        $this->search = '';
-        return;
-    }
-
-    $user = auth()->user();
-    $empresaId = $this->getEmpresaId($user);
-    
-    $producto = Product::where('empresa_id', $empresaId)
-        ->where(function ($q) use ($value) {
-            $q->where('id_producto', $value)
-                ->orWhereHas('alternateCodes', function ($subq) use ($value) {
-                    $subq->where('code', $value);
-                });
-        })
-        ->first();
-
-    if ($producto) {
-        // ✅ ENVIAR SOLO EL id_producto como parámetro directo
-       $this->dispatch('productoAgregado', $producto->id_producto);
-        $this->dispatch('limpiar-input-busqueda');
-        $this->search = '';
-    }
-}
-    
-    public function limpiarBusqueda()
-    {
-        $this->search = '';
-    }
 
     public function agregarProductoTemporal()
     {

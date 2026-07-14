@@ -9,7 +9,8 @@
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <link rel="manifest" href="{{ asset('manifest.json') }}">
+    @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/pos-catalogo-offline.js'])
     @livewireStyles
     <link rel="stylesheet" href="{{ asset('css/pos-pro.css') }}?v={{ filemtime(public_path('css/pos-pro.css')) }}">
 </head>
@@ -279,6 +280,14 @@
 
             window.Livewire.hook('request', ({ fail }) => {
                 fail(({ status, preventDefault }) => {
+                    // Si no hay conexion, un 401/419 no es una sesion vencida
+                    // de verdad: es la red cayendose. No forzar el logout/reload
+                    // en ese caso, se reintenta solo cuando vuelva la señal.
+                    if (navigator.onLine === false) {
+                        preventDefault();
+                        return;
+                    }
+
                     if (status === 401 || status === 419) {
                         preventDefault();
                         cerrarSesionPorInactividad();
@@ -288,6 +297,43 @@
         });
 
         reiniciarTemporizador();
+    </script>
+
+    {{-- Aviso de conexion + service worker (para que el POS no se rompa/pida
+         recargar cuando se cae internet un momento) --}}
+    <script>
+        (function () {
+            let banner = null;
+
+            function mostrarBannerOffline() {
+                if (banner) return;
+                banner = document.createElement('div');
+                banner.id = 'pos-offline-banner';
+                banner.textContent = '📴 Sin conexión — usando datos guardados localmente';
+                banner.style.cssText = 'position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:999999;background:#78350f;color:#fef3c7;padding:8px 18px;border-radius:999px;font-size:12px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.3);';
+                document.body.appendChild(banner);
+            }
+
+            function ocultarBannerOffline() {
+                if (!banner) return;
+                banner.remove();
+                banner = null;
+            }
+
+            window.addEventListener('offline', mostrarBannerOffline);
+            window.addEventListener('online', () => {
+                ocultarBannerOffline();
+                window.PosCatalogoOffline?.sincronizarCatalogo();
+            });
+
+            if (navigator.onLine === false) mostrarBannerOffline();
+
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+                });
+            }
+        })();
     </script>
 
     {{-- Sesión única global --}}

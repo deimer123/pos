@@ -1,0 +1,357 @@
+/**
+ * Catalogo de productos del POS guardado localmente (IndexedDB) para que
+ * la busqueda no dependa de un viaje al servidor por cada tecla. Se
+ * sincroniza en segundo plano contra /pos/catalogo.json.
+ */
+
+const DB_NAME = 'pos_offline';
+const DB_VERSION = 1;
+const STORE_PRODUCTOS = 'productos';
+const SYNC_AT_KEY = 'pos_catalogo_sincronizado_en';
+const SYNC_STALE_MS = 30 * 60 * 1000; // 30 min
+
+let dbPromise = null;
+let catalogoEnMemoria = [];
+
+function abrirDB() {
+    if (dbPromise) return dbPromise;
+
+    dbPromise = new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onupgradeneeded = () => {
+            const db = request.result;
+            if (!db.objectStoreNames.contains(STORE_PRODUCTOS)) {
+                db.createObjectStore(STORE_PRODUCTOS, { keyPath: 'id_producto' });
+            }
+        };
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+
+    return dbPromise;
+}
+
+async function leerTodoDeIndexedDB() {
+    const db = await abrirDB();
+
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_PRODUCTOS, 'readonly');
+        const store = tx.objectStore(STORE_PRODUCTOS);
+        const request = store.getAll();
+
+        request.onsuccess = () => resolve(request.result || []);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function reemplazarEnIndexedDB(productos) {
+    const db = await abrirDB();
+
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_PRODUCTOS, 'readwrite');
+        const store = tx.objectStore(STORE_PRODUCTOS);
+
+        store.clear();
+        productos.forEach((producto) => store.put(producto));
+
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+    });
+}
+
+/**
+ * Trae el catalogo del servidor y reemplaza lo guardado localmente.
+ * Si falla (sin conexion, etc.) deja lo que ya habia en IndexedDB.
+ */
+async function sincronizarCatalogo() {
+    try {
+        const response = await fetch('/pos/catalogo.json', {
+            headers: { Accept: 'application/json' },
+            credentials: 'same-origin',
+        });
+
+        if (!response.ok) return false;
+
+        const data = await response.json();
+        const productos = data.productos || [];
+
+        await reemplazarEnIndexedDB(productos);
+        catalogoEnMemoria = productos;
+        localStorage.setItem(SYNC_AT_KEY, String(Date.now()));
+
+        window.dispatchEvent(new CustomEvent('pos-catalogo-sincronizado', {
+            detail: { total: productos.length },
+        }));
+
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+/**
+ * Hidrata el array en memoria desde IndexedDB al cargar la pagina, y
+ * sincroniza en segundo plano si no hay datos o estan viejos.
+ */
+async function cargarCatalogoLocal() {
+    try {
+        catalogoEnMemoria = await leerTodoDeIndexedDB();
+    } catch (e) {
+        catalogoEnMemoria = [];
+    }
+
+    const sincronizadoEn = Number(localStorage.getItem(SYNC_AT_KEY) || 0);
+    const desactualizado = (Date.now() - sincronizadoEn) > SYNC_STALE_MS;
+
+    if (catalogoEnMemoria.length === 0 || desactualizado) {
+        sincronizarCatalogo();
+    }
+
+    return catalogoEnMemoria;
+}
+
+function quitarAcentos(texto) {
+    return (texto || '')
+        .toString()
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .toLowerCase();
+}
+
+/**
+ * Replica el LIKE '%palabra1%palabra2%' que hacia el servidor: todas las
+ * palabras de la busqueda deben aparecer en el nombre (o coincidir con el
+ * codigo / un codigo alterno).
+ */
+function coincideProducto(producto, palabras) {
+    if (palabras.length === 0) return true;
+
+    const nombre = quitarAcentos(producto.descripcion_larga);
+    const codigo = quitarAcentos(String(producto.id_producto));
+    const alternos = (producto.alternate_codes || []).map(quitarAcentos);
+
+    return palabras.every((palabra) => (
+        nombre.includes(palabra)
+        || codigo.includes(palabra)
+        || alternos.some((c) => c.includes(palabra))
+    ));
+}
+
+function coincideFiltroTipo(producto, filtroTipo) {
+    if (!filtroTipo) return true;
+    if (filtroTipo === 'combo') return !!producto.tiene_combo;
+    if (filtroTipo === 'receta') return !!producto.tiene_receta;
+    return producto.tipo_producto === filtroTipo;
+}
+
+/**
+ * Busqueda local: mismo orden y limite que usaba el servidor (primero con
+ * stock, luego por existencias desc, maximo 40).
+ */
+function buscarLocal(query, filtroTipo) {
+    const palabras = quitarAcentos(query).split(/\s+/).filter(Boolean);
+
+    return catalogoEnMemoria
+        .filter((p) => coincideFiltroTipo(p, filtroTipo) && coincideProducto(p, palabras))
+        .sort((a, b) => {
+            const aConStock = a.existencias > 0 ? 1 : 0;
+            const bConStock = b.existencias > 0 ? 1 : 0;
+            if (aConStock !== bConStock) return bConStock - aConStock;
+            return b.existencias - a.existencias;
+        })
+        .slice(0, 40);
+}
+
+/**
+ * Soporte de lector de codigo de barras: coincidencia exacta de
+ * id_producto o de un codigo alterno.
+ */
+function buscarCoincidenciaExacta(codigo) {
+    const valor = String(codigo).trim();
+    if (!valor) return null;
+
+    return catalogoEnMemoria.find((p) => (
+        String(p.id_producto) === valor
+        || (p.alternate_codes || []).some((c) => String(c) === valor)
+    )) || null;
+}
+
+function getCatalogo() {
+    return catalogoEnMemoria;
+}
+
+// ---------------------------------------------------------------------
+// Render de tarjetas (replica el markup de pos-productos.blade.php)
+// ---------------------------------------------------------------------
+
+function escapeHtml(texto) {
+    return String(texto ?? '').replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    })[c]);
+}
+
+function formatoMoneda(valor) {
+    return '$' + Math.round(Number(valor) || 0).toLocaleString('es-CO');
+}
+
+function calcularStock(producto) {
+    let cantidad = Number(producto.existencias) || 0;
+    let unidad = producto.stock_unidad || 'und';
+    let decimales = producto.stock_decimales ?? 0;
+
+    if (producto.receta) {
+        cantidad = Number(producto.receta.porciones_disponibles) || 0;
+        unidad = producto.receta.unidad_rendimiento || unidad;
+        decimales = 2;
+    }
+
+    const texto = cantidad.toLocaleString('es-CO', {
+        minimumFractionDigits: decimales,
+        maximumFractionDigits: decimales,
+    }) + ' ' + unidad;
+
+    return { cantidad, unidad, texto, tieneStock: cantidad > 0 };
+}
+
+function stockBadgeEstilo(cantidad) {
+    if (cantidad <= 0) return 'border-color:#fecaca;background:#fef2f2;color:#b91c1c;';
+    if (cantidad <= 5) return 'border-color:#fde68a;background:#fef3c7;color:#92400e;';
+    return 'border-color:#a7f3d0;background:#d1fae5;color:#065f46;';
+}
+
+function etiquetaServicio(producto) {
+    if (producto.tipo_producto !== 'servicio') return '';
+    if (producto.mecanico_nombre) {
+        return '<div style="font-size:10px; color:#7c3aed; font-weight:700; margin-top:3px;">🔧 ' + escapeHtml(producto.mecanico_nombre) + '</div>';
+    }
+    if (producto.tercero_nombre) {
+        return '<div style="font-size:10px; color:#d97706; font-weight:700; margin-top:3px;">🤝 ' + escapeHtml(producto.tercero_nombre) + '</div>';
+    }
+    return '';
+}
+
+function tarjetaHTML(producto, empresaContexto) {
+    const stock = calcularStock(producto);
+    const puedeVerStock = empresaContexto?.puede_ver_stock ?? true;
+    const bordeColor = stock.tieneStock ? 'border-green-300' : 'border-red-200';
+    const nombre = escapeHtml(producto.descripcion_larga);
+    const foto = escapeHtml(producto.foto_url);
+    const badgeEstilo = stockBadgeEstilo(stock.cantidad);
+    const idAttr = escapeHtml(String(producto.id_producto));
+
+    const stockBadgeDesktop = puedeVerStock
+        ? '<div class="inline-flex items-center justify-center rounded-full border shadow-sm" style="width:120px; padding:4px 8px; font-size:10px; font-weight:700; text-align:center;' + badgeEstilo + '">Stock: ' + escapeHtml(stock.texto) + '</div>'
+        : '';
+
+    const stockBadgeMobile = puedeVerStock
+        ? '<div class="inline-flex items-center justify-center rounded-full border shadow-sm" style="width:86px; padding:3px 6px; font-size:8px; font-weight:700; text-align:center;' + badgeEstilo + '">Stock: ' + escapeHtml(stock.texto) + '</div>'
+        : '';
+
+    return `
+    <div>
+        <div class="pos-product-card-desktop bg-white rounded-lg shadow border ${bordeColor}" style="height: 110px; display: flex; align-items: stretch;">
+            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:10px 8px 10px 14px; flex-shrink:0;">
+                <div class="inline-flex items-center justify-center rounded-full border px-2 text-[11px] font-bold leading-none shadow-sm" style="border-color:#312e81;background:#4338ca;color:#fefefe; min-width:54px; height:22px;">${idAttr}</div>
+                <img data-ver-imagen="${foto}" src="${foto}" style="width:56px; height:56px; object-fit:cover; border-radius:4px; border:1px solid #e2e8f0; cursor:pointer;" alt="Foto del producto" />
+            </div>
+            <div style="flex:1; min-width:0; display:flex; align-items:center; padding:10px 12px 10px 8px;">
+                <div>
+                    <div title="${nombre}" style="font-size:11px; font-weight:600; line-height:1.3; color:#334155; word-break:break-word; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${nombre}</div>
+                    ${etiquetaServicio(producto)}
+                </div>
+            </div>
+            <div style="display:flex; flex-direction:row; align-items:flex-end; gap:8px; padding:0 14px 10px 0; flex-shrink:0;">
+                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+                    <div class="inline-flex items-center justify-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 shadow-sm" style="width:120px; padding:5px 8px; font-size:12px; font-weight:800; color:#4338ca; white-space:nowrap;">
+                        <span>${formatoMoneda(producto.precio_venta1)}</span>
+                        <span style="font-size:9px; font-weight:600; color:#6366f1;">${escapeHtml(producto.sufijo_venta)}</span>
+                    </div>
+                    ${stockBadgeDesktop}
+                </div>
+                <button type="button" data-agregar="${idAttr}" style="width:88px; flex-shrink:0; background:#4f46e5; color:white; border:none; border-radius:9999px; padding:8px 6px; font-size:12px; font-weight:600; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.2);">Agregar</button>
+            </div>
+        </div>
+
+        <div class="pos-product-card-mobile bg-white rounded-lg shadow border ${bordeColor}" style="height: 96px; display:flex; align-items:stretch;">
+            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; padding:8px 6px 8px 10px; flex-shrink:0;">
+                <div class="inline-flex items-center justify-center rounded-full border px-2 text-[10px] font-bold leading-none shadow-sm" style="border-color:#312e81;background:#4338ca;color:#fefefe; min-width:46px; height:20px;">${idAttr}</div>
+                <img data-ver-imagen="${foto}" src="${foto}" style="width:46px; height:46px; object-fit:cover; border-radius:4px; border:1px solid #e2e8f0;" alt="Foto del producto" />
+            </div>
+            <div style="flex:1; min-width:0; display:flex; align-items:center; padding:8px 8px 8px 6px;">
+                <div style="width:100%;">
+                    <button type="button" data-ver-nombre-mobile="${nombre}" data-stock-mobile="${puedeVerStock ? escapeHtml(stock.texto) : ''}" title="${nombre}" style="width:100%; text-align:left; font-size:9px; font-weight:600; line-height:1.2; color:#334155; word-break:break-word; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; background:none; border:none; padding:0; cursor:pointer;">${nombre}</button>
+                    ${etiquetaServicio(producto)}
+                </div>
+            </div>
+            <div style="display:flex; flex-direction:row; align-items:flex-end; gap:6px; padding:0 10px 8px 0; flex-shrink:0;">
+                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
+                    <div class="inline-flex items-center justify-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 shadow-sm" style="width:86px; padding:4px 6px; font-size:10px; font-weight:800; color:#4338ca; white-space:nowrap;">
+                        <span>${formatoMoneda(producto.precio_venta1)}</span>
+                        <span style="font-size:7px; font-weight:600; color:#6366f1;">${escapeHtml(producto.sufijo_venta)}</span>
+                    </div>
+                    ${stockBadgeMobile}
+                </div>
+                <button type="button" data-agregar="${idAttr}" style="width:68px; flex-shrink:0; background:#4f46e5; color:white; border:none; border-radius:9999px; padding:6px 4px; font-size:10px; font-weight:600; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.2);">Agregar</button>
+            </div>
+        </div>
+    </div>`;
+}
+
+function renderizarProductos(lista, empresaContexto, contenedorEl) {
+    if (!contenedorEl) return;
+
+    if (lista.length === 0) {
+        contenedorEl.innerHTML = '<div class="p-4 space-y-4 min-h-[700px]">No se encontraron productos.</div>';
+        return;
+    }
+
+    contenedorEl.innerHTML = lista.map((p) => tarjetaHTML(p, empresaContexto)).join('');
+}
+
+/**
+ * Delegacion de eventos sobre el contenedor de la grilla: click en
+ * "Agregar" llama al callback (que a su vez llama al metodo Livewire),
+ * click en la foto o en el nombre (mobile) dispara los mismos eventos
+ * que ya escuchan los modales Alpine existentes en el blade.
+ */
+function inicializarEventosGrid(contenedorEl, onAgregar) {
+    if (!contenedorEl) return;
+
+    contenedorEl.addEventListener('click', (event) => {
+        const botonAgregar = event.target.closest('[data-agregar]');
+        if (botonAgregar) {
+            onAgregar(botonAgregar.getAttribute('data-agregar'));
+            return;
+        }
+
+        const imagen = event.target.closest('[data-ver-imagen]');
+        if (imagen) {
+            window.dispatchEvent(new CustomEvent('ver-imagen', {
+                detail: { url: imagen.getAttribute('data-ver-imagen') },
+            }));
+            return;
+        }
+
+        const nombreMobile = event.target.closest('[data-ver-nombre-mobile]');
+        if (nombreMobile) {
+            window.dispatchEvent(new CustomEvent('ver-nombre-producto-mobile', {
+                detail: {
+                    nombre: nombreMobile.getAttribute('data-ver-nombre-mobile'),
+                    stock: nombreMobile.getAttribute('data-stock-mobile') || null,
+                },
+            }));
+        }
+    });
+}
+
+window.PosCatalogoOffline = {
+    cargarCatalogoLocal,
+    sincronizarCatalogo,
+    buscarLocal,
+    buscarCoincidenciaExacta,
+    getCatalogo,
+    renderizarProductos,
+    inicializarEventosGrid,
+};

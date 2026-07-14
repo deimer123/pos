@@ -9,6 +9,7 @@ use App\Http\Controllers\NotaCreditoPdfController;
 use App\Models\Caja;
 use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\KardexController;
+use App\Http\Controllers\PosCatalogoController;
 
 
 
@@ -335,6 +336,9 @@ Route::middleware(['auth', 'no.cocina.en.pos'])->group(function () {
 
     Route::view('/pos', 'pos')
         ->name('pos');
+
+    Route::get('/pos/catalogo.json', [PosCatalogoController::class, 'index'])
+        ->name('pos.catalogo');
 
     Route::get('/pos/mesa/{mesa}', function (\App\Models\Mesa $mesa) {
         $empresaId = auth()->user()->getEmpresaActualId();
