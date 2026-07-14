@@ -6,7 +6,6 @@ export default defineConfig({
         laravel({
             input: [
                 'resources/css/app.css',
-                 'resources/css/filament/admin.css',
                 'resources/js/app.js',
                 'resources/js/pos-catalogo-offline.js',
             ],
