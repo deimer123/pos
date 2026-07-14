@@ -940,6 +940,13 @@ public function asignarConsumidorFinalPorDefecto()
     if ($this->hotelReservaId) {
         $this->sincronizarCarritoConHotelReserva();
     }
+
+    // Producto vendido por peso: enfocar su campo de cantidad para que
+    // una gramera USB (que "escribe" el peso como si fuera un teclado)
+    // pueda escribirlo directamente ahi.
+    if (($this->carrito[$key]['vende_por'] ?? null) === 'peso') {
+        $this->dispatch('enfocar-cantidad-carrito', key: $key);
+    }
 }
     public function agregarProductoAlCarrito($idProducto)
     {

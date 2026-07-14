@@ -584,6 +584,7 @@
                 <div style="flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:2px;">
                     <span style="font-size:9px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:.05em;">Cant.</span>
                     <input type="number"
+                        id="cantidad-input-{{ $id }}"
                         min="{{ $permiteDecimal ? '0.01' : '1' }}"
                         step="{{ $permiteDecimal ? '0.01' : '1' }}"
                         inputmode="{{ $permiteDecimal ? 'decimal' : 'numeric' }}"
@@ -2601,6 +2602,19 @@
         Livewire.on('open-print', (event) => {
             const url = event?.url ?? event?.[0]?.url;
             if (url) openPrintPopup(url);
+        });
+
+        Livewire.on('enfocar-cantidad-carrito', (event) => {
+            const key = event?.key ?? event?.[0]?.key;
+            if (!key) return;
+
+            setTimeout(() => {
+                const input = document.getElementById('cantidad-input-' + key);
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }, 50);
         });
 
         Livewire.on('cliente-creado', () => {
