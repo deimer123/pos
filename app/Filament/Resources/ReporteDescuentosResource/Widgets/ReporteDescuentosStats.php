@@ -47,7 +47,7 @@ class ReporteDescuentosStats extends BaseWidget
             ? (float) $registrosConDescuento->avg(fn ($r) => abs((float) $r->descuento_promedio))
             : 0;
 
-        return [
+        $stats = [
             Stat::make('Productos vendidos', number_format($totalUnidadesTodas, 0, ',', '.'))
                 ->description('Con o sin descuento')
                 ->icon('heroicon-o-shopping-bag')
@@ -73,6 +73,11 @@ class ReporteDescuentosStats extends BaseWidget
                 ->icon('heroicon-o-receipt-percent')
                 ->color('success'),
         ];
+
+        return array_map(
+            fn (Stat $stat) => $stat->extraAttributes(['class' => 'reporte-descuentos-stat']),
+            $stats
+        );
     }
 
     protected function money(float $value): string

@@ -2122,6 +2122,43 @@ body:has(.fi-simple-layout) {
     font-size: 11px !important;
 }
 
+/* ======================================================
+   REPORTE DE DESCUENTOS: TARJETAS EN UNA SOLA LINEA
+====================================================== */
+
+.fi-page-header-widgets:has(.reporte-descuentos-stat) {
+    width: 100% !important;
+    max-width: 100% !important;
+    grid-column: 1 / -1 !important;
+}
+
+.fi-wi-stats-overview:has(.reporte-descuentos-stat) {
+    width: 100% !important;
+}
+
+.fi-wi-stats-overview-stats-ctn.fi-wi-stats-overview-stats-ctn:has(.reporte-descuentos-stat) {
+    width: 100% !important;
+    gap: 8px !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+}
+
+.reporte-descuentos-stat {
+    padding: .6rem !important;
+}
+
+.reporte-descuentos-stat .fi-wi-stats-overview-stat-label {
+    font-size: 12px !important;
+    white-space: normal !important;
+}
+
+.reporte-descuentos-stat .fi-wi-stats-overview-stat-value {
+    font-size: 1.1rem !important;
+}
+
+.reporte-descuentos-stat .fi-wi-stats-overview-stat-description {
+    font-size: 11px !important;
+}
+
 .producto-linea-1,
 .producto-linea-2 {
     border-radius: 0 !important;
