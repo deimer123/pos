@@ -104,7 +104,7 @@ class ReporteDescuentosResource extends Resource
                 Tables\Columns\TextColumn::make('descripcion_larga')
                     ->label('Producto')
                     ->searchable(query: function ($query, string $search) {
-                        $query->having('descripcion_larga', 'like', "%{$search}%");
+                        $query->where('factura_detalles.descripcion_larga', 'like', "%{$search}%");
                     })
                     ->sortable(),
 
