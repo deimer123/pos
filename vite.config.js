@@ -8,6 +8,7 @@ export default defineConfig({
                 'resources/css/app.css',
                 'resources/js/app.js',
                 'resources/js/pos-catalogo-offline.js',
+                'resources/js/pos-offline-queue.js',
             ],
             refresh: true,
         }),

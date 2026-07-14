@@ -10,7 +10,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
     <link rel="manifest" href="{{ asset('manifest.json') }}">
-    @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/pos-catalogo-offline.js'])
+    @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/pos-catalogo-offline.js', 'resources/js/pos-offline-queue.js'])
     @livewireStyles
     <link rel="stylesheet" href="{{ asset('css/pos-pro.css') }}?v={{ filemtime(public_path('css/pos-pro.css')) }}">
 </head>
@@ -324,6 +324,7 @@
             window.addEventListener('online', () => {
                 ocultarBannerOffline();
                 window.PosCatalogoOffline?.sincronizarCatalogo();
+                window.PosOfflineQueue?.procesarCola();
             });
 
             if (navigator.onLine === false) mostrarBannerOffline();
@@ -333,6 +334,63 @@
                     navigator.serviceWorker.register('/service-worker.js').catch(() => {});
                 });
             }
+        })();
+    </script>
+
+    {{-- Indicador de operaciones pendientes de sincronizar (ventas, mesas,
+         taller, hotel guardadas mientras no habia conexion) --}}
+    <script>
+        (function () {
+            let badge = null;
+
+            function crearBadge() {
+                badge = document.createElement('button');
+                badge.type = 'button';
+                badge.id = 'pos-pendientes-badge';
+                badge.style.cssText = 'position:fixed;left:14px;bottom:14px;z-index:999999;background:#4338ca;color:#fff;border:none;padding:8px 16px;border-radius:999px;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.3);cursor:pointer;display:none;';
+                badge.addEventListener('click', () => window.PosOfflineQueue?.procesarCola());
+                document.body.appendChild(badge);
+            }
+
+            async function actualizarBadge() {
+                if (!window.PosOfflineQueue) return;
+                if (!badge) crearBadge();
+
+                const total = await window.PosOfflineQueue.contarPendientes();
+
+                if (total > 0) {
+                    badge.textContent = '🕓 ' + total + ' pendiente' + (total === 1 ? '' : 's') + ' de sincronizar';
+                    badge.style.display = 'block';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+
+            window.addEventListener('pos-cola-cambio', actualizarBadge);
+
+            window.addEventListener('pos-operacion-sincronizada', () => {
+                if (window.Swal) {
+                    window.Swal.fire({
+                        icon: 'success', title: 'Sincronizado', timer: 1500, showConfirmButton: false,
+                    });
+                }
+            });
+
+            window.addEventListener('pos-operacion-conflicto', (event) => {
+                if (window.Swal) {
+                    window.Swal.fire({
+                        icon: 'warning',
+                        title: 'Quedo pendiente de revisar',
+                        text: event.detail?.error || 'No se pudo sincronizar una operacion.',
+                        confirmButtonText: 'Entendido',
+                    });
+                }
+            });
+
+            document.addEventListener('DOMContentLoaded', () => {
+                actualizarBadge();
+                if (navigator.onLine !== false) window.PosOfflineQueue?.procesarCola();
+            });
         })();
     </script>
 

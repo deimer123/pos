@@ -1,5 +1,10 @@
 <div class="pos-cart-component" style="display: flex; flex-direction: column; {{ $mesaId ? 'min-height: 100%' : 'height: 100%; min-height: 0;' }}">
-    
+    <script>
+        window.posMesaId = @json($mesaId);
+        window.posTallerOrdenId = @json($tallerOrdenId ?? null);
+        window.posHotelReservaId = @json($hotelReservaId ?? null);
+    </script>
+
 
     <div class="pos-cart-header" style="padding: 1rem; border-bottom: 1px solid #ddd;">
         <div class="flex items-center gap-2">
@@ -657,7 +662,8 @@
                     📤 Enviar cocina
                 </button>
                 @if ((auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa')) && auth()->user()->puedeVerBotonPos('facturar'))
-                <button onclick="window.Livewire.dispatch('mesa-facturar')"
+                <button id="btn-mesa-facturar"
+                    onclick="if (navigator.onLine === false) { window.posMesaFacturarOffline?.(); } else { window.Livewire.dispatch('mesa-facturar'); }"
                     class="pos-mesa-total-btn"
                     style="background:#16a34a; color:white; border:none; border-radius:9999px; padding:0 14px; height:34px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">
                     💳 Facturar
@@ -668,7 +674,7 @@
         @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion']) && auth()->user()->puedeVerBotonPos('facturar'))
             <button type="button" id="btn-abrir-facturar"
                 class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow"
-                wire:click="confirmarFacturar" wire:loading.attr="disabled" wire:target="confirmarFacturar">
+                wire:loading.attr="disabled" wire:target="confirmarFacturar">
                 Facturar
             </button>
         @endif
@@ -3284,4 +3290,183 @@ function abrirIngresoTaller(nombreCliente, telefonoCliente) {
         }
     });
 }
+</script>
+
+<script>
+    // Facturar una venta simple sin conexion: guarda la venta en la cola
+    // local (IndexedDB) en vez de llamar a Livewire, y se sincroniza sola
+    // cuando vuelve el internet (ver resources/js/pos-offline-queue.js).
+    // No aplica a mesas/taller/hotel (eso se maneja aparte).
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.__posFacturarOfflineInicializado) return;
+        window.__posFacturarOfflineInicializado = true;
+
+        const boton = document.getElementById('btn-abrir-facturar');
+        if (!boton) return;
+
+        function wireCarrito() {
+            const el = boton.closest('[wire\\:id]');
+            return el ? window.Livewire.find(el.getAttribute('wire:id')) : null;
+        }
+
+        function itemsParaOffline() {
+            const wire = wireCarrito();
+            const carrito = wire ? wire.get('carrito') : {};
+
+            return Object.values(carrito || {}).map((item) => ({
+                id_producto: item.id_producto,
+                nombre: item.nombre,
+                cantidad: item.cantidad,
+                precio: item.precio,
+                nuevo_precio: item.nuevo_precio,
+                descuento: item.descuento,
+                permite_decimal: item.permite_decimal,
+                vende_por: item.vende_por,
+                permite_fraccion: item.permite_fraccion,
+                id_unidad_de_medida: item.id_unidad_de_medida,
+            }));
+        }
+
+        function mostrarCarritoVendidoOffline() {
+            const contenedor = document.querySelector('.pos-cart-table-scroll');
+            if (!contenedor) return;
+
+            contenedor.innerHTML = '<div style="padding:32px 16px; text-align:center; color:#166534;">'
+                + '<div style="font-size:40px; margin-bottom:8px;">🕓</div>'
+                + '<div style="font-weight:700; margin-bottom:4px;">Venta guardada sin conexion</div>'
+                + '<div style="font-size:12px; color:#64748b; margin-bottom:14px;">Se va a facturar sola apenas vuelva el internet.</div>'
+                + '<button type="button" id="btn-offline-nueva-venta" style="background:#4f46e5; color:white; border:none; border-radius:9999px; padding:8px 16px; font-size:12px; font-weight:700; cursor:pointer;">Iniciar otra venta</button>'
+                + '</div>';
+
+            document.getElementById('btn-offline-nueva-venta')?.addEventListener('click', () => {
+                window.location.reload();
+            });
+        }
+
+        async function cobrarSinConexion() {
+            // En modo taller el botón "Facturar" cierra la orden de taller
+            // (usa lo que ya haya en el servidor + lo que este dispositivo
+            // agrego offline), no una venta suelta.
+            if (window.posTallerOrdenId) {
+                const { value: medioPago } = await window.Swal.fire({
+                    title: 'Cerrar orden de taller sin conexion',
+                    text: 'Se guarda como venta de contado no fiscal. Se confirma de verdad al recuperar internet.',
+                    input: 'radio',
+                    inputOptions: { efectivo: 'Efectivo', transferencia: 'Transferencia' },
+                    inputValue: 'efectivo',
+                    showCancelButton: true,
+                    confirmButtonText: 'Cerrar orden',
+                    cancelButtonText: 'Cancelar',
+                    inputValidator: (v) => (!v ? 'Elige un medio de pago' : undefined),
+                });
+
+                if (!medioPago) return;
+
+                await window.PosOfflineQueue.agregarOperacion({
+                    tipo: 'taller_facturar',
+                    payload: { taller_orden_id: window.posTallerOrdenId, medio_pago: medioPago },
+                });
+
+                mostrarCarritoVendidoOffline();
+                return;
+            }
+
+            // En modo hotel el botón "Facturar" hace el check-out de la
+            // reserva (hospedaje + consumos), igual que taller.
+            if (window.posHotelReservaId) {
+                const { value: medioPago } = await window.Swal.fire({
+                    title: 'Check-out sin conexion',
+                    text: 'Se guarda como venta de contado no fiscal. Se confirma de verdad al recuperar internet.',
+                    input: 'radio',
+                    inputOptions: { efectivo: 'Efectivo', transferencia: 'Transferencia' },
+                    inputValue: 'efectivo',
+                    showCancelButton: true,
+                    confirmButtonText: 'Hacer check-out',
+                    cancelButtonText: 'Cancelar',
+                    inputValidator: (v) => (!v ? 'Elige un medio de pago' : undefined),
+                });
+
+                if (!medioPago) return;
+
+                await window.PosOfflineQueue.agregarOperacion({
+                    tipo: 'hotel_facturar',
+                    payload: { hotel_reserva_id: window.posHotelReservaId, medio_pago: medioPago },
+                });
+
+                mostrarCarritoVendidoOffline();
+                return;
+            }
+
+            const items = itemsParaOffline();
+
+            if (items.length === 0) {
+                window.Swal?.fire('El carrito esta vacio', '', 'warning');
+                return;
+            }
+
+            const { value: medioPago } = await window.Swal.fire({
+                title: 'Cobrar sin conexion',
+                text: 'Esta venta se guarda como "salida" (no fiscal) y de contado. Se factura de verdad al recuperar internet.',
+                input: 'radio',
+                inputOptions: { efectivo: 'Efectivo', transferencia: 'Transferencia' },
+                inputValue: 'efectivo',
+                showCancelButton: true,
+                confirmButtonText: 'Guardar venta',
+                cancelButtonText: 'Cancelar',
+                inputValidator: (v) => (!v ? 'Elige un medio de pago' : undefined),
+            });
+
+            if (!medioPago) return;
+
+            await window.PosOfflineQueue.agregarOperacion({
+                tipo: 'venta',
+                payload: { carrito: items, medio_pago: medioPago },
+            });
+
+            mostrarCarritoVendidoOffline();
+        }
+
+        boton.addEventListener('click', () => {
+            if (navigator.onLine === false) {
+                cobrarSinConexion();
+                return;
+            }
+
+            wireCarrito()?.call('confirmarFacturar');
+        });
+
+        // Cerrar/facturar una mesa sin conexion (boton "💳 Facturar" en modo
+        // mesa). No manda el carrito: el servidor lo reconstruye el mismo a
+        // partir de los items de la mesa que ya tenga guardados.
+        window.posMesaFacturarOffline = async function () {
+            if (!window.posMesaId) return;
+
+            const { value: medioPago } = await window.Swal.fire({
+                title: 'Cerrar mesa sin conexion',
+                text: 'Se guarda como venta de contado no fiscal. Se confirma de verdad al recuperar internet.',
+                input: 'radio',
+                inputOptions: { efectivo: 'Efectivo', transferencia: 'Transferencia' },
+                inputValue: 'efectivo',
+                showCancelButton: true,
+                confirmButtonText: 'Cerrar mesa',
+                cancelButtonText: 'Cancelar',
+                inputValidator: (v) => (!v ? 'Elige un medio de pago' : undefined),
+            });
+
+            if (!medioPago) return;
+
+            await window.PosOfflineQueue.agregarOperacion({
+                tipo: 'mesa_facturar',
+                payload: { mesa_id: window.posMesaId, medio_pago: medioPago },
+            });
+
+            window.Swal.fire({
+                icon: 'success',
+                title: 'Mesa guardada para cerrar',
+                text: 'Se confirma sola al volver el internet.',
+                timer: 2200,
+                showConfirmButton: false,
+            });
+        };
+    });
 </script>

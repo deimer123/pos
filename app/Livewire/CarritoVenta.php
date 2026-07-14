@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Caja;
 use App\Models\ConfiguracionEmpresa;
+use App\Services\Ventas\FacturarVentaService;
 use Livewire\WithFileUploads;
 class CarritoVenta extends Component
 {
@@ -230,35 +231,6 @@ class CarritoVenta extends Component
     }
 
     return $user->id;
-}
-
-private function validarStockCarrito(int $empresaId): void
-{
-    $permiteNegativo = (bool) ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('permite_stock_negativo');
-
-    foreach ($this->carrito as $item) {
-        $prod = null;
-
-        if (is_numeric($item['id_producto'])) {
-            $prod = Product::where('empresa_id', $empresaId)
-                ->where('id_producto', $item['id_producto'])
-                ->lockForUpdate()
-                ->first();
-
-            if (!$prod) {
-                throw new \Exception("Producto {$item['id_producto']} no existe.");
-            }
-        }
-
-        $cant = $this->normalizarCantidad($item['cantidad'] ?? 1, $this->permiteCantidadDecimal($item));
-        if ($cant <= 0) {
-            throw new \Exception("Cantidad invÃ¡lida en {$item['id_producto']}.");
-        }
-
-        if (!$permiteNegativo && $prod && $prod->tipo_producto !== 'servicio' && $cant > (float) $prod->existencias) {
-            throw new \Exception("Stock insuficiente para \"{$prod->descripcion_larga}\": disponible {$prod->existencias}, solicitado {$cant}.");
-        }
-    }
 }
 
 private function descuentoMaximoPermitido(int $empresaId): ?float
@@ -928,7 +900,8 @@ public function asignarConsumidorFinalPorDefecto()
 
     // En modo mesa: guardar inmediatamente en OrdenMesa
     if ($this->mesaId) {
-        $this->guardarProductoEnOrdenMesa($producto, $this->carrito[$key]['cantidad']);
+        app(\App\Services\Mesas\AgregarItemMesaService::class)
+            ->establecerCantidadItem($producto, $this->carrito[$key]['cantidad'], $this->mesaId, $empresaId, auth()->id());
     }
 
     // Auto-sync con orden de taller activa
@@ -954,39 +927,6 @@ public function asignarConsumidorFinalPorDefecto()
         $this->dispatch('limpiar-input-busqueda')->to('pos-productos');
     }
 
-    private function guardarProductoEnOrdenMesa(\App\Models\Product $producto, float $cantidad): void
-    {
-        $empresaId = $this->getEmpresaId();
-        $orden = $this->obtenerOrdenMesaActiva($empresaId);
-
-        $existente = \App\Models\OrdenMesaItem::where('orden_mesa_id', $orden->id)
-            ->where('product_id', $producto->id)
-            ->whereIn('estado_cocina', ['pendiente', 'enviado', 'preparando'])
-            ->orderByDesc('id')
-            ->first();
-
-        if ($existente && $existente->estado_cocina === 'pendiente') {
-            // Sumar al ítem pendiente existente
-            $existente->cantidad  = $cantidad;
-            $existente->subtotal  = round($existente->precio_unitario * $cantidad, 2);
-            $existente->save();
-        } else {
-            // Crear nuevo ítem pendiente
-            \App\Models\OrdenMesaItem::create([
-                'empresa_id'      => $empresaId,
-                'orden_mesa_id'   => $orden->id,
-                'product_id'      => $producto->id,
-                'cantidad'        => $cantidad,
-                'precio_unitario' => (float) $producto->precio_venta1,
-                'subtotal'        => round((float) $producto->precio_venta1 * $cantidad, 2),
-                'estado_cocina'   => 'pendiente',
-                'requiere_cocina' => true,
-            ]);
-        }
-
-        \App\Models\Mesa::where('id', $this->mesaId)->update(['estado' => 'ocupada']);
-        $this->recalcularTotalOrden($orden->id);
-    }
 
     // âœ… MÃ‰TODO PARA AGREGAR PRODUCTO MANUAL
     public function agregarProductoManual($data)
@@ -1606,44 +1546,16 @@ public function guardarPrefacturaConfirmada()
         }
     }
 
-    protected function vincularFacturaTaller(int $facturaId): void
-    {
-        if (! $this->tallerOrdenId) return;
-
-        \App\Models\TallerOrden::where('id', $this->tallerOrdenId)
-            ->where('empresa_id', $this->getEmpresaId())
-            ->update([
-                'factura_id'   => $facturaId,
-                'estado'       => 'entregado',
-                'entregado_at' => now(),
-            ]);
-
-        $this->tallerOrdenId = null;
-    }
-
     public function sincronizarCarritoConOrdenTaller(): void
     {
         if (! $this->tallerOrdenId) return;
 
-        $orden = \App\Models\TallerOrden::where('id', $this->tallerOrdenId)
-            ->where('empresa_id', $this->getEmpresaId())
-            ->first();
-
-        if (! $orden) return;
-
-        \App\Models\TallerRepuesto::where('orden_id', $orden->id)->delete();
-
-        foreach ($this->carrito as $item) {
-            $precio = (float) ($item['nuevo_precio'] ?? $item['precio'] ?? 0);
-            $cant   = (float) ($item['cantidad'] ?? 1);
-            \App\Models\TallerRepuesto::create([
-                'orden_id'        => $orden->id,
-                'producto_id'     => is_numeric($item['id_producto']) ? (int) $item['id_producto'] : null,
-                'descripcion'     => $item['nombre'] ?? 'Sin descripción',
-                'cantidad'        => $cant,
-                'precio_unitario' => $precio,
-                'subtotal'        => round($precio * $cant, 2),
-            ]);
+        try {
+            app(\App\Services\Taller\GuardarOrdenTallerService::class)
+                ->sincronizarItems($this->tallerOrdenId, $this->getEmpresaId(), $this->carrito);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
+            // La orden no existe/no es de esta empresa: mismo comportamiento
+            // silencioso que tenia el metodo original.
         }
     }
 
@@ -1965,25 +1877,8 @@ public function guardarPrefacturaConfirmada()
                 return;
             }
 
-            \App\Models\HotelReservaConsumo::where('reserva_id', $this->hotelReservaId)->delete();
-
-            foreach ($this->carrito as $key => $item) {
-                if (str_starts_with((string) $key, 'hotel-reserva-')) {
-                    continue; // el ítem de hospedaje no es un consumo, se recalcula solo
-                }
-
-                $precio = (float) ($item['nuevo_precio'] ?? $item['precio'] ?? 0);
-                $cant   = (float) ($item['cantidad'] ?? 1);
-
-                \App\Models\HotelReservaConsumo::create([
-                    'reserva_id'      => $this->hotelReservaId,
-                    'producto_id'     => is_numeric($item['id_producto']) ? (int) $item['id_producto'] : null,
-                    'descripcion'     => $item['nombre'] ?? 'Sin descripción',
-                    'cantidad'        => $cant,
-                    'precio_unitario' => $precio,
-                    'subtotal'        => round($precio * $cant, 2),
-                ]);
-            }
+            app(\App\Services\Hotel\GuardarReservaService::class)
+                ->sincronizarConsumos($this->hotelReservaId, $this->getEmpresaId(), $this->carrito);
         } catch (\Throwable $e) {
             \Log::error('sincronizarCarritoConHotelReserva fallo', [
                 'hotel_reserva_id' => $this->hotelReservaId,
@@ -2005,23 +1900,6 @@ public function guardarPrefacturaConfirmada()
         $this->forzarConsumidorFinal();
 
         $this->redirect(route('hotel'));
-    }
-
-    protected function vincularFacturaHotel(int $facturaId): void
-    {
-        if (! $this->hotelReservaId) return;
-
-        \App\Models\HotelReserva::where('id', $this->hotelReservaId)
-            ->where('empresa_id', $this->getEmpresaId())
-            ->update([
-                'factura_id'       => $facturaId,
-                'estado'           => 'checkout',
-                'checkout_real_at' => now(),
-            ]);
-
-        $this->hotelReservaId      = null;
-        $this->hotelAbonoMonto     = 0;
-        $this->hotelAbonoMedioPago = '';
     }
 
     public function verPrefacturas()
@@ -2409,137 +2287,6 @@ public function confirmarFacturar()
 // Los items manuales del carrito (hospedaje de hotel, repuestos sueltos de
 // taller, empaque/domicilio, etc.) se guardan con una clave sintética como
 // id_producto ('hotel-reserva-3', un uuid...) que no existe como Product
-// real: se facturan con producto_id = 0. A propósito NO se usa el 10001:
-// ese código es el de "ítems manuales/reembolsos a terceros" y tiene su
-// propia función aparte, que no se debe tocar. Tampoco se marca el
-// hospedaje como un Product con tipo_producto=servicio, porque en
-// resumenCaja() los servicios se restan del efectivo esperado (van a la
-// caja de mecánicos de Taller) — el hospedaje sí debe contar como
-// efectivo/transferencia normal de la caja de recepción.
-private function idProductoFacturable($idProducto): int
-{
-    return is_numeric($idProducto) ? (int) $idProducto : 0;
-}
-
-// Si el ítem es el hospedaje de una reserva de hotel con abono ya
-// recibido, se separa ese abono en una línea aparte (producto_id = 0,
-// descripción "Abono ya recibido..."). Esa línea se excluye del efectivo/
-// transferencia esperado y del total de ventas del cierre de caja
-// (resumenCaja(), por su descripción — NO por el código 10001, que se deja
-// intacto), así que el cajero solo tiene que cuadrar contra lo que
-// realmente cobró hoy — el abono ya entró a caja el día que se recibió,
-// como Gasto, y no se vuelve a contar aquí.
-private function crearDetalleFactura(Factura $factura, array $item, string $idFacturable, array $datosServicio, float $precio, float $cant, float $sub): void
-{
-    $esHospedaje = str_starts_with((string) $item['id_producto'], 'hotel-reserva-');
-
-    if ($esHospedaje && $this->hotelReservaId && $this->hotelAbonoMonto > 0) {
-        $abonoAplicado = min($this->hotelAbonoMonto, $sub);
-        $subRestante   = round($sub - $abonoAplicado, 2);
-
-        if ($subRestante > 0) {
-            $factura->detalles()->create([
-                'producto_id'        => $idFacturable,
-                'descripcion_larga'  => $item['nombre'],
-                'cantidad'           => $cant,
-                'precio'             => round($subRestante / $cant, 2),
-                'subtotal'           => $subRestante,
-                'descuento'          => (float) ($item['descuento'] ?? 0),
-                'tipo_servicio'      => $datosServicio['tipo_servicio'],
-                'porcentaje_empresa' => $datosServicio['porcentaje_empresa'],
-                'mecanico_id'        => $datosServicio['mecanico_id'] ?? null,
-            ]);
-        }
-
-        $factura->detalles()->create([
-            'producto_id'        => 0,
-            'descripcion_larga'  => 'Abono ya recibido al reservar (' . $item['nombre'] . ')',
-            'cantidad'           => 1,
-            'precio'             => $abonoAplicado,
-            'subtotal'           => $abonoAplicado,
-            'descuento'          => 0,
-            'tipo_servicio'      => null,
-            'porcentaje_empresa' => null,
-            'mecanico_id'        => null,
-        ]);
-
-        return;
-    }
-
-    $factura->detalles()->create([
-        'producto_id'        => $idFacturable,
-        'descripcion_larga'  => $item['nombre'],
-        'cantidad'           => $cant,
-        'subtotal'           => $sub,
-        'precio'             => $precio,
-        'descuento'          => (float) ($item['descuento'] ?? 0),
-        'tipo_servicio'      => $datosServicio['tipo_servicio'],
-        'porcentaje_empresa' => $datosServicio['porcentaje_empresa'],
-        'mecanico_id'        => $datosServicio['mecanico_id'] ?? null,
-    ]);
-}
-
-protected function datosServicioFactura(?Product $producto): array
-{
-    if (! $producto || $producto->tipo_producto !== 'servicio' || ! $producto->tipo_servicio) {
-        return ['tipo_servicio' => null, 'porcentaje_empresa' => null, 'mecanico_id' => null];
-    }
-
-    return [
-        'tipo_servicio'      => $producto->tipo_servicio,
-        'porcentaje_empresa' => (float) ($producto->porcentaje_empresa ?? 0),
-        'mecanico_id'        => $producto->tipo_servicio === 'propio' ? $producto->mecanico_id : null,
-    ];
-}
-
-// Registra cómo quedó pagada la factura recién creada. El abono de una
-// reserva de hotel es puramente informativo (ya se cobró y se registró como
-// entrada de caja al momento de reservar): la factura se paga igual que
-// cualquier venta de contado/crédito, por el total completo, para no meter
-// lógica especial de hotel en el reporte de caja compartido con el resto
-// del POS. La nota del pago solo deja constancia del abono para trazabilidad.
-private function finalizarPagoFactura(Factura $factura, string $tipoPago, ?string $medioPago, ?string $transferObs, ?string $vencRaw): void
-{
-    if ($tipoPago === 'credito') {
-        $info = $this->clienteCreditoInfo; // accessor existente
-
-        if (!($info['permite'] ?? false)) {
-            throw new \Exception('El cliente no tiene crédito habilitado.');
-        }
-        if ($factura->total > (float)($info['cupo_disponible'] ?? 0)) {
-            throw new \Exception('Cupo insuficiente para otorgar este crédito.');
-        }
-
-        $dias = (int)($info['dias'] ?? 0);
-
-        $factura->saldo             = $factura->total;
-        $factura->estado_pago       = 'pendiente';
-        $factura->fecha_vencimiento = $vencRaw
-            ? \Carbon\Carbon::parse($vencRaw)->toDateString()
-            : now()->addDays($dias)->toDateString();
-
-        $factura->save();
-
-        return;
-    }
-
-    $nota = ($medioPago === 'transferencia' && $transferObs)
-        ? ('Transferencia: ' . $transferObs)
-        : 'Pago contado';
-
-    if ($this->hotelReservaId && $this->hotelAbonoMonto > 0) {
-        $nota .= ' (incluye abono de $' . number_format($this->hotelAbonoMonto, 0, ',', '.') . ' ya recibido al reservar)';
-    }
-
-    $factura->registrarAbono(
-        monto: (float) $factura->total,
-        medio: $medioPago ?? 'efectivo',
-        nota : $nota,
-        userId: auth()->id(),
-        transferenciaObs: $transferObs
-    );
-}
-
 #[On('facturar-confirmada')]
 public function facturarConfirmada(array $data = [])
 {
@@ -2554,10 +2301,7 @@ public function facturarConfirmada(array $data = [])
         return;
      }
 
-
     try {
-        DB::beginTransaction();
-
         Log::info('POS facturarConfirmada inicio', [
             'empresa_id' => $empresaId,
             'user_id' => auth()->id(),
@@ -2566,33 +2310,7 @@ public function facturarConfirmada(array $data = [])
             'data' => $data,
         ]);
 
-        // âœ… CLIENTE: usa el seleccionado o fuerza CF
-        $clienteId = $this->clienteId ?: $this->getConsumidorFinalId($empresaId);
-        if (!$clienteId) {
-            throw new \Exception('Falta CONSUMIDOR FINAL en esta empresa.');
-        }
-
-        $this->validarStockCarrito($empresaId);
-
-        // ===== Datos de la peticiÃ³n =====
-        $tipoFactura  = $data['tipo_factura'] ?? 'salida';
-        $tipoPago     = $data['tipo_pago']    ?? 'contado';
-        $medioPago    = $tipoPago === 'contado' ? ($data['medio_pago'] ?? 'efectivo') : null;
-        $vencRaw      = $data['fecha_vencimiento'] ?? null;
-        $tipoPedido     = $data['tipo_pedido'] ?? 'local';
-        $costoEmpaque   = (float)($data['costo_empaque'] ?? 0);
-        $cobroDomicilio = $data['cobro_domicilio'] ?? null;
-
-        if ($tipoFactura === 'electronica' && ! $this->facturacionElectronicaDisponible($empresaId)) {
-            throw new \Exception('La facturacion electronica no esta activa o no tiene rango Factus configurado para esta empresa.');
-        }
-
-        // NUEVO: observaciÃ³n exclusiva para transferencia
-        $transferObs = ($tipoPago === 'contado' && $medioPago === 'transferencia')
-            ? trim((string)($data['transferencia_obs'] ?? ''))
-            : null;
-
-        $obs = trim((string)($this->observacionesPrefactura ?? ''));
+        $tipoPago = $data['tipo_pago'] ?? 'contado';
 
         $vendedorId = auth()->id();
         if ($this->prefacturaCargadaId) {
@@ -2600,143 +2318,44 @@ public function facturarConfirmada(array $data = [])
             $vendedorId = $prefactura?->vendedor_id ?? $vendedorId;
         }
 
-        // ===== Crear factura =====
-        $factura = Factura::create([
-            'empresa_id'         => $empresaId,
-            'cliente_id'         => $clienteId,
-            'user_id'            => auth()->id(),
-            'vendedor_id'        => $vendedorId,
-            'cajero_id'          => auth()->id(),
-            'tipo_factura'       => $tipoFactura,
-            'factus_reference_code' => null,
-            'factus_bill_id'        => null,
-            'factus_number'         => null,
-            'factus_cufe'           => null,
-            'factus_status'         => null,
-            'factus_response'       => null,
-            'factus_validated_at'   => null,
-            'tipo_pago'          => $tipoPago,
-            'medio_pago'         => $medioPago,
-            'fecha'              => now(),
-            'fecha_compra'       => now(),
-            'fecha_pago'         => null,
-            'fecha_vencimiento'  => ($tipoPago === 'credito' && $vencRaw)
-                                    ? \Carbon\Carbon::parse($vencRaw)->toDateString()
-                                    : null,
-            'total'              => 0,
-            'saldo'              => 0,
-            'estado_pago'        => 'pendiente',
-            'observaciones'      => $obs,
-            'transferencia_obs'  => $transferObs,
-            'tipo_pedido'           => $tipoPedido,
-            'costo_empaque'         => $costoEmpaque,
-            'dom_costo_domicilio'   => $tipoPedido === 'domicilio' ? (float)($data['dom_costo_domicilio'] ?? $this->ordenDomCostoDomicilio) : 0,
-            'dom_costo_desechables' => $tipoPedido === 'domicilio' ? (float)($data['dom_costo_desechables'] ?? $this->ordenDomCostoDesechables) : ($tipoPedido === 'para_llevar' ? $costoEmpaque : 0),
-            'cobro_domicilio'       => $cobroDomicilio,
-            'dom_nombre'            => $data['dom_nombre'] ?? null,
-            'dom_telefono'          => $data['dom_telefono'] ?? null,
-            'dom_direccion'         => $data['dom_direccion'] ?? null,
-            'dom_observaciones'     => $data['dom_observaciones'] ?? $this->ordenDomObservaciones ?: null,
-            'dom_nit'               => $data['dom_nit'] ?? null,
-            'dom_email'             => $data['dom_email'] ?? null,
-            'dom_razon_social'      => $data['dom_razon_social'] ?? null,
+        $factura = app(FacturarVentaService::class)->facturar($this->carrito, [
+            'empresa_id' => $empresaId,
+            'cliente_id' => $this->clienteId ?: null,
+            'user_id' => auth()->id(),
+            'vendedor_id' => $vendedorId,
+            'tipo_factura' => $data['tipo_factura'] ?? 'salida',
+            'tipo_pago' => $tipoPago,
+            'medio_pago' => $data['medio_pago'] ?? null,
+            'fecha_vencimiento' => $data['fecha_vencimiento'] ?? null,
+            'tipo_pedido' => $data['tipo_pedido'] ?? 'local',
+            'costo_empaque' => (float) ($data['costo_empaque'] ?? 0),
+            'cobro_domicilio' => $data['cobro_domicilio'] ?? null,
+            'transferencia_obs' => $data['transferencia_obs'] ?? null,
+            'observaciones' => $this->observacionesPrefactura,
+            'dom_costo_domicilio' => $data['dom_costo_domicilio'] ?? $this->ordenDomCostoDomicilio,
+            'dom_costo_desechables' => $data['dom_costo_desechables'] ?? $this->ordenDomCostoDesechables,
+            'dom_nombre' => $data['dom_nombre'] ?? null,
+            'dom_telefono' => $data['dom_telefono'] ?? null,
+            'dom_direccion' => $data['dom_direccion'] ?? null,
+            'dom_observaciones' => $data['dom_observaciones'] ?? $this->ordenDomObservaciones ?: null,
+            'dom_nit' => $data['dom_nit'] ?? null,
+            'dom_email' => $data['dom_email'] ?? null,
+            'dom_razon_social' => $data['dom_razon_social'] ?? null,
+            'cliente_credito_info' => $tipoPago === 'credito' ? $this->clienteCreditoInfo : null,
+            'mesa_id' => $this->mesaId,
+            'taller_orden_id' => $this->tallerOrdenId,
+            'hotel_reserva_id' => $this->hotelReservaId,
+            'hotel_abono_monto' => $this->hotelAbonoMonto,
         ]);
-
-        // ===== Detalles & stock =====
-        foreach ($this->carrito as $item) {
-            $precio = (float)($item['nuevo_precio'] ?? $item['precio'] ?? 0);
-            $cant   = $this->normalizarCantidad($item['cantidad'] ?? 1, $this->permiteCantidadDecimal($item));
-            $sub    = round($precio * $cant, 2);
-
-            $idFacturable = $this->idProductoFacturable($item['id_producto']);
-
-            $producto = Product::where('empresa_id', $empresaId)
-                ->where('id_producto', $idFacturable)
-                ->lockForUpdate()
-                ->first();
-
-            $datosServicio = $this->datosServicioFactura($producto);
-
-            $this->crearDetalleFactura($factura, $item, (string) $idFacturable, $datosServicio, $precio, $cant, $sub);
-
-if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->id_producto !== '10001') {
-
-    $stockAnterior = (float)$producto->existencias;
-
-    // ðŸ”¥ 1. KARDEX (ANTES DE DESCONTAR)
-    guardarKardex(
-        $item['id_producto'],
-        'venta',
-        $cant,
-        $empresaId,
-        $factura->id,
-        $stockAnterior
-    );
-
-    // 2. DESCONTAR STOCK (solo si NO tiene receta activa)
-    $receta = \App\Models\Receta::where('empresa_id', $empresaId)
-        ->where('product_id', $producto->id)
-        ->where('activo', true)
-        ->with('items.ingrediente')
-        ->first();
-
-    if (! $receta) {
-        $producto->existencias = $stockAnterior - $cant;
-        $producto->save();
-    }
-
-    // 3. DESCONTAR INGREDIENTES si el producto tiene receta
-
-    if ($receta && $receta->items->isNotEmpty()) {
-        $rendimiento = (float) $receta->rendimiento ?: 1;
-        foreach ($receta->items as $recetaItem) {
-            $ingrediente = $recetaItem->ingrediente;
-            if (!$ingrediente) continue;
-            $cantBase = ((float) $recetaItem->cantidad / $rendimiento) * $cant;
-            $merma = (float) $recetaItem->merma;
-            $cantConMerma = $merma > 0 ? $cantBase * (1 + $merma / 100) : $cantBase;
-            $stockIngAnterior = (float) $ingrediente->existencias;
-            guardarKardex($ingrediente->id_producto, 'venta', $cantConMerma, $empresaId, $factura->id, $stockIngAnterior);
-            $ingrediente->existencias = $stockIngAnterior - $cantConMerma;
-            $ingrediente->save();
-        }
-    }
-}
-        }
-
-        // Agregar costo de domicilio/empaque como ítem de detalle
-        if ($costoEmpaque > 0) {
-            $label = match($tipoPedido) {
-                'domicilio'   => 'Domicilio + desechables',
-                'para_llevar' => 'Empaque / desechables',
-                default       => 'Empaque',
-            };
-            $factura->detalles()->create([
-                'producto_id'       => 0,
-                'descripcion_larga' => $label,
-                'cantidad'          => 1,
-                'precio'            => $costoEmpaque,
-                'subtotal'          => $costoEmpaque,
-                'descuento'         => 0,
-            ]);
-        }
-
-        // Recalcular totales
-        $factura->recalcularTotales();
-
-        // ===== Condiciones de pago =====
-        $this->finalizarPagoFactura($factura, $tipoPago, $medioPago, $transferObs, $vencRaw);
-
-        $this->validarFacturaElectronicaConFactus($factura);
-
-        DB::commit();
 
         $eraOrdenTaller = (bool) $this->tallerOrdenId;
         $eraReservaHotel = (bool) $this->hotelReservaId;
 
         $this->eliminarPrefacturaCargada();
-        $this->vincularFacturaTaller($factura->id);
-        $this->vincularFacturaHotel($factura->id);
+        $this->tallerOrdenId = null;
+        $this->hotelReservaId = null;
+        $this->hotelAbonoMonto = 0;
+        $this->hotelAbonoMedioPago = '';
 
         // ===== Limpiar UI =====
         $this->carrito = [];
@@ -2750,19 +2369,6 @@ if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->
         session()->forget('observaciones_guardadas');
         $this->olvidarCarritoPersistente();
 
-        // Liberar mesa si estamos en modo mesa
-        if ($this->mesaId) {
-            \App\Models\OrdenMesa::where('mesa_id', $this->mesaId)
-                ->whereIn('estado', ['abierta', 'en_preparacion'])
-                ->update(['estado' => 'facturada', 'cerrada_en' => now()]);
-            // Solo liberar la mesa si no quedan cuentas en espera para esta mesa
-            $cuentasEnEspera = \App\Models\OrdenMesa::where('mesa_id', $this->mesaId)
-                ->where('estado', 'lista')->count();
-            if ($cuentasEnEspera === 0) {
-                \App\Models\Mesa::where('id', $this->mesaId)->update(['estado' => 'libre']);
-            }
-        }
-
         $this->dispatch('success', $factura->numero_visual . ' creada.');
         if ($this->mesaId || $eraOrdenTaller) {
             $this->redirect(route('pos'));
@@ -2770,7 +2376,6 @@ if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->
             $this->redirect(route('hotel'));
         }
     } catch (\Throwable $e) {
-        DB::rollBack();
         Log::error('POS no pudo crear factura', [
             'empresa_id' => $empresaId,
             'user_id' => auth()->id(),
@@ -2785,23 +2390,6 @@ if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->
 
 
 
-
-private function validarFacturaElectronicaConFactus(Factura $factura): void
-{
-    if ($factura->tipo_factura !== 'electronica') {
-        return;
-    }
-
-    $factura->load(['cliente.ciudad', 'detalles']);
-
-    app(\App\Services\Factus\FactusInvoiceService::class)->validate($factura);
-
-    $factura->refresh();
-
-    if (blank($factura->factus_number) || blank($factura->factus_cufe) || $factura->factus_status !== 'validada') {
-        throw new \RuntimeException('Factus no valido la factura electronica. No se guardo la venta.');
-    }
-}
 
 private function facturacionElectronicaDisponible(int $empresaId): bool
 {
@@ -3044,184 +2632,58 @@ public function facturarEImprimir(array $data = [])
             return ['ok' => false, 'error' => 'Caja cerrada.'];
         }
 
+    if (empty($this->carrito)) {
+        $this->dispatch('error', 'El carrito está vacío.');
+        return ['ok' => false, 'error' => 'El carrito está vacío.'];
+    }
+
     try {
-        DB::beginTransaction();
+        $tipoPago = $data['tipo_pago'] ?? 'contado';
 
-        // âœ… Cliente: seleccionado o CONSUMIDOR FINAL
-        $clienteId = $this->clienteId ?: $this->getConsumidorFinalId($empresaId);
-        if (!$clienteId) {
-            throw new \Exception('Falta CONSUMIDOR FINAL en esta empresa.');
-        }
-
-        // âœ… Carrito (permitiendo stock negativo)
-        if (empty($this->carrito)) {
-            throw new \Exception('El carrito estÃ¡ vacÃ­o.');
-        }
-
-        $this->validarStockCarrito($empresaId);
-
-        // ===== Datos de cabecera
-        $tipoFactura  = $data['tipo_factura'] ?? 'salida';
-        $tipoPago     = $data['tipo_pago']    ?? 'contado';
-        $medioPago    = $tipoPago === 'contado' ? ($data['medio_pago'] ?? 'efectivo') : null;
-        $vencRaw      = $data['fecha_vencimiento'] ?? null;
-        $tipoPedido     = $data['tipo_pedido'] ?? 'local';
-        $costoEmpaque   = (float)($data['costo_empaque'] ?? 0);
-        $cobroDomicilio = $data['cobro_domicilio'] ?? null;
-
-        if ($tipoFactura === 'electronica' && ! $this->facturacionElectronicaDisponible($empresaId)) {
-            throw new \Exception('La facturacion electronica no esta activa o no tiene rango Factus configurado para esta empresa.');
-        }
-
-        // ðŸ'‡ ObservaciÃ³n especÃ­fica si es transferencia en contado
-        $transferObs = ($tipoPago === 'contado' && $medioPago === 'transferencia')
-            ? trim((string)($data['transferencia_obs'] ?? ''))
-            : null;
-
-        $obs = trim((string)($this->observacionesPrefactura ?? ''));
-
-        // ===== Crear factura
         $vendedorId = auth()->id();
         if ($this->prefacturaCargadaId) {
             $prefactura = Prefactura::find($this->prefacturaCargadaId);
             $vendedorId = $prefactura?->vendedor_id ?? $vendedorId;
         }
 
-        $factura = Factura::create([
-            'empresa_id'         => $empresaId,
-            'cliente_id'         => $clienteId,
-            'user_id'            => auth()->id(),
-            'vendedor_id'        => $vendedorId,
-            'cajero_id'          => auth()->id(),
-            'tipo_factura'       => $tipoFactura,
-            'factus_reference_code' => null,
-            'factus_bill_id'        => null,
-            'factus_number'         => null,
-            'factus_cufe'           => null,
-            'factus_status'         => null,
-            'factus_response'       => null,
-            'factus_validated_at'   => null,
-            'tipo_pago'          => $tipoPago,
-            'medio_pago'         => $medioPago,
-            'transferencia_obs'  => $transferObs,
-            'fecha'              => now(),
-            'fecha_compra'       => now(),
-            'fecha_pago'         => null,
-            'fecha_vencimiento'  => ($tipoPago === 'credito' && $vencRaw)
-                                    ? \Carbon\Carbon::parse($vencRaw)->toDateString()
-                                    : null,
-            'total'              => 0,
-            'saldo'              => 0,
-            'estado_pago'        => 'pendiente',
-            'observaciones'      => $obs,
-            'tipo_pedido'           => $tipoPedido,
-            'costo_empaque'         => $costoEmpaque,
-            'dom_costo_domicilio'   => $tipoPedido === 'domicilio' ? (float)($data['dom_costo_domicilio'] ?? $this->ordenDomCostoDomicilio) : 0,
-            'dom_costo_desechables' => $tipoPedido === 'domicilio' ? (float)($data['dom_costo_desechables'] ?? $this->ordenDomCostoDesechables) : ($tipoPedido === 'para_llevar' ? $costoEmpaque : 0),
-            'cobro_domicilio'       => $cobroDomicilio,
-            'dom_nombre'            => $data['dom_nombre'] ?? null,
-            'dom_telefono'          => $data['dom_telefono'] ?? null,
-            'dom_direccion'         => $data['dom_direccion'] ?? null,
-            'dom_observaciones'     => $data['dom_observaciones'] ?? $this->ordenDomObservaciones ?: null,
-            'dom_nit'               => $data['dom_nit'] ?? null,
-            'dom_email'             => $data['dom_email'] ?? null,
-            'dom_razon_social'      => $data['dom_razon_social'] ?? null,
+        $factura = app(FacturarVentaService::class)->facturar($this->carrito, [
+            'empresa_id' => $empresaId,
+            'cliente_id' => $this->clienteId ?: null,
+            'user_id' => auth()->id(),
+            'vendedor_id' => $vendedorId,
+            'tipo_factura' => $data['tipo_factura'] ?? 'salida',
+            'tipo_pago' => $tipoPago,
+            'medio_pago' => $data['medio_pago'] ?? null,
+            'fecha_vencimiento' => $data['fecha_vencimiento'] ?? null,
+            'tipo_pedido' => $data['tipo_pedido'] ?? 'local',
+            'costo_empaque' => (float) ($data['costo_empaque'] ?? 0),
+            'cobro_domicilio' => $data['cobro_domicilio'] ?? null,
+            'transferencia_obs' => $data['transferencia_obs'] ?? null,
+            'observaciones' => $this->observacionesPrefactura,
+            'dom_costo_domicilio' => $data['dom_costo_domicilio'] ?? $this->ordenDomCostoDomicilio,
+            'dom_costo_desechables' => $data['dom_costo_desechables'] ?? $this->ordenDomCostoDesechables,
+            'dom_nombre' => $data['dom_nombre'] ?? null,
+            'dom_telefono' => $data['dom_telefono'] ?? null,
+            'dom_direccion' => $data['dom_direccion'] ?? null,
+            'dom_observaciones' => $data['dom_observaciones'] ?? $this->ordenDomObservaciones ?: null,
+            'dom_nit' => $data['dom_nit'] ?? null,
+            'dom_email' => $data['dom_email'] ?? null,
+            'dom_razon_social' => $data['dom_razon_social'] ?? null,
+            'cliente_credito_info' => $tipoPago === 'credito' ? $this->clienteCreditoInfo : null,
+            'mesa_id' => $this->mesaId,
+            'taller_orden_id' => $this->tallerOrdenId,
+            'hotel_reserva_id' => $this->hotelReservaId,
+            'hotel_abono_monto' => $this->hotelAbonoMonto,
         ]);
-
-        // ===== Detalles + existencias
-        foreach ($this->carrito as $item) {
-            $precio = (float)($item['nuevo_precio'] ?? $item['precio'] ?? 0);
-            $cant   = $this->normalizarCantidad($item['cantidad'] ?? 1, $this->permiteCantidadDecimal($item));
-            $sub    = round($precio * $cant, 2);
-
-            $idFacturable = $this->idProductoFacturable($item['id_producto']);
-
-            $producto = Product::where('empresa_id', $empresaId)
-                ->where('id_producto', $idFacturable)
-                ->lockForUpdate()
-                ->first();
-
-            $datosServicio = $this->datosServicioFactura($producto);
-
-            $this->crearDetalleFactura($factura, $item, (string) $idFacturable, $datosServicio, $precio, $cant, $sub);
-
-if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->id_producto !== '10001') {
-
-    $stockAnterior = (float)$producto->existencias;
-
-    // ðŸ”¥ 1. KARDEX (ANTES DE DESCONTAR)
-    guardarKardex(
-        $item['id_producto'],
-        'venta',
-        $cant,
-        $empresaId,
-        $factura->id,
-        $stockAnterior
-    );
-
-    // 2. DESCONTAR STOCK (solo si NO tiene receta activa)
-    $receta = \App\Models\Receta::where('empresa_id', $empresaId)
-        ->where('product_id', $producto->id)
-        ->where('activo', true)
-        ->with('items.ingrediente')
-        ->first();
-
-    if (! $receta) {
-        $producto->existencias = $stockAnterior - $cant;
-        $producto->save();
-    }
-
-
-    if ($receta && $receta->items->isNotEmpty()) {
-        $rendimiento = (float) $receta->rendimiento ?: 1;
-        foreach ($receta->items as $recetaItem) {
-            $ingrediente = $recetaItem->ingrediente;
-            if (!$ingrediente) continue;
-            $cantBase = ((float) $recetaItem->cantidad / $rendimiento) * $cant;
-            $merma = (float) $recetaItem->merma;
-            $cantConMerma = $merma > 0 ? $cantBase * (1 + $merma / 100) : $cantBase;
-            $stockIngAnterior = (float) $ingrediente->existencias;
-            guardarKardex($ingrediente->id_producto, 'venta', $cantConMerma, $empresaId, $factura->id, $stockIngAnterior);
-            $ingrediente->existencias = $stockIngAnterior - $cantConMerma;
-            $ingrediente->save();
-        }
-    }
-}
-        }
-
-        // Agregar costo de domicilio/empaque como ítem de detalle
-        if ($costoEmpaque > 0) {
-            $label = match($tipoPedido) {
-                'domicilio'   => 'Domicilio + desechables',
-                'para_llevar' => 'Empaque / desechables',
-                default       => 'Empaque',
-            };
-            $factura->detalles()->create([
-                'producto_id'       => 0,
-                'descripcion_larga' => $label,
-                'cantidad'          => 1,
-                'precio'            => $costoEmpaque,
-                'subtotal'          => $costoEmpaque,
-                'descuento'         => 0,
-            ]);
-        }
-
-        // Totales
-        $factura->recalcularTotales();
-
-        // ===== Condiciones de pago
-        $this->finalizarPagoFactura($factura, $tipoPago, $medioPago, $transferObs, $vencRaw);
-
-        $this->validarFacturaElectronicaConFactus($factura);
-
-        DB::commit();
 
         $eraOrdenTaller = (bool) $this->tallerOrdenId;
         $eraReservaHotel = (bool) $this->hotelReservaId;
 
         $this->eliminarPrefacturaCargada();
-        $this->vincularFacturaTaller($factura->id);
-        $this->vincularFacturaHotel($factura->id);
+        $this->tallerOrdenId = null;
+        $this->hotelReservaId = null;
+        $this->hotelAbonoMonto = 0;
+        $this->hotelAbonoMedioPago = '';
 
         // ===== Limpiar UI
         $this->carrito = [];
@@ -3235,19 +2697,6 @@ if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->
         session()->forget('observaciones_guardadas');
         $this->olvidarCarritoPersistente();
 
-        // Liberar mesa si estamos en modo mesa
-        if ($this->mesaId) {
-            \App\Models\OrdenMesa::where('mesa_id', $this->mesaId)
-                ->whereIn('estado', ['abierta', 'en_preparacion'])
-                ->update(['estado' => 'facturada', 'cerrada_en' => now()]);
-            // Solo liberar la mesa si no quedan cuentas en espera para esta mesa
-            $cuentasEnEspera = \App\Models\OrdenMesa::where('mesa_id', $this->mesaId)
-                ->where('estado', 'lista')->count();
-            if ($cuentasEnEspera === 0) {
-                \App\Models\Mesa::where('id', $this->mesaId)->update(['estado' => 'libre']);
-            }
-        }
-
         // ===== Devolver URL para imprimir (lo consume el .then del botón)
         // Se fuerza recarga de pagina (redirect_url) tambien al facturar una orden
         // de taller: al imprimir se abre una ventana nueva y, en algunos
@@ -3259,7 +2708,6 @@ if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->
         return ['ok' => true, 'factura_id' => $factura->id, 'print_url' => $url, 'redirect_url' => $redirectUrl];
 
     } catch (\Throwable $e) {
-        DB::rollBack();
         Log::error('POS no pudo crear/imprimir salida', [
             'empresa_id' => $empresaId,
             'user_id' => auth()->id(),

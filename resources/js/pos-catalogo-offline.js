@@ -4,34 +4,12 @@
  * sincroniza en segundo plano contra /pos/catalogo.json.
  */
 
-const DB_NAME = 'pos_offline';
-const DB_VERSION = 1;
-const STORE_PRODUCTOS = 'productos';
+import { abrirDB, STORE_PRODUCTOS } from './pos-offline-db.js';
+
 const SYNC_AT_KEY = 'pos_catalogo_sincronizado_en';
 const SYNC_STALE_MS = 30 * 60 * 1000; // 30 min
 
-let dbPromise = null;
 let catalogoEnMemoria = [];
-
-function abrirDB() {
-    if (dbPromise) return dbPromise;
-
-    dbPromise = new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-        request.onupgradeneeded = () => {
-            const db = request.result;
-            if (!db.objectStoreNames.contains(STORE_PRODUCTOS)) {
-                db.createObjectStore(STORE_PRODUCTOS, { keyPath: 'id_producto' });
-            }
-        };
-
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
-
-    return dbPromise;
-}
 
 async function leerTodoDeIndexedDB() {
     const db = await abrirDB();
