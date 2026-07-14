@@ -2170,12 +2170,14 @@ body:has(.reporte-descuentos-stat) .fi-ta-filters .fi-fo-component-ctn {
 body:has(.reporte-descuentos-stat) .fi-ta-header-ctn {
     display: grid !important;
     grid-template-columns: 1fr auto !important;
-    align-items: center !important;
+    align-items: stretch !important;
 }
 
 body:has(.reporte-descuentos-stat) .fi-ta-filters-above-content-ctn {
     grid-column: 1 !important;
     grid-row: 1 !important;
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
 }
 
 body:has(.reporte-descuentos-stat) .fi-ta-header-toolbar {
@@ -2183,6 +2185,9 @@ body:has(.reporte-descuentos-stat) .fi-ta-header-toolbar {
     grid-row: 1 !important;
     border-top: 0 !important;
     padding-left: 1rem !important;
+    background: #eef2ff !important;
+    border-top-right-radius: 16px !important;
+    border-bottom-right-radius: 16px !important;
 }
 
 .producto-linea-1,
