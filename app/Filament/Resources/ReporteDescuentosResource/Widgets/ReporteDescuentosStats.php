@@ -40,9 +40,8 @@ class ReporteDescuentosStats extends BaseWidget
         $totalUnidadesTodas = (float) $registrosTodos->sum('cantidad_total');
         $totalUnidadesConDescuento = (float) $registrosConDescuento->sum('cantidad_total');
         $totalDescontado = (float) $registrosConDescuento->sum('valor_descontado');
-        $totalVendidoTodo = (float) $registrosTodos->sum('valor_con_descuento');
         $totalVendidoConDescuento = (float) $registrosConDescuento->sum('valor_con_descuento');
-        $totalVendidoSinDescuento = $totalVendidoTodo - $totalVendidoConDescuento;
+        $totalOriginalConDescuento = $totalVendidoConDescuento + $totalDescontado;
         $descuentoPromedio = $totalProductosConDescuento > 0
             ? (float) $registrosConDescuento->avg(fn ($r) => abs((float) $r->descuento_promedio))
             : 0;
@@ -58,8 +57,8 @@ class ReporteDescuentosStats extends BaseWidget
                 ->icon('heroicon-o-tag')
                 ->color('primary'),
 
-            Stat::make('Valor vendido sin descuento', $this->money($totalVendidoSinDescuento))
-                ->description('A precio normal')
+            Stat::make('Valor sin descuento', $this->money($totalOriginalConDescuento))
+                ->description('De productos vendidos con descuento')
                 ->icon('heroicon-o-banknotes')
                 ->color('gray'),
 
