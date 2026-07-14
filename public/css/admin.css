@@ -2159,11 +2159,7 @@ body:has(.fi-simple-layout) {
     font-size: 11px !important;
 }
 
-/* Filtros de fecha compactos, sin ocupar todo el ancho de la pagina */
-body:has(.reporte-descuentos-stat) .fi-ta-filters-above-content-ctn {
-    width: fit-content !important;
-}
-
+/* Filtros de fecha compactos (el fondo se mantiene a todo el ancho) */
 body:has(.reporte-descuentos-stat) .fi-ta-filters .fi-fo-component-ctn {
     grid-template-columns: repeat(2, minmax(140px, 180px)) !important;
     justify-content: flex-start !important;
