@@ -45,6 +45,7 @@ class FacturarVentaService
             }
 
             $this->validarStockCarrito($carrito, $empresaId);
+            $this->validarDescuentoCarrito($carrito, $empresaId);
 
             $tipoFactura = $opciones['tipo_factura'] ?? 'salida';
             $tipoPago = $opciones['tipo_pago'] ?? 'contado';
@@ -240,6 +241,35 @@ class FacturarVentaService
             ->whereNotNull('fecha_inicio')
             ->whereNotNull('fecha_fin')
             ->exists();
+    }
+
+    /**
+     * Ultima linea de defensa del limite de descuento (ConfiguracionEmpresa::
+     * descuento_maximo_permitido), replicando App\Livewire\CarritoVenta::
+     * descuentoMaximoPermitido()/clampDescuento(). El flujo online ya bloquea
+     * esto en CarritoVenta::aplicarCambiosModal() antes de llegar aqui, pero
+     * el flujo offline (App\Http\Controllers\PosSyncController::venta())
+     * arma el carrito en el navegador y lo envia directo a facturar(), asi
+     * que sin esta revalidacion cualquier descuento offline pasaba sin
+     * control.
+     */
+    private function validarDescuentoCarrito(array $carrito, int $empresaId): void
+    {
+        if (auth()->user()?->hasRole('admin_empresa')) {
+            return; // sin limite
+        }
+
+        $max = ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('descuento_maximo_permitido');
+        $max = $max === null ? 100.0 : (float) $max;
+
+        foreach ($carrito as $item) {
+            $descuento = (float) ($item['descuento'] ?? 0);
+
+            if ($descuento < -$max) {
+                $nombre = $item['nombre'] ?? ($item['id_producto'] ?? '');
+                throw new \Exception("El descuento máximo permitido es {$max}%".($nombre !== '' ? " (\"{$nombre}\")." : '.'));
+            }
+        }
     }
 
     private function validarStockCarrito(array $carrito, int $empresaId): void
