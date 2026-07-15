@@ -3576,12 +3576,6 @@ function abrirIngresoTaller(nombreCliente, telefonoCliente) {
         return window.__posCarritoOffline;
     }
 
-    function posClampDescuento(descuentoPositivo) {
-        const max = window.PosCatalogoOffline?.descuentoMaximoPermitidoLocal();
-        const valor = Math.max(0, Number(descuentoPositivo) || 0);
-        return (max === null || max === undefined) ? valor : Math.min(valor, max);
-    }
-
     function posRenderCarritoOffline() {
         const contenedor = document.querySelector('.pos-cart-table-scroll');
         if (!contenedor) return;
@@ -3601,12 +3595,15 @@ function abrirIngresoTaller(nombreCliente, telefonoCliente) {
                 const descuentoPositivo = Math.abs(item.descuento || 0);
                 total += subtotal;
 
+                const maxLocal = window.PosCatalogoOffline?.descuentoMaximoPermitidoLocal();
+                const maxAttr = (maxLocal === null || maxLocal === undefined) ? '100' : maxLocal;
+
                 return '<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:10px;display:flex;align-items:center;gap:8px;">'
                     + '<div style="flex:1;min-width:0;font-size:13px;font-weight:700;color:#1e293b;">' + posEscapeHtml(item.nombre) + '</div>'
                     + '<div style="font-size:11px;color:#92400e;font-weight:700;white-space:nowrap;">🕓 offline</div>'
                     + '<div style="font-size:12px;color:#64748b;white-space:nowrap;">x' + item.cantidad + '</div>'
                     + '<div style="display:flex;align-items:center;gap:2px;white-space:nowrap;">'
-                    + '<input type="number" class="pos-carrito-offline-descuento" data-key="' + key + '" value="' + descuentoPositivo + '" min="0" max="100" step="0.01" style="width:48px;font-size:12px;text-align:center;border:1px solid #fdba74;border-radius:6px;padding:2px;">'
+                    + '<input type="number" class="pos-carrito-offline-descuento" data-key="' + key + '" value="' + descuentoPositivo + '" min="0" max="' + maxAttr + '" step="0.01" style="width:48px;font-size:12px;text-align:center;border:1px solid #fdba74;border-radius:6px;padding:2px;">'
                     + '<span style="font-size:11px;color:#92400e;">% dto</span>'
                     + '</div>'
                     + '<div style="font-size:14px;font-weight:800;color:#0f766e;white-space:nowrap;min-width:80px;text-align:right;">' + posFormatoMoneda(subtotal) + '</div>'
@@ -3617,14 +3614,41 @@ function abrirIngresoTaller(nombreCliente, telefonoCliente) {
             if (totalEl) totalEl.textContent = posFormatoMoneda(total);
 
             contenedor.querySelectorAll('.pos-carrito-offline-descuento').forEach((input) => {
-                input.addEventListener('change', () => {
+                const aplicarDescuento = (avisar) => {
                     const item = window.__posCarritoOffline?.[input.dataset.key];
                     if (!item) return;
 
-                    const descuentoPositivo = posClampDescuento(input.value);
+                    const max = window.PosCatalogoOffline?.descuentoMaximoPermitidoLocal();
+                    const crudo = Math.max(0, Number(input.value) || 0);
+                    const descuentoPositivo = (max === null || max === undefined) ? crudo : Math.min(crudo, max);
+
+                    if (avisar && descuentoPositivo < crudo) {
+                        input.value = descuentoPositivo;
+                        input.style.borderColor = '#dc2626';
+                        input.style.background = '#fef2f2';
+                        setTimeout(() => { input.style.borderColor = '#fdba74'; input.style.background = ''; }, 900);
+                        window.Swal?.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'warning',
+                            title: 'Descuento máximo permitido: ' + max + '%',
+                            showConfirmButton: false,
+                            timer: 1800,
+                            timerProgressBar: true,
+                        });
+                    }
+
                     item.descuento = -descuentoPositivo;
                     item.nuevo_precio = item.precio * (1 + item.descuento / 100);
+                };
 
+                // Bloquea en el momento (mientras se escribe), sin re-renderizar
+                // toda la tabla para no perder el foco del input.
+                input.addEventListener('input', () => aplicarDescuento(true));
+
+                // Al salir del campo, sí re-renderiza para refrescar subtotal/total.
+                input.addEventListener('change', () => {
+                    aplicarDescuento(true);
                     posRenderCarritoOffline();
                 });
             });
