@@ -319,7 +319,7 @@
                 banner = document.createElement('div');
                 banner.id = 'pos-offline-banner';
                 banner.textContent = '📴 Sin conexión — usando datos guardados localmente';
-                banner.style.cssText = 'position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:999999;background:#78350f;color:#fef3c7;padding:8px 18px;border-radius:999px;font-size:12px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.3);';
+                banner.style.cssText = 'position:fixed;top:72px;right:14px;z-index:999999;background:#78350f;color:#fef3c7;padding:8px 18px;border-radius:999px;font-size:12px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.3);pointer-events:none;max-width:min(90vw,320px);text-align:center;';
                 document.body.appendChild(banner);
             }
 
