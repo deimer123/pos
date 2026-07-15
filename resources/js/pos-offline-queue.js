@@ -91,6 +91,24 @@ export async function contarPendientes() {
     return todas.filter((op) => op.estado === 'pendiente' || op.estado === 'conflicto').length;
 }
 
+/**
+ * Vuelve a poner en "pendiente" las operaciones en conflicto para que la
+ * proxima corrida de procesarCola() las intente de nuevo. Pensado para
+ * cuando el conflicto fue por algo transitorio (token de sesion vencido,
+ * corte de red) y no por una regla de negocio real: los endpoints de
+ * sincronizacion son idempotentes por uuid, asi que reintentar no
+ * duplica nada aunque la operacion ya hubiera llegado al servidor.
+ */
+export async function reintentarConflictos() {
+    const todas = await listarOperaciones();
+
+    for (const op of todas) {
+        if (op.estado === 'conflicto') {
+            await actualizarOperacion(op.uuid, { estado: 'pendiente', error: null });
+        }
+    }
+}
+
 async function actualizarOperacion(uuidOp, cambios) {
     await conTransaccion('readwrite', async (store) => {
         const existente = await new Promise((resolve, reject) => {
@@ -300,4 +318,5 @@ window.PosOfflineQueue = {
     contarPendientes,
     eliminarOperacion,
     procesarCola,
+    reintentarConflictos,
 };

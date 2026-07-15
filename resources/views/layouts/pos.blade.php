@@ -479,6 +479,7 @@
                     const textoOriginal = badge.textContent;
                     badge.textContent = '⏳ Sincronizando...';
 
+                    await window.PosOfflineQueue?.reintentarConflictos();
                     await window.PosOfflineQueue?.procesarCola();
 
                     badge.disabled = false;
