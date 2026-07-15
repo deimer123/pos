@@ -194,24 +194,52 @@ async function enviarOperacion(operacion, payloadResuelto) {
  * Procesa la cola en orden de creacion. Las operaciones cuya dependencia
  * todavia no se resolvio se dejan pendientes para el proximo intento.
  * Una operacion en conflicto no bloquea a las demas.
+ *
+ * Las operaciones completadas no se borran de inmediato: quedan como
+ * "completada" con su id real, por si otra operacion depende de ellas y
+ * todavia no le toco su turno (puede pasar en corridas distintas, ej. la
+ * pagina se recargo entre crear un cliente offline y facturarle la venta).
+ * Al final de cada corrida se limpian las que ya nadie necesita.
  */
 export async function procesarCola() {
     if (procesandoCola) return;
     procesandoCola = true;
 
     try {
-        const operaciones = (await listarOperaciones())
-            .filter((op) => op.estado === 'pendiente')
-            .sort((a, b) => a.creado_en - b.creado_en);
+        const todas = await listarOperaciones();
 
         const resultadosPorUuid = new Map();
+        for (const op of todas) {
+            if (op.estado === 'completada') resultadosPorUuid.set(op.uuid, op.resultado_id ?? null);
+        }
+
+        const uuidsExistentes = new Set(todas.map((op) => op.uuid));
+
+        const operaciones = todas
+            .filter((op) => op.estado === 'pendiente')
+            .sort((a, b) => a.creado_en - b.creado_en);
 
         for (const operacion of operaciones) {
             let payloadResuelto = operacion.payload;
 
             if (operacion.depende_de) {
-                const dependenciaResuelta = resultadosPorUuid.has(operacion.depende_de);
-                if (!dependenciaResuelta) continue; // se reintenta en la siguiente corrida
+                if (!resultadosPorUuid.has(operacion.depende_de)) {
+                    if (uuidsExistentes.has(operacion.depende_de)) continue; // se reintenta en la siguiente corrida
+
+                    // La operacion de la que dependia ya no existe en la cola
+                    // ni quedo registrada como completada: quedo huerfana y
+                    // nunca se va a poder resolver sola. Se marca como
+                    // conflicto para que un admin la revise a mano.
+                    const mensaje = 'No se pudo sincronizar: la operacion de la que dependia ya no esta disponible.';
+
+                    await actualizarOperacion(operacion.uuid, { estado: 'conflicto', error: mensaje });
+                    reportarConflictoAlServidor(operacion, mensaje);
+
+                    window.dispatchEvent(new CustomEvent('pos-operacion-conflicto', {
+                        detail: { operacion, error: mensaje },
+                    }));
+                    continue;
+                }
 
                 payloadResuelto = resolverPayload(operacion.payload, resultadosPorUuid);
                 if (payloadResuelto === null) continue;
@@ -227,7 +255,10 @@ export async function procesarCola() {
                     detail: { operacion, resultado },
                 }));
 
-                await eliminarOperacion(operacion.uuid);
+                await actualizarOperacion(operacion.uuid, {
+                    estado: 'completada',
+                    resultado_id: resultado.id ?? null,
+                });
             } catch (e) {
                 const mensaje = e.message || 'Error desconocido al sincronizar.';
 
@@ -241,6 +272,20 @@ export async function procesarCola() {
                 window.dispatchEvent(new CustomEvent('pos-operacion-conflicto', {
                     detail: { operacion, error: mensaje },
                 }));
+            }
+        }
+
+        // Limpieza: borrar las "completada" que ya nadie referencia como
+        // dependencia (evita que la cola crezca para siempre).
+        const pendientesDeUnaDependencia = new Set(
+            (await listarOperaciones())
+                .filter((op) => op.depende_de && op.estado !== 'completada')
+                .map((op) => op.depende_de)
+        );
+
+        for (const op of await listarOperaciones()) {
+            if (op.estado === 'completada' && !pendientesDeUnaDependencia.has(op.uuid)) {
+                await eliminarOperacion(op.uuid);
             }
         }
     } finally {
