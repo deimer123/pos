@@ -40,6 +40,11 @@
         🔒 Acceso offline
     </button>
 
+    <button type="button" id="pos-pendientes-badge"
+        class="bg-indigo-700 hover:bg-indigo-800 text-white px-4 py-2 text-sm rounded shadow"
+        style="display:none;">
+    </button>
+
     <form method="POST" action="{{ route('cerrar.sesion') }}">
         @csrf
 
@@ -57,6 +62,10 @@
 <button type="button" id="btn-activar-offline"
     class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 text-sm rounded shadow">
     🔒 Acceso offline
+</button>
+<button type="button" id="pos-pendientes-badge"
+    class="bg-indigo-700 hover:bg-indigo-800 text-white px-4 py-2 text-sm rounded shadow"
+    style="display:none;">
 </button>
 <form method="POST" action="{{ route('cerrar.sesion') }}">
     @csrf
@@ -453,17 +462,27 @@
             let badge = null;
 
             function crearBadge() {
-                badge = document.createElement('button');
-                badge.type = 'button';
-                badge.id = 'pos-pendientes-badge';
-                badge.style.cssText = 'position:fixed;left:14px;bottom:14px;z-index:999999;background:#4338ca;color:#fff;border:none;padding:8px 16px;border-radius:999px;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.3);cursor:pointer;display:none;';
-                badge.addEventListener('click', () => window.PosOfflineQueue?.procesarCola());
-                document.body.appendChild(badge);
+                badge = document.getElementById('pos-pendientes-badge');
+                if (!badge) return;
+                badge.addEventListener('click', () => {
+                    if (navigator.onLine === false) {
+                        window.Swal?.fire({
+                            icon: 'info',
+                            title: 'Sin conexion',
+                            text: 'Se van a enviar solas apenas vuelva el internet.',
+                            timer: 2000,
+                            showConfirmButton: false,
+                        });
+                        return;
+                    }
+                    window.PosOfflineQueue?.procesarCola();
+                });
             }
 
             async function actualizarBadge() {
                 if (!window.PosOfflineQueue) return;
                 if (!badge) crearBadge();
+                if (!badge) return;
 
                 const total = await window.PosOfflineQueue.contarPendientes();
 
