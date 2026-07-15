@@ -464,18 +464,25 @@
             function crearBadge() {
                 badge = document.getElementById('pos-pendientes-badge');
                 if (!badge) return;
-                badge.addEventListener('click', () => {
+                badge.addEventListener('click', async () => {
                     if (navigator.onLine === false) {
                         window.Swal?.fire({
                             icon: 'info',
                             title: 'Sin conexion',
-                            text: 'Se van a enviar solas apenas vuelva el internet.',
-                            timer: 2000,
-                            showConfirmButton: false,
+                            text: 'Se van a enviar solas apenas vuelva el internet. No se puede sincronizar mientras no haya conexion.',
+                            confirmButtonText: 'Entendido',
                         });
                         return;
                     }
-                    window.PosOfflineQueue?.procesarCola();
+
+                    badge.disabled = true;
+                    const textoOriginal = badge.textContent;
+                    badge.textContent = '⏳ Sincronizando...';
+
+                    await window.PosOfflineQueue?.procesarCola();
+
+                    badge.disabled = false;
+                    badge.textContent = textoOriginal;
                 });
             }
 
