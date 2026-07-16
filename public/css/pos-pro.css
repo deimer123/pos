@@ -3252,3 +3252,12 @@ button:hover {
         transform: translate(-50%, -50%) !important;
     }
 }
+
+/* POS con Taller en movil: ocultar la fila plana de botones (esta pensada
+   para escritorio, donde si caben todos en una linea) y dejar solo el
+   boton unico "Acciones" (mismo mecanismo que el POS sin taller). */
+@media (max-width: 768px) {
+    .pos-taller-actions-row {
+        display: none !important;
+    }
+}
