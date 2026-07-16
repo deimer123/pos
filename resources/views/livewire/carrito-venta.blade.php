@@ -700,19 +700,19 @@
         @if(! $mesaId)
         @php $usaTallerPos = (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_taller') && auth()->user()->hasAnyRole(['taller', 'admin_empresa']); @endphp
         @if($usaTallerPos)
-        {{-- POS con Taller: sin Cartera ni Guardar (prefactura). Solo Ingresar/Ver lobby,
-             Guardar orden y Limpiar quedan sueltos; el resto se agrupa en "Más acciones". --}}
-        <div style="display:flex; flex-wrap:wrap; gap:4px; width:100%; align-items:center;" x-data="{ masAcciones: false }" @click.outside="masAcciones = false">
+        {{-- POS con Taller: todos los botones en una sola fila pareja, sin
+             menu "Más acciones" (se saco por pedido expreso). --}}
+        <div style="display:flex !important; flex-wrap:nowrap !important; flex-direction:row !important; gap:4px !important; width:100% !important; align-items:center !important;">
 
             @if($tallerOrdenId)
             <button
                 x-on:click="Swal.fire({title:'¿Ir al lobby?',text:'Se guardarán los productos actuales en la orden antes de salir.',icon:'question',showCancelButton:true,confirmButtonText:'Guardar y salir',cancelButtonText:'Cancelar',confirmButtonColor:'#0f766e'}).then(r=>{if(r.isConfirmed){$wire.salirALobbyTaller();}})"
-                style="flex:1 1 0; min-width:110px; background:#0d9488;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#0d9488;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;">
                 🔧 Ver lobby
             </button>
             @else
             <button onclick="abrirIngresoTaller(@js($clienteSeleccionadoNombre ?? ''), @js($clienteTelefono ?? ''))"
-                style="flex:1 1 0; min-width:110px; background:#0f766e;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#0f766e;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;">
                 🔧 Ingresar
             </button>
             @endif
@@ -720,8 +720,8 @@
             @if($tallerOrdenId && auth()->user()->puedeVerBotonPos('guardar'))
             <button
                 x-on:click="Swal.fire({title:'💾 Guardar orden taller',text:'Se guardan los productos en la orden. Puedes reabrirla desde el panel Taller.',icon:'question',showCancelButton:true,confirmButtonText:'Guardar',cancelButtonText:'Cancelar',confirmButtonColor:'#0f766e'}).then(r=>{if(r.isConfirmed){$wire.guardarOrdenTaller();}})"
-                style="flex:1 1 0; min-width:120px; background:#0f766e;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
-                💾 Guardar orden
+                style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#0f766e;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;">
+                💾 Guardar
             </button>
             @endif
 
@@ -736,62 +736,51 @@
                         confirmButtonText:'Sí, eliminar', cancelButtonText:'Cancelar',
                         confirmButtonColor:'#dc2626'
                     }).then(r=>{ if(r.isConfirmed){ $wire.limpiarCarrito(); } })"
-                style="flex:1 1 0; min-width:90px; background:#dc2626;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#dc2626;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;">
                 Limpiar
             </button>
             @endif
 
-            <button type="button" @click="masAcciones = !masAcciones"
-                style="flex:1 1 0; min-width:130px; background:#334155;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;"
-                x-text="masAcciones ? 'Ocultar acciones ▴' : 'Más acciones ▾'">
-                Más acciones ▾
+            @if (auth()->user()->puedeVerBotonPos('editar'))
+            <button type="button"
+                x-on:click="
+                    if(Object.keys($wire.get('carrito') ?? {}).length===0){Swal.fire({icon:'warning',title:'Carrito vacío',text:'Agregue productos primero.'});}else{$wire.abrirModalEditar();}"
+                style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;">
+                Editar
             </button>
+            @endif
 
-            <div x-show="masAcciones" x-cloak style="flex:1 1 100% !important; display:flex !important; flex-wrap:nowrap !important; flex-direction:row !important; gap:4px !important; width:100% !important; max-width:100% !important;">
+            @if (auth()->user()->puedeVerBotonPos('buscar_cliente'))
+            {{-- En escritorio ya esta "Buscar Cliente" arriba del carrito
+                 (id="btn-buscar-cliente"); en movil ese boton se oculta
+                 (ver pos-pro.css), asi que aqui solo hace falta mostrarlo
+                 en movil para no duplicarlo en escritorio. --}}
+            <button type="button" class="pos-show-mobile-only" x-on:click="$wire.abrirModalBuscarCliente();"
+                style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#2563eb;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;">
+                🔍 Cliente
+            </button>
+            @endif
 
-                @if (auth()->user()->puedeVerBotonPos('editar'))
-                <button type="button"
-                    x-on:click="
-                        masAcciones = false;
-                        if(Object.keys($wire.get('carrito') ?? {}).length===0){Swal.fire({icon:'warning',title:'Carrito vacío',text:'Agregue productos primero.'});}else{$wire.abrirModalEditar();}"
-                    style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;display:inline-block !important;">
-                    Editar
-                </button>
-                @endif
+            @if (auth()->user()->puedeVerBotonPos('mas_cliente'))
+            <button type="button" x-on:click="$wire.abrirModalCrearCliente();"
+                style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#7c3aed;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;">
+                + Cliente
+            </button>
+            @endif
 
-                @if (auth()->user()->puedeVerBotonPos('buscar_cliente'))
-                {{-- En escritorio ya esta "Buscar Cliente" arriba del carrito
-                     (id="btn-buscar-cliente"); en movil ese boton se oculta
-                     (ver pos-pro.css), asi que aqui solo hace falta mostrarlo
-                     en movil para no duplicarlo en escritorio. --}}
-                <button type="button" class="pos-show-mobile-only" x-on:click="masAcciones = false; $wire.abrirModalBuscarCliente();"
-                    style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#2563eb;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;display:inline-block !important;">
-                    🔍 Cliente
-                </button>
-                @endif
+            @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion']) && $cajaEstado === 'abierta' && auth()->user()->puedeVerBotonPos('entrada_salida'))
+            <button type="button" x-on:click="$wire.abrirMovimientoCajaModal('salida');"
+                style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#0891b2;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;">
+                Entrada/Salida
+            </button>
+            @endif
 
-                @if (auth()->user()->puedeVerBotonPos('mas_cliente'))
-                <button type="button" x-on:click="masAcciones = false; $wire.abrirModalCrearCliente();"
-                    style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#7c3aed;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;display:inline-block !important;">
-                    + Cliente
-                </button>
-                @endif
-
-                @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion']) && $cajaEstado === 'abierta' && auth()->user()->puedeVerBotonPos('entrada_salida'))
-                <button type="button" x-on:click="masAcciones = false; $wire.abrirMovimientoCajaModal('salida');"
-                    style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#0891b2;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;display:inline-block !important;">
-                    Entrada/Salida
-                </button>
-                @endif
-
-                @if (auth()->user()->puedeVerBotonPos('ver'))
-                <button type="button" x-on:click="masAcciones = false; $wire.verPrefacturas();"
-                    style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#475569;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;display:inline-block !important;">
-                    Ver
-                </button>
-                @endif
-
-            </div>
+            @if (auth()->user()->puedeVerBotonPos('ver'))
+            <button type="button" x-on:click="$wire.verPrefacturas();"
+                style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#475569;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;">
+                Ver
+            </button>
+            @endif
 
         </div>
         @else
