@@ -18,7 +18,7 @@
 <body style="height: 100vh; margin: 0; padding: 0; overflow: hidden; background: #f3f4f6; color: #111827;">
 
     {{-- Titulo punto de venta --}}
-    <div class="pos-app-header" style="position: relative; width: 100%; height: 60px; background: #2563eb; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 2px solid #1d4ed8; flex-shrink: 0;">
+    <div class="pos-app-header" style="position: relative; width: 100%; height: 60px; background: #2563eb; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 16px; border-bottom: 2px solid #1d4ed8; flex-shrink: 0;">
         {{-- Izquierda: botón ← Mesas (solo en vista mesa) o usuario logueado --}}
         <div class="pos-header-left" style="flex:1; display:flex; align-items:center; justify-content:flex-start; gap:8px; min-width:0;">
             @hasSection('header-left')
@@ -91,14 +91,14 @@
             {{ $nombreEmpresa }}
         </h1>
         {{-- Derecha: nav de mesa (si aplica) + acciones (Administracion / offline / cerrar sesión) --}}
-        <div style="flex:1; display:flex; align-items:center; justify-content:flex-end; gap:8px; min-width:0;">
+        <div style="flex:1 1 0; display:flex; align-items:center; justify-content:flex-end; gap:8px; min-width:max-content;">
             @hasSection('mesa-nav')
                 @yield('mesa-nav')
             @endif
 
             <div class="pos-top-actions" x-data="{ menuOpen: false }" style="position: relative; z-index: 50; display:flex; align-items:center; gap:8px;">
 
-              <button type="button" class="pos-mobile-menu-button" @click="menuOpen = !menuOpen" aria-label="Menu POS" style="display:none;">
+              <button type="button" class="pos-mobile-menu-button" @click="menuOpen = !menuOpen" aria-label="Menu POS">
               </button>
 
               @if(
