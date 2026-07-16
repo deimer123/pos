@@ -95,12 +95,14 @@ export async function listarOperaciones() {
 
 /**
  * true si la operacion es de la empresa que tiene sesion activa ahora
- * mismo (o de una version anterior sin empresa_id registrado, por
- * compatibilidad con operaciones ya encoladas antes de este cambio).
+ * mismo. Una operacion sin empresa_id (encolada antes de este cambio) NO
+ * se da por buena cuando se sabe cual es la empresa actual: es preferible
+ * dejarla sin sincronizar (requiere revisarla a mano) a arriesgarse a
+ * facturarla a nombre de un negocio que no es el suyo.
  */
 function esDeEmpresaActual(op) {
-    if (op.empresa_id === undefined || op.empresa_id === null) return true;
     if (window.posEmpresaId === undefined || window.posEmpresaId === null) return true;
+    if (op.empresa_id === undefined || op.empresa_id === null) return false;
     return Number(op.empresa_id) === Number(window.posEmpresaId);
 }
 

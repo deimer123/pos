@@ -23,7 +23,14 @@ let catalogoEnMemoria = [];
 function esCacheDeOtraEmpresa() {
     if (window.posEmpresaId === undefined || window.posEmpresaId === null) return false;
     const guardada = localStorage.getItem(EMPRESA_KEY);
-    return guardada !== null && Number(guardada) !== Number(window.posEmpresaId);
+    // Si nunca se registro de que empresa es lo guardado (dispositivos que
+    // ya tenian cache ANTES de este cambio), no se puede confiar en que
+    // sea de la empresa actual: se trata igual que un cache de otra
+    // empresa, forzando una sincronizacion fresca. Una vez que corra una
+    // vez con esta version, EMPRESA_KEY queda registrado y esta rama ya
+    // no se vuelve a usar para esta empresa.
+    if (guardada === null) return true;
+    return Number(guardada) !== Number(window.posEmpresaId);
 }
 
 async function leerTodoDeIndexedDB() {

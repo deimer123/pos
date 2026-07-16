@@ -17,7 +17,8 @@ let clientesEnMemoria = [];
 function esCacheDeOtraEmpresa() {
     if (window.posEmpresaId === undefined || window.posEmpresaId === null) return false;
     const guardada = localStorage.getItem(EMPRESA_KEY);
-    return guardada !== null && Number(guardada) !== Number(window.posEmpresaId);
+    if (guardada === null) return true;
+    return Number(guardada) !== Number(window.posEmpresaId);
 }
 
 async function leerTodoDeIndexedDB() {
