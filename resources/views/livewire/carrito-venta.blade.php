@@ -747,14 +747,14 @@
                 Más acciones ▾
             </button>
 
-            <div x-show="masAcciones" x-cloak style="flex:1 1 100%; display:grid; grid-template-columns:repeat(auto-fit, minmax(90px, 1fr)); gap:4px; width:100%;">
+            <div x-show="masAcciones" x-cloak style="flex:1 1 100% !important; display:flex !important; flex-wrap:nowrap !important; flex-direction:row !important; gap:4px !important; width:100% !important; max-width:100% !important;">
 
                 @if (auth()->user()->puedeVerBotonPos('editar'))
                 <button type="button"
                     x-on:click="
                         masAcciones = false;
                         if(Object.keys($wire.get('carrito') ?? {}).length===0){Swal.fire({icon:'warning',title:'Carrito vacío',text:'Agregue productos primero.'});}else{$wire.abrirModalEditar();}"
-                    style="width:100%; background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                    style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;display:inline-block !important;">
                     Editar
                 </button>
                 @endif
@@ -765,28 +765,28 @@
                      (ver pos-pro.css), asi que aqui solo hace falta mostrarlo
                      en movil para no duplicarlo en escritorio. --}}
                 <button type="button" class="pos-show-mobile-only" x-on:click="masAcciones = false; $wire.abrirModalBuscarCliente();"
-                    style="width:100%; background:#2563eb;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                    style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#2563eb;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;display:inline-block !important;">
                     🔍 Cliente
                 </button>
                 @endif
 
                 @if (auth()->user()->puedeVerBotonPos('mas_cliente'))
                 <button type="button" x-on:click="masAcciones = false; $wire.abrirModalCrearCliente();"
-                    style="width:100%; background:#7c3aed;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                    style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#7c3aed;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;display:inline-block !important;">
                     + Cliente
                 </button>
                 @endif
 
                 @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion']) && $cajaEstado === 'abierta' && auth()->user()->puedeVerBotonPos('entrada_salida'))
                 <button type="button" x-on:click="masAcciones = false; $wire.abrirMovimientoCajaModal('salida');"
-                    style="width:100%; background:#0891b2;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                    style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#0891b2;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;display:inline-block !important;">
                     Entrada/Salida
                 </button>
                 @endif
 
                 @if (auth()->user()->puedeVerBotonPos('ver'))
                 <button type="button" x-on:click="masAcciones = false; $wire.verPrefacturas();"
-                    style="width:100%; background:#475569;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                    style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#475569;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;display:inline-block !important;">
                     Ver
                 </button>
                 @endif
