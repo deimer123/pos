@@ -136,7 +136,7 @@
 
 @else
 
-<div class="pos-actions-list" :class="{ 'is-open': menuOpen }">
+<div class="pos-actions-list flex gap-2" :class="{ 'is-open': menuOpen }">
 <button type="button" id="btn-activar-offline"
     class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 text-sm rounded shadow">
     🔒 Acceso offline
