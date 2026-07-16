@@ -7,9 +7,24 @@
 import { abrirDB, STORE_PRODUCTOS } from './pos-offline-db.js';
 
 const SYNC_AT_KEY = 'pos_catalogo_sincronizado_en';
+const EMPRESA_KEY = 'pos_catalogo_empresa_id';
 const SYNC_STALE_MS = 30 * 60 * 1000; // 30 min
 
 let catalogoEnMemoria = [];
+
+/**
+ * IndexedDB es una sola base compartida por el navegador, no por empresa.
+ * Si en este mismo dispositivo antes se uso el POS con OTRO negocio, lo
+ * guardado ahi (productos/clientes/pendientes) no es de quien tiene la
+ * sesion activa ahora. Se compara contra la empresa de la sesion actual
+ * (window.posEmpresaId, fijado en pos.blade.php) para no mostrar ni
+ * sincronizar datos mezclados entre negocios.
+ */
+function esCacheDeOtraEmpresa() {
+    if (window.posEmpresaId === undefined || window.posEmpresaId === null) return false;
+    const guardada = localStorage.getItem(EMPRESA_KEY);
+    return guardada !== null && Number(guardada) !== Number(window.posEmpresaId);
+}
 
 async function leerTodoDeIndexedDB() {
     const db = await abrirDB();
@@ -59,6 +74,10 @@ async function sincronizarCatalogo() {
         catalogoEnMemoria = productos;
         localStorage.setItem(SYNC_AT_KEY, String(Date.now()));
 
+        if (data.empresa_id !== undefined && data.empresa_id !== null) {
+            localStorage.setItem(EMPRESA_KEY, String(data.empresa_id));
+        }
+
         if (data.descuento_maximo_permitido === null || data.descuento_maximo_permitido === undefined) {
             localStorage.removeItem('pos_descuento_maximo_permitido');
         } else {
@@ -80,6 +99,15 @@ async function sincronizarCatalogo() {
  * sincroniza en segundo plano si no hay datos o estan viejos.
  */
 async function cargarCatalogoLocal() {
+    if (esCacheDeOtraEmpresa()) {
+        // Lo que hay en IndexedDB es de otro negocio: no se muestra (se
+        // veria como productos/precios que no existen aqui) hasta que
+        // termine de llegar el catalogo real de esta empresa.
+        catalogoEnMemoria = [];
+        sincronizarCatalogo();
+        return catalogoEnMemoria;
+    }
+
     try {
         catalogoEnMemoria = await leerTodoDeIndexedDB();
     } catch (e) {

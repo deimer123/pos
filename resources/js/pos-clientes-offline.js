@@ -8,9 +8,17 @@
 import { abrirDB, STORE_CLIENTES } from './pos-offline-db.js';
 
 const SYNC_AT_KEY = 'pos_clientes_sincronizado_en';
+const EMPRESA_KEY = 'pos_clientes_empresa_id';
 const SYNC_STALE_MS = 30 * 60 * 1000;
 
 let clientesEnMemoria = [];
+
+// Ver misma logica/comentario en pos-catalogo-offline.js.
+function esCacheDeOtraEmpresa() {
+    if (window.posEmpresaId === undefined || window.posEmpresaId === null) return false;
+    const guardada = localStorage.getItem(EMPRESA_KEY);
+    return guardada !== null && Number(guardada) !== Number(window.posEmpresaId);
+}
 
 async function leerTodoDeIndexedDB() {
     const db = await abrirDB();
@@ -52,6 +60,10 @@ export async function sincronizarClientes() {
         clientesEnMemoria = clientes;
         localStorage.setItem(SYNC_AT_KEY, String(Date.now()));
 
+        if (data.empresa_id !== undefined && data.empresa_id !== null) {
+            localStorage.setItem(EMPRESA_KEY, String(data.empresa_id));
+        }
+
         return true;
     } catch (e) {
         return false;
@@ -59,6 +71,12 @@ export async function sincronizarClientes() {
 }
 
 export async function cargarClientesLocal() {
+    if (esCacheDeOtraEmpresa()) {
+        clientesEnMemoria = [];
+        sincronizarClientes();
+        return clientesEnMemoria;
+    }
+
     try {
         clientesEnMemoria = await leerTodoDeIndexedDB();
     } catch (e) {

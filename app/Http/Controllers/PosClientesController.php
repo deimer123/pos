@@ -23,6 +23,6 @@ class PosClientesController extends Controller
             ->get(['id', 'id_clip_pro', 'nombre', 'identificacion', 'telefono', 'direccion', 'email', 'permite_credito'])
             ->values();
 
-        return response()->json(['clientes' => $clientes]);
+        return response()->json(['clientes' => $clientes, 'empresa_id' => $empresaId]);
     }
 }

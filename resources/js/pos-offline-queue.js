@@ -71,6 +71,13 @@ export async function agregarOperacion({ tipo, payload, dependeDe = null }) {
         estado: 'pendiente',
         error: null,
         creado_en: Date.now(),
+        // Empresa de la sesion que la creo (window.posEmpresaId, fijado en
+        // pos.blade.php). IndexedDB es una sola base compartida por el
+        // navegador: si despues se usa este mismo dispositivo con OTRO
+        // negocio, esta operacion NO se debe sincronizar ni contar ahi
+        // (ver esDeEmpresaActual() mas abajo) - se queda guardada tal cual
+        // hasta que la empresa que la creo vuelva a tener sesion activa.
+        empresa_id: window.posEmpresaId ?? null,
     };
 
     await conTransaccion('readwrite', (store) => {
@@ -86,9 +93,20 @@ export async function listarOperaciones() {
     return conTransaccion('readonly', (store) => pedirTodo(store));
 }
 
+/**
+ * true si la operacion es de la empresa que tiene sesion activa ahora
+ * mismo (o de una version anterior sin empresa_id registrado, por
+ * compatibilidad con operaciones ya encoladas antes de este cambio).
+ */
+function esDeEmpresaActual(op) {
+    if (op.empresa_id === undefined || op.empresa_id === null) return true;
+    if (window.posEmpresaId === undefined || window.posEmpresaId === null) return true;
+    return Number(op.empresa_id) === Number(window.posEmpresaId);
+}
+
 export async function contarPendientes() {
     const todas = await listarOperaciones();
-    return todas.filter((op) => op.estado === 'pendiente' || op.estado === 'conflicto').length;
+    return todas.filter((op) => esDeEmpresaActual(op) && (op.estado === 'pendiente' || op.estado === 'conflicto')).length;
 }
 
 /**
@@ -103,7 +121,7 @@ export async function reintentarConflictos() {
     const todas = await listarOperaciones();
 
     for (const op of todas) {
-        if (op.estado === 'conflicto') {
+        if (esDeEmpresaActual(op) && op.estado === 'conflicto') {
             await actualizarOperacion(op.uuid, { estado: 'pendiente', error: null });
         }
     }
@@ -234,7 +252,7 @@ export async function procesarCola() {
         const uuidsExistentes = new Set(todas.map((op) => op.uuid));
 
         const operaciones = todas
-            .filter((op) => op.estado === 'pendiente')
+            .filter((op) => esDeEmpresaActual(op) && op.estado === 'pendiente')
             .sort((a, b) => a.creado_en - b.creado_en);
 
         for (const operacion of operaciones) {

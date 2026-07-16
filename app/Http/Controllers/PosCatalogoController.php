@@ -116,6 +116,7 @@ class PosCatalogoController extends Controller
             'productos' => $productos,
             'descuento_maximo_permitido' => $descuentoMaximoPermitido,
             'sincronizado_en' => now()->toIso8601String(),
+            'empresa_id' => $empresaId,
         ]);
     }
 }
