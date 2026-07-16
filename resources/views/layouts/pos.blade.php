@@ -322,6 +322,24 @@
         (function () {
             let banner = null;
 
+            // Ancla el aviso justo debajo del header (y de las pestañas
+            // Productos/Carrito en movil, si estan visibles) en vez de un
+            // top fijo: el alto del header cambia segun el ancho de
+            // pantalla y el aviso no debe tapar nada que se pueda tocar.
+            function posicionarBannerOffline() {
+                if (!banner) return;
+                const header = document.querySelector('.pos-app-header');
+                const tabs = document.querySelector('.pos-mobile-tabs');
+                let bottom = 72;
+                if (header) {
+                    bottom = header.getBoundingClientRect().bottom;
+                    if (tabs && getComputedStyle(tabs).display !== 'none') {
+                        bottom = Math.max(bottom, tabs.getBoundingClientRect().bottom);
+                    }
+                }
+                banner.style.top = (bottom + 8) + 'px';
+            }
+
             function mostrarBannerOffline() {
                 if (banner) return;
                 banner = document.createElement('div');
@@ -329,6 +347,7 @@
                 banner.textContent = '📴 Sin conexión — usando datos guardados localmente';
                 banner.style.cssText = 'position:fixed;top:72px;right:14px;z-index:999999;background:#78350f;color:#fef3c7;padding:8px 18px;border-radius:999px;font-size:12px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.3);pointer-events:none;max-width:min(90vw,320px);text-align:center;';
                 document.body.appendChild(banner);
+                posicionarBannerOffline();
             }
 
             function ocultarBannerOffline() {
@@ -336,6 +355,8 @@
                 banner.remove();
                 banner = null;
             }
+
+            window.addEventListener('resize', posicionarBannerOffline);
 
             window.addEventListener('offline', mostrarBannerOffline);
             window.addEventListener('online', () => {
