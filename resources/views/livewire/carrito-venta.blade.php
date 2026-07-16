@@ -797,8 +797,10 @@
 
         </div>
         @else
-        {{-- POS base (sin taller) --}}
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(90px, 1fr)); gap:4px; width:100%; align-items:center;">
+        {{-- POS base (sin taller): en movil se oculta (clase pos-cart-actions-base-grid,
+             ver pos-pro.css) y se usa en su lugar el boton unico "Acciones"
+             (.pos-cart-mobile-more, mas abajo) que ya agrupa estas mismas opciones. --}}
+        <div class="pos-cart-actions-base-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(90px, 1fr)); gap:4px; width:100%; align-items:center;">
 
             @if (auth()->user()->puedeVerBotonPos('editar'))
             <button

@@ -3197,3 +3197,15 @@ button:hover {
     }
 }
 /* FIN Móvil: header del panel Taller */
+
+/* POS base (sin mesa/taller) en movil: ocultar la grilla de botones sueltos
+   (Editar/+Cliente/Cartera/Entrada-Salida/Limpiar/Guardar/Ver) y dejar solo
+   el boton unico "Acciones" (.pos-cart-mobile-more) que agrupa las mismas
+   opciones. Usa una clase propia en vez de .pos-desktop-cart-actions porque
+   esa clase tiene reglas mas especificas (.pos-cart-component > ...) que la
+   vuelven a mostrar como grid para el modo mesas. */
+@media (max-width: 768px) {
+    .pos-cart-actions-base-grid {
+        display: none !important;
+    }
+}
