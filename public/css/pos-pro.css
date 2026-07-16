@@ -197,8 +197,6 @@ h2, h3, h4 {
     }
 
     .pos-top-actions {
-        top: 8px !important;
-        right: 8px !important;
         z-index: 80 !important;
     }
 
@@ -214,6 +212,7 @@ h2, h3, h4 {
         color: #fff;
         font-size: 18px;
         box-shadow: 0 8px 18px rgba(15, 23, 42, .2);
+        flex-shrink: 0;
     }
 
     .pos-top-actions .pos-actions-list {
@@ -1570,11 +1569,6 @@ button:hover {
         white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
-    }
-
-    .pos-top-actions {
-        top: 11px !important;
-        right: 8px !important;
     }
 
     .pos-shell {
@@ -2973,6 +2967,18 @@ button:hover {
     .pos-shell {
         height: calc(100vh - 80px) !important;
         height: calc(100dvh - 80px) !important;
+    }
+
+    /* Menu de acciones (Administracion/Acceso offline/Pendientes/Cerrar
+       sesion): en escritorio vive en el flujo normal del header (junto al
+       nombre de empresa); en movil se ancla como icono en la esquina del
+       propio header (no del viewport) para no tapar el nombre ni quedar
+       fuera de la fila 1, aprovechando el padding-right de 50px de arriba. */
+    .pos-top-actions {
+        position: absolute !important;
+        top: 10px !important;
+        right: 8px !important;
+        z-index: 80 !important;
     }
 }
 
