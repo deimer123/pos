@@ -950,7 +950,7 @@
         $usaTallerPosMobile = (! $mesaId) && (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_taller') && auth()->user()->hasAnyRole(['taller', 'admin_empresa']);
     @endphp
     @if(! $usaTallerPosMobile)
-    <div class="pos-cart-mobile-more" x-data="{ open: false }" wire:key="mobile-actions-root-{{ $cajaEstado }}">
+    <div class="pos-cart-mobile-more pos-cart-mobile-more-side" x-data="{ open: false }" wire:key="mobile-actions-root-{{ $cajaEstado }}">
         <button type="button" class="pos-cart-mobile-more-button" @click="open = !open">
                 Acciones
             </button>
