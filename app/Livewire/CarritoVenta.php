@@ -668,14 +668,24 @@ if (request()->hasSession() && session()->has('observaciones_guardadas')) {
         $this->cargarCajaActual();
     }
 
-    // Si no hay caja abierta hoy, pedir abrir caja
+    // Si no hay caja abierta hoy, se abre sola en $0 -- sin modal, sin
+    // pedir monto. El dia siempre arranca con la caja en cero; el boton
+    // manual "Abrir caja" sigue disponible para casos aparte (ej. alguien
+    // cierra la caja a mitad del dia por error y necesita reabrirla).
     $user = auth()->user();
 
         if (
             !$this->cajaActual &&
             $user->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion'])
         ) {
-            $this->mostrarModalAbrirCaja = true;
+            \App\Models\Caja::create([
+                'user_id'        => auth()->id(),
+                'empresa_id'     => $this->getEmpresaId(),
+                'monto_apertura' => 0,
+                'opened_at'      => now(),
+                'estado'         => 'abierta',
+            ]);
+            $this->cargarCajaActual();
         }
 
     // Cargar orden de taller desde query param ?taller={id}
