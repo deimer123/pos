@@ -5,7 +5,15 @@
  */
 
 const DB_NAME = 'pos_offline';
-const DB_VERSION = 1;
+// Ojo: este numero solo puede SUBIR, nunca bajar. Si el navegador de
+// alguien ya abrio esta misma base de datos ("pos_offline") en una version
+// mas alta (ej. quedo en 5 por una fase de desarrollo offline mas amplia
+// que despues se revirtio), pedir una version menor rompe la apertura con
+// un VersionError que este codigo atrapa en silencio -- se queda pegado en
+// "Sincronizando catalogo..." sin ningun error visible en consola. Por eso
+// se deja en 10, bien por encima de cualquier version usada antes, para que
+// siempre pueda abrir sin importar el historial de ese navegador.
+const DB_VERSION = 10;
 const STORE_PRODUCTOS = 'productos';
 const SYNC_AT_KEY = 'pos_catalogo_sincronizado_en';
 const SYNC_STALE_MS = 30 * 60 * 1000; // 30 min
