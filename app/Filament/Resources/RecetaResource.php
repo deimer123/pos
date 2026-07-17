@@ -8,6 +8,7 @@ use App\Models\Receta;
 use App\Models\RecetaItem;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -285,6 +286,46 @@ class RecetaResource extends Resource
 
                             return new \Illuminate\Support\HtmlString($filas);
                         }),
+
+                    Forms\Components\Actions::make([
+                        Forms\Components\Actions\Action::make('actualizar_costo_producto')
+                            ->label('💰 Actualizar costo del producto')
+                            ->color('success')
+                            ->requiresConfirmation()
+                            ->modalHeading('¿Actualizar el costo del producto?')
+                            ->modalDescription('Reemplaza el costo actual del producto por el costo por porción calculado arriba (ya incluye el IVA de los ingredientes). No se vuelve a aplicar IVA ni descuento comercial encima de este valor.')
+                            ->modalSubmitActionLabel('Sí, actualizar')
+                            ->disabled(fn (Forms\Get $get) => ! $get('product_id'))
+                            ->action(function (Forms\Get $get) use ($calcularCostoReceta) {
+                                $producto = Product::find($get('product_id'));
+
+                                if (! $producto) {
+                                    return;
+                                }
+
+                                $c = $calcularCostoReceta($get);
+                                $nuevoCosto = round($c['costoPorPorcion'], 2);
+
+                                $datos = [
+                                    'precio_costo' => $nuevoCosto,
+                                    'precio_con_descuento' => $nuevoCosto,
+                                    'costo_iva' => $nuevoCosto,
+                                ];
+
+                                $precioVenta = (float) $producto->precio_venta1;
+                                if ($precioVenta > 0) {
+                                    $datos['utilidad1'] = round((($precioVenta - $nuevoCosto) / $precioVenta) * 100, 2);
+                                }
+
+                                $producto->update($datos);
+
+                                Notification::make()
+                                    ->title('Costo del producto actualizado')
+                                    ->body('Nuevo costo: $' . number_format($nuevoCosto, 0, ',', '.'))
+                                    ->success()
+                                    ->send();
+                            }),
+                    ]),
                 ]),
         ]);
     }
