@@ -121,10 +121,10 @@
 </div>
 
 <table class="items" width="100%">
-  @foreach ($factura->detalles as $d)
-    <tr><td colspan="2">{{ $d->descripcion_larga }}</td></tr>
+  @foreach ($factura->detalles as $i => $d)
+    <tr><td colspan="2">{{ $i + 1 }}. {{ $d->descripcion_larga }}</td></tr>
     <tr>
-      <td>{{ $fmtCant($d->cantidad) }} x ${{ number_format($d->precio, 0, ',', '.') }}</td>
+      <td>Cantidad: {{ $fmtCant($d->cantidad) }}</td>
       <td style="text-align:right;">${{ number_format($d->subtotal, 0, ',', '.') }}</td>
     </tr>
   @endforeach
