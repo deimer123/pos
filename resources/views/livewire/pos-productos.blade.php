@@ -313,19 +313,38 @@
                 }
 
                 botonPrecio?.addEventListener('click', () => {
+                    // Modal fijo a casi toda la altura de la pantalla, con
+                    // el campo de busqueda siempre visible arriba y solo la
+                    // lista de resultados con scroll propio adentro -- asi
+                    // el popup completo no se desplaza (antes al hacer
+                    // scroll en la lista, el campo de busqueda tambien se
+                    // iba hacia arriba y quedaba fuera de vista). Mismo
+                    // patron que el modal de "Ingreso al taller" en
+                    // carrito-venta.blade.php.
+                    if (!document.getElementById('precio-modal-style')) {
+                        const estilo = document.createElement('style');
+                        estilo.id = 'precio-modal-style';
+                        estilo.textContent = `
+                            .swal-precio-popup { display:flex !important; flex-direction:column; height:92vh !important; max-height:92vh !important; }
+                            .swal-precio-html { flex:1 1 auto; display:flex; flex-direction:column; min-height:0; overflow:hidden; margin:0 !important; }
+                        `;
+                        document.head.appendChild(estilo);
+                    }
+
                     const campoInput = document.createElement('input');
                     campoInput.id = 'precio-buscar';
                     campoInput.type = 'text';
                     campoInput.className = 'swal2-input';
                     campoInput.placeholder = 'Nombre o codigo del producto...';
                     campoInput.autocomplete = 'off';
-                    campoInput.style.cssText = 'width:100%;max-width:100%;height:56px;font-size:20px;margin-left:0;margin-right:0;box-sizing:border-box;';
+                    campoInput.style.cssText = 'width:100%;max-width:100%;height:56px;font-size:20px;margin-left:0;margin-right:0;box-sizing:border-box;flex-shrink:0;';
 
                     const contenedorResultados = document.createElement('div');
                     contenedorResultados.id = 'precio-resultados';
-                    contenedorResultados.style.cssText = 'max-height:420px;overflow-y:auto;text-align:left;margin-top:10px;';
+                    contenedorResultados.style.cssText = 'flex:1 1 auto;min-height:0;overflow-y:auto;text-align:left;margin-top:10px;';
 
                     const cuerpo = document.createElement('div');
+                    cuerpo.style.cssText = 'display:flex;flex-direction:column;height:100%;min-height:0;';
                     cuerpo.appendChild(campoInput);
                     cuerpo.appendChild(contenedorResultados);
 
@@ -333,6 +352,8 @@
                         title: '🏷️ Verificar precio',
                         html: cuerpo,
                         width: 620,
+                        heightAuto: false,
+                        customClass: { popup: 'swal-precio-popup', htmlContainer: 'swal-precio-html' },
                         showConfirmButton: false,
                         showCancelButton: true,
                         cancelButtonText: 'Cerrar',
