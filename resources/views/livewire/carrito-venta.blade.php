@@ -1959,6 +1959,21 @@
                                     class="h-9 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-full shadow-sm">
                                     Cargar
                                 </button>
+
+                                @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion']) && auth()->user()->puedeVerBotonPos('facturar'))
+                                <button x-data="{ hayProductos: {{ $hayProductosEnCarrito ? 'true' : 'false' }} }"
+                                    x-on:click="
+                                    if (hayProductos) {
+                                      Swal.fire({icon:'warning',title:'Carrito con productos',text:'Limpie el carrito antes de facturar otra prefactura.',confirmButtonText:'Entendido'});
+                                    } else {
+                                      $wire.facturarPrefacturaDirecto({{ $prefacturaSeleccionada->id }});
+                                    }"
+                                    wire:key="prefactura-facturar-btn-{{ $prefacturaSeleccionada->id }}"
+                                    wire:loading.attr="disabled" wire:target="facturarPrefacturaDirecto"
+                                    class="h-9 px-4 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-full shadow-sm">
+                                    💳 Facturar
+                                </button>
+                                @endif
                             @endif
 
                             <button wire:click="$set('mostrarModalPrefacturas', false)"

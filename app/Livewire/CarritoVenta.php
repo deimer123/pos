@@ -2198,8 +2198,20 @@ $prefactura = $query->first();
 
 $this->calcularTotalGeneral(); // âœ… RECALCULAR TOTAL DESPUÃ‰S DE CARGAR
 $this->dispatch('guardar-carrito-en-cache', $this->carrito); // âœ… GUARDAR EN CACHE
-    
+
 }
+
+    // Igual que cargarPrefacturaAlCarrito, pero de una vez abre el modal de
+    // facturar (confirmarFacturar) con los productos ya cargados, para el
+    // boton "Facturar" del modal de Gestion de Prefacturas.
+    public function facturarPrefacturaDirecto($id)
+    {
+        $this->cargarPrefacturaAlCarrito($id);
+
+        if (empty($this->carrito)) return;
+
+        $this->confirmarFacturar();
+    }
 
     public function render()
 {

@@ -58,7 +58,15 @@ class LoginResponse implements FilamentLoginResponseContract, FortifyLoginRespon
             return redirect()->intended(route('filament.admin.pages.dashboard'));
         }
 
-        if ($user?->necesitaConfiguracionInicial()) {
+        // Solo el admin de la empresa debe terminar el wizard de
+        // configuracion inicial. Sin este filtro por rol, un vendedor o
+        // cajero que vuelve a iniciar sesion (ej. despues de que la sesion
+        // unica lo saco por haber entrado en otro dispositivo) tambien
+        // caia aca si la ConfiguracionEmpresa quedaba incompleta, y como
+        // esas rutas de /admin estan bloqueadas para esos roles
+        // (RestrictVendedorFromPanel), terminaba viendo un 403 en vez del
+        // POS.
+        if ($user?->hasRole('admin_empresa') && $user->necesitaConfiguracionInicial()) {
             return redirect()->intended(route('filament.admin.resources.configuracion-empresas.create'));
         }
 
