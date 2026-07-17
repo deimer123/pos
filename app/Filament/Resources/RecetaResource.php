@@ -50,9 +50,82 @@ class RecetaResource extends Resource
         return parent::getEloquentQuery()->where('empresa_id', $empresaId)->with(['producto', 'items.ingrediente']);
     }
 
+    /**
+     * Costo con IVA de un producto (ingrediente o producto vendido). Misma
+     * logica que CarritoVenta::costoConIvaProducto() -- prefiere la
+     * columna precomputada costo_iva y, si no hay, calcula
+     * precio_costo + IVA de iva_venta.
+     */
+    protected static function costoConIvaProducto(?Product $producto): float
+    {
+        if (! $producto) {
+            return 0;
+        }
+
+        $costoIva = (float) ($producto->costo_iva ?? 0);
+        if ($costoIva > 0) {
+            return round($costoIva, 2);
+        }
+
+        $costo = (float) ($producto->precio_costo ?? 0);
+        $iva = (float) ($producto->iva_venta ?? 0);
+
+        return round($costo + ($costo * $iva / 100), 2);
+    }
+
+    /**
+     * Cantidad de un ingrediente convertida a la unidad "grande" en la que
+     * normalmente se fija su costo (kg, litro) -- no existe una tabla de
+     * conversion en el sistema, asi que se asume que gramo/mililitro son
+     * siempre la fraccion /1000 de kilogramo/litro. Unidad y porcion se
+     * usan tal cual (el costo del producto ya esta fijado por unidad).
+     */
+    protected static function cantidadEnUnidadDeCosto(float $cantidad, string $unidad): float
+    {
+        return match ($unidad) {
+            'gr', 'ml' => $cantidad / 1000,
+            default => $cantidad,
+        };
+    }
+
     public static function form(Form $form): Form
     {
         $empresaId = auth()->user()->getEmpresaActualId();
+
+        $calcularCostoReceta = function (Forms\Get $get): array {
+            $items = $get('items') ?? [];
+            $costoTotal = 0.0;
+
+            foreach ($items as $item) {
+                $ingredienteId = $item['ingrediente_product_id'] ?? null;
+                $cantidad = (float) ($item['cantidad'] ?? 0);
+                $unidad = $item['unidad'] ?? 'unidad';
+                $merma = (float) ($item['merma'] ?? 0);
+
+                if (! $ingredienteId || $cantidad <= 0) {
+                    continue;
+                }
+
+                $ingrediente = Product::find($ingredienteId);
+                $costoUnitario = static::costoConIvaProducto($ingrediente);
+                $cantidadBase = static::cantidadEnUnidadDeCosto($cantidad, $unidad);
+                $cantidadConMerma = $cantidadBase * (1 + $merma / 100);
+
+                $costoTotal += $costoUnitario * $cantidadConMerma;
+            }
+
+            $rendimiento = (float) ($get('rendimiento') ?? 1) ?: 1.0;
+            $costoPorPorcion = $costoTotal / $rendimiento;
+
+            $productoVenta = $get('product_id') ? Product::find($get('product_id')) : null;
+            $precioVenta = (float) ($productoVenta->precio_venta1 ?? 0);
+
+            $utilidad = $precioVenta > 0
+                ? round((($precioVenta - $costoPorPorcion) / $precioVenta) * 100, 2)
+                : null;
+
+            return compact('costoTotal', 'costoPorPorcion', 'precioVenta', 'utilidad');
+        };
 
         return $form->schema([
             Forms\Components\Hidden::make('empresa_id')
@@ -72,6 +145,7 @@ class RecetaResource extends Resource
                                         ->pluck('descripcion_larga', 'id')
                                 )
                                 ->searchable()
+                                ->live()
                                 ->required(),
                         ]),
 
@@ -89,6 +163,7 @@ class RecetaResource extends Resource
                                 ->default(1)
                                 ->minValue(0.001)
                                 ->step(0.001)
+                                ->live(onBlur: true)
                                 ->required(),
                         ]),
 
@@ -121,6 +196,7 @@ class RecetaResource extends Resource
                         ->label('')
                         ->defaultItems(1)
                         ->addActionLabel('+ Agregar ingrediente')
+                        ->live()
                         ->schema([
                             Forms\Components\Hidden::make('empresa_id')
                                 ->default($empresaId),
@@ -136,6 +212,7 @@ class RecetaResource extends Resource
                                                 ->pluck('descripcion_larga', 'id')
                                         )
                                         ->searchable()
+                                        ->live()
                                         ->required()
                                         ->columnSpan(2),
 
@@ -144,6 +221,7 @@ class RecetaResource extends Resource
                                         ->numeric()
                                         ->minValue(0.001)
                                         ->step(0.001)
+                                        ->live(onBlur: true)
                                         ->required(),
 
                                     Forms\Components\Select::make('unidad')
@@ -157,6 +235,7 @@ class RecetaResource extends Resource
                                             'porcion'=> 'Porción',
                                         ])
                                         ->default('unidad')
+                                        ->live()
                                         ->required(),
                                 ]),
 
@@ -170,9 +249,42 @@ class RecetaResource extends Resource
                                         ->minValue(0)
                                         ->maxValue(100)
                                         ->step(0.1)
+                                        ->live(onBlur: true)
                                         ->helperText('Porcentaje de pérdida del ingrediente'),
                                 ]),
                         ]),
+                ]),
+
+            Forms\Components\Section::make('Costo y utilidad')
+                ->description('Calculado con el costo (con IVA) de cada ingrediente segun la cantidad que se gasta. Ej: si el kilo de un ingrediente cuesta $1.000 con IVA incluido y la receta gasta 100 gramos, ese ingrediente aporta $100 al costo total.')
+                ->extraAttributes(['class' => 'combo-franja-azul'])
+                ->schema([
+                    Forms\Components\Placeholder::make('costo_receta')
+                        ->label('')
+                        ->content(function (Forms\Get $get) use ($calcularCostoReceta) {
+                            $c = $calcularCostoReceta($get);
+                            $fmt = fn (float $v) => '$' . number_format($v, 0, ',', '.');
+
+                            $filas = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">'
+                                . '<div><div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;">Costo total de la receta</div>'
+                                . '<div style="font-size:20px;font-weight:800;color:#1e293b;">' . $fmt($c['costoTotal']) . '</div></div>'
+                                . '<div><div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;">Costo por porción</div>'
+                                . '<div style="font-size:20px;font-weight:800;color:#1e293b;">' . $fmt($c['costoPorPorcion']) . '</div></div>';
+
+                            if ($c['precioVenta'] > 0) {
+                                $colorUtilidad = $c['utilidad'] >= 0 ? '#16a34a' : '#dc2626';
+                                $filas .= '<div><div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;">Precio de venta</div>'
+                                    . '<div style="font-size:20px;font-weight:800;color:#1e293b;">' . $fmt($c['precioVenta']) . '</div></div>'
+                                    . '<div><div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;">Utilidad</div>'
+                                    . '<div style="font-size:20px;font-weight:800;color:' . $colorUtilidad . ';">' . number_format($c['utilidad'], 2) . '%</div></div>';
+                            } else {
+                                $filas .= '<div style="grid-column:1/-1;color:#94a3b8;font-size:13px;">Selecciona el producto que se vende para ver el precio de venta y la utilidad.</div>';
+                            }
+
+                            $filas .= '</div>';
+
+                            return new \Illuminate\Support\HtmlString($filas);
+                        }),
                 ]),
         ]);
     }
