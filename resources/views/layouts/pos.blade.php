@@ -42,10 +42,16 @@
                     👤 {{ $u->name }}@if($rolActual) · {{ $rolActual }}@endif
                 </span>
                 @php
+                    // ?modo=normal (boton "Punto de Venta" en /eleccion) fuerza el
+                    // POS base sin ningun boton de taller/hotel, sin importar la
+                    // configuracion de la empresa -- para cuando el negocio usa
+                    // taller/hotel pero en ese momento se quiere el POS de tienda
+                    // normal, tal cual.
+                    $modoNormal = request()->get('modo') === 'normal';
                     $cfgEmpresa = \App\Models\ConfiguracionEmpresa::where('empresa_id', $u->getEmpresaActualId())->first();
-                    $usaTallerLayout = (bool) ($cfgEmpresa?->usa_taller ?? false) && $u->hasAnyRole(['taller', 'admin_empresa']);
+                    $usaTallerLayout = ! $modoNormal && (bool) ($cfgEmpresa?->usa_taller ?? false) && $u->hasAnyRole(['taller', 'admin_empresa']);
                     $usaMesasLayout  = (bool) ($cfgEmpresa?->usa_mesas ?? false);
-                    $usaHotelLayout  = (bool) ($cfgEmpresa?->usa_hotel ?? false);
+                    $usaHotelLayout  = ! $modoNormal && (bool) ($cfgEmpresa?->usa_hotel ?? false);
                 @endphp
                 @if($usaTallerLayout)
                     @if($usaMesasLayout)

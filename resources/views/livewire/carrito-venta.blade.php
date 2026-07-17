@@ -692,7 +692,7 @@
 
     <div class="pos-desktop-cart-actions flex items-center justify-between">
         @if(! $mesaId)
-        @php $usaTallerPos = (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_taller') && auth()->user()->hasAnyRole(['taller', 'admin_empresa']); @endphp
+        @php $usaTallerPos = request()->get('modo') !== 'normal' && (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_taller') && auth()->user()->hasAnyRole(['taller', 'admin_empresa']); @endphp
         @if($usaTallerPos)
         {{-- POS con Taller: en escritorio, todos los botones en una sola fila
              pareja (sin menu "Más acciones"). En movil esta fila se oculta
@@ -930,7 +930,7 @@
 
     @php
         $esMeseroPuroMenu = auth()->user()->hasRole('mesero') && ! auth()->user()->hasAnyRole(['cajero','admin_empresa','vendedor']);
-        $usaTallerPosMobile = (! $mesaId) && (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_taller') && auth()->user()->hasAnyRole(['taller', 'admin_empresa']);
+        $usaTallerPosMobile = (! $mesaId) && request()->get('modo') !== 'normal' && (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_taller') && auth()->user()->hasAnyRole(['taller', 'admin_empresa']);
     @endphp
     @if(! $usaTallerPosMobile)
     <div class="pos-cart-mobile-more pos-cart-mobile-more-side" x-data="{ open: false }" wire:key="mobile-actions-root-{{ $cajaEstado }}">
