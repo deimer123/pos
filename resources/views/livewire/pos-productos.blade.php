@@ -255,7 +255,7 @@
 
                 function crearFilaPrecio(producto) {
                     const fila = document.createElement('div');
-                    fila.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 4px;border-bottom:1px solid #e5e7eb;';
+                    fila.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 4px;border-bottom:1px solid #dbeafe;';
 
                     const info = document.createElement('div');
                     info.style.minWidth = '0';
@@ -321,12 +321,20 @@
                     // iba hacia arriba y quedaba fuera de vista). Mismo
                     // patron que el modal de "Ingreso al taller" en
                     // carrito-venta.blade.php.
+                    // Mismos colores/formato que el modal "Movimiento de
+                    // caja" (.pos-cierre-caja-overlay en pos-pro.css):
+                    // encabezado en degrade azul con letras blancas,
+                    // tarjeta con borde celeste, campos con fondo celeste
+                    // clarito, y botones en pastilla.
                     if (!document.getElementById('precio-modal-style')) {
                         const estilo = document.createElement('style');
                         estilo.id = 'precio-modal-style';
                         estilo.textContent = `
-                            .swal-precio-popup { display:flex !important; flex-direction:column; height:92vh !important; max-height:92vh !important; }
-                            .swal-precio-html { flex:1 1 auto; display:flex; flex-direction:column; min-height:0; overflow:hidden; margin:0 !important; }
+                            .swal-precio-popup { display:flex !important; flex-direction:column; height:92vh !important; max-height:92vh !important; padding:0 !important; border:1px solid #bfdbfe !important; border-radius:16px !important; overflow:hidden !important; }
+                            .swal-precio-popup .swal2-title { margin:0 !important; padding:14px 18px !important; background:linear-gradient(180deg, #2563eb 0%, #4f46e5 100%) !important; color:#ffffff !important; font-size:20px !important; font-weight:800 !important; }
+                            .swal-precio-html { flex:1 1 auto; display:flex; flex-direction:column; min-height:0; overflow:hidden; margin:0 !important; padding:18px !important; box-sizing:border-box; }
+                            .swal-precio-popup .swal2-actions { margin:0 !important; padding:14px 18px !important; border-top:1px solid #dbeafe !important; }
+                            .swal-precio-popup .swal2-cancel { min-width:118px !important; min-height:42px !important; border-radius:999px !important; font-size:14px !important; font-weight:800 !important; background:#64748b !important; box-shadow:0 8px 16px rgba(15,23,42,.16) !important; }
                         `;
                         document.head.appendChild(estilo);
                     }
@@ -337,7 +345,7 @@
                     campoInput.className = 'swal2-input';
                     campoInput.placeholder = 'Nombre o codigo del producto...';
                     campoInput.autocomplete = 'off';
-                    campoInput.style.cssText = 'width:100%;max-width:100%;height:56px;font-size:20px;margin-left:0;margin-right:0;box-sizing:border-box;flex-shrink:0;';
+                    campoInput.style.cssText = 'width:100%;max-width:100%;height:56px;font-size:20px;margin-left:0;margin-right:0;box-sizing:border-box;flex-shrink:0;border-color:#bfdbfe;border-radius:10px;background:#f8fbff;color:#111827;';
 
                     const contenedorResultados = document.createElement('div');
                     contenedorResultados.id = 'precio-resultados';
