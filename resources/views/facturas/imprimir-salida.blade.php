@@ -146,10 +146,10 @@
     @else
       Desechables / empaque: ${{ number_format($costoEmpaque, 0, ',', '.') }}<br>
     @endif
-    <strong>Total: ${{ number_format($factura->total, 0, ',', '.') }}</strong>
-  @else
-    <strong>Total: ${{ number_format($factura->total, 0, ',', '.') }}</strong>
   @endif
+  <div style="border-top:1px solid #111; margin-top:4px; padding-top:4px;">
+    <strong style="font-size:16px;">Total: ${{ number_format($factura->total, 0, ',', '.') }}</strong>
+  </div>
 </div>
 
 @if($factura->observaciones)
