@@ -339,8 +339,20 @@
                             const resultados = document.getElementById('precio-resultados');
 
                             function render() {
-                                const lista = Catalogo.buscarLocal(input.value, '');
                                 resultados.replaceChildren();
+
+                                // Codigo exacto (propio o alterno/barcode): se muestra
+                                // solo ese, aunque la busqueda amplia tambien
+                                // encuentre otros productos por una coincidencia
+                                // parcial de barcode (ej. "10056" adentro de un
+                                // codigo de barras mas largo de otro producto).
+                                const exacto = Catalogo.buscarCoincidenciaExacta(input.value);
+                                if (exacto) {
+                                    resultados.appendChild(crearCuadroPrecio(exacto));
+                                    return;
+                                }
+
+                                const lista = Catalogo.buscarLocal(input.value, '');
 
                                 if (lista.length === 0) {
                                     const vacio = document.createElement('div');
