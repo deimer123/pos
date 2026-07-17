@@ -1970,7 +1970,8 @@
                                     }"
                                     wire:key="prefactura-facturar-btn-{{ $prefacturaSeleccionada->id }}"
                                     wire:loading.attr="disabled" wire:target="facturarPrefacturaDirecto"
-                                    class="h-9 px-4 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-full shadow-sm">
+                                    class="h-9 px-4 text-white text-sm font-semibold rounded-full shadow-sm"
+                                    style="background:#16a34a;">
                                     💳 Facturar
                                 </button>
                                 @endif
