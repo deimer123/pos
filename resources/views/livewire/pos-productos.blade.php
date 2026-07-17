@@ -280,6 +280,38 @@
                     return fila;
                 }
 
+                // Cuadro grande centrado: se usa cuando queda UN solo
+                // resultado (tipico al escanear/escribir un codigo exacto),
+                // para poder leer el precio de un vistazo sin achicar los
+                // ojos. Con varias coincidencias (buscando por nombre) se
+                // usa la lista de crearFilaPrecio en su lugar.
+                function crearCuadroPrecio(producto) {
+                    const cuadro = document.createElement('div');
+                    cuadro.style.cssText = 'text-align:center;padding:18px 10px;';
+
+                    const nombre = document.createElement('div');
+                    nombre.style.cssText = 'font-weight:700;font-size:16px;color:#1e293b;margin-bottom:2px;';
+                    nombre.textContent = producto.descripcion_larga;
+
+                    const codigo = document.createElement('div');
+                    codigo.style.cssText = 'font-size:12px;color:#94a3b8;margin-bottom:14px;';
+                    codigo.textContent = 'Codigo ' + producto.id_producto;
+
+                    const precio = document.createElement('div');
+                    precio.style.cssText = 'font-size:42px;font-weight:800;color:#4338ca;line-height:1.1;';
+                    precio.textContent = formatoMonedaPrecio(producto.precio_venta1);
+
+                    const sufijo = document.createElement('div');
+                    sufijo.style.cssText = 'font-size:13px;font-weight:600;color:#6366f1;margin-top:2px;';
+                    sufijo.textContent = producto.sufijo_venta || '';
+
+                    cuadro.appendChild(nombre);
+                    cuadro.appendChild(codigo);
+                    cuadro.appendChild(precio);
+                    cuadro.appendChild(sufijo);
+                    return cuadro;
+                }
+
                 botonPrecio?.addEventListener('click', () => {
                     const campoInput = document.createElement('input');
                     campoInput.id = 'precio-buscar';
@@ -315,6 +347,11 @@
                                     vacio.style.cssText = 'padding:16px;text-align:center;color:#94a3b8;font-size:13px;';
                                     vacio.textContent = 'Sin resultados';
                                     resultados.appendChild(vacio);
+                                    return;
+                                }
+
+                                if (lista.length === 1) {
+                                    resultados.appendChild(crearCuadroPrecio(lista[0]));
                                     return;
                                 }
 
