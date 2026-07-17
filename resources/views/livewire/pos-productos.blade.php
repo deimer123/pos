@@ -5,7 +5,7 @@
          resources/js/pos-catalogo-offline.js). wire:ignore evita que un
          re-render de este componente Livewire (ej. al abrir el modal de
          producto manual) borre lo que JS ya puso aqui. --}}
-    <div wire:ignore>
+    <div wire:ignore style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
         @php
             $tipoNegocio = $empresaContexto['tipo_negocio'] ?? 'tienda';
             $placeholderBusqueda = $tipoNegocio === 'carniceria'
