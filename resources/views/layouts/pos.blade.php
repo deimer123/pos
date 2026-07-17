@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Punto de Venta</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script>
+        // Empresa del usuario que tiene la sesion activa en ESTE momento.
+        // Usado para que el catalogo local guardado en este navegador
+        // (IndexedDB, compartido entre sesiones) nunca se muestre mezclado
+        // si en este mismo dispositivo se usa el POS con otro negocio (ver
+        // pos-catalogo-offline.js).
+        window.posEmpresaId = @json(auth()->check() ? auth()->user()->getEmpresaActualId() : null);
+    </script>
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}">
