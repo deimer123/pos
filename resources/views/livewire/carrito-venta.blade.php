@@ -1960,7 +1960,7 @@
                                     Cargar
                                 </button>
 
-                                @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion']) && auth()->user()->puedeVerBotonPos('facturar'))
+                                @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa']) && auth()->user()->puedeVerBotonPos('facturar'))
                                 <button x-data="{ hayProductos: {{ $hayProductosEnCarrito ? 'true' : 'false' }} }"
                                     x-on:click="
                                     if (hayProductos) {

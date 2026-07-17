@@ -2206,6 +2206,10 @@ $this->dispatch('guardar-carrito-en-cache', $this->carrito); // âœ… GUARDAR 
     // boton "Facturar" del modal de Gestion de Prefacturas.
     public function facturarPrefacturaDirecto($id)
     {
+        if (! auth()->user()->hasAnyRole(['cajero', 'admin_empresa'])) {
+            abort(403);
+        }
+
         $this->cargarPrefacturaAlCarrito($id);
 
         if (empty($this->carrito)) return;
