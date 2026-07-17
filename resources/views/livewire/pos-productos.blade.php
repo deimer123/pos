@@ -255,24 +255,24 @@
 
                 function crearFilaPrecio(producto) {
                     const fila = document.createElement('div');
-                    fila.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px;border-bottom:1px solid #e5e7eb;';
+                    fila.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 4px;border-bottom:1px solid #e5e7eb;';
 
                     const info = document.createElement('div');
                     info.style.minWidth = '0';
 
                     const nombre = document.createElement('div');
-                    nombre.style.cssText = 'font-weight:700;font-size:13px;color:#1e293b;';
+                    nombre.style.cssText = 'font-weight:700;font-size:17px;color:#1e293b;';
                     nombre.textContent = producto.descripcion_larga;
 
                     const codigo = document.createElement('div');
-                    codigo.style.cssText = 'font-size:11px;color:#94a3b8;';
+                    codigo.style.cssText = 'font-size:14px;color:#94a3b8;';
                     codigo.textContent = 'Codigo ' + producto.id_producto;
 
                     info.appendChild(nombre);
                     info.appendChild(codigo);
 
                     const precio = document.createElement('div');
-                    precio.style.cssText = 'font-size:15px;font-weight:800;color:#4338ca;white-space:nowrap;text-align:right;';
+                    precio.style.cssText = 'font-size:20px;font-weight:800;color:#4338ca;white-space:nowrap;text-align:right;';
                     precio.textContent = formatoMonedaPrecio(producto.precio_venta1) + ' ' + (producto.sufijo_venta || '');
 
                     fila.appendChild(info);
@@ -290,19 +290,19 @@
                     cuadro.style.cssText = 'text-align:center;padding:18px 10px;';
 
                     const nombre = document.createElement('div');
-                    nombre.style.cssText = 'font-weight:700;font-size:16px;color:#1e293b;margin-bottom:2px;';
+                    nombre.style.cssText = 'font-weight:700;font-size:20px;color:#1e293b;margin-bottom:4px;';
                     nombre.textContent = producto.descripcion_larga;
 
                     const codigo = document.createElement('div');
-                    codigo.style.cssText = 'font-size:12px;color:#94a3b8;margin-bottom:14px;';
+                    codigo.style.cssText = 'font-size:14px;color:#94a3b8;margin-bottom:16px;';
                     codigo.textContent = 'Codigo ' + producto.id_producto;
 
                     const precio = document.createElement('div');
-                    precio.style.cssText = 'font-size:42px;font-weight:800;color:#4338ca;line-height:1.1;';
+                    precio.style.cssText = 'font-size:52px;font-weight:800;color:#4338ca;line-height:1.1;';
                     precio.textContent = formatoMonedaPrecio(producto.precio_venta1);
 
                     const sufijo = document.createElement('div');
-                    sufijo.style.cssText = 'font-size:13px;font-weight:600;color:#6366f1;margin-top:2px;';
+                    sufijo.style.cssText = 'font-size:15px;font-weight:600;color:#6366f1;margin-top:4px;';
                     sufijo.textContent = producto.sufijo_venta || '';
 
                     cuadro.appendChild(nombre);
@@ -319,10 +319,11 @@
                     campoInput.className = 'swal2-input';
                     campoInput.placeholder = 'Nombre o codigo del producto...';
                     campoInput.autocomplete = 'off';
+                    campoInput.style.cssText = 'width:100%;max-width:100%;height:56px;font-size:20px;margin-left:0;margin-right:0;box-sizing:border-box;';
 
                     const contenedorResultados = document.createElement('div');
                     contenedorResultados.id = 'precio-resultados';
-                    contenedorResultados.style.cssText = 'max-height:320px;overflow-y:auto;text-align:left;margin-top:8px;';
+                    contenedorResultados.style.cssText = 'max-height:420px;overflow-y:auto;text-align:left;margin-top:10px;';
 
                     const cuerpo = document.createElement('div');
                     cuerpo.appendChild(campoInput);
@@ -331,6 +332,7 @@
                     window.Swal.fire({
                         title: '🏷️ Verificar precio',
                         html: cuerpo,
+                        width: 620,
                         showConfirmButton: false,
                         showCancelButton: true,
                         cancelButtonText: 'Cerrar',
@@ -356,7 +358,7 @@
 
                                 if (lista.length === 0) {
                                     const vacio = document.createElement('div');
-                                    vacio.style.cssText = 'padding:16px;text-align:center;color:#94a3b8;font-size:13px;';
+                                    vacio.style.cssText = 'padding:16px;text-align:center;color:#94a3b8;font-size:16px;';
                                     vacio.textContent = 'Sin resultados';
                                     resultados.appendChild(vacio);
                                     return;
