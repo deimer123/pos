@@ -16,6 +16,7 @@ const DB_NAME = 'pos_offline';
 const DB_VERSION = 10;
 const STORE_PRODUCTOS = 'productos';
 const SYNC_AT_KEY = 'pos_catalogo_sincronizado_en';
+const EMPRESA_KEY = 'pos_catalogo_empresa_id';
 const SYNC_STALE_MS = 30 * 60 * 1000; // 30 min
 
 let dbPromise = null;
@@ -89,6 +90,12 @@ async function sincronizarCatalogo() {
         catalogoEnMemoria = productos;
         localStorage.setItem(SYNC_AT_KEY, String(Date.now()));
 
+        // Marca de que empresa es este catalogo guardado localmente (ver
+        // esDeEmpresaActual en cargarCatalogoLocal).
+        if (window.posEmpresaId !== undefined && window.posEmpresaId !== null) {
+            localStorage.setItem(EMPRESA_KEY, String(window.posEmpresaId));
+        }
+
         window.dispatchEvent(new CustomEvent('pos-catalogo-sincronizado', {
             detail: { total: productos.length },
         }));
@@ -100,10 +107,43 @@ async function sincronizarCatalogo() {
 }
 
 /**
+ * Este dispositivo/navegador puede haberse usado antes con OTRA empresa
+ * (ej. un tablet compartido, o probando con varias cuentas). El catalogo
+ * guardado en IndexedDB no lleva el empresa_id producto por producto, asi
+ * que se compara contra una marca aparte guardada la ultima vez que se
+ * sincronizo de verdad (ver sincronizarCatalogo). Si no coincide con la
+ * empresa de la sesion actual, el catalogo viejo NO se muestra -- se
+ * descarta y se espera la sincronizacion real, para no mezclar productos
+ * de un negocio distinto.
+ */
+function catalogoLocalEsDeEmpresaActual() {
+    if (window.posEmpresaId === undefined || window.posEmpresaId === null) return true;
+
+    // Sin marca guardada (primera vez con esta version del codigo, o un
+    // catalogo que quedo de antes de que existiera esta marca) no se da
+    // por buena: es preferible resincronizar una vez de mas que arriesgarse
+    // a mostrar productos de otro negocio sin saberlo.
+    const empresaGuardada = localStorage.getItem(EMPRESA_KEY);
+    if (empresaGuardada === null) return false;
+
+    return empresaGuardada === String(window.posEmpresaId);
+}
+
+/**
  * Hidrata el array en memoria desde IndexedDB al cargar la pagina, y
- * sincroniza en segundo plano si no hay datos o estan viejos.
+ * sincroniza en segundo plano si no hay datos, estan viejos, o son de
+ * otra empresa.
  */
 async function cargarCatalogoLocal() {
+    if (!catalogoLocalEsDeEmpresaActual()) {
+        await reemplazarEnIndexedDB([]);
+        catalogoEnMemoria = [];
+        localStorage.removeItem(SYNC_AT_KEY);
+        localStorage.removeItem(EMPRESA_KEY);
+        await sincronizarCatalogo();
+        return catalogoEnMemoria;
+    }
+
     try {
         catalogoEnMemoria = await leerTodoDeIndexedDB();
     } catch (e) {
