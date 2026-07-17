@@ -17,10 +17,6 @@
             <div style="display:flex; align-items:center; gap:8px;">
                 <input type="text" id="pos-buscar-producto" placeholder="{{ $placeholderBusqueda }}" autocomplete="off"
                     class="w-full p-2 border border-gray-300 rounded-full shadow focus:ring focus:ring-blue-200" />
-                <button type="button" id="pos-verificar-precio" title="Verificar precio (no agrega al carrito)"
-                    style="flex-shrink:0; width:36px; height:36px; border-radius:9999px; border:1px solid #d1d5db; background:white; cursor:pointer; font-size:15px;">
-                    🏷️
-                </button>
                 <button type="button" id="pos-actualizar-catalogo" title="Actualizar catalogo"
                     style="flex-shrink:0; width:36px; height:36px; border-radius:9999px; border:1px solid #d1d5db; background:white; cursor:pointer; font-size:15px;">
                     🔄
@@ -238,58 +234,6 @@
                     await Catalogo.sincronizarCatalogo();
                     actualizarInfoSync();
                     renderizar();
-                });
-
-                // Verificador de precios: busca en el catalogo guardado
-                // localmente (funciona igual con o sin conexion) y solo
-                // muestra nombre/precio -- no agrega nada al carrito ni
-                // guarda nada, es solo para consultar.
-                const botonPrecio = document.getElementById('pos-verificar-precio');
-
-                function formatoMonedaPrecio(valor) {
-                    return '$' + Math.round(Number(valor) || 0).toLocaleString('es-CO');
-                }
-
-                function escapeHtmlPrecio(texto) {
-                    return String(texto ?? '').replace(/[&<>"']/g, (c) => ({
-                        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-                    })[c]);
-                }
-
-                botonPrecio?.addEventListener('click', () => {
-                    window.Swal.fire({
-                        title: '🏷️ Verificar precio',
-                        html: '<input id="precio-buscar" type="text" class="swal2-input" placeholder="Nombre o codigo del producto..." autocomplete="off">'
-                            + '<div id="precio-resultados" style="max-height:320px;overflow-y:auto;text-align:left;margin-top:8px;"></div>',
-                        showConfirmButton: false,
-                        showCancelButton: true,
-                        cancelButtonText: 'Cerrar',
-                        didOpen: () => {
-                            const input = document.getElementById('precio-buscar');
-                            const resultados = document.getElementById('precio-resultados');
-
-                            function render() {
-                                const lista = Catalogo.buscarLocal(input.value, '');
-
-                                resultados.innerHTML = lista.length
-                                    ? lista.map((p) => (
-                                        '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px;border-bottom:1px solid #e5e7eb;">'
-                                        + '<div style="min-width:0;">'
-                                        + '<div style="font-weight:700;font-size:13px;color:#1e293b;">' + escapeHtmlPrecio(p.descripcion_larga) + '</div>'
-                                        + '<div style="font-size:11px;color:#94a3b8;">Codigo ' + escapeHtmlPrecio(p.id_producto) + '</div>'
-                                        + '</div>'
-                                        + '<div style="font-size:15px;font-weight:800;color:#4338ca;white-space:nowrap;text-align:right;">' + formatoMonedaPrecio(p.precio_venta1)
-                                        + ' <span style="font-size:10px;color:#6366f1;">' + escapeHtmlPrecio(p.sufijo_venta) + '</span></div>'
-                                        + '</div>'
-                                    )).join('')
-                                    : '<div style="padding:16px;text-align:center;color:#94a3b8;font-size:13px;">Sin resultados</div>';
-                            }
-
-                            input.addEventListener('input', render);
-                            input.focus();
-                            render();
-                        },
-                    });
                 });
 
                 window.addEventListener('pos-catalogo-sincronizado', () => {
