@@ -17,6 +17,10 @@
             <div style="display:flex; align-items:center; gap:8px;">
                 <input type="text" id="pos-buscar-producto" placeholder="{{ $placeholderBusqueda }}" autocomplete="off"
                     class="w-full p-2 border border-gray-300 rounded-full shadow focus:ring focus:ring-blue-200" />
+                <button type="button" id="pos-verificar-precio" title="Verificar precio (no agrega al carrito)"
+                    style="flex-shrink:0; width:36px; height:36px; border-radius:9999px; border:1px solid #d1d5db; background:white; cursor:pointer; font-size:15px;">
+                    🏷️
+                </button>
                 <button type="button" id="pos-actualizar-catalogo" title="Actualizar catalogo"
                     style="flex-shrink:0; width:36px; height:36px; border-radius:9999px; border:1px solid #d1d5db; background:white; cursor:pointer; font-size:15px;">
                     🔄
@@ -234,6 +238,94 @@
                     await Catalogo.sincronizarCatalogo();
                     actualizarInfoSync();
                     renderizar();
+                });
+
+                // Verificador de precios: busca en el catalogo guardado
+                // localmente (funciona igual con o sin conexion) y solo
+                // muestra nombre/precio -- no agrega nada al carrito ni
+                // guarda nada, es solo para consultar. El resultado se arma
+                // creando elementos DOM directamente (createElement/
+                // textContent) en vez de strings de HTML, para no tener
+                // ningun texto con pinta de etiqueta suelto en este archivo.
+                const botonPrecio = document.getElementById('pos-verificar-precio');
+
+                function formatoMonedaPrecio(valor) {
+                    return '$' + Math.round(Number(valor) || 0).toLocaleString('es-CO');
+                }
+
+                function crearFilaPrecio(producto) {
+                    const fila = document.createElement('div');
+                    fila.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px;border-bottom:1px solid #e5e7eb;';
+
+                    const info = document.createElement('div');
+                    info.style.minWidth = '0';
+
+                    const nombre = document.createElement('div');
+                    nombre.style.cssText = 'font-weight:700;font-size:13px;color:#1e293b;';
+                    nombre.textContent = producto.descripcion_larga;
+
+                    const codigo = document.createElement('div');
+                    codigo.style.cssText = 'font-size:11px;color:#94a3b8;';
+                    codigo.textContent = 'Codigo ' + producto.id_producto;
+
+                    info.appendChild(nombre);
+                    info.appendChild(codigo);
+
+                    const precio = document.createElement('div');
+                    precio.style.cssText = 'font-size:15px;font-weight:800;color:#4338ca;white-space:nowrap;text-align:right;';
+                    precio.textContent = formatoMonedaPrecio(producto.precio_venta1) + ' ' + (producto.sufijo_venta || '');
+
+                    fila.appendChild(info);
+                    fila.appendChild(precio);
+                    return fila;
+                }
+
+                botonPrecio?.addEventListener('click', () => {
+                    const campoInput = document.createElement('input');
+                    campoInput.id = 'precio-buscar';
+                    campoInput.type = 'text';
+                    campoInput.className = 'swal2-input';
+                    campoInput.placeholder = 'Nombre o codigo del producto...';
+                    campoInput.autocomplete = 'off';
+
+                    const contenedorResultados = document.createElement('div');
+                    contenedorResultados.id = 'precio-resultados';
+                    contenedorResultados.style.cssText = 'max-height:320px;overflow-y:auto;text-align:left;margin-top:8px;';
+
+                    const cuerpo = document.createElement('div');
+                    cuerpo.appendChild(campoInput);
+                    cuerpo.appendChild(contenedorResultados);
+
+                    window.Swal.fire({
+                        title: '🏷️ Verificar precio',
+                        html: cuerpo,
+                        showConfirmButton: false,
+                        showCancelButton: true,
+                        cancelButtonText: 'Cerrar',
+                        didOpen: () => {
+                            const input = document.getElementById('precio-buscar');
+                            const resultados = document.getElementById('precio-resultados');
+
+                            function render() {
+                                const lista = Catalogo.buscarLocal(input.value, '');
+                                resultados.replaceChildren();
+
+                                if (lista.length === 0) {
+                                    const vacio = document.createElement('div');
+                                    vacio.style.cssText = 'padding:16px;text-align:center;color:#94a3b8;font-size:13px;';
+                                    vacio.textContent = 'Sin resultados';
+                                    resultados.appendChild(vacio);
+                                    return;
+                                }
+
+                                lista.forEach((producto) => resultados.appendChild(crearFilaPrecio(producto)));
+                            }
+
+                            input.addEventListener('input', render);
+                            input.focus();
+                            render();
+                        },
+                    });
                 });
 
                 window.addEventListener('pos-catalogo-sincronizado', () => {
