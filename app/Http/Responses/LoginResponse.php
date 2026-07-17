@@ -70,6 +70,22 @@ class LoginResponse implements FilamentLoginResponseContract, FortifyLoginRespon
             return redirect()->intended(route('filament.admin.resources.configuracion-empresas.create'));
         }
 
-        return redirect()->intended('/eleccion');
+        // Laravel guarda en la sesion la URL que se intentaba visitar
+        // cuando no habia sesion activa (redirect()->guest(), disparado
+        // automaticamente por el middleware de auth) y redirect()->intended()
+        // la usa apenas hay login exitoso -- sin importar el rol. Si en
+        // algun momento el navegador llego a tocar una URL de /admin/*
+        // estando ya deslogueado (ej. una peticion de fondo de una pestana
+        // vieja justo despues de que la sesion unica invalido la sesion),
+        // esa URL de /admin queda "recordada" y el siguiente login manda
+        // ahi directo a CUALQUIER rol, incluidos los que no deberian entrar
+        // a /admin (taller, cajero, vendedor, recepcion, mesero). Por eso
+        // solo se honra intended() para los roles que si tienen acceso
+        // normal al panel; todos los demas van siempre a /eleccion.
+        if ($user?->hasAnyRole(['admin_empresa', 'super_admin'])) {
+            return redirect()->intended('/eleccion');
+        }
+
+        return redirect()->to('/eleccion');
     }
 }
