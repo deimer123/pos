@@ -17,52 +17,8 @@
 
 <body style="height: 100vh; margin: 0; padding: 0; overflow: hidden; background: #f3f4f6; color: #111827;">
 
-    {{-- Boton de logout --}}
-    <div class="pos-top-actions" x-data="{ menuOpen: false }" style="position: fixed; top: 10px; right: 20px; z-index: 50; display:flex; align-items:center; gap:8px;">
-
-      <button type="button" class="pos-mobile-menu-button" @click="menuOpen = !menuOpen" aria-label="Menu POS" style="display:none;">
-      </button>
-
-      @if(
-    request()->routeIs('pos') &&
-    auth()->user()->hasAnyRole(['digitador', 'admin_empresa'])
-)
-
-<div class="pos-actions-list flex gap-2" :class="{ 'is-open': menuOpen }">
-
-    <a href="/admin"
-        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-sm rounded shadow inline-block">
-        Administracion
-    </a>
-
-    <form method="POST" action="{{ route('cerrar.sesion') }}">
-        @csrf
-
-        <button type="submit"
-            class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-sm rounded shadow">
-            Cerrar sesion
-        </button>
-    </form>
-
-</div>
-
-@else
-
-<div class="pos-actions-list" :class="{ 'is-open': menuOpen }">
-<form method="POST" action="{{ route('cerrar.sesion') }}">
-    @csrf
-    <button type="submit"
-        class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-sm rounded shadow">
-        Cerrar sesion
-    </button>
-</form>
-</div>
-
-@endif
-    </div>
-
     {{-- Titulo punto de venta --}}
-    <div class="pos-app-header" style="width: 100%; height: 60px; background: #2563eb; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 2px solid #1d4ed8; flex-shrink: 0;">
+    <div class="pos-app-header" style="position: relative; width: 100%; height: 60px; background: #2563eb; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 16px; border-bottom: 2px solid #1d4ed8; flex-shrink: 0;">
         {{-- Izquierda: botón ← Mesas (solo en vista mesa) o usuario logueado --}}
         <div class="pos-header-left" style="flex:1; display:flex; align-items:center; justify-content:flex-start; gap:8px; min-width:0;">
             @hasSection('header-left')
@@ -131,14 +87,57 @@
             @endif
         </div>
         {{-- Centro: nombre empresa --}}
-        <h1 class="pos-header-empresa" style="color: white; font-size: 24px; font-weight: bold; margin: 0; text-align: center; flex:0 0 auto;">
+        <h1 class="pos-header-empresa" style="color: white; font-size: 24px; font-weight: bold; margin: 0; text-align: center; flex:0 1 auto; min-width:0; max-width:40%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
             {{ $nombreEmpresa }}
         </h1>
-        {{-- Derecha: espacio para balance visual --}}
-        <div style="flex:1; display:flex; align-items:center; justify-content:flex-end; gap:8px;">
+        {{-- Derecha: nav de mesa (si aplica) + acciones (Administracion / cerrar sesión) --}}
+        <div style="flex:1 1 0; display:flex; align-items:center; justify-content:flex-end; gap:8px; min-width:max-content;">
             @hasSection('mesa-nav')
                 @yield('mesa-nav')
             @endif
+
+            <div class="pos-top-actions" x-data="{ menuOpen: false }" style="position: relative; z-index: 50; display:flex; align-items:center; gap:8px;">
+
+              <button type="button" class="pos-mobile-menu-button" @click="menuOpen = !menuOpen" aria-label="Menu POS">
+              </button>
+
+              @if(
+    request()->routeIs('pos') &&
+    auth()->user()->hasAnyRole(['digitador', 'admin_empresa'])
+)
+
+<div class="pos-actions-list flex gap-2" :class="{ 'is-open': menuOpen }">
+
+    <a href="/admin"
+        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-sm rounded shadow inline-block">
+        Administracion
+    </a>
+
+    <form method="POST" action="{{ route('cerrar.sesion') }}">
+        @csrf
+
+        <button type="submit"
+            class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-sm rounded shadow">
+            Cerrar sesion
+        </button>
+    </form>
+
+</div>
+
+@else
+
+<div class="pos-actions-list flex gap-2" :class="{ 'is-open': menuOpen }">
+<form method="POST" action="{{ route('cerrar.sesion') }}">
+    @csrf
+    <button type="submit"
+        class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-sm rounded shadow">
+        Cerrar sesion
+    </button>
+</form>
+</div>
+
+@endif
+            </div>
         </div>
     </div>
 

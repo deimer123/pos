@@ -3191,3 +3191,67 @@ button:hover {
     }
 }
 /* FIN Móvil: header del panel Taller */
+
+/* POS base (sin mesa/taller) en movil: ocultar la grilla de botones sueltos
+   (Editar/+Cliente/Cartera/Entrada-Salida/Limpiar/Guardar/Ver) y dejar solo
+   el boton unico "Acciones" (.pos-cart-mobile-more) que agrupa las mismas
+   opciones. Usa una clase propia en vez de .pos-desktop-cart-actions porque
+   esa clase tiene reglas mas especificas (.pos-cart-component > ...) que la
+   vuelven a mostrar como grid para el modo mesas. */
+@media (max-width: 768px) {
+    .pos-cart-actions-base-grid {
+        display: none !important;
+    }
+}
+
+/* Boton "Acciones" del carrito en movil: chico y a un costado (como el
+   icono de menu del header), no una barra negra de ancho completo. Clase
+   propia (pos-cart-mobile-more-side) para no pelear con las varias reglas
+   viejas de .pos-cart-mobile-more-button que fuerzan width:100%. */
+@media (max-width: 768px) {
+    .pos-cart-component .pos-cart-mobile-more-side {
+        display: flex !important;
+        justify-content: flex-end !important;
+        padding: 6px 10px !important;
+        background: transparent !important;
+    }
+
+    .pos-cart-mobile-more-side .pos-cart-mobile-more-button {
+        width: 40px !important;
+        min-width: 40px !important;
+        height: 40px !important;
+        padding: 0 !important;
+        border-radius: 10px !important;
+        background: rgba(15, 23, 42, .85) !important;
+        border: 1px solid rgba(255, 255, 255, .15) !important;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, .2) !important;
+        font-size: 0 !important;
+        color: transparent !important;
+        text-indent: -9999px !important;
+        position: relative !important;
+        overflow: hidden !important;
+    }
+
+    .pos-cart-mobile-more-side .pos-cart-mobile-more-button::before {
+        content: '' !important;
+        position: absolute !important;
+        left: 50% !important;
+        top: 50% !important;
+        width: 16px !important;
+        height: 2px !important;
+        margin: 0 !important;
+        border-radius: 999px !important;
+        background: #ffffff !important;
+        box-shadow: 0 -5px 0 #ffffff, 0 5px 0 #ffffff !important;
+        transform: translate(-50%, -50%) !important;
+    }
+}
+
+/* POS con Taller en movil: ocultar la fila plana de botones (esta pensada
+   para escritorio, donde si caben todos en una linea) y dejar solo el
+   boton unico "Acciones" (mismo mecanismo que el POS sin taller). */
+@media (max-width: 768px) {
+    .pos-taller-actions-row {
+        display: none !important;
+    }
+}
