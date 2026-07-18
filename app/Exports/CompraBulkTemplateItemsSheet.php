@@ -124,7 +124,20 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
     {
         return [
             AfterSheet::class => function (AfterSheet $event) {
-                $sheet = $event->sheet->getDelegate();
+                // OJO: no confiar en $event->sheet->getDelegate() a secas.
+                // Este archivo tiene 3 hojas (Items, Productos existentes,
+                // Referencia); cuando mas de una implementa WithEvents, el
+                // "sheet actual" que llega en el evento a veces no es esta
+                // (se vio en la practica: las formulas de aqui terminaron
+                // escritas en otra hoja del mismo archivo). Se pide la hoja
+                // "Items" por nombre, explicitamente, al Spreadsheet padre.
+                $spreadsheet = $event->sheet->getDelegate()->getParent();
+                $sheet = $spreadsheet->getSheetByName('Items');
+
+                if (! $sheet) {
+                    return;
+                }
+
                 $ultimaFila = self::ULTIMA_FILA_FORMULAS;
 
                 // Desplegable de la columna Producto: en vez de una lista
