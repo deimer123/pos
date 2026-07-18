@@ -32,6 +32,10 @@ class MecanicoResource extends Resource
             return false;
         }
 
+        if (! auth()->user()->puedeVerResource('mecanicos')) {
+            return false;
+        }
+
         $empresaId = auth()->user()->getEmpresaActualId();
 
         return (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_taller');

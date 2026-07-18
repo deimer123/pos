@@ -365,11 +365,13 @@ class ActorResource extends Resource
     public static function shouldRegisterNavigation(): bool
     {
         // Ya ocultas el recurso a vendedores; mantenemos igual.
-        return ! auth()->user()->hasRole('vendedor') && ! auth()->user()->hasRole('super_admin');
+        return ! auth()->user()->hasRole('vendedor') && ! auth()->user()->hasRole('super_admin')
+            && auth()->user()->puedeVerResource('clientes');
     }
 
     public static function canAccess(): bool
     {
-        return ! auth()->user()->hasRole('vendedor') && ! auth()->user()->hasRole('super_admin');
+        return ! auth()->user()->hasRole('vendedor') && ! auth()->user()->hasRole('super_admin')
+            && auth()->user()->puedeVerResource('clientes');
     }
 }

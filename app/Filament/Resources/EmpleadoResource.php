@@ -162,6 +162,7 @@ class EmpleadoResource extends Resource
                             })
                             ->required()
                             ->columns(1)
+                            ->live()
                             ->afterStateHydrated(function (Forms\Components\CheckboxList $component, $state, $record) {
                                 if ($record) {
                                     $component->state($record->roles->pluck('name')->toArray());
@@ -203,6 +204,43 @@ class EmpleadoResource extends Resource
                                 'guardar' => 'Guardar',
                                 'ver' => 'Ver',
                             ])
+                            ->columns(2),
+                    ]),
+
+                Forms\Components\Section::make('Recursos visibles en el Admin')
+                    ->description('Solo aplica a Digitador (es el unico rol, aparte de Admin Empresa, que entra al panel de administracion). Marca los que NO quieres que este empleado vea. Admin Empresa siempre los ve todos.')
+                    ->extraAttributes(['class' => 'combo-franja-azul'])
+                    ->visible(fn (Forms\Get $get) => in_array('digitador', $get('roles') ?? []))
+                    ->schema([
+                        Forms\Components\CheckboxList::make('recursos_ocultos_admin')
+                            ->extraAttributes(['class' => 'producto-linea-2'])
+                            ->label('Ocultar estos recursos')
+                            ->options(function () {
+                                $empresaId = auth()->user()->getEmpresaActualId();
+                                $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();
+
+                                // Solo se listan los resources a los que Digitador
+                                // ya tiene acceso por su rol -- esta lista solo
+                                // resta visibilidad, no la otorga. Los propios de
+                                // un tipo de negocio (Recetas, Mecanicos) solo
+                                // aparecen si la empresa los tiene activados.
+                                $opciones = [
+                                    'productos' => 'Productos',
+                                    'combos'    => 'Combos',
+                                    'compras'   => 'Compras a Proveedor',
+                                    'clientes'  => 'Clientes y Proveedores',
+                                ];
+
+                                if ($config?->usa_recetas) {
+                                    $opciones['recetas'] = 'Recetas';
+                                }
+
+                                if ($config?->usa_taller) {
+                                    $opciones['mecanicos'] = 'Mecánicos';
+                                }
+
+                                return $opciones;
+                            })
                             ->columns(2),
                     ]),
             ]);

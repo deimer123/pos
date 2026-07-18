@@ -28,7 +28,8 @@ class ProductComboResource extends Resource
     public static function shouldRegisterNavigation(): bool
     {
         $user = auth()->user();
-        return $user && ($user->hasRole('admin_empresa') || $user->hasRole('digitador'));
+        return $user && ($user->hasRole('admin_empresa') || $user->hasRole('digitador'))
+            && $user->puedeVerResource('combos');
     }
 
     public static function getEloquentQuery(): Builder

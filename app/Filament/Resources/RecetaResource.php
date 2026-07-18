@@ -31,6 +31,9 @@ class RecetaResource extends Resource
         if (!$user || !($user->hasRole('admin_empresa') || $user->hasRole('digitador'))) {
             return false;
         }
+        if (! $user->puedeVerResource('recetas')) {
+            return false;
+        }
         $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $user->getEmpresaActualId())->first();
         return (bool) ($config?->usa_recetas ?? false);
     }
@@ -39,6 +42,9 @@ class RecetaResource extends Resource
     {
         $user = auth()->user();
         if (!$user || !($user->hasRole('admin_empresa') || $user->hasRole('digitador'))) {
+            return false;
+        }
+        if (! $user->puedeVerResource('recetas')) {
             return false;
         }
         $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $user->getEmpresaActualId())->first();
