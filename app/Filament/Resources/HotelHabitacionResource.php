@@ -30,11 +30,14 @@ class HotelHabitacionResource extends Resource
 
     public static function canViewAny(): bool
     {
-        if (! auth()->check() || ! auth()->user()->hasRole('admin_empresa')) {
+        $user = auth()->user();
+        $tieneRol = $user && ($user->hasRole('admin_empresa') || ($user->hasRole('digitador') && $user->puedeVerResource('habitaciones')));
+
+        if (! $tieneRol) {
             return false;
         }
 
-        $empresaId = auth()->user()->getEmpresaActualId();
+        $empresaId = $user->getEmpresaActualId();
 
         return (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_hotel');
     }

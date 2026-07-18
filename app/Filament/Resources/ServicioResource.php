@@ -40,7 +40,12 @@ class ServicioResource extends Resource
 
     public static function canAccess(): bool
     {
-        $empresaId = auth()->user()?->getEmpresaActualId();
+        $user = auth()->user();
+        if (! $user || ! $user->puedeVerResource('servicios')) {
+            return false;
+        }
+
+        $empresaId = $user->getEmpresaActualId();
 
         return (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_servicios');
     }

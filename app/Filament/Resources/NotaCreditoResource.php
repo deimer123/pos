@@ -227,12 +227,13 @@ class NotaCreditoResource extends Resource
        // Solo ADMIN_EMPRESA puede acceder
     public static function canAccess(): bool
     {
-        return auth()->user()->hasRole('admin_empresa');
+        $user = auth()->user();
+        return (bool) $user && ($user->hasRole('admin_empresa') || ($user->hasRole('digitador') && $user->puedeVerResource('notas_credito')));
     }
 
     public static function canViewAny(): bool
 {
-    return auth()->user()->hasRole('admin_empresa');
+    return static::canAccess();
 }
 
     public static function canCreate(): bool { return false; }
