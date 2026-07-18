@@ -10,6 +10,7 @@ use App\Models\Subfamilia;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
+use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
 // Importador de la plantilla de carga masiva de productos (self-service,
 // distinto del ProductImport.php que usa el superadmin en ImportarDatos.php).
@@ -17,7 +18,7 @@ use Maatwebsite\Excel\Concerns\WithHeadingRow;
 // y si el nombre de proveedor/departamento/subfamilia no existe se CREA de
 // una con ese nombre, en vez de caer siempre al registro "DE PRUEBA" (ese
 // solo se usa si la celda quedo vacia).
-class ProductBulkImport implements ToCollection, WithHeadingRow
+class ProductBulkImport implements ToCollection, WithHeadingRow, WithMultipleSheets
 {
     protected int $empresaId;
     protected int $creados = 0;
@@ -26,6 +27,14 @@ class ProductBulkImport implements ToCollection, WithHeadingRow
     public function __construct(int $empresaId)
     {
         $this->empresaId = $empresaId;
+    }
+
+    // Sin esto, Laravel Excel procesa TODAS las hojas del archivo (tambien
+    // la hoja "Referencia" de la plantilla, que no tiene columna de nombre
+    // y por eso salia como fila con error). Se limita a la hoja de datos.
+    public function sheets(): array
+    {
+        return ['Productos' => $this];
     }
 
     public function collection(Collection $rows)
@@ -41,6 +50,11 @@ class ProductBulkImport implements ToCollection, WithHeadingRow
             }
 
             $nombre = trim((string) ($row['nombre_del_producto'] ?? ''));
+
+            if (str_starts_with(mb_strtolower($nombre), 'ejemplo')) {
+                continue; // fila de ejemplo de la plantilla, se ignora sin avisar
+            }
+
             $precioCosto = $this->numero($row['precio_costo'] ?? null);
             $precioVenta = $this->numero($row['precio_de_venta'] ?? null);
 
