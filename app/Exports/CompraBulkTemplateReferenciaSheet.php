@@ -6,17 +6,14 @@ use App\Models\Familia;
 use App\Models\Subfamilia;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
-use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
-use Maatwebsite\Excel\Events\AfterSheet;
-use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class CompraBulkTemplateReferenciaSheet implements FromArray, WithHeadings, WithTitle, WithColumnWidths, WithStyles, WithEvents
+class CompraBulkTemplateReferenciaSheet implements FromArray, WithHeadings, WithTitle, WithColumnWidths, WithStyles
 {
     public function __construct(protected int $empresaId)
     {
@@ -113,32 +110,5 @@ class CompraBulkTemplateReferenciaSheet implements FromArray, WithHeadings, With
         $sheet->freezePane('A2');
 
         return [];
-    }
-
-    public function registerEvents(): array
-    {
-        return [
-            // Forzar TODO como texto plano. Si un nombre de departamento o
-            // subfamilia empieza con "=", "+", "-" o "@", Excel lo toma
-            // como el inicio de una formula (aunque sea una frase normal),
-            // y como no es una formula valida, al abrir el archivo Excel
-            // "repara" el libro quitando esa celda. Con setValueExplicit
-            // como texto, nunca se interpreta como formula.
-            AfterSheet::class => function (AfterSheet $event) {
-                $sheet = $event->sheet->getDelegate();
-                $highestRow = $sheet->getHighestRow();
-                $highestColumn = $sheet->getHighestColumn();
-
-                foreach ($sheet->getRowIterator(1, $highestRow) as $fila) {
-                    foreach ($fila->getCellIterator('A', $highestColumn) as $celda) {
-                        $valor = $celda->getValue();
-
-                        if (is_string($valor) && $valor !== '') {
-                            $celda->setValueExplicit($valor, DataType::TYPE_STRING);
-                        }
-                    }
-                }
-            },
-        ];
     }
 }

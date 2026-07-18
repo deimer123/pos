@@ -5,12 +5,9 @@ namespace App\Exports;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
-use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
-use Maatwebsite\Excel\Events\AfterSheet;
-use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
@@ -19,10 +16,8 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 // Hoja de consulta: muestra los datos ACTUALES de cada producto que ya
 // existe (del proveedor elegido), para que el usuario sepa que costo/IVA/
 // precio/etc tiene ahora mismo un producto antes de decidir que escribir
-// en la hoja Items. Es solo informativa, no la lee el importador -- pero
-// la hoja Items SI la consulta por formula (VLOOKUP), asi que el nombre
-// del producto tiene que quedar identico, solo como texto.
-class CompraBulkTemplateProductosExistentesSheet implements FromArray, WithHeadings, WithTitle, WithColumnWidths, WithStyles, WithEvents
+// en la hoja Items. Es solo informativa, no la lee el importador.
+class CompraBulkTemplateProductosExistentesSheet implements FromArray, WithHeadings, WithTitle, WithColumnWidths, WithStyles
 {
     private const UNIDADES = [
         1 => 'Pieza',
@@ -126,31 +121,5 @@ class CompraBulkTemplateProductosExistentesSheet implements FromArray, WithHeadi
         $sheet->setAutoFilter('A1:I' . $highestRow);
 
         return [];
-    }
-
-    public function registerEvents(): array
-    {
-        return [
-            // Nombre de producto/departamento/subfamilia como texto
-            // explicito: si alguno empieza con "=", "+", "-" o "@", Excel
-            // lo toma como el inicio de una formula (aunque sea texto
-            // normal) y como no es una formula valida, "repara" el
-            // archivo quitando esa celda al abrirlo.
-            AfterSheet::class => function (AfterSheet $event) {
-                $sheet = $event->sheet->getDelegate();
-                $highestRow = max($sheet->getHighestRow(), 2);
-
-                foreach (['A', 'G', 'H', 'I'] as $columna) {
-                    for ($fila = 2; $fila <= $highestRow; $fila++) {
-                        $celda = $sheet->getCell($columna . $fila);
-                        $valor = $celda->getValue();
-
-                        if (is_string($valor) && $valor !== '') {
-                            $celda->setValueExplicit($valor, DataType::TYPE_STRING);
-                        }
-                    }
-                }
-            },
-        ];
     }
 }
