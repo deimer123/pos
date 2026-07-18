@@ -2247,4 +2247,23 @@ body:has(.reporte-descuentos-stat) .fi-ta-header-toolbar {
     background: linear-gradient(90deg, #e0e7ff 0%, #c7d2fe 100%) !important;
 }
 
+/* ======================================================
+   BOTON POS: DESTACADO, DISTINTO AL RESTO DEL MENU
+====================================================== */
+
+.fi-sidebar-item-button[href$="/admin/pos"] {
+    background: linear-gradient(135deg, #16a34a, #15803d) !important;
+    box-shadow: 0 10px 22px rgba(21, 128, 61, .35) !important;
+}
+
+.fi-sidebar-item-button[href$="/admin/pos"]:hover {
+    background: linear-gradient(135deg, #22c55e, #16a34a) !important;
+}
+
+.fi-sidebar-item-button[href$="/admin/pos"],
+.fi-sidebar-item-button[href$="/admin/pos"] .fi-sidebar-item-label,
+.fi-sidebar-item-button[href$="/admin/pos"] svg {
+    color: #ffffff !important;
+}
+
 
