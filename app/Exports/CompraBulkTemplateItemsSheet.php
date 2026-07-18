@@ -153,7 +153,7 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
                 $validation->setAllowBlank(true);
                 $validation->setShowInputMessage(true);
                 $validation->setShowErrorMessage(false);
-                $validation->setShowDropDown(false); // false = SI muestra la flecha (asi de rara es la libreria)
+                $validation->setShowDropDown(true);
                 $validation->setPromptTitle('Producto de este proveedor');
                 $validation->setPrompt('Dale clic a la flechita de la celda para ver los productos que ya existen. Si escribes uno que no aparece en la lista, se crea nuevo.');
                 $validation->setFormula1('$A$' . $primeraFila . ':$A$' . $ultimaFila);
