@@ -125,53 +125,64 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
                 $sheet = $event->sheet->getDelegate();
                 $ultimaFila = self::ULTIMA_FILA_FORMULAS;
 
-                // Desplegable de la columna Producto: apunta directo a la
-                // columna A de la hoja "Productos existentes" (sin copiar
-                // nada aqui). Data Validation si puede referenciar otra
-                // hoja sin problema, a diferencia del autocompletado nativo.
-                $cantidadProductos = count(array_filter($this->productosExistentes));
-
-                if ($cantidadProductos > 0) {
-                    $ultimaFilaLista = $cantidadProductos + 1; // +1 por el encabezado de esa hoja
-
-                    $validation = new DataValidation();
-                    $validation->setType(DataValidation::TYPE_LIST);
-                    $validation->setErrorStyle(DataValidation::STYLE_INFORMATION);
-                    $validation->setAllowBlank(true);
-                    $validation->setShowInputMessage(true);
-                    $validation->setShowErrorMessage(false);
-                    $validation->setShowDropDown(true);
-                    $validation->setPromptTitle('Producto de este proveedor');
-                    $validation->setPrompt('Dale clic a la flechita de la celda para ver los productos que ya existen. Si escribes uno que no aparece en la lista, se crea nuevo.');
-                    $validation->setFormula1("'Productos existentes'!\$A\$2:\$A\${$ultimaFilaLista}");
-
+                // Desplegable de la columna Producto: en vez de una lista
+                // fija, la fuente es una formula OFFSET+COINCIDIR+CONTAR.SI
+                // que filtra 'Productos existentes'!A por lo que ya llevas
+                // escrito en la propia celda (comodin "texto*") -- asi el
+                // desplegable de verdad se acorta mientras escribes.
+                if (! empty(array_filter($this->productosExistentes))) {
                     for ($fila = 2; $fila <= $ultimaFila; $fila++) {
-                        $sheet->getCell('A' . $fila)->setDataValidation(clone $validation);
+                        $validation = new DataValidation();
+                        $validation->setType(DataValidation::TYPE_LIST);
+                        $validation->setErrorStyle(DataValidation::STYLE_INFORMATION);
+                        $validation->setAllowBlank(true);
+                        $validation->setShowInputMessage(true);
+                        $validation->setShowErrorMessage(false);
+                        $validation->setShowDropDown(true);
+                        $validation->setPromptTitle('Producto de este proveedor');
+                        $validation->setPrompt('Escribe parte del nombre: el desplegable se filtra solo. Si no aparece, se crea un producto nuevo con ese nombre.');
+                        $validation->setFormula1(
+                            "OFFSET('Productos existentes'!\$A\$1,MATCH(A{$fila}&\"*\",'Productos existentes'!\$A:\$A,0)-1,0,COUNTIF('Productos existentes'!\$A:\$A,A{$fila}&\"*\"),1)"
+                        );
+
+                        $sheet->getCell('A' . $fila)->setDataValidation($validation);
                     }
                 }
 
                 // Autollenar el resto de la fila con los datos ACTUALES del
-                // producto escrito/elegido en la columna A, buscandolo en
-                // la hoja "Productos existentes". Si el producto es nuevo
-                // (no aparece alla), estas celdas quedan vacias y hay que
-                // llenarlas a mano. El usuario puede sobreescribir cualquier
-                // celda si esta compra trae un dato distinto al de siempre.
+                // producto escrito/elegido en la columna A, buscandolo por
+                // coincidencia parcial (comodin) en "Productos existentes".
+                // Si el producto es nuevo (no aparece alla), estas celdas
+                // quedan vacias y hay que llenarlas a mano. El usuario puede
+                // sobreescribir cualquier celda si esta compra trae un dato
+                // distinto al de siempre (ej: subio el costo).
+                //
+                // Utilidad (F) queda SIN formula a proposito: es una
+                // decision de precio de esta compra, no algo que deba
+                // copiarse ciego del historico. Precio de Venta (G) se
+                // calcula solo a partir de Costo+IVA+Utilidad (no se copia
+                // el precio de venta anterior del producto), redondeado a
+                // la centena, para que siempre quede consistente con lo que
+                // el usuario haya puesto en C/E/F.
                 for ($fila = 3; $fila <= $ultimaFila; $fila++) {
                     foreach ([
                         'C' => 2, // Costo Unitario
                         'D' => 3, // Descuento Comercial
                         'E' => 4, // IVA
-                        'F' => 5, // Utilidad
-                        'G' => 6, // Precio de Venta
                         'H' => 7, // Departamento
                         'I' => 8, // Subfamilia
                         'J' => 9, // Unidad de Medida
                     ] as $columna => $indiceProductosExistentes) {
                         $sheet->setCellValue(
                             $columna . $fila,
-                            "=IFERROR(VLOOKUP(\$A{$fila},'Productos existentes'!\$A:\$I,{$indiceProductosExistentes},FALSE),\"\")"
+                            "=IF(\$A{$fila}=\"\",\"\",IFERROR(VLOOKUP(\"*\"&\$A{$fila}&\"*\",'Productos existentes'!\$A:\$I,{$indiceProductosExistentes},FALSE),\"\"))"
                         );
                     }
+
+                    $sheet->setCellValue(
+                        'G' . $fila,
+                        "=IF(\$A{$fila}=\"\",\"\",IF(F{$fila}=\"\",\"\",MROUND(C{$fila}*(1+E{$fila}/100)/(1-F{$fila}/100),100)))"
+                    );
                 }
             },
         ];

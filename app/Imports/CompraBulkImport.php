@@ -112,8 +112,14 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
                 $pv = $precioVentaExcel;
                 $util = $utilidadExcel ?? round((($pv - $costoConIva) / max($pv, 0.01)) * 100, 2);
             } else {
+                // Respaldo por si el excel llega sin la formula de Precio de
+                // Venta (ej. csv, o el usuario la borro). Misma formula que
+                // la plantilla: margen sobre el precio de venta (no markup
+                // sobre el costo), redondeado a la centena.
                 $util = $utilidadExcel ?? ($esNuevo ? 30.0 : (float) $producto->utilidad1);
-                $pv = round($costoConIva * (1 + $util / 100), 2);
+                $pv = $util >= 100
+                    ? $costoConIva
+                    : round($costoConIva / (1 - $util / 100) / 100) * 100;
             }
 
             $precioVentaAnterior = (float) ($producto->precio_venta1 ?? 0);
