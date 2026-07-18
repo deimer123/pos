@@ -1322,16 +1322,59 @@
                 <div class="flex-1 min-h-0 overflow-y-auto p-3" style="background:#f8fbff;">
                     <table class="w-full text-sm bg-white rounded-lg overflow-hidden shadow-sm border" style="border-color:#dbeafe;">
                         @forelse ($clientes as $cliente)
-                            <tr wire:key="cliente-{{ $cliente->id }}"
-                                wire:click="seleccionarCliente({{ $cliente->id_clip_pro }})"
-                                class="hover:bg-indigo-50 cursor-pointer border-b">
-                                <td class="px-3 py-2">
-                                    <div class="font-semibold">{{ $cliente->nombre }}</div>
-                                    <div class="text-xs text-gray-500">
-                                        Cedula: {{ $cliente->identificacion ?? '-' }}
-                                    </div>
-                                </td>
-                            </tr>
+                            @if ($editandoClienteId === $cliente->id_clip_pro)
+                                <tr wire:key="cliente-edit-{{ $cliente->id }}" class="border-b" style="background:#eef2ff;">
+                                    <td class="px-3 py-3">
+                                        <div class="font-semibold mb-2">{{ $cliente->nombre }}</div>
+                                        <div class="grid grid-cols-1 gap-2">
+                                            <div>
+                                                <input type="text" wire:model.defer="editClienteTelefono"
+                                                    placeholder="Telefono"
+                                                    class="w-full px-2 py-1.5 border rounded-md text-sm" />
+                                                @error('editClienteTelefono') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                                            </div>
+                                            <div>
+                                                <input type="text" wire:model.defer="editClienteEmail"
+                                                    placeholder="Correo"
+                                                    class="w-full px-2 py-1.5 border rounded-md text-sm" />
+                                                @error('editClienteEmail') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                                            </div>
+                                        </div>
+                                        <div class="flex gap-2 mt-2">
+                                            <button wire:click="guardarEdicionCliente" type="button"
+                                                class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md">
+                                                Guardar
+                                            </button>
+                                            <button wire:click="cancelarEdicionCliente" type="button"
+                                                class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-semibold px-3 py-1.5 rounded-md">
+                                                Cancelar
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @else
+                                <tr wire:key="cliente-{{ $cliente->id }}"
+                                    class="hover:bg-indigo-50 border-b">
+                                    <td class="px-3 py-2 cursor-pointer" wire:click="seleccionarCliente({{ $cliente->id_clip_pro }})">
+                                        <div class="font-semibold">{{ $cliente->nombre }}</div>
+                                        <div class="text-xs text-gray-500">
+                                            Cedula: {{ $cliente->identificacion ?? '-' }}
+                                        </div>
+                                        @if ($cliente->telefono || $cliente->email)
+                                            <div class="text-xs text-gray-400">
+                                                {{ $cliente->telefono ?? '-' }} @if($cliente->email) &middot; {{ $cliente->email }} @endif
+                                            </div>
+                                        @endif
+                                    </td>
+                                    <td class="px-3 py-2 text-right" style="width:36px;">
+                                        <button type="button" title="Editar telefono/correo"
+                                            wire:click.stop="iniciarEdicionCliente({{ $cliente->id_clip_pro }})"
+                                            class="text-gray-400 hover:text-blue-600">
+                                            ✏️
+                                        </button>
+                                    </td>
+                                </tr>
+                            @endif
                         @empty
                             <tr>
                                 <td class="px-3 py-4 text-center text-gray-500">

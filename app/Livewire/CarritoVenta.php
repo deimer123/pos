@@ -68,6 +68,9 @@ class CarritoVenta extends Component
     public string  $ordenDomObservaciones = '';
     public $buscarCliente             = '';
     public $mostrarModalCrearCliente  = false;
+    public $editandoClienteId         = null;
+    public $editClienteTelefono       = '';
+    public $editClienteEmail          = '';
     public $nuevoCliente              = [
         'tipo_documento_id'  => '',
         'identificacion'     => '',
@@ -725,9 +728,10 @@ public function asignarConsumidorFinalPorDefecto()
         $this->clientes = Actor::whereIn('tipo', [1, 2])
             ->where('empresa_id', $empresaId)
             ->orderBy('nombre')
-            ->get(['id', 'id_clip_pro', 'nombre', 'identificacion']);
+            ->get(['id', 'id_clip_pro', 'nombre', 'identificacion', 'telefono', 'email']);
 
         $this->buscarCliente = '';
+        $this->editandoClienteId = null;
         $this->mostrarModalClientes = true;
     }
 
@@ -864,6 +868,82 @@ public function asignarConsumidorFinalPorDefecto()
 
     $this->mostrarModalClientes = false;
 
+}
+
+public function iniciarEdicionCliente($idClipPro)
+{
+    $empresaId = $this->getEmpresaId();
+
+    $cliente = \App\Models\Actor::where('empresa_id', $empresaId)
+        ->where('id_clip_pro', $idClipPro)
+        ->first();
+
+    if (! $cliente) {
+        $this->dispatch('error', 'Cliente no encontrado');
+        return;
+    }
+
+    $this->resetErrorBag();
+    $this->editandoClienteId   = $idClipPro;
+    $this->editClienteTelefono = $cliente->telefono;
+    $this->editClienteEmail    = $cliente->email;
+}
+
+public function cancelarEdicionCliente()
+{
+    $this->resetErrorBag();
+    $this->editandoClienteId = null;
+}
+
+public function guardarEdicionCliente()
+{
+    $empresaId = $this->getEmpresaId();
+
+    $cliente = \App\Models\Actor::where('empresa_id', $empresaId)
+        ->where('id_clip_pro', $this->editandoClienteId)
+        ->first();
+
+    if (! $cliente) {
+        $this->dispatch('error', 'Cliente no encontrado');
+        $this->editandoClienteId = null;
+        return;
+    }
+
+    $this->validate([
+        'editClienteTelefono' => [
+            'required',
+            'numeric',
+            Rule::unique('actors', 'telefono')
+                ->where(fn ($query) => $query->where('empresa_id', $empresaId))
+                ->ignore($cliente->id),
+        ],
+        'editClienteEmail' => [
+            'required',
+            'email',
+            Rule::unique('actors', 'email')
+                ->where(fn ($query) => $query->where('empresa_id', $empresaId))
+                ->ignore($cliente->id),
+        ],
+    ], [
+        'editClienteTelefono.required' => 'Debe ingresar un telefono.',
+        'editClienteTelefono.numeric'  => 'El telefono debe ser numerico.',
+        'editClienteTelefono.unique'   => 'Este telefono ya esta registrado en otro cliente.',
+        'editClienteEmail.required'    => 'Debe ingresar un correo.',
+        'editClienteEmail.email'       => 'Debe ingresar un correo valido.',
+        'editClienteEmail.unique'      => 'Este correo ya esta registrado en otro cliente.',
+    ]);
+
+    $cliente->update([
+        'telefono' => $this->editClienteTelefono,
+        'email'    => $this->editClienteEmail,
+    ]);
+
+    if ($this->clienteId === $cliente->id) {
+        $this->clienteTelefono = $cliente->telefono;
+    }
+
+    $this->editandoClienteId = null;
+    $this->dispatch('success', 'Datos del cliente actualizados.');
 }
 
 
@@ -2245,7 +2325,7 @@ $this->dispatch('guardar-carrito-en-cache', $this->carrito); // âœ… GUARDAR 
             });
         })
         ->orderBy('nombre')
-        ->get(['id', 'id_clip_pro', 'nombre', 'identificacion']);
+        ->get(['id', 'id_clip_pro', 'nombre', 'identificacion', 'telefono', 'email']);
 
     $carrito = $this->limpiarUtf8Array($this->carrito);
     $observacionesPrefactura = $this->textoUtf8($this->observacionesPrefactura);
