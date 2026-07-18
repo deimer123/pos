@@ -164,7 +164,7 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
                     }
                 }
 
-                // Autollenar el resto de la fila con los datos ACTUALES del
+                // Autollenar Costo Unitario e IVA con los datos ACTUALES del
                 // producto escrito/elegido en la columna A, buscandolo por
                 // coincidencia parcial (comodin) en "Productos existentes".
                 // Si el producto es nuevo (no aparece alla), estas celdas
@@ -172,7 +172,14 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
                 // sobreescribir cualquier celda si esta compra trae un dato
                 // distinto al de siempre (ej: subio el costo).
                 //
-                // Utilidad (F) queda SIN formula a proposito: es una
+                // Descuento, Departamento, Subfamilia y Unidad de Medida ya
+                // NO llevan formula (se dejo solo en Costo/IVA/Precio de
+                // Venta): esas 4 solo importan para productos nuevos, que de
+                // todas formas hay que escribir a mano, y tener formula ahi
+                // no aportaba nada -- solo daba pie a que Excel se comportara
+                // raro al escribir encima y cambiar de celda.
+                //
+                // Utilidad (F) sigue SIN formula a proposito: es una
                 // decision de precio de esta compra, no algo que deba
                 // copiarse ciego del historico. Precio de Venta (G) se
                 // calcula solo a partir de Costo+IVA+Utilidad (no se copia
@@ -182,11 +189,7 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
                 for ($fila = 3; $fila <= $ultimaFila; $fila++) {
                     foreach ([
                         'C' => 2, // Costo Unitario
-                        'D' => 3, // Descuento Comercial
                         'E' => 4, // IVA
-                        'H' => 7, // Departamento
-                        'I' => 8, // Subfamilia
-                        'J' => 9, // Unidad de Medida
                     ] as $columna => $indiceProductosExistentes) {
                         $sheet->setCellValue(
                             $columna . $fila,

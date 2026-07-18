@@ -36,13 +36,12 @@ class CompraBulkTemplateReferenciaSheet implements FromArray, WithHeadings, With
             'Producto, Cantidad y Costo Unitario son obligatorios. Las demas columnas se pueden dejar vacias.',
             'Producto: escribe el nombre. Si ya existe para el proveedor que elegiste, se actualiza su costo y sube su existencia. Si no existe, se crea de una.',
             'En la columna Producto (hoja Items), escribe parte del nombre: el desplegable de la celda se va filtrando solo con lo que llevas escrito. Si lo que buscas no aparece, es un producto nuevo.',
-            'Al escribir/elegir un producto que ya existe, Costo Unitario, Descuento, IVA, Departamento, Subfamilia y Unidad de Medida se llenan solos con sus datos actuales. Puedes sobreescribir cualquiera si esta compra trae un dato distinto (ej: subio el costo).',
+            'Al escribir/elegir un producto que ya existe, Costo Unitario e IVA se llenan solos con sus datos actuales. Puedes sobreescribirlos si esta compra trae un dato distinto (ej: subio el costo).',
+            'Descuento, Departamento, Subfamilia y Unidad de Medida NO se llenan solos: siempre se escriben a mano. Solo importan si el producto es nuevo (si ya existia, no se tocan al importar).',
             'Utilidad la escribes tu (es una decision de precio de esta compra, no se copia del historico). Precio de Venta se calcula solo a partir de Costo + IVA + Utilidad, redondeado a la centena -- no hace falta escribirlo.',
             'Para buscar un producto por nombre en la hoja "Productos existentes": dale clic a la flechita del encabezado "Producto", y arriba del listado hay una cajita "Buscar" que filtra mientras escribes. Copia el nombre que encuentres a la hoja Items.',
-            'Departamento / Subfamilia / Unidad de Medida solo se usan si el producto es nuevo (si ya existia, no se tocan).',
             'Si dejas vacios Departamento o Subfamilia en un producto nuevo, queda con "FAMILIA DE PRUEBA" / "SUBFAMILIA DE PRUEBA" (editable despues).',
             'IVA: numero sin el simbolo %. Si lo dejas vacio, usa el IVA que ya tenia el producto (o 19 si es nuevo).',
-            'Costo Unitario, Descuento, IVA, Departamento, Subfamilia y Unidad se llenan solos, pero se pueden escribir/cambiar libremente en cualquier fila si esta compra trae un dato distinto (ej: subio el costo).',
             'Todo o nada: si una sola fila tiene error, no se crea la compra ni se toca ningun producto. Corrige el excel y vuelve a subir el MISMO archivo (mismo numero de factura) sin que marque "factura duplicada".',
         ];
 
