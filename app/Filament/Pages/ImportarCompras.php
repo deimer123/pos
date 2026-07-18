@@ -65,11 +65,11 @@ class ImportarCompras extends Page
     {
         $empresaId = auth()->user()->getEmpresaActualId();
 
-        $query = Product::query()->where('empresa_id', $empresaId);
+        $query = Product::query()->where('empresa_id', $empresaId)->with(['familia1', 'subfamilia']);
 
-        // Si ya eligió proveedor, la lista de apoyo (autocompletado) solo
-        // trae los productos de ESE proveedor -- si aun no lo elige, trae
-        // los de toda la empresa (mejor eso que nada).
+        // Si ya eligió proveedor, la lista de productos existentes (dropdown
+        // + hoja "Productos existentes") solo trae los de ESE proveedor --
+        // si aun no lo elige, trae los de toda la empresa (mejor eso que nada).
         if ($this->proveedor_id) {
             $clip = Actor::where('empresa_id', $empresaId)->where('id', $this->proveedor_id)->value('id_clip_pro');
             if ($clip) {
@@ -77,7 +77,7 @@ class ImportarCompras extends Page
             }
         }
 
-        $productos = $query->orderBy('descripcion_larga')->pluck('descripcion_larga')->toArray();
+        $productos = $query->orderBy('descripcion_larga')->get();
 
         return Excel::download(new CompraBulkTemplateExport($empresaId, $productos), 'plantilla-compras.xlsx');
     }
