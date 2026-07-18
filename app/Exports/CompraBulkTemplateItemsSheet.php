@@ -13,7 +13,6 @@ use PhpOffice\PhpSpreadsheet\Cell\DataValidation;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Style\Protection;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 // Ultima fila (inclusive) hasta donde se ponen el desplegable y las
@@ -187,18 +186,6 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
                         "=IF(\$A{$fila}=\"\",\"\",IF(F{$fila}=\"\",\"\",MROUND(C{$fila}*(1+E{$fila}/100)/(1-F{$fila}/100),100)))"
                     );
                 }
-
-                // Proteger la hoja para que no se puedan borrar/editar por
-                // accidente las formulas: solo quedan editables Producto,
-                // Cantidad y Utilidad (lo que realmente hay que escribir a
-                // mano). Sin contraseña -- evita el accidente, pero si de
-                // verdad hace falta se puede quitar desde Revisar >
-                // Desproteger hoja sin que pida clave.
-                $sheet->getStyle('A1:J' . $ultimaFila)->getProtection()->setLocked(Protection::PROTECTION_PROTECTED);
-                $sheet->getStyle('A2:A' . $ultimaFila)->getProtection()->setLocked(Protection::PROTECTION_UNPROTECTED);
-                $sheet->getStyle('B2:B' . $ultimaFila)->getProtection()->setLocked(Protection::PROTECTION_UNPROTECTED);
-                $sheet->getStyle('F2:F' . $ultimaFila)->getProtection()->setLocked(Protection::PROTECTION_UNPROTECTED);
-                $sheet->getProtection()->setSheet(true);
             },
         ];
     }
