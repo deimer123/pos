@@ -343,8 +343,20 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
         return [$producto, $siguienteCodigo + 1];
     }
 
+    // Si el nombre viene con pinta de formula (empieza con =, +, - o @),
+    // se trata como si viniera vacio en vez de crear un Departamento o
+    // Subfamilia con ese texto -- eso paso una vez por un bug ya
+    // corregido (se leyo el texto de una formula en vez de su
+    // resultado), y dejo un nombre corrupto guardado.
+    private function textoValido(string $nombre): string
+    {
+        return preg_match('/^[=+\-@]/', $nombre) ? '' : $nombre;
+    }
+
     private function resolveFamilia(string $nombre): int
     {
+        $nombre = $this->textoValido($nombre);
+
         if ($nombre === '') {
             return (int) Familia::query()->firstOrCreate(
                 ['empresa_id' => $this->empresaId, 'nombre' => 'FAMILIA DE PRUEBA'],
@@ -365,6 +377,8 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
 
     private function resolveSubfamilia(string $nombre, int $familiaId): int
     {
+        $nombre = $this->textoValido($nombre);
+
         if ($nombre === '') {
             return (int) Subfamilia::query()->firstOrCreate([
                 'empresa_id' => $this->empresaId,

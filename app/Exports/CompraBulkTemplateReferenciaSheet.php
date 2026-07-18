@@ -46,15 +46,23 @@ class CompraBulkTemplateReferenciaSheet implements FromArray, WithHeadings, With
             'Todo o nada: si una sola fila tiene error, no se crea la compra ni se toca ningun producto. Corrige el excel y vuelve a subir el MISMO archivo (mismo numero de factura) sin que marque "factura duplicada".',
         ];
 
+        // Se descartan nombres que empiecen como formula (=, +, -, @): Excel
+        // los toma como el inicio de una formula invalida y "repara" el
+        // archivo quitandolos. No deberian existir nombres asi, pero si
+        // alguno quedo mal creado en el pasado, mejor no mostrarlo aqui.
+        $esNombreValido = fn (?string $nombre) => $nombre && ! preg_match('/^[=+\-@]/', $nombre);
+
         $familias = Familia::where('empresa_id', $this->empresaId)
             ->orderBy('nombre')
             ->pluck('nombre')
+            ->filter($esNombreValido)
             ->values();
 
         $subfamilias = Subfamilia::where('empresa_id', $this->empresaId)
             ->with('familia')
             ->orderBy('nombre')
             ->get()
+            ->filter(fn ($s) => $esNombreValido($s->nombre))
             ->map(fn ($s) => $s->nombre . ' (' . (optional($s->familia)->nombre ?? '-') . ')')
             ->values();
 

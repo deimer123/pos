@@ -146,8 +146,19 @@ class ProductBulkImport implements ToCollection, WithHeadingRow, WithMultipleShe
         return is_numeric($value) ? (float) $value : null;
     }
 
+    // Si el nombre viene con pinta de formula (empieza con =, +, - o @),
+    // se trata como si viniera vacio en vez de crear un proveedor/
+    // departamento/subfamilia con ese texto (por si una fila de excel
+    // trae una celda con formula sin calcular en vez de su resultado).
+    private function textoValido(string $nombre): string
+    {
+        return preg_match('/^[=+\-@]/', $nombre) ? '' : $nombre;
+    }
+
     private function resolveProveedor(string $nombre): int
     {
+        $nombre = $this->textoValido($nombre);
+
         if ($nombre === '') {
             return (int) $this->defaultProveedor()->id_clip_pro;
         }
@@ -188,6 +199,8 @@ class ProductBulkImport implements ToCollection, WithHeadingRow, WithMultipleShe
 
     private function resolveFamilia(string $nombre): int
     {
+        $nombre = $this->textoValido($nombre);
+
         if ($nombre === '') {
             return (int) $this->defaultFamilia()->id;
         }
@@ -209,6 +222,8 @@ class ProductBulkImport implements ToCollection, WithHeadingRow, WithMultipleShe
 
     private function resolveSubfamilia(string $nombre, int $familiaId): int
     {
+        $nombre = $this->textoValido($nombre);
+
         if ($nombre === '') {
             return (int) $this->defaultSubfamilia($familiaId)->id_familia2;
         }

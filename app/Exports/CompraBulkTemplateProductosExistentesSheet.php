@@ -53,6 +53,18 @@ class CompraBulkTemplateProductosExistentesSheet implements FromArray, WithHeadi
 
     public function array(): array
     {
+        // Si un nombre empieza como formula (=, +, -, @), Excel lo toma
+        // como el inicio de una formula invalida y "repara" el archivo
+        // quitandolo. No deberia pasar, pero por si algun nombre quedo mal
+        // guardado, se reemplaza por un texto seguro en vez de mostrarlo.
+        $textoSeguro = function (?string $valor) {
+            if (! $valor || preg_match('/^[=+\-@]/', $valor)) {
+                return '-';
+            }
+
+            return $valor;
+        };
+
         return $this->productos->map(fn ($p) => [
             $p->descripcion_larga,
             (float) $p->precio_costo,
@@ -60,8 +72,8 @@ class CompraBulkTemplateProductosExistentesSheet implements FromArray, WithHeadi
             (float) $p->iva_compra,
             (float) $p->utilidad1,
             (float) $p->precio_venta1,
-            optional($p->familia1)->nombre ?? '-',
-            optional($p->subfamilia)->nombre ?? '-',
+            $textoSeguro(optional($p->familia1)->nombre),
+            $textoSeguro(optional($p->subfamilia)->nombre),
             self::UNIDADES[(int) $p->id_unidad_de_medida] ?? '-',
         ])->toArray();
     }
