@@ -6,6 +6,7 @@ use App\Exports\CompraBulkTemplateExport;
 use App\Imports\CompraBulkImport;
 use App\Models\Actor;
 use App\Models\Compra;
+use App\Models\Product;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Livewire\WithFileUploads;
@@ -64,7 +65,21 @@ class ImportarCompras extends Page
     {
         $empresaId = auth()->user()->getEmpresaActualId();
 
-        return Excel::download(new CompraBulkTemplateExport($empresaId), 'plantilla-compras.xlsx');
+        $query = Product::query()->where('empresa_id', $empresaId);
+
+        // Si ya eligió proveedor, la lista de apoyo (autocompletado) solo
+        // trae los productos de ESE proveedor -- si aun no lo elige, trae
+        // los de toda la empresa (mejor eso que nada).
+        if ($this->proveedor_id) {
+            $clip = Actor::where('empresa_id', $empresaId)->where('id', $this->proveedor_id)->value('id_clip_pro');
+            if ($clip) {
+                $query->where('id_proveedor', (int) $clip);
+            }
+        }
+
+        $productos = $query->orderBy('descripcion_larga')->pluck('descripcion_larga')->toArray();
+
+        return Excel::download(new CompraBulkTemplateExport($empresaId, $productos), 'plantilla-compras.xlsx');
     }
 
     public function importar()

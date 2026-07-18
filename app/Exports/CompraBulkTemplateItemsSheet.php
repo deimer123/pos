@@ -4,16 +4,33 @@ namespace App\Exports;
 
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
+use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
+use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Cell\DataValidation;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Color;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle, WithColumnWidths, WithStyles
+class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle, WithColumnWidths, WithStyles, WithEvents
 {
+    // Fila desde donde se esconde la lista de productos existentes, muy por
+    // debajo del area donde se escriben los items. Puesta en la MISMA
+    // columna A (no en otra hoja) a proposito: el autocompletado nativo de
+    // Excel al escribir en una celda solo sugiere valores que ya existen en
+    // esa misma columna de esa misma hoja.
+    // Publica (no privada): CompraBulkImport::collection() la usa para
+    // saber a partir de que fila debe dejar de leer datos reales.
+    public const FILA_LISTA_OCULTA = 1000;
+
+    public function __construct(protected array $productosExistentes = [])
+    {
+    }
+
     public function title(): string
     {
         return 'Items';
@@ -105,5 +122,46 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
         $sheet->freezePane('A2');
 
         return [];
+    }
+
+    public function registerEvents(): array
+    {
+        return [
+            AfterSheet::class => function (AfterSheet $event) {
+                $sheet = $event->sheet->getDelegate();
+                $productos = array_values(array_unique(array_filter($this->productosExistentes)));
+
+                if (empty($productos)) {
+                    return;
+                }
+
+                $primeraFila = self::FILA_LISTA_OCULTA;
+                $ultimaFila = $primeraFila + count($productos) - 1;
+
+                $sheet->setCellValue('A' . ($primeraFila - 1), 'No borrar: lista de apoyo para el autocompletado (productos existentes de este proveedor)');
+                $sheet->getStyle('A' . ($primeraFila - 1))->getFont()->setItalic(true)->setColor(new Color('FF9CA3AF'));
+
+                foreach ($productos as $i => $nombre) {
+                    $sheet->setCellValue('A' . ($primeraFila + $i), $nombre);
+                }
+
+                $sheet->getStyle('A' . $primeraFila . ':A' . $ultimaFila)->getFont()->setColor(new Color('FFD1D5DB'));
+
+                $validation = new DataValidation();
+                $validation->setType(DataValidation::TYPE_LIST);
+                $validation->setErrorStyle(DataValidation::STYLE_INFORMATION);
+                $validation->setAllowBlank(true);
+                $validation->setShowInputMessage(true);
+                $validation->setShowErrorMessage(false);
+                $validation->setShowDropDown(false);
+                $validation->setPromptTitle('Producto de este proveedor');
+                $validation->setPrompt('Empieza a escribir y Excel te sugiere los que ya existen. Si no aparece, se crea uno nuevo con ese nombre.');
+                $validation->setFormula1('$A$' . $primeraFila . ':$A$' . $ultimaFila);
+
+                for ($fila = 2; $fila <= $primeraFila - 2; $fila++) {
+                    $sheet->getCell('A' . $fila)->setDataValidation(clone $validation);
+                }
+            },
+        ];
     }
 }
