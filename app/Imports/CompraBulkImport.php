@@ -78,7 +78,7 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
 
             $row = collect($rawRow)->mapWithKeys(fn ($value, $key) => [strtolower(trim((string) $key)) => $value]);
 
-            $nombre = trim((string) ($row['producto'] ?? ''));
+            $nombre = $this->textoValido(trim((string) ($row['producto'] ?? '')));
             $cantidad = $this->numero($row['cantidad'] ?? null);
             $costo = $this->numero($row['costo_unitario'] ?? null);
 

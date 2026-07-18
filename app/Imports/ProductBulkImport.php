@@ -49,7 +49,7 @@ class ProductBulkImport implements ToCollection, WithHeadingRow, WithMultipleShe
                 continue; // fila completamente vacia, se ignora sin avisar
             }
 
-            $nombre = trim((string) ($row['nombre_del_producto'] ?? ''));
+            $nombre = $this->textoValido(trim((string) ($row['nombre_del_producto'] ?? '')));
 
             if (str_starts_with(mb_strtolower($nombre), 'ejemplo')) {
                 continue; // fila de ejemplo de la plantilla, se ignora sin avisar

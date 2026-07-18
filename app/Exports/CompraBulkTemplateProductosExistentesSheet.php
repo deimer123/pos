@@ -66,7 +66,7 @@ class CompraBulkTemplateProductosExistentesSheet implements FromArray, WithHeadi
         };
 
         return $this->productos->map(fn ($p) => [
-            $p->descripcion_larga,
+            $textoSeguro($p->descripcion_larga),
             (float) $p->precio_costo,
             (float) $p->descuento_comercial,
             (float) $p->iva_compra,

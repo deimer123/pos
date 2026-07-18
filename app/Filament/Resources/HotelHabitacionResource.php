@@ -9,6 +9,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class HotelHabitacionResource extends Resource
 {
@@ -40,6 +41,12 @@ class HotelHabitacionResource extends Resource
         $empresaId = $user->getEmpresaActualId();
 
         return (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_hotel');
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->where('empresa_id', auth()->user()->getEmpresaActualId());
     }
 
     private static function moneyField(string $name, string $label): Forms\Components\TextInput

@@ -247,9 +247,6 @@ Route::get('/ticket-cierre-caja/{id}', function($id) {
     ]);
 })->middleware('auth');
 
-Route::get('/inventario', function () {
-    return view('inventario.rapido');
-});
 Route::middleware(['auth'])->group(function () {
 Route::get('/producto/{codigo}', [InventarioController::class, 'buscar']);
 Route::post('/inventario/guardar', [InventarioController::class, 'guardar']);

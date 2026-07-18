@@ -668,6 +668,12 @@ style="width:100%; min-height:80px; resize:vertical;"></textarea>
 
 
 <script>
+function escapeHtml(texto) {
+    return String(texto ?? '').replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    })[c]);
+}
+
 let items = [];
 let productoActual = null;
 let lista = [];
@@ -724,11 +730,11 @@ function renderTabla() {
     items.forEach((item, index) => {
         let row = `
         <tr>
-            <td>${item.codigo}</td>
-            <td>${item.nombre}</td>
-            <td>${item.stock}</td>
+            <td>${escapeHtml(item.codigo)}</td>
+            <td>${escapeHtml(item.nombre)}</td>
+            <td>${escapeHtml(item.stock)}</td>
             <td>
-                <input type="number" value="${item.cantidad}"
+                <input type="number" value="${escapeHtml(item.cantidad)}"
                     onchange="editarCantidad(${index}, this.value)"
                     class="input-cantidad">
             </td>
@@ -803,8 +809,8 @@ function pintar(data) {
         if(i===index) tr.classList.add('selected');
 
         tr.innerHTML = `
-            <td>${p.id_producto}</td>
-            <td>${p.descripcion_larga}</td>
+            <td>${escapeHtml(p.id_producto)}</td>
+            <td>${escapeHtml(p.descripcion_larga)}</td>
         `;
 
         tr.onclick = ()=> seleccionar(p);

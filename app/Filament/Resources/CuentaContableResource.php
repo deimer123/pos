@@ -10,6 +10,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class CuentaContableResource extends Resource
 {
@@ -29,6 +30,12 @@ class CuentaContableResource extends Resource
     public static function canCreate(): bool
     {
         return auth()->check() && auth()->user()->hasRole('admin_empresa');
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->where('empresa_id', auth()->user()->getEmpresaActualId());
     }
 
     public static function form(Form $form): Form

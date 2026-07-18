@@ -9,6 +9,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class MecanicoResource extends Resource
 {
@@ -39,6 +40,12 @@ class MecanicoResource extends Resource
         $empresaId = auth()->user()->getEmpresaActualId();
 
         return (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_taller');
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->where('empresa_id', auth()->user()->getEmpresaActualId());
     }
 
     public static function form(Form $form): Form
