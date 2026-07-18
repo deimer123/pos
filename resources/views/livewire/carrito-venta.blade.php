@@ -1328,12 +1328,14 @@
                                         <div class="font-semibold mb-2">{{ $cliente->nombre }}</div>
                                         <div class="grid grid-cols-1 gap-2">
                                             <div>
+                                                <label class="text-xs font-semibold" style="color:#4b5563;">Telefono</label>
                                                 <input type="text" wire:model.defer="editClienteTelefono"
                                                     placeholder="Telefono"
                                                     class="w-full px-2 py-1.5 border rounded-md text-sm" />
                                                 @error('editClienteTelefono') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
                                             </div>
                                             <div>
+                                                <label class="text-xs font-semibold" style="color:#4b5563;">Correo</label>
                                                 <input type="text" wire:model.defer="editClienteEmail"
                                                     placeholder="Correo"
                                                     class="w-full px-2 py-1.5 border rounded-md text-sm" />
