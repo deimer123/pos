@@ -238,6 +238,7 @@ class EmpleadoResource extends Resource
                                     'catalogo'  => 'Catálogo público',
                                     'ajustes_inventario' => 'Ajustes de Inventario',
                                     'notas_credito' => 'Notas Crédito',
+                                    'kardex' => 'Kardex',
                                 ];
 
                                 if ($config?->usa_recetas) {

@@ -8,9 +8,19 @@ use Illuminate\Support\Carbon;
 
 class KardexController extends Controller
 {
+    private function verificarAcceso(): void
+    {
+        $user = auth()->user();
+
+        if (! $user || ! ($user->hasRole('admin_empresa') || ($user->hasRole('digitador') && $user->puedeVerResource('kardex')))) {
+            abort(403);
+        }
+    }
 
 public function reporte(Request $request)
 {
+    $this->verificarAcceso();
+
     $empresaId = auth()->user()->getEmpresaActualId();
 
     $productoId = $request->producto_id;
@@ -55,6 +65,8 @@ public function reporte(Request $request)
 
 public function index(Request $request)
 {
+    $this->verificarAcceso();
+
     $empresaId = auth()->user()->getEmpresaActualId();
 
     $codigo = $request->codigo;
@@ -110,6 +122,8 @@ public function index(Request $request)
 
 public function documento(Request $request)
 {
+    $this->verificarAcceso();
+
     $empresaId = auth()->user()->getEmpresaActualId();
     $tipo = $request->tipo;
     $ref  = $request->ref;

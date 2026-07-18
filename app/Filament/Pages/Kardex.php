@@ -18,10 +18,8 @@ class Kardex extends Page
 
     public static function shouldRegisterNavigation(): bool
     {
-        return auth()->check() &&
-            auth()->user()->hasAnyRole([
-                'admin_empresa',
-                'digitador',
-            ]);
+        $user = auth()->user();
+
+        return (bool) $user && ($user->hasRole('admin_empresa') || ($user->hasRole('digitador') && $user->puedeVerResource('kardex')));
     }
 }
