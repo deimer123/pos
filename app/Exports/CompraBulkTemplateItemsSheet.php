@@ -12,20 +12,14 @@ use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Cell\DataValidation;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\Color;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
+// Ultima fila (inclusive) hasta donde se ponen el desplegable y las
+// formulas de autollenado de esta hoja.
 class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle, WithColumnWidths, WithStyles, WithEvents
 {
-    // Fila desde donde se esconde la lista de productos existentes, muy por
-    // debajo del area donde se escriben los items. Es la fuente del
-    // desplegable (Data Validation tipo lista) de la columna Producto --
-    // NO alimenta el autocompletado nativo de Excel al escribir, porque ese
-    // requiere celdas contiguas sin huecos en blanco en la misma columna.
-    // Publica (no privada): CompraBulkImport::collection() la usa para
-    // saber a partir de que fila debe dejar de leer datos reales.
-    public const FILA_LISTA_OCULTA = 1000;
+    private const ULTIMA_FILA_FORMULAS = 500;
 
     public function __construct(protected array $productosExistentes = [])
     {
@@ -129,37 +123,55 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
         return [
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
-                $productos = array_values(array_unique(array_filter($this->productosExistentes)));
+                $ultimaFila = self::ULTIMA_FILA_FORMULAS;
 
-                if (empty($productos)) {
-                    return;
+                // Desplegable de la columna Producto: apunta directo a la
+                // columna A de la hoja "Productos existentes" (sin copiar
+                // nada aqui). Data Validation si puede referenciar otra
+                // hoja sin problema, a diferencia del autocompletado nativo.
+                $cantidadProductos = count(array_filter($this->productosExistentes));
+
+                if ($cantidadProductos > 0) {
+                    $ultimaFilaLista = $cantidadProductos + 1; // +1 por el encabezado de esa hoja
+
+                    $validation = new DataValidation();
+                    $validation->setType(DataValidation::TYPE_LIST);
+                    $validation->setErrorStyle(DataValidation::STYLE_INFORMATION);
+                    $validation->setAllowBlank(true);
+                    $validation->setShowInputMessage(true);
+                    $validation->setShowErrorMessage(false);
+                    $validation->setShowDropDown(true);
+                    $validation->setPromptTitle('Producto de este proveedor');
+                    $validation->setPrompt('Dale clic a la flechita de la celda para ver los productos que ya existen. Si escribes uno que no aparece en la lista, se crea nuevo.');
+                    $validation->setFormula1("'Productos existentes'!\$A\$2:\$A\${$ultimaFilaLista}");
+
+                    for ($fila = 2; $fila <= $ultimaFila; $fila++) {
+                        $sheet->getCell('A' . $fila)->setDataValidation(clone $validation);
+                    }
                 }
 
-                $primeraFila = self::FILA_LISTA_OCULTA;
-                $ultimaFila = $primeraFila + count($productos) - 1;
-
-                $sheet->setCellValue('A' . ($primeraFila - 1), 'No borrar: lista de apoyo del desplegable (productos existentes de este proveedor)');
-                $sheet->getStyle('A' . ($primeraFila - 1))->getFont()->setItalic(true)->setColor(new Color('FF9CA3AF'));
-
-                foreach ($productos as $i => $nombre) {
-                    $sheet->setCellValue('A' . ($primeraFila + $i), $nombre);
-                }
-
-                $sheet->getStyle('A' . $primeraFila . ':A' . $ultimaFila)->getFont()->setColor(new Color('FFD1D5DB'));
-
-                $validation = new DataValidation();
-                $validation->setType(DataValidation::TYPE_LIST);
-                $validation->setErrorStyle(DataValidation::STYLE_INFORMATION);
-                $validation->setAllowBlank(true);
-                $validation->setShowInputMessage(true);
-                $validation->setShowErrorMessage(false);
-                $validation->setShowDropDown(true);
-                $validation->setPromptTitle('Producto de este proveedor');
-                $validation->setPrompt('Dale clic a la flechita de la celda para ver los productos que ya existen. Si escribes uno que no aparece en la lista, se crea nuevo.');
-                $validation->setFormula1('$A$' . $primeraFila . ':$A$' . $ultimaFila);
-
-                for ($fila = 2; $fila <= $primeraFila - 2; $fila++) {
-                    $sheet->getCell('A' . $fila)->setDataValidation(clone $validation);
+                // Autollenar el resto de la fila con los datos ACTUALES del
+                // producto escrito/elegido en la columna A, buscandolo en
+                // la hoja "Productos existentes". Si el producto es nuevo
+                // (no aparece alla), estas celdas quedan vacias y hay que
+                // llenarlas a mano. El usuario puede sobreescribir cualquier
+                // celda si esta compra trae un dato distinto al de siempre.
+                for ($fila = 3; $fila <= $ultimaFila; $fila++) {
+                    foreach ([
+                        'C' => 2, // Costo Unitario
+                        'D' => 3, // Descuento Comercial
+                        'E' => 4, // IVA
+                        'F' => 5, // Utilidad
+                        'G' => 6, // Precio de Venta
+                        'H' => 7, // Departamento
+                        'I' => 8, // Subfamilia
+                        'J' => 9, // Unidad de Medida
+                    ] as $columna => $indiceProductosExistentes) {
+                        $sheet->setCellValue(
+                            $columna . $fila,
+                            "=IFERROR(VLOOKUP(\$A{$fila},'Productos existentes'!\$A:\$I,{$indiceProductosExistentes},FALSE),\"\")"
+                        );
+                    }
                 }
             },
         ];

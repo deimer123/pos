@@ -36,7 +36,7 @@ class CompraBulkTemplateReferenciaSheet implements FromArray, WithHeadings, With
             'Producto, Cantidad y Costo Unitario son obligatorios. Las demas columnas se pueden dejar vacias.',
             'Producto: escribe el nombre. Si ya existe para el proveedor que elegiste, se actualiza su costo y sube su existencia. Si no existe, se crea de una.',
             'En la columna Producto (hoja Items), al pararte en la celda aparece una flechita a la derecha: dale clic para ver y elegir los productos que ya tiene el proveedor que elegiste en la pantalla antes de descargar.',
-            'Revisa la hoja "Productos existentes" para ver el Costo, Descuento, IVA, Utilidad, Precio de Venta, Departamento, Subfamilia y Unidad de Medida que tiene ACTUALMENTE cada producto de ese proveedor, antes de decidir que escribir.',
+            'Al escribir/elegir un producto que ya existe, las columnas Costo Unitario, Descuento, IVA, Utilidad, Precio de Venta, Departamento, Subfamilia y Unidad de Medida se llenan solas con sus datos actuales. Puedes sobreescribir cualquiera si esta compra trae un dato distinto (ej: subio el costo).',
             'Para buscar un producto por nombre en la hoja "Productos existentes": dale clic a la flechita del encabezado "Producto", y arriba del listado hay una cajita "Buscar" que filtra mientras escribes. Copia el nombre que encuentres a la hoja Items.',
             'Departamento / Subfamilia / Unidad de Medida solo se usan si el producto es nuevo (si ya existia, no se tocan).',
             'Si dejas vacios Departamento o Subfamilia en un producto nuevo, queda con "FAMILIA DE PRUEBA" / "SUBFAMILIA DE PRUEBA" (editable despues).',

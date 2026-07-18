@@ -2,7 +2,6 @@
 
 namespace App\Imports;
 
-use App\Exports\CompraBulkTemplateItemsSheet;
 use App\Models\Actor;
 use App\Models\AlternateCode;
 use App\Models\Compra;
@@ -56,13 +55,6 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
 
         foreach ($rows as $index => $rawRow) {
             $numeroFila = $index + 2;
-
-            // A partir de aqui empieza la lista de apoyo del autocompletado
-            // que trae la plantilla (escondida en la misma columna A, muy
-            // mas abajo) -- no son productos de la factura, se ignoran.
-            if ($numeroFila >= CompraBulkTemplateItemsSheet::FILA_LISTA_OCULTA - 1) {
-                continue;
-            }
 
             $row = collect($rawRow)->mapWithKeys(fn ($value, $key) => [strtolower(trim((string) $key)) => $value]);
 
