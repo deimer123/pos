@@ -96,6 +96,8 @@ class ImportarCompras extends Page
             return;
         }
 
+        @ini_set('memory_limit', '512M');
+
         $productos = Product::query()
             ->where('empresa_id', $empresaId)
             ->where('id_proveedor', (int) $proveedor->id_clip_pro)
@@ -151,6 +153,7 @@ class ImportarCompras extends Page
 
         @set_time_limit(0);
         @ini_set('max_execution_time', '0');
+        @ini_set('memory_limit', '512M');
 
         $fechaVencimiento = $this->tipo_pago === 'credito' ? $this->fecha_vencimiento : $this->fecha;
 

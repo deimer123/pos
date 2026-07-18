@@ -11,7 +11,6 @@ use App\Models\Subfamilia;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\ToCollection;
-use Maatwebsite\Excel\Concerns\WithCalculatedFormulas;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
@@ -27,7 +26,7 @@ use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 // archivo con el mismo numero de factura sin chocar con "factura duplicada"
 // (antes se creaba la compra solo con las filas validas, dejando la compra
 // incompleta y bloqueando un segundo intento).
-class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleSheets, WithCalculatedFormulas
+class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleSheets
 {
     protected int $creados = 0;
     protected array $errores = [];
