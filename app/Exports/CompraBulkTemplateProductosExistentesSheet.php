@@ -113,6 +113,13 @@ class CompraBulkTemplateProductosExistentesSheet implements FromArray, WithHeadi
 
         $sheet->freezePane('A2');
 
+        // Autofiltro (sin envolverlo en una Tabla, para no arriesgar que
+        // Excel le aplique su propio tema de color y pise el encabezado
+        // verde de arriba). Con esto solo, el desplegable de cada columna
+        // ya trae la cajita de busqueda nativa de Excel que filtra al
+        // escribir -- funciona igual, sin necesidad de una Tabla completa.
+        $sheet->setAutoFilter('A1:I' . $highestRow);
+
         return [];
     }
 }
