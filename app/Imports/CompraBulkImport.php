@@ -222,6 +222,24 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
             return [$producto, false, $siguienteCodigo];
         }
 
+        // El nombre del producto es unico por empresa (sin importar
+        // proveedor). Si ya existe con OTRO proveedor, no se puede crear
+        // uno nuevo con el mismo nombre (violaria ese unique) -- se
+        // reasigna el producto existente a este proveedor, que es
+        // exactamente lo que esta pasando en la vida real (cambio de
+        // proveedor para ese producto).
+        $productoOtroProveedor = Product::query()
+            ->where('empresa_id', $this->empresaId)
+            ->whereRaw('LOWER(descripcion_larga) = ?', [mb_strtolower($nombre)])
+            ->first();
+
+        if ($productoOtroProveedor) {
+            $productoOtroProveedor->id_proveedor = $this->proveedorClip;
+            $productoOtroProveedor->save();
+
+            return [$productoOtroProveedor, false, $siguienteCodigo];
+        }
+
         $idFamilia1 = $this->resolveFamilia(trim((string) ($row['departamento'] ?? '')));
         $idFamilia2 = $this->resolveSubfamilia(trim((string) ($row['subfamilia'] ?? '')), $idFamilia1);
         $idUnidad = $this->resolveUnidad(trim((string) ($row['unidad_de_medida'] ?? '')));

@@ -56,7 +56,7 @@
             <div class="flex items-center justify-between gap-4 px-6 py-5" style="background:#f0fdf4;">
                 <div>
                     <div class="text-base font-bold text-gray-800">2. Descarga la plantilla de ítems</div>
-                    <div class="text-sm text-gray-600 mt-1">Solo la lista de productos de esta factura (el encabezado ya lo llenaste arriba). Elige el Proveedor antes de descargar: en la columna "Producto" el desplegable se filtra solo mientras escribes, y al elegir uno se llenan solos Costo/Descuento/IVA/Departamento/Subfamilia/Unidad. Tú solo escribes la Cantidad y la Utilidad; el Precio de Venta se calcula solo.</div>
+                    <div class="text-sm text-gray-600 mt-1">Solo la lista de productos de esta factura (el encabezado ya lo llenaste arriba). <strong>Debes elegir el Proveedor antes de descargar</strong>: la plantilla solo trae los productos de ese proveedor. En la columna "Producto" el desplegable se filtra solo mientras escribes, y al elegir uno se llenan solos Costo/Descuento/IVA/Departamento/Subfamilia/Unidad. Tú solo escribes la Cantidad y la Utilidad; el Precio de Venta se calcula solo.</div>
                 </div>
                 <x-filament::button wire:click="descargarPlantilla" type="button" color="success" icon="heroicon-o-arrow-down-tray">
                     Descargar plantilla

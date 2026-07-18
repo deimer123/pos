@@ -111,7 +111,9 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
             ],
         ]);
 
-        $sheet->getStyle('B2:G20')->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle('B2:E20')->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle('F2:F500')->getNumberFormat()->setFormatCode('#,##0.00');
+        $sheet->getStyle('G2:G20')->getNumberFormat()->setFormatCode('#,##0');
 
         $sheet->freezePane('A2');
 

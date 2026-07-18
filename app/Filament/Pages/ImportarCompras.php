@@ -63,23 +63,56 @@ class ImportarCompras extends Page
 
     public function descargarPlantilla()
     {
-        $empresaId = auth()->user()->getEmpresaActualId();
+        if (! $this->proveedor_id) {
+            Notification::make()
+                ->title('Selecciona un proveedor primero')
+                ->body('La plantilla depende del proveedor: sin elegirlo no se puede armar la lista de productos existentes ni el desplegable.')
+                ->warning()
+                ->send();
 
-        $query = Product::query()->where('empresa_id', $empresaId)->with(['familia1', 'subfamilia']);
-
-        // Si ya eligió proveedor, la lista de productos existentes (dropdown
-        // + hoja "Productos existentes") solo trae los de ESE proveedor --
-        // si aun no lo elige, trae los de toda la empresa (mejor eso que nada).
-        if ($this->proveedor_id) {
-            $clip = Actor::where('empresa_id', $empresaId)->where('id', $this->proveedor_id)->value('id_clip_pro');
-            if ($clip) {
-                $query->where('id_proveedor', (int) $clip);
-            }
+            return;
         }
 
-        $productos = $query->orderBy('descripcion_larga')->get();
+        $empresaId = auth()->user()->getEmpresaActualId();
+
+        $proveedor = Actor::query()
+            ->where('empresa_id', $empresaId)
+            ->whereIn('clasificacion', ['proveedor', 'cliente_proveedor'])
+            ->find($this->proveedor_id);
+
+        if (! $proveedor) {
+            Notification::make()->title('Proveedor no válido.')->danger()->send();
+
+            return;
+        }
+
+        if ($this->numero_factura && $this->facturaDuplicada($empresaId, (int) $proveedor->id)) {
+            Notification::make()
+                ->title('Factura duplicada')
+                ->body('Ya existe una compra con este número para este proveedor.')
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        $productos = Product::query()
+            ->where('empresa_id', $empresaId)
+            ->where('id_proveedor', (int) $proveedor->id_clip_pro)
+            ->with(['familia1', 'subfamilia'])
+            ->orderBy('descripcion_larga')
+            ->get();
 
         return Excel::download(new CompraBulkTemplateExport($empresaId, $productos), 'plantilla-compras.xlsx');
+    }
+
+    private function facturaDuplicada(int $empresaId, int $proveedorId): bool
+    {
+        return Compra::where('proveedor_id', $proveedorId)
+            ->where('numero_factura', $this->numero_factura)
+            ->where('empresa_id', $empresaId)
+            ->where('estado', '!=', 'anulada')
+            ->exists();
     }
 
     public function importar()
@@ -106,13 +139,7 @@ class ImportarCompras extends Page
             return;
         }
 
-        $duplicada = Compra::where('proveedor_id', $proveedor->id)
-            ->where('numero_factura', $this->numero_factura)
-            ->where('empresa_id', $empresaId)
-            ->where('estado', '!=', 'anulada')
-            ->exists();
-
-        if ($duplicada) {
+        if ($this->facturaDuplicada($empresaId, (int) $proveedor->id)) {
             Notification::make()
                 ->title('Factura duplicada')
                 ->body('Ya existe una compra con este número para este proveedor.')
