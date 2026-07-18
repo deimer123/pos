@@ -1342,11 +1342,13 @@
                                         </div>
                                         <div class="flex gap-2 mt-2">
                                             <button wire:click="guardarEdicionCliente" type="button"
-                                                class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md">
+                                                class="text-xs font-semibold"
+                                                style="background:#2563eb;color:#fff;padding:6px 12px;border-radius:6px;border:none;">
                                                 Guardar
                                             </button>
                                             <button wire:click="cancelarEdicionCliente" type="button"
-                                                class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-semibold px-3 py-1.5 rounded-md">
+                                                class="text-xs font-semibold"
+                                                style="background:#e5e7eb;color:#374151;padding:6px 12px;border-radius:6px;border:none;">
                                                 Cancelar
                                             </button>
                                         </div>
