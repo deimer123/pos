@@ -188,9 +188,17 @@
         .note strong { color: var(--gold); }
 
         figure.shot { margin: 20px 0; padding: 0; }
-        figure.shot img {
-            display: block; width: 100%; height: auto;
-            border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow);
+        /* Las capturas originales incluyen la barra de pestañas del navegador
+           y la barra de tareas de Windows. Se recortan visualmente con
+           object-fit/object-position en vez de re-exportar los 12 PNG, dejando
+           solo el contenido real de la pantalla. */
+        .shot-crop {
+            overflow: hidden; border-radius: 14px;
+            border: 1px solid var(--line); box-shadow: var(--shadow);
+        }
+        .shot-crop img {
+            display: block; width: 100%; height: 100%;
+            object-fit: cover; object-position: 50% 72%;
         }
         figure.shot figcaption {
             margin-top: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11.5px;
@@ -379,7 +387,7 @@
                     </ol>
                 </div>
 
-                <figure class="shot"><img src="/images/manual/manual-01.png" alt="Punto de venta" loading="lazy" /><figcaption>Punto de venta</figcaption></figure>
+                <figure class="shot"><div class="shot-crop" style="aspect-ratio: 1919 / 885;"><img src="/images/manual/manual-01.png" alt="Punto de venta" loading="lazy" /></div><figcaption>Punto de venta</figcaption></figure>
 
                 <div class="note">
                     <span>&#127991;&#65039;</span>
@@ -425,7 +433,7 @@
                     </div>
                 </div>
 
-                <figure class="shot"><img src="/images/manual/manual-02.png" alt="Gestion de Prefacturas" loading="lazy" /><figcaption>Gestion de Prefacturas</figcaption></figure>
+                <figure class="shot"><div class="shot-crop" style="aspect-ratio: 1919 / 885;"><img src="/images/manual/manual-02.png" alt="Gestion de Prefacturas" loading="lazy" /></div><figcaption>Gestion de Prefacturas</figcaption></figure>
 
                 <div class="note">
                     <span>&#8505;</span>
@@ -450,7 +458,7 @@
                     </ol>
                 </div>
 
-                <figure class="shot"><img src="/images/manual/manual-03.png" alt="Confirmar factura" loading="lazy" /><figcaption>Confirmar factura</figcaption></figure>
+                <figure class="shot"><div class="shot-crop" style="aspect-ratio: 1919 / 883;"><img src="/images/manual/manual-03.png" alt="Confirmar factura" loading="lazy" /></div><figcaption>Confirmar factura</figcaption></figure>
 
                 <div class="note">
                     <span>&#8505;</span>
@@ -480,7 +488,7 @@
                     </div>
                 </div>
 
-                <figure class="shot"><img src="/images/manual/manual-04.png" alt="Cerrar caja" loading="lazy" /><figcaption>Cerrar caja</figcaption></figure>
+                <figure class="shot"><div class="shot-crop" style="aspect-ratio: 1919 / 880;"><img src="/images/manual/manual-04.png" alt="Cerrar caja" loading="lazy" /></div><figcaption>Cerrar caja</figcaption></figure>
             </section>
 
             <!-- ============ VERTICALES ============ -->
@@ -539,8 +547,8 @@
                     </ol>
                 </div>
 
-                <figure class="shot"><img src="/images/manual/manual-05.png" alt="Panel de Taller" loading="lazy" /><figcaption>Panel de Taller</figcaption></figure>
-                <figure class="shot"><img src="/images/manual/manual-06.png" alt="Detalle de una orden de Taller" loading="lazy" /><figcaption>Detalle de una orden de Taller</figcaption></figure>
+                <figure class="shot"><div class="shot-crop" style="aspect-ratio: 1919 / 884;"><img src="/images/manual/manual-05.png" alt="Panel de Taller" loading="lazy" /></div><figcaption>Panel de Taller</figcaption></figure>
+                <figure class="shot"><div class="shot-crop" style="aspect-ratio: 1919 / 885;"><img src="/images/manual/manual-06.png" alt="Detalle de una orden de Taller" loading="lazy" /></div><figcaption>Detalle de una orden de Taller</figcaption></figure>
 
                 <p>
                     La liquidación de comisiones de cada mecánico se revisa en
@@ -584,14 +592,14 @@
                 <h2>Productos</h2>
                 <p class="lede">El catálogo completo de lo que vendes: nombre, proveedor, categoría, precios, impuestos y existencias.</p>
 
-                <figure class="shot"><img src="/images/manual/manual-07.png" alt="Listado de Productos" loading="lazy" /><figcaption>Listado de Productos</figcaption></figure>
+                <figure class="shot"><div class="shot-crop" style="aspect-ratio: 1919 / 885;"><img src="/images/manual/manual-07.png" alt="Listado de Productos" loading="lazy" /></div><figcaption>Listado de Productos</figcaption></figure>
 
                 <h3 class="sub">Crear un producto</h3>
                 <div class="card">
                     <p>El código se asigna solo. Completa nombre, proveedor, departamento y subfamilia, unidad de medida, costo, descuento comercial, IVA de compra y venta, y precio de venta (o la utilidad, y el sistema calcula el precio).</p>
                 </div>
 
-                <figure class="shot"><img src="/images/manual/manual-08.png" alt="Crear Producto" loading="lazy" /><figcaption>Crear Producto</figcaption></figure>
+                <figure class="shot"><div class="shot-crop" style="aspect-ratio: 1919 / 864;"><img src="/images/manual/manual-08.png" alt="Crear Producto" loading="lazy" /></div><figcaption>Crear Producto</figcaption></figure>
 
                 <h3 class="sub">Carga masiva por Excel</h3>
                 <div class="card">
@@ -628,7 +636,7 @@
                     </ol>
                 </div>
 
-                <figure class="shot"><img src="/images/manual/manual-09.png" alt="Carga masiva de Compras" loading="lazy" /><figcaption>Carga masiva de Compras</figcaption></figure>
+                <figure class="shot"><div class="shot-crop" style="aspect-ratio: 1919 / 885;"><img src="/images/manual/manual-09.png" alt="Carga masiva de Compras" loading="lazy" /></div><figcaption>Carga masiva de Compras</figcaption></figure>
 
                 <div class="note">
                     <span>&#8505;</span>
@@ -736,7 +744,7 @@
                     </ol>
                 </div>
 
-                <figure class="shot"><img src="/images/manual/manual-10.png" alt="Crear Empleado - permisos" loading="lazy" /><figcaption>Crear Empleado - permisos</figcaption></figure>
+                <figure class="shot"><div class="shot-crop" style="aspect-ratio: 1919 / 863;"><img src="/images/manual/manual-10.png" alt="Crear Empleado - permisos" loading="lazy" /></div><figcaption>Crear Empleado - permisos</figcaption></figure>
 
                 <div class="note">
                     <span>&#8505;</span>
@@ -759,7 +767,7 @@
                     </ul>
                 </div>
 
-                <figure class="shot"><img src="/images/manual/manual-11.png" alt="Configuracion de la Empresa" loading="lazy" /><figcaption>Configuracion de la Empresa</figcaption></figure>
+                <figure class="shot"><div class="shot-crop" style="aspect-ratio: 1919 / 885;"><img src="/images/manual/manual-11.png" alt="Configuracion de la Empresa" loading="lazy" /></div><figcaption>Configuracion de la Empresa</figcaption></figure>
             </section>
 
             <hr class="mod-divider" />
@@ -784,7 +792,7 @@
                 <h2>Qué reporte mirar según la pregunta</h2>
                 <p class="lede">Todos los reportes filtran por fecha y se pueden exportar.</p>
 
-                <figure class="shot"><img src="/images/manual/manual-12.png" alt="Reporte de Ventas" loading="lazy" /><figcaption>Reporte de Ventas</figcaption></figure>
+                <figure class="shot"><div class="shot-crop" style="aspect-ratio: 1919 / 885;"><img src="/images/manual/manual-12.png" alt="Reporte de Ventas" loading="lazy" /></div><figcaption>Reporte de Ventas</figcaption></figure>
 
                 <div class="table-wrap">
                     <table class="field-table">
