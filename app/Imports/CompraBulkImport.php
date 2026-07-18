@@ -11,6 +11,7 @@ use App\Models\Subfamilia;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\ToCollection;
+use Maatwebsite\Excel\Concerns\WithCalculatedFormulas;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
@@ -26,7 +27,7 @@ use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 // archivo con el mismo numero de factura sin chocar con "factura duplicada"
 // (antes se creaba la compra solo con las filas validas, dejando la compra
 // incompleta y bloqueando un segundo intento).
-class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleSheets
+class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleSheets, WithCalculatedFormulas
 {
     protected int $creados = 0;
     protected array $errores = [];
@@ -78,18 +79,24 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
 
             $row = collect($rawRow)->mapWithKeys(fn ($value, $key) => [strtolower(trim((string) $key)) => $value]);
 
-            if ($row->filter(fn ($value) => trim((string) $value) !== '')->isEmpty()) {
+            $nombre = trim((string) ($row['producto'] ?? ''));
+            $cantidad = $this->numero($row['cantidad'] ?? null);
+            $costo = $this->numero($row['costo_unitario'] ?? null);
+
+            // Fila sin tocar: se decide SOLO por las columnas que uno
+            // realmente escribe (Producto/Cantidad/Costo), no por todas.
+            // Las demas columnas tienen formula y su valor calculado no
+            // siempre se lee igual que su resultado (a veces llega el
+            // texto de la formula en vez de "", segun como se guardo el
+            // archivo) -- si se revisaran esas tambien, una fila vacia de
+            // verdad podia salir marcada como "con datos" por error.
+            if ($nombre === '' && $cantidad === null && $costo === null) {
                 continue;
             }
-
-            $nombre = trim((string) ($row['producto'] ?? ''));
 
             if (str_starts_with(mb_strtolower($nombre), 'ejemplo')) {
                 continue;
             }
-
-            $cantidad = $this->numero($row['cantidad'] ?? null);
-            $costo = $this->numero($row['costo_unitario'] ?? null);
 
             if ($nombre === '') {
                 $this->errores[] = "Fila {$numeroFila}: falta el nombre del producto.";
