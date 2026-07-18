@@ -6,10 +6,15 @@ use App\Models\Actor;
 use App\Models\Familia;
 use App\Models\Subfamilia;
 use Maatwebsite\Excel\Concerns\FromArray;
+use Maatwebsite\Excel\Concerns\WithColumnWidths;
 use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class ProductBulkTemplateReferenciaSheet implements FromArray, WithHeadings, WithTitle
+class ProductBulkTemplateReferenciaSheet implements FromArray, WithHeadings, WithTitle, WithColumnWidths, WithStyles
 {
     public function __construct(protected int $empresaId)
     {
@@ -72,5 +77,49 @@ class ProductBulkTemplateReferenciaSheet implements FromArray, WithHeadings, Wit
         }
 
         return $resultado;
+    }
+
+    public function columnWidths(): array
+    {
+        return [
+            'A' => 70,
+            'B' => 28,
+            'C' => 28,
+            'D' => 32,
+        ];
+    }
+
+    public function styles(Worksheet $sheet)
+    {
+        $sheet->getRowDimension(1)->setRowHeight(24);
+
+        $sheet->getStyle('A1:D1')->applyFromArray([
+            'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '4338CA'],
+            ],
+            'alignment' => [
+                'vertical' => Alignment::VERTICAL_CENTER,
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+            ],
+        ]);
+
+        $highestRow = $sheet->getHighestRow();
+
+        $sheet->getStyle('A2:A' . $highestRow)->applyFromArray([
+            'alignment' => [
+                'wrapText' => true,
+                'vertical' => Alignment::VERTICAL_CENTER,
+            ],
+        ]);
+
+        $sheet->getStyle('B2:D' . $highestRow)->applyFromArray([
+            'alignment' => ['vertical' => Alignment::VERTICAL_CENTER],
+        ]);
+
+        $sheet->freezePane('A2');
+
+        return [];
     }
 }
