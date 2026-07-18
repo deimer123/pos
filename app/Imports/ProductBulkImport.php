@@ -1,0 +1,284 @@
+<?php
+
+namespace App\Imports;
+
+use App\Models\Actor;
+use App\Models\AlternateCode;
+use App\Models\Familia;
+use App\Models\Product;
+use App\Models\Subfamilia;
+use Illuminate\Support\Collection;
+use Maatwebsite\Excel\Concerns\ToCollection;
+use Maatwebsite\Excel\Concerns\WithHeadingRow;
+
+// Importador de la plantilla de carga masiva de productos (self-service,
+// distinto del ProductImport.php que usa el superadmin en ImportarDatos.php).
+// Diferencias clave: el codigo se autogenera aqui (no viene en el excel),
+// y si el nombre de proveedor/departamento/subfamilia no existe se CREA de
+// una con ese nombre, en vez de caer siempre al registro "DE PRUEBA" (ese
+// solo se usa si la celda quedo vacia).
+class ProductBulkImport implements ToCollection, WithHeadingRow
+{
+    protected int $empresaId;
+    protected int $creados = 0;
+    protected array $errores = [];
+
+    public function __construct(int $empresaId)
+    {
+        $this->empresaId = $empresaId;
+    }
+
+    public function collection(Collection $rows)
+    {
+        $siguienteCodigo = (int) (Product::where('empresa_id', $this->empresaId)->max('id_producto') ?? 10001) + 1;
+
+        foreach ($rows as $index => $rawRow) {
+            $row = collect($rawRow)->mapWithKeys(fn ($value, $key) => [strtolower(trim((string) $key)) => $value]);
+            $numeroFila = $index + 2; // +1 por el encabezado, +1 porque el indice empieza en 0
+
+            if ($row->filter(fn ($value) => trim((string) $value) !== '')->isEmpty()) {
+                continue; // fila completamente vacia, se ignora sin avisar
+            }
+
+            $nombre = trim((string) ($row['nombre_del_producto'] ?? ''));
+            $precioCosto = $this->numero($row['precio_costo'] ?? null);
+            $precioVenta = $this->numero($row['precio_de_venta'] ?? null);
+
+            if ($nombre === '') {
+                $this->errores[] = "Fila {$numeroFila}: falta el nombre del producto.";
+                continue;
+            }
+
+            if ($precioCosto === null) {
+                $this->errores[] = "Fila {$numeroFila} ({$nombre}): falta el Precio Costo.";
+                continue;
+            }
+
+            if ($precioVenta === null) {
+                $this->errores[] = "Fila {$numeroFila} ({$nombre}): falta el Precio de Venta.";
+                continue;
+            }
+
+            if (Product::where('empresa_id', $this->empresaId)->where('descripcion_larga', $nombre)->exists()) {
+                $this->errores[] = "Fila {$numeroFila}: ya existe un producto llamado \"{$nombre}\" en tu empresa.";
+                continue;
+            }
+
+            $idFamilia1 = $this->resolveFamilia(trim((string) ($row['departamento'] ?? '')));
+            $idFamilia2 = $this->resolveSubfamilia(trim((string) ($row['subfamilia'] ?? '')), $idFamilia1);
+            $idProveedor = $this->resolveProveedor(trim((string) ($row['proveedor'] ?? '')));
+            $idUnidad = $this->resolveUnidad(trim((string) ($row['unidad_de_medida'] ?? '')));
+
+            $descuento = $this->numero($row['descuento_comercial'] ?? null) ?? 0;
+            $ivaCompra = $this->numero($row['iva_compra'] ?? null) ?? 19;
+            $ivaVenta = $this->numero($row['iva_venta'] ?? null) ?? 19;
+
+            // Misma formula que ProductResource::calcularValores(), para que
+            // la utilidad/costo con IVA salgan iguales a como quedarian si
+            // el producto se hubiera creado a mano en el formulario.
+            $costoConDescuento = round($precioCosto * (1 - $descuento / 100), 2);
+            $costoIva = round($costoConDescuento * (1 + $ivaVenta / 100), 2);
+            $utilidad1 = $precioVenta > 0 ? round((($precioVenta - $costoIva) / $precioVenta) * 100, 2) : 0;
+
+            $producto = Product::create([
+                'empresa_id' => $this->empresaId,
+                'id_producto' => $siguienteCodigo,
+                'descripcion_larga' => $nombre,
+                'id_proveedor' => $idProveedor,
+                'id_familia1' => $idFamilia1,
+                'id_familia2' => $idFamilia2,
+                'id_unidad_de_medida' => $idUnidad,
+                'precio_costo' => $precioCosto,
+                'descuento_comercial' => $descuento,
+                'precio_con_descuento' => $costoConDescuento,
+                'iva_compra' => $ivaCompra,
+                'iva_venta' => $ivaVenta,
+                'costo_iva' => $costoIva,
+                'utilidad1' => $utilidad1,
+                'precio_venta1' => $precioVenta,
+                'tipo_producto' => 'producto',
+                'vende_por' => 'unidad',
+                'maneja_inventario' => true,
+                'mostrar_en_catalogo' => true,
+            ]);
+
+            AlternateCode::create([
+                'empresa_id' => $this->empresaId,
+                'product_id' => $producto->id,
+                'code' => (string) $producto->id_producto,
+            ]);
+
+            $this->creados++;
+            $siguienteCodigo++;
+        }
+    }
+
+    public function resumen(): array
+    {
+        return [
+            'creados' => $this->creados,
+            'errores' => $this->errores,
+        ];
+    }
+
+    private function numero($value): ?float
+    {
+        if ($value === null || trim((string) $value) === '') {
+            return null;
+        }
+
+        $value = str_replace(',', '.', (string) $value);
+
+        return is_numeric($value) ? (float) $value : null;
+    }
+
+    private function resolveProveedor(string $nombre): int
+    {
+        if ($nombre === '') {
+            return (int) $this->defaultProveedor()->id_clip_pro;
+        }
+
+        $proveedor = Actor::query()
+            ->where('empresa_id', $this->empresaId)
+            ->whereIn('clasificacion', ['proveedor', 'cliente_proveedor'])
+            ->whereRaw('LOWER(nombre) = ?', [mb_strtolower($nombre)])
+            ->first();
+
+        if ($proveedor) {
+            return (int) $proveedor->id_clip_pro;
+        }
+
+        $nuevoId = (int) (Actor::max('id_clip_pro') ?? 10000) + 1;
+
+        $creado = Actor::create([
+            'id_clip_pro' => $nuevoId,
+            'empresa_id' => $this->empresaId,
+            'tipo_documento_id' => 6,
+            'identificacion' => (string) $nuevoId,
+            'nombre' => $nombre,
+            'razon_social' => $nombre,
+            'direccion' => 'N/A',
+            'telefono' => '0000000000',
+            'email' => null,
+            'departamento_id' => 1,
+            'ciudad_id' => 1,
+            'tipo_persona' => 'juridica',
+            'regimen_tributario' => 'simplificado',
+            'responsable_iva' => 0,
+            'clasificacion' => 'proveedor',
+            'tipo' => 3,
+        ]);
+
+        return (int) $creado->id_clip_pro;
+    }
+
+    private function resolveFamilia(string $nombre): int
+    {
+        if ($nombre === '') {
+            return (int) $this->defaultFamilia()->id;
+        }
+
+        $familia = Familia::query()
+            ->where('empresa_id', $this->empresaId)
+            ->whereRaw('LOWER(nombre) = ?', [mb_strtolower($nombre)])
+            ->first();
+
+        if ($familia) {
+            return (int) $familia->id;
+        }
+
+        return (int) Familia::create([
+            'empresa_id' => $this->empresaId,
+            'nombre' => $nombre,
+        ])->id;
+    }
+
+    private function resolveSubfamilia(string $nombre, int $familiaId): int
+    {
+        if ($nombre === '') {
+            return (int) $this->defaultSubfamilia($familiaId)->id_familia2;
+        }
+
+        $subfamilia = Subfamilia::query()
+            ->where('empresa_id', $this->empresaId)
+            ->where('id_familia1', $familiaId)
+            ->whereRaw('LOWER(nombre) = ?', [mb_strtolower($nombre)])
+            ->first();
+
+        if ($subfamilia) {
+            return (int) $subfamilia->id_familia2;
+        }
+
+        return (int) Subfamilia::create([
+            'empresa_id' => $this->empresaId,
+            'id_familia1' => $familiaId,
+            'nombre' => $nombre,
+        ])->id_familia2;
+    }
+
+    private function resolveUnidad(string $texto): int
+    {
+        $mapa = [
+            'pieza' => 1, 'piezas' => 1, 'unidad' => 1, 'u' => 1,
+            'kilogramo' => 2, 'kilogramos' => 2, 'kg' => 2,
+            'litro' => 3, 'litros' => 3, 'l' => 3,
+            'metro' => 4, 'metros' => 4, 'm' => 4,
+            'hora' => 5, 'horas' => 5, 'h' => 5,
+        ];
+
+        return $mapa[mb_strtolower($texto)] ?? 1;
+    }
+
+    private function defaultProveedor(): Actor
+    {
+        $proveedor = Actor::query()
+            ->where('empresa_id', $this->empresaId)
+            ->whereIn('clasificacion', ['proveedor', 'cliente_proveedor'])
+            ->orderByRaw("CASE WHEN nombre = 'PROVEEDOR DE PRUEBA' THEN 0 ELSE 1 END")
+            ->orderBy('id')
+            ->first();
+
+        if ($proveedor) {
+            return $proveedor;
+        }
+
+        $nuevoId = (int) (Actor::max('id_clip_pro') ?? 10000) + 1;
+
+        return Actor::create([
+            'id_clip_pro' => $nuevoId,
+            'empresa_id' => $this->empresaId,
+            'tipo_documento_id' => 6,
+            'identificacion' => '111111111',
+            'nombre' => 'PROVEEDOR DE PRUEBA',
+            'razon_social' => 'PROVEEDOR DE PRUEBA',
+            'direccion' => 'N/A',
+            'telefono' => '0000000000',
+            'email' => 'proveedor@prueba.com',
+            'departamento_id' => 1,
+            'ciudad_id' => 1,
+            'tipo_persona' => 'juridica',
+            'regimen_tributario' => 'simplificado',
+            'responsable_iva' => 0,
+            'clasificacion' => 'proveedor',
+            'tipo' => 3,
+        ]);
+    }
+
+    private function defaultFamilia(): Familia
+    {
+        return Familia::query()->firstOrCreate(
+            ['empresa_id' => $this->empresaId, 'nombre' => 'FAMILIA DE PRUEBA'],
+        );
+    }
+
+    private function defaultSubfamilia(int $familiaId): Subfamilia
+    {
+        return Subfamilia::query()->firstOrCreate(
+            [
+                'empresa_id' => $this->empresaId,
+                'id_familia1' => $familiaId,
+                'nombre' => 'SUBFAMILIA DE PRUEBA',
+            ],
+        );
+    }
+}
