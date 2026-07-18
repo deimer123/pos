@@ -21,7 +21,10 @@ use App\Http\Controllers\PosCatalogoController;
 */
 
 // Puedes dejar esto si tienes un landing o ruta base
-Route::get('/', fn () => view('welcome'));
+Route::get('/', fn () => view('landing'));
+
+// Manual de usuario, público (sin login)
+Route::get('/manual', fn () => view('manual'))->name('manual');
 
 // Catálogo público de productos por empresa (sin login, para compartir con clientes)
 Route::get('/catalogo/{slug}', \App\Livewire\CatalogoPublico::class)->name('catalogo.publico');
