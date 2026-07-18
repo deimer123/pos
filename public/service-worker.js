@@ -36,6 +36,9 @@ self.addEventListener('fetch', (event) => {
     if (url.origin !== self.location.origin) return;
 
     // Shell HTML de /pos: network-first, con respaldo en cache si no hay conexion.
+    // ignoreSearch=true porque la misma pantalla se visita con distintos
+    // query strings (?modo=normal, ?modo=mesas...) y sin conexion no
+    // importa cual haya quedado cacheada, sirve cualquiera como shell.
     if (request.mode === 'navigate' && url.pathname.startsWith('/pos')) {
         event.respondWith(
             fetch(request)
@@ -44,7 +47,7 @@ self.addEventListener('fetch', (event) => {
                     caches.open(CACHE_NAME).then((cache) => cache.put(request, copia));
                     return respuesta;
                 })
-                .catch(() => caches.match(request))
+                .catch(() => caches.match(request, { ignoreSearch: true }))
         );
         return;
     }
