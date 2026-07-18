@@ -19,10 +19,10 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle, WithColumnWidths, WithStyles, WithEvents
 {
     // Fila desde donde se esconde la lista de productos existentes, muy por
-    // debajo del area donde se escriben los items. Puesta en la MISMA
-    // columna A (no en otra hoja) a proposito: el autocompletado nativo de
-    // Excel al escribir en una celda solo sugiere valores que ya existen en
-    // esa misma columna de esa misma hoja.
+    // debajo del area donde se escriben los items. Es la fuente del
+    // desplegable (Data Validation tipo lista) de la columna Producto --
+    // NO alimenta el autocompletado nativo de Excel al escribir, porque ese
+    // requiere celdas contiguas sin huecos en blanco en la misma columna.
     // Publica (no privada): CompraBulkImport::collection() la usa para
     // saber a partir de que fila debe dejar de leer datos reales.
     public const FILA_LISTA_OCULTA = 1000;
@@ -138,7 +138,7 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
                 $primeraFila = self::FILA_LISTA_OCULTA;
                 $ultimaFila = $primeraFila + count($productos) - 1;
 
-                $sheet->setCellValue('A' . ($primeraFila - 1), 'No borrar: lista de apoyo para el autocompletado (productos existentes de este proveedor)');
+                $sheet->setCellValue('A' . ($primeraFila - 1), 'No borrar: lista de apoyo del desplegable (productos existentes de este proveedor)');
                 $sheet->getStyle('A' . ($primeraFila - 1))->getFont()->setItalic(true)->setColor(new Color('FF9CA3AF'));
 
                 foreach ($productos as $i => $nombre) {
@@ -153,9 +153,9 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
                 $validation->setAllowBlank(true);
                 $validation->setShowInputMessage(true);
                 $validation->setShowErrorMessage(false);
-                $validation->setShowDropDown(false);
+                $validation->setShowDropDown(false); // false = SI muestra la flecha (asi de rara es la libreria)
                 $validation->setPromptTitle('Producto de este proveedor');
-                $validation->setPrompt('Empieza a escribir y Excel te sugiere los que ya existen. Si no aparece, se crea uno nuevo con ese nombre.');
+                $validation->setPrompt('Dale clic a la flechita de la celda para ver los productos que ya existen. Si escribes uno que no aparece en la lista, se crea nuevo.');
                 $validation->setFormula1('$A$' . $primeraFila . ':$A$' . $ultimaFila);
 
                 for ($fila = 2; $fila <= $primeraFila - 2; $fila++) {

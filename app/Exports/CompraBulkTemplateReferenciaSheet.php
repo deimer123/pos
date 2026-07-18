@@ -35,7 +35,7 @@ class CompraBulkTemplateReferenciaSheet implements FromArray, WithHeadings, With
             'El Proveedor, N° de factura, Tipo de pago y Fecha se llenan una sola vez en la pantalla -- este excel es solo la lista de productos de esa factura.',
             'Producto, Cantidad y Costo Unitario son obligatorios. Las demas columnas se pueden dejar vacias.',
             'Producto: escribe el nombre. Si ya existe para el proveedor que elegiste, se actualiza su costo y sube su existencia. Si no existe, se crea de una.',
-            'Al escribir en la columna Producto (hoja Items), Excel te sugiere solo con empezar a teclear -- son los productos que ya tiene el proveedor que elegiste en la pantalla antes de descargar.',
+            'En la columna Producto (hoja Items), al pararte en la celda aparece una flechita a la derecha: dale clic para ver y elegir los productos que ya tiene el proveedor que elegiste en la pantalla antes de descargar.',
             'Departamento / Subfamilia / Unidad de Medida solo se usan si el producto es nuevo (si ya existia, no se tocan).',
             'Si dejas vacios Departamento o Subfamilia en un producto nuevo, queda con "FAMILIA DE PRUEBA" / "SUBFAMILIA DE PRUEBA" (editable despues).',
             'IVA: numero sin el simbolo %. Si lo dejas vacio, usa el IVA que ya tenia el producto (o 19 si es nuevo).',
