@@ -42,6 +42,8 @@ class CompraBulkTemplateReferenciaSheet implements FromArray, WithHeadings, With
             'Departamento / Subfamilia / Unidad de Medida solo se usan si el producto es nuevo (si ya existia, no se tocan).',
             'Si dejas vacios Departamento o Subfamilia en un producto nuevo, queda con "FAMILIA DE PRUEBA" / "SUBFAMILIA DE PRUEBA" (editable despues).',
             'IVA: numero sin el simbolo %. Si lo dejas vacio, usa el IVA que ya tenia el producto (o 19 si es nuevo).',
+            'Las columnas con formula (Costo, Descuento, IVA, Precio de Venta, Departamento, Subfamilia, Unidad) estan protegidas para que no se borren sin querer. Solo Producto, Cantidad y Utilidad se pueden escribir. Si de verdad necesitas editar una celda protegida: Revisar > Desproteger hoja (no pide clave).',
+            'Todo o nada: si una sola fila tiene error, no se crea la compra ni se toca ningun producto. Corrige el excel y vuelve a subir el MISMO archivo (mismo numero de factura) sin que marque "factura duplicada".',
         ];
 
         $familias = Familia::where('empresa_id', $this->empresaId)

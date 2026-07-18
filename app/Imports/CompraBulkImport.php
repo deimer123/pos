@@ -2,7 +2,6 @@
 
 namespace App\Imports;
 
-use App\Models\Actor;
 use App\Models\AlternateCode;
 use App\Models\Compra;
 use App\Models\CompraDetalle;
@@ -20,6 +19,13 @@ use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 // (ImportarCompras), y el excel solo trae los items (productos) de esa
 // factura. Misma matematica que CreateCompra::guardarCompra() para que el
 // resultado quede identico a como si se hubiera cargado a mano y confirmado.
+//
+// Todo o nada: primero se valida CADA fila sin escribir nada en la base de
+// datos; si una sola fila falla, no se crea la compra ni se toca ningun
+// producto -- asi se puede corregir el excel y volver a subir el MISMO
+// archivo con el mismo numero de factura sin chocar con "factura duplicada"
+// (antes se creaba la compra solo con las filas validas, dejando la compra
+// incompleta y bloqueando un segundo intento).
 class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleSheets
 {
     protected int $creados = 0;
@@ -45,13 +51,27 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
 
     public function collection(Collection $rows)
     {
-        $siguienteCodigo = (int) (Product::where('empresa_id', $this->empresaId)->max('id_producto') ?? 10001) + 1;
+        $pendientes = $this->validar($rows);
 
-        $lineas = [];
-        $subtotal = 0;
-        $descuentoTotal = 0;
-        $impuestoTotal = 0;
-        $total = 0;
+        if (! empty($this->errores)) {
+            // Alguna fila fallo: no se crea nada, ni la compra ni productos.
+            return;
+        }
+
+        if (empty($pendientes)) {
+            return;
+        }
+
+        $this->confirmar($pendientes);
+    }
+
+    /**
+     * Pase 1: solo lectura. Valida cada fila y calcula todos los valores,
+     * sin crear/actualizar nada en la base de datos todavia.
+     */
+    private function validar(Collection $rows): array
+    {
+        $pendientes = [];
 
         foreach ($rows as $index => $rawRow) {
             $numeroFila = $index + 2;
@@ -86,24 +106,14 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
                 continue;
             }
 
-            [$producto, $esNuevo, $siguienteCodigo] = $this->resolveProducto($nombre, $row, $siguienteCodigo);
+            $productoExistente = $this->buscarProducto($nombre);
+            $esNuevo = $productoExistente === null;
 
             $descP = $this->numero($row['descuento_comercial'] ?? null) ?? 0;
-            $iva = $this->numero($row['iva'] ?? null) ?? ($esNuevo ? 19.0 : (float) $producto->iva_compra);
+            $iva = $this->numero($row['iva'] ?? null) ?? ($esNuevo ? 19.0 : (float) $productoExistente->iva_compra);
 
             $precioVentaExcel = $this->numero($row['precio_de_venta'] ?? null);
             $utilidadExcel = $this->numero($row['utilidad'] ?? null);
-
-            $lineaBruta = $cantidad * $costo;
-            $lineaDescuento = $lineaBruta * ($descP / 100);
-            $lineaBase = $lineaBruta - $lineaDescuento;
-            $lineaImpuesto = $lineaBase * ($iva / 100);
-            $lineaTotal = $lineaBase + $lineaImpuesto;
-
-            $subtotal += $lineaBruta;
-            $descuentoTotal += $lineaDescuento;
-            $impuestoTotal += $lineaImpuesto;
-            $total += $lineaTotal;
 
             $costoConDesc = round($costo * (1 - $descP / 100), 2);
             $costoConIva = round($costoConDesc * (1 + $iva / 100), 2);
@@ -116,52 +126,103 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
                 // Venta (ej. csv, o el usuario la borro). Misma formula que
                 // la plantilla: margen sobre el precio de venta (no markup
                 // sobre el costo), redondeado a la centena.
-                $util = $utilidadExcel ?? ($esNuevo ? 30.0 : (float) $producto->utilidad1);
+                $util = $utilidadExcel ?? ($esNuevo ? 30.0 : (float) $productoExistente->utilidad1);
                 $pv = $util >= 100
                     ? $costoConIva
                     : round($costoConIva / (1 - $util / 100) / 100) * 100;
             }
 
-            $precioVentaAnterior = (float) ($producto->precio_venta1 ?? 0);
-
-            $producto->existencias = (float) ($producto->existencias ?? 0) + $cantidad;
-            $producto->precio_costo_anterior = $producto->precio_costo;
-            $producto->precio_venta_anterior = $producto->precio_venta1;
-            $producto->precio_costo = $costo;
-            $producto->descuento_comercial = $descP;
-            $producto->precio_con_descuento = $costoConDesc;
-            $producto->costo_iva = $costoConIva;
-            $producto->iva_compra = $iva;
-            $producto->iva_venta = $iva;
-            $producto->utilidad1 = $util;
-            $producto->precio_venta1 = $pv;
-            $producto->save();
-
-            $lineas[] = [
-                'product_id' => (string) $producto->id_producto,
-                'codigo_ingresado' => (string) $producto->id_producto,
-                'nombre_producto' => $producto->descripcion_larga,
+            $pendientes[] = [
+                'numero_fila' => $numeroFila,
+                'nombre' => $nombre,
+                'es_nuevo' => $esNuevo,
+                'departamento' => trim((string) ($row['departamento'] ?? '')),
+                'subfamilia' => trim((string) ($row['subfamilia'] ?? '')),
+                'unidad_texto' => trim((string) ($row['unidad_de_medida'] ?? '')),
                 'cantidad' => $cantidad,
-                'costo_unitario' => $costo,
-                'desc_comercial' => $descP,
-                'descuento_pct' => $descP,
-                'iva_pct' => $iva,
-                'precio_venta_act' => $precioVentaAnterior,
-                'utilidad_pct' => $util,
+                'costo' => $costo,
+                'descuento' => $descP,
+                'iva' => $iva,
+                'utilidad' => $util,
                 'precio_venta' => $pv,
-                'subtotal' => $lineaBruta,
-                'impuesto' => $lineaImpuesto,
-                'total' => $lineaTotal,
+                'costo_con_descuento' => $costoConDesc,
+                'costo_con_iva' => $costoConIva,
             ];
-
-            $this->creados++;
         }
 
-        if (empty($lineas)) {
-            return;
-        }
+        return $pendientes;
+    }
 
-        DB::transaction(function () use ($lineas, $subtotal, $descuentoTotal, $impuestoTotal, $total) {
+    /**
+     * Pase 2: solo se llega aqui si TODAS las filas del pase 1 fueron
+     * validas. Aqui si se crean/actualizan productos y la compra.
+     */
+    private function confirmar(array $pendientes): void
+    {
+        $siguienteCodigo = (int) (Product::where('empresa_id', $this->empresaId)->max('id_producto') ?? 10001) + 1;
+
+        DB::transaction(function () use ($pendientes, &$siguienteCodigo) {
+            $lineas = [];
+            $subtotal = 0;
+            $descuentoTotal = 0;
+            $impuestoTotal = 0;
+            $total = 0;
+
+            foreach ($pendientes as $p) {
+                [$producto, $siguienteCodigo] = $this->resolveProducto(
+                    $p['nombre'],
+                    $p['departamento'],
+                    $p['subfamilia'],
+                    $p['unidad_texto'],
+                    $siguienteCodigo,
+                );
+
+                $lineaBruta = $p['cantidad'] * $p['costo'];
+                $lineaDescuento = $lineaBruta * ($p['descuento'] / 100);
+                $lineaBase = $lineaBruta - $lineaDescuento;
+                $lineaImpuesto = $lineaBase * ($p['iva'] / 100);
+                $lineaTotal = $lineaBase + $lineaImpuesto;
+
+                $subtotal += $lineaBruta;
+                $descuentoTotal += $lineaDescuento;
+                $impuestoTotal += $lineaImpuesto;
+                $total += $lineaTotal;
+
+                $precioVentaAnterior = (float) ($producto->precio_venta1 ?? 0);
+
+                $producto->existencias = (float) ($producto->existencias ?? 0) + $p['cantidad'];
+                $producto->precio_costo_anterior = $producto->precio_costo;
+                $producto->precio_venta_anterior = $producto->precio_venta1;
+                $producto->precio_costo = $p['costo'];
+                $producto->descuento_comercial = $p['descuento'];
+                $producto->precio_con_descuento = $p['costo_con_descuento'];
+                $producto->costo_iva = $p['costo_con_iva'];
+                $producto->iva_compra = $p['iva'];
+                $producto->iva_venta = $p['iva'];
+                $producto->utilidad1 = $p['utilidad'];
+                $producto->precio_venta1 = $p['precio_venta'];
+                $producto->save();
+
+                $lineas[] = [
+                    'product_id' => (string) $producto->id_producto,
+                    'codigo_ingresado' => (string) $producto->id_producto,
+                    'nombre_producto' => $producto->descripcion_larga,
+                    'cantidad' => $p['cantidad'],
+                    'costo_unitario' => $p['costo'],
+                    'desc_comercial' => $p['descuento'],
+                    'descuento_pct' => $p['descuento'],
+                    'iva_pct' => $p['iva'],
+                    'precio_venta_act' => $precioVentaAnterior,
+                    'utilidad_pct' => $p['utilidad'],
+                    'precio_venta' => $p['precio_venta'],
+                    'subtotal' => $lineaBruta,
+                    'impuesto' => $lineaImpuesto,
+                    'total' => $lineaTotal,
+                ];
+
+                $this->creados++;
+            }
+
             $compra = Compra::create([
                 'empresa_id' => $this->empresaId,
                 'proveedor_id' => $this->proveedorActorId,
@@ -207,42 +268,44 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
         return is_numeric($value) ? (float) $value : null;
     }
 
-    /**
-     * @return array{0: Product, 1: bool, 2: int} [producto resuelto/creado, es_nuevo, siguiente codigo disponible]
-     */
-    private function resolveProducto(string $nombre, Collection $row, int $siguienteCodigo): array
+    // Solo lectura: busca el producto por nombre, primero con ESTE
+    // proveedor y si no con cualquier otro (el nombre es unico por
+    // empresa). No crea ni modifica nada.
+    private function buscarProducto(string $nombre): ?Product
     {
-        $producto = Product::query()
+        return Product::query()
             ->where('empresa_id', $this->empresaId)
             ->where('id_proveedor', $this->proveedorClip)
             ->whereRaw('LOWER(descripcion_larga) = ?', [mb_strtolower($nombre)])
-            ->first();
+            ->first()
+            ?? Product::query()
+                ->where('empresa_id', $this->empresaId)
+                ->whereRaw('LOWER(descripcion_larga) = ?', [mb_strtolower($nombre)])
+                ->first();
+    }
+
+    /**
+     * @return array{0: Product, 1: int} [producto resuelto/creado, siguiente codigo disponible]
+     */
+    private function resolveProducto(string $nombre, string $departamento, string $subfamilia, string $unidadTexto, int $siguienteCodigo): array
+    {
+        $producto = $this->buscarProducto($nombre);
 
         if ($producto) {
-            return [$producto, false, $siguienteCodigo];
+            // Si existe pero con OTRO proveedor, se reasigna a este --el
+            // nombre es unico por empresa sin importar proveedor, no se
+            // puede crear un duplicado, y en la vida real esto es
+            // simplemente que el producto cambio de proveedor.
+            if ((int) $producto->id_proveedor !== $this->proveedorClip) {
+                $producto->id_proveedor = $this->proveedorClip;
+            }
+
+            return [$producto, $siguienteCodigo];
         }
 
-        // El nombre del producto es unico por empresa (sin importar
-        // proveedor). Si ya existe con OTRO proveedor, no se puede crear
-        // uno nuevo con el mismo nombre (violaria ese unique) -- se
-        // reasigna el producto existente a este proveedor, que es
-        // exactamente lo que esta pasando en la vida real (cambio de
-        // proveedor para ese producto).
-        $productoOtroProveedor = Product::query()
-            ->where('empresa_id', $this->empresaId)
-            ->whereRaw('LOWER(descripcion_larga) = ?', [mb_strtolower($nombre)])
-            ->first();
-
-        if ($productoOtroProveedor) {
-            $productoOtroProveedor->id_proveedor = $this->proveedorClip;
-            $productoOtroProveedor->save();
-
-            return [$productoOtroProveedor, false, $siguienteCodigo];
-        }
-
-        $idFamilia1 = $this->resolveFamilia(trim((string) ($row['departamento'] ?? '')));
-        $idFamilia2 = $this->resolveSubfamilia(trim((string) ($row['subfamilia'] ?? '')), $idFamilia1);
-        $idUnidad = $this->resolveUnidad(trim((string) ($row['unidad_de_medida'] ?? '')));
+        $idFamilia1 = $this->resolveFamilia($departamento);
+        $idFamilia2 = $this->resolveSubfamilia($subfamilia, $idFamilia1);
+        $idUnidad = $this->resolveUnidad($unidadTexto);
 
         $producto = Product::create([
             'empresa_id' => $this->empresaId,
@@ -271,7 +334,7 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
             'code' => (string) $producto->id_producto,
         ]);
 
-        return [$producto, true, $siguienteCodigo + 1];
+        return [$producto, $siguienteCodigo + 1];
     }
 
     private function resolveFamilia(string $nombre): int

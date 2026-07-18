@@ -87,11 +87,11 @@
             @if($resultado['compra'])
                 <div class="font-semibold text-green-700">Compra #{{ $resultado['compra']->numero_factura }} creada con {{ $resultado['items'] }} ítem{{ $resultado['items'] === 1 ? '' : 's' }}.</div>
             @else
-                <div class="font-semibold text-red-700">No se creó ninguna compra.</div>
+                <div class="font-semibold text-red-700">No se creó ninguna compra: mientras haya una fila con error, no se crea nada (ni la factura ni los productos). Corrige lo de abajo y vuelve a subir el mismo archivo.</div>
             @endif
 
             @if(!empty($resultado['errores']))
-                <div class="font-semibold text-red-700">{{ count($resultado['errores']) }} fila(s) con error (no se importaron):</div>
+                <div class="font-semibold text-red-700">{{ count($resultado['errores']) }} fila(s) con error:</div>
                 <ul class="list-disc list-inside text-sm text-red-600 max-h-64 overflow-y-auto">
                     @foreach($resultado['errores'] as $error)
                         <li>{{ $error }}</li>

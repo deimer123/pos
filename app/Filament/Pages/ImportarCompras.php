@@ -181,8 +181,13 @@ class ImportarCompras extends Page
         $this->archivo = null;
 
         if (! $this->resultado['compra']) {
+            $errores = count($this->resultado['errores']);
+
             Notification::make()
-                ->title('No se creó la compra: ningún ítem del excel fue válido.')
+                ->title($errores > 0
+                    ? "No se creó la compra: {$errores} fila(s) con error. Corrígelas y vuelve a subir el mismo archivo."
+                    : 'No se creó la compra: el excel no tenía ningún producto.')
+                ->body($errores > 0 ? 'Revisa el detalle abajo.' : null)
                 ->danger()
                 ->send();
 
