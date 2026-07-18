@@ -872,6 +872,10 @@ public function asignarConsumidorFinalPorDefecto()
 
 public function iniciarEdicionCliente($idClipPro)
 {
+    if (! auth()->user()->puedeVerBotonPos('editar_cliente')) {
+        abort(403);
+    }
+
     $empresaId = $this->getEmpresaId();
 
     $cliente = \App\Models\Actor::where('empresa_id', $empresaId)
@@ -897,6 +901,10 @@ public function cancelarEdicionCliente()
 
 public function guardarEdicionCliente()
 {
+    if (! auth()->user()->puedeVerBotonPos('editar_cliente')) {
+        abort(403);
+    }
+
     $empresaId = $this->getEmpresaId();
 
     $cliente = \App\Models\Actor::where('empresa_id', $empresaId)

@@ -197,6 +197,7 @@ class EmpleadoResource extends Resource
                                 'buscar_cliente' => 'Buscar Cliente',
                                 'caja' => 'Abrir/Cerrar caja',
                                 'editar' => 'Editar',
+                                'editar_cliente' => 'Editar cliente (tel/correo) en Buscar Cliente',
                                 'mas_cliente' => '+ Cliente',
                                 'cartera' => 'Cartera',
                                 'entrada_salida' => 'Entrada/Salida',

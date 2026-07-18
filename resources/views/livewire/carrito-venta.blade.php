@@ -1366,13 +1366,15 @@
                                             </div>
                                         @endif
                                     </td>
-                                    <td class="px-3 py-2 text-right" style="width:36px;">
-                                        <button type="button" title="Editar telefono/correo"
-                                            wire:click.stop="iniciarEdicionCliente({{ $cliente->id_clip_pro }})"
-                                            class="text-gray-400 hover:text-blue-600">
-                                            ✏️
-                                        </button>
-                                    </td>
+                                    @if (auth()->user()->puedeVerBotonPos('editar_cliente'))
+                                        <td class="px-3 py-2 text-right" style="width:36px;">
+                                            <button type="button" title="Editar telefono/correo"
+                                                wire:click.stop="iniciarEdicionCliente({{ $cliente->id_clip_pro }})"
+                                                class="text-gray-400 hover:text-blue-600">
+                                                ✏️
+                                            </button>
+                                        </td>
+                                    @endif
                                 </tr>
                             @endif
                         @empty
