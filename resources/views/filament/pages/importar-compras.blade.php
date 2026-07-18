@@ -3,7 +3,7 @@
     <form wire:submit.prevent="importar" class="space-y-6">
 
         <div class="compra-franja-azul bg-white">
-            <div class="px-5 pt-5 pb-3">
+            <div class="px-6 py-4">
                 <div class="text-base font-bold text-gray-800">1. Datos de la factura</div>
             </div>
 
@@ -53,7 +53,7 @@
         </div>
 
         <div class="compra-franja-azul bg-white">
-            <div class="flex items-center justify-between gap-4 p-5" style="background:#f0fdf4;">
+            <div class="flex items-center justify-between gap-4 px-6 py-5" style="background:#f0fdf4;">
                 <div>
                     <div class="text-base font-bold text-gray-800">2. Descarga la plantilla de ítems</div>
                     <div class="text-sm text-gray-600 mt-1">Solo la lista de productos de esta factura (el encabezado ya lo llenaste arriba).</div>
@@ -65,7 +65,7 @@
         </div>
 
         <div class="compra-franja-azul bg-white">
-            <div class="p-5 space-y-4">
+            <div class="px-6 py-5 space-y-4">
                 <div>
                     <label for="archivo" class="block text-xs font-bold uppercase tracking-wide text-indigo-700">3. Sube tu archivo ya lleno</label>
                     <input type="file" wire:model="archivo" id="archivo" class="block w-full text-sm text-gray-700 border border-gray-300 rounded-xl mt-1" />
@@ -83,7 +83,7 @@
     </form>
 
     @if(!empty($resultado))
-        <div class="compra-franja-azul bg-white p-5 space-y-2">
+        <div class="compra-franja-azul bg-white px-6 py-5 space-y-2">
             @if($resultado['compra'])
                 <div class="font-semibold text-green-700">Compra #{{ $resultado['compra']->numero_factura }} creada con {{ $resultado['items'] }} ítem{{ $resultado['items'] === 1 ? '' : 's' }}.</div>
             @else
