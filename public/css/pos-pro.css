@@ -21,12 +21,21 @@
     height: 100%;
     overflow: hidden;
     border-right: 1px solid #cbd5e1;
+    background: #eef6ff;
+}
+
+.pos-cartera-dialog,
+.pos-prefacturas-dialog,
+.pos-devolucion-dialog {
+    background: #f8fbff !important;
+    border-color: #bfdbfe !important;
 }
 
 .pos-cart-pane {
     width: 55%;
     height: 100%;
     overflow: hidden;
+    background: #fff7ed;
 }
 
 .pos-mobile-tabs {

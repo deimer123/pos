@@ -323,7 +323,7 @@
             wire:key="modal-fac-{{ $verFacturaId }}">
             <div class="absolute inset-0 bg-black/40" wire:click="cerrarFacturaModal"></div>
 
-            <div class="relative bg-white rounded-xl shadow-xl w-[480px] max-w-[95vw] h-[78vh] overflow-hidden">
+            <div class="relative bg-white rounded-xl shadow-xl w-[480px] max-w-[95vw] h-[78vh] overflow-hidden" style="background:#f8fbff;">
                 <div class="flex items-center justify-between px-3 py-2 border-b">
                     <h4 class="text-sm font-semibold">{{ 'SAL-' . str_pad((string) $verFacturaId, 6, '0', STR_PAD_LEFT) }} (solo lectura)</h4>
                     <button class="px-3 py-1 rounded-full bg-red-500 hover:bg-red-600 text-white text-xs font-bold" wire:click="cerrarFacturaModal">Cerrar</button>
@@ -351,7 +351,7 @@
             <div class="absolute inset-0 bg-black/55" style="background:rgba(0,0,0,.55);" wire:click="cerrarAbono"></div>
 
             <div class="relative bg-white shadow-2xl"
-                style="width:512px;max-width:94vw;border-radius:4px;padding:42px 50px 32px 50px;"
+                style="width:512px;max-width:94vw;border-radius:4px;padding:42px 50px 32px 50px;background:#f8fbff;"
                 x-data="{ medio: @entangle('abonoMedio').live }">
                 <div style="width:88px;height:88px;border:4px solid #8bb0bf;border-radius:999px;margin:0 auto 30px auto;display:flex;align-items:center;justify-content:center;color:#7fa8ba;font-size:58px;line-height:1;font-weight:300;">
                     ?
@@ -522,7 +522,7 @@
     @endif
 
     {{-- CARRITO CARDS --}}
-    <div class="pos-cart-table-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden" style="background:#f1f5f9; padding:8px 6px; display:flex; flex-direction:column; gap:6px;">
+    <div class="pos-cart-table-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden" style="background:#fff7ed; padding:8px 6px; display:flex; flex-direction:column; gap:6px;">
 
         @forelse($carrito as $id => $item)
             @php
@@ -1113,7 +1113,7 @@
     </div>
 @if ($mostrarModalCrearCliente)
         <div class="fixed inset-0 flex items-center justify-center bg-black/50" style="z-index: 2147482800;">
-            <div class="bg-white rounded-xl shadow-xl border overflow-hidden flex flex-col" style="width: 90%; max-width: 720px; max-height: 92vh;">
+            <div class="bg-white rounded-xl shadow-xl border overflow-hidden flex flex-col" style="width: 90%; max-width: 720px; max-height: 92vh; background:#f8fbff;">
                 <div class="pos-cartera-header px-4 py-3 border-b flex items-center justify-between shrink-0">
                     <h2 class="text-base font-semibold">Crear Cliente</h2>
                 </div>
@@ -2175,7 +2175,7 @@
         class="fixed inset-0 flex items-center justify-center" style="z-index:2147483000;background:rgba(15,23,42,.62);padding:16px;">
 
         <div class="bg-white rounded-2xl shadow-2xl p-6 w-full"
-            style="max-width:360px; text-align:center; font-size:14px">
+            style="max-width:360px; text-align:center; font-size:14px; background:#f8fbff;">
 
             <h2 class="text-xl font-bold mb-4">Abrir Caja</h2>
 
@@ -2212,7 +2212,7 @@
         <div wire:key="modal-movimiento-caja"
             class="pos-cierre-caja-overlay fixed inset-0 bg-black/50 flex items-center justify-center z-[200020]">
             <div class="bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 p-6 w-full"
-                style="max-width:520px; max-height:90vh; overflow-y:auto" x-data="{
+                style="max-width:520px; max-height:90vh; overflow-y:auto; background:#f8fbff;" x-data="{
                     montoTexto: '',
                     init() {
                         this.montoTexto = this.formato($wire.movimientoCaja.monto || 0);

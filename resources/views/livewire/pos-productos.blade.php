@@ -1,4 +1,4 @@
-<div style="width: 100%; height: 100%; display: flex; flex-direction: column; background: white;">
+<div style="width: 100%; height: 100%; display: flex; flex-direction: column; background: transparent;">
     <script>window.posEmpresaContexto = @json($empresaContexto);</script>
 
     {{-- Todo este bloque es manejado por JS (busqueda/listado 100% local, ver
