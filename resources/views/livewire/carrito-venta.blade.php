@@ -323,7 +323,7 @@
             wire:key="modal-fac-{{ $verFacturaId }}">
             <div class="absolute inset-0 bg-black/40" wire:click="cerrarFacturaModal"></div>
 
-            <div class="relative bg-white rounded-xl shadow-xl w-[480px] max-w-[95vw] h-[78vh] overflow-hidden" style="background:#f8fbff;">
+            <div class="relative bg-white rounded-xl shadow-xl w-[480px] max-w-[95vw] h-[78vh] overflow-hidden" style="background:#eef6ff;">
                 <div class="flex items-center justify-between px-3 py-2 border-b">
                     <h4 class="text-sm font-semibold">{{ 'SAL-' . str_pad((string) $verFacturaId, 6, '0', STR_PAD_LEFT) }} (solo lectura)</h4>
                     <button class="px-3 py-1 rounded-full bg-red-500 hover:bg-red-600 text-white text-xs font-bold" wire:click="cerrarFacturaModal">Cerrar</button>
@@ -351,7 +351,7 @@
             <div class="absolute inset-0 bg-black/55" style="background:rgba(0,0,0,.55);" wire:click="cerrarAbono"></div>
 
             <div class="relative bg-white shadow-2xl"
-                style="width:512px;max-width:94vw;border-radius:4px;padding:42px 50px 32px 50px;background:#f8fbff;"
+                style="width:512px;max-width:94vw;border-radius:4px;padding:42px 50px 32px 50px;background:#eef6ff;"
                 x-data="{ medio: @entangle('abonoMedio').live }">
                 <div style="width:88px;height:88px;border:4px solid #8bb0bf;border-radius:999px;margin:0 auto 30px auto;display:flex;align-items:center;justify-content:center;color:#7fa8ba;font-size:58px;line-height:1;font-weight:300;">
                     ?
@@ -522,7 +522,7 @@
     @endif
 
     {{-- CARRITO CARDS --}}
-    <div class="pos-cart-table-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden" style="background:#fff7ed; padding:8px 6px; display:flex; flex-direction:column; gap:6px;">
+    <div class="pos-cart-table-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden" style="background:#ffedd5; padding:8px 6px; display:flex; flex-direction:column; gap:6px;">
 
         @forelse($carrito as $id => $item)
             @php
@@ -557,7 +557,7 @@
                 style="background:{{ $enviado ? '#f0fdf4' : 'white' }}; border-radius:12px; border:1px solid {{ $enviado ? '#86efac' : '#e2e8f0' }}; padding:10px 10px 8px 10px; display:flex; align-items:center; gap:8px; box-shadow:0 1px 4px rgba(0,0,0,.06); opacity:{{ $enviado ? '.85' : '1' }}; transition:box-shadow .15s;">
 
                 {{-- Número / código --}}
-                <div style="flex-shrink:0; width:34px; height:34px; border-radius:8px; background:{{ $enviado ? '#dcfce7' : '#eef2ff' }}; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:800; color:{{ $enviado ? '#16a34a' : '#4338ca' }};">
+                <div style="flex-shrink:0; width:34px; height:34px; border-radius:8px; background:{{ $enviado ? '#dcfce7' : '#e0e7ff' }}; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:800; color:{{ $enviado ? '#16a34a' : '#4338ca' }};">
                     {{ $item['id_producto'] ?? '-' }}
                 </div>
 
@@ -597,7 +597,7 @@
                         wire:change="actualizarTotales"
                         wire:key="cantidad-{{ $id }}-{{ $item['cantidad'] }}"
                         {{ $enviado ? 'disabled' : '' }}
-                        style="width:52px; height:32px; font-size:14px; font-weight:800; text-align:center; border:2px solid {{ $enviado ? '#86efac' : '#a5b4fc' }}; border-radius:8px; background:{{ $enviado ? '#dcfce7' : '#eef2ff' }}; color:{{ $enviado ? '#15803d' : '#3730a3' }}; padding:0 3px; outline:none;" />
+                        style="width:52px; height:32px; font-size:14px; font-weight:800; text-align:center; border:2px solid {{ $enviado ? '#86efac' : '#a5b4fc' }}; border-radius:8px; background:{{ $enviado ? '#dcfce7' : '#e0e7ff' }}; color:{{ $enviado ? '#15803d' : '#3730a3' }}; padding:0 3px; outline:none;" />
                 </div>
 
                 {{-- Total --}}
@@ -1113,7 +1113,7 @@
     </div>
 @if ($mostrarModalCrearCliente)
         <div class="fixed inset-0 flex items-center justify-center bg-black/50" style="z-index: 2147482800;">
-            <div class="bg-white rounded-xl shadow-xl border overflow-hidden flex flex-col" style="width: 90%; max-width: 720px; max-height: 92vh; background:#f8fbff;">
+            <div class="bg-white rounded-xl shadow-xl border overflow-hidden flex flex-col" style="width: 90%; max-width: 720px; max-height: 92vh; background:#eef6ff;">
                 <div class="pos-cartera-header px-4 py-3 border-b flex items-center justify-between shrink-0">
                     <h2 class="text-base font-semibold">Crear Cliente</h2>
                 </div>
@@ -1314,7 +1314,7 @@
 
     @if ($mostrarModalClientes)
         <div class="fixed inset-0 flex items-center justify-center" style="z-index:2147482400;background:rgba(15,23,42,.62);padding:16px;">
-            <div class="bg-white rounded-xl shadow-2xl border overflow-hidden flex flex-col" style="width:min(560px, calc(100vw - 32px));max-height:min(680px, calc(100dvh - 32px));border-color:#bfdbfe;background:#f8fbff;">
+            <div class="bg-white rounded-xl shadow-2xl border overflow-hidden flex flex-col" style="width:min(560px, calc(100vw - 32px));max-height:min(680px, calc(100dvh - 32px));border-color:#93c5fd;background:#eef6ff;">
                 <div class="px-5 py-3 border-b shrink-0 text-center" style="background:linear-gradient(180deg,#2563eb 0%,#4f46e5 100%);color:#fff;border-bottom:0;">
                     <h2 class="text-base font-bold" style="color:#fff;">Seleccionar Cliente</h2>
                 </div>
@@ -1325,11 +1325,11 @@
                         class="w-full px-3 py-2 border rounded-lg text-sm" />
                 </div>
 
-                <div class="flex-1 min-h-0 overflow-y-auto p-3" style="background:#f8fbff;">
+                <div class="flex-1 min-h-0 overflow-y-auto p-3" style="background:#eef6ff;">
                     <table class="w-full text-sm bg-white rounded-lg overflow-hidden shadow-sm border" style="border-color:#dbeafe;">
                         @forelse ($clientes as $cliente)
                             @if ($editandoClienteId === $cliente->id_clip_pro)
-                                <tr wire:key="cliente-edit-{{ $cliente->id }}" class="border-b" style="background:#eef2ff;">
+                                <tr wire:key="cliente-edit-{{ $cliente->id }}" class="border-b" style="background:#e0e7ff;">
                                     <td class="px-3 py-3">
                                         <div class="font-semibold mb-2">{{ $cliente->nombre }}</div>
                                         <div class="grid grid-cols-1 gap-2">
@@ -1413,7 +1413,7 @@
         <div class="fixed inset-0 flex items-center justify-center" style="z-index: 2147482800; padding:16px;">
             <div class="absolute inset-0 bg-black/60" style="background:rgba(15,23,42,.62);"></div>
             <div class="relative bg-white rounded-xl shadow-xl border flex flex-col overflow-hidden"
-                style="z-index:2147482801;width:min(1120px, calc(100vw - 32px));height:min(720px, calc(100dvh - 32px));max-height:calc(100dvh - 32px);border-color:#bfdbfe;background:#f8fbff;" x-data="{
+                style="z-index:2147482801;width:min(1120px, calc(100vw - 32px));height:min(720px, calc(100dvh - 32px));max-height:calc(100dvh - 32px);border-color:#93c5fd;background:#eef6ff;" x-data="{
                     total: 0,
                     totalOriginal: 0,
                     recalcularTotal() {
@@ -1432,7 +1432,7 @@
                 <div class="px-6 py-3 border-b flex items-center justify-between shrink-0" style="background:linear-gradient(180deg,#2563eb 0%,#4f46e5 100%);color:#fff;border-bottom:0;">
                     <h2 class="text-base font-semibold" style="color:#fff;">Editar Detalles de Productos</h2>
                 </div>
-                <div class="p-4 flex-1 overflow-hidden" style="background:#f8fbff;min-height:0;height:100%;position:relative;">
+                <div class="p-4 flex-1 overflow-hidden" style="background:#eef6ff;min-height:0;height:100%;position:relative;">
                 <div class="pos-edit-products-scroll rounded border bg-white" style="position:absolute;left:16px;right:16px;top:16px;bottom:126px;overflow:auto;min-height:0;padding-bottom:12px;">
                     <table class="pos-edit-products-table min-w-full text-xs bg-white border border-gray-300">
                         <colgroup>
@@ -1595,11 +1595,11 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="pos-edit-products-total text-right text-lg font-bold text-gray-900" style="position:absolute;left:auto;right:42px;bottom:86px;z-index:2;background:#f8fbff;box-sizing:border-box;white-space:nowrap;overflow:visible;width:auto;min-width:260px;max-width:calc(100% - 84px);">
+                <div class="pos-edit-products-total text-right text-lg font-bold text-gray-900" style="position:absolute;left:auto;right:42px;bottom:86px;z-index:2;background:#eef6ff;box-sizing:border-box;white-space:nowrap;overflow:visible;width:auto;min-width:260px;max-width:calc(100% - 84px);">
                     TOTAL: $<span x-text="total.toLocaleString('es-CO')"></span>
                 </div>
                 <template x-if="total !== totalOriginal">
-                    <div class="text-right" style="position:absolute;left:auto;right:42px;bottom:62px;z-index:2;background:#f8fbff;box-sizing:border-box;white-space:nowrap;overflow:visible;width:auto;min-width:260px;max-width:calc(100% - 84px);">
+                    <div class="text-right" style="position:absolute;left:auto;right:42px;bottom:62px;z-index:2;background:#eef6ff;box-sizing:border-box;white-space:nowrap;overflow:visible;width:auto;min-width:260px;max-width:calc(100% - 84px);">
                         <span :class="total > totalOriginal ? 'text-green-600' : 'text-red-600'" class="font-semibold"
                             x-text="(total > totalOriginal ? 'Aumento: $' : 'Descuento: $') + Math.abs(total - totalOriginal).toLocaleString('es-CO')"></span>
                     </div>
@@ -1648,7 +1648,7 @@
 
                 
                 <div class="pos-prefacturas-dialog relative bg-white rounded-xl shadow-xl border flex flex-col overflow-hidden"
-                    style="z-index:2147482601;width:min(1120px, calc(100vw - 32px));height:min(720px, calc(100dvh - 32px));max-height:calc(100dvh - 32px);border-color:#bfdbfe;background:#f8fbff;">
+                    style="z-index:2147482601;width:min(1120px, calc(100vw - 32px));height:min(720px, calc(100dvh - 32px));max-height:calc(100dvh - 32px);border-color:#93c5fd;background:#eef6ff;">
 
                     
                     <div class="pos-prefacturas-header px-6 py-3 border-b flex items-center justify-between shrink-0" style="background:linear-gradient(180deg,#2563eb 0%,#4f46e5 100%);color:#fff;border-bottom:0;">
@@ -1682,7 +1682,7 @@
 
                     
                     @if ($tab === 'facturas')
-                        <div class="px-6 py-2 border-b text-sm flex items-end gap-3 flex-wrap" style="background:#f8fbff;">
+                        <div class="px-6 py-2 border-b text-sm flex items-end gap-3 flex-wrap" style="background:#eef6ff;">
                             <label class="text-xs text-gray-600 flex flex-col">
                                 <span>Desde</span>
                                 <input type="date" wire:model.live.debounce.300ms="fDesde"
@@ -1707,7 +1707,7 @@
                     @endif
 
                     
-                    <div class="pos-prefacturas-body flex flex-1 overflow-hidden text-sm text-gray-800" style="background:#f8fbff;">
+                    <div class="pos-prefacturas-body flex flex-1 overflow-hidden text-sm text-gray-800" style="background:#eef6ff;">
 
                         
                         <div class="pos-prefacturas-list w-1/2 border-r overflow-y-auto p-3 bg-white">
@@ -2051,7 +2051,7 @@
                 <div class="fixed inset-0 flex items-center justify-center"
                     style="z-index:2147483647 !important; left:0; top:0; right:0; bottom:0; background:rgba(15,23,42,.62); padding:16px; overflow:auto; pointer-events:auto;">
                     <div class="pos-devolucion-dialog relative bg-white rounded-xl shadow-xl border flex flex-col overflow-hidden"
-                        style="z-index:2147483647 !important; pointer-events:auto;width:min(1120px, calc(100vw - 32px));height:min(720px, calc(100dvh - 32px));max-height:calc(100dvh - 32px);border-color:#bfdbfe;background:#f8fbff;">
+                        style="z-index:2147483647 !important; pointer-events:auto;width:min(1120px, calc(100vw - 32px));height:min(720px, calc(100dvh - 32px));max-height:calc(100dvh - 32px);border-color:#93c5fd;background:#eef6ff;">
                         <div class="px-6 py-3 border-b flex items-center justify-between shrink-0"
                             style="background:linear-gradient(180deg,#2563eb 0%,#4f46e5 100%);color:#fff;border-bottom:0;">
                             <div class="flex items-center gap-4 flex-wrap">
@@ -2070,7 +2070,7 @@
                         </div>
 
                         <div class="px-6 py-2 border-b text-sm flex items-end gap-3 flex-wrap"
-                            style="background:#f8fbff;">
+                            style="background:#eef6ff;">
                             <div class="flex flex-wrap items-center gap-2">
                                 <button wire:click="seleccionarTodosDevolucion"
                                     class="inline-flex items-center justify-center h-[38px] px-4 rounded-md bg-gray-800 text-white hover:bg-gray-900 leading-none">
@@ -2086,10 +2086,10 @@
                             </div>
                         </div>
 
-                        <div class="flex-1 overflow-hidden p-0 bg-[#f8fbff]">
+                        <div class="flex-1 overflow-hidden p-0 bg-[#eef6ff]">
                             <div class="h-full overflow-y-auto overflow-x-auto p-3">
                                 <table class="min-w-[760px] w-full text-sm bg-white rounded-xl overflow-hidden shadow-sm border"
-                                    style="border-color:#bfdbfe;">
+                                    style="border-color:#93c5fd;">
                                     <thead class="bg-gray-100 sticky top-0 z-10 border-b border-gray-300"
                                         style="position:sticky;top:0;z-index:20;background:#63a0d7;">
                                         <tr>
@@ -2175,7 +2175,7 @@
         class="fixed inset-0 flex items-center justify-center" style="z-index:2147483000;background:rgba(15,23,42,.62);padding:16px;">
 
         <div class="bg-white rounded-2xl shadow-2xl p-6 w-full"
-            style="max-width:360px; text-align:center; font-size:14px; background:#f8fbff;">
+            style="max-width:360px; text-align:center; font-size:14px; background:#eef6ff;">
 
             <h2 class="text-xl font-bold mb-4">Abrir Caja</h2>
 
@@ -2212,7 +2212,7 @@
         <div wire:key="modal-movimiento-caja"
             class="pos-cierre-caja-overlay fixed inset-0 bg-black/50 flex items-center justify-center z-[200020]">
             <div class="bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 p-6 w-full"
-                style="max-width:520px; max-height:90vh; overflow-y:auto; background:#f8fbff;" x-data="{
+                style="max-width:520px; max-height:90vh; overflow-y:auto; background:#eef6ff;" x-data="{
                     montoTexto: '',
                     init() {
                         this.montoTexto = this.formato($wire.movimientoCaja.monto || 0);
@@ -2298,7 +2298,7 @@
         <div wire:key="modal-cerrar-caja"
             class="fixed inset-0 flex items-center justify-center" style="z-index:2147483000;background:rgba(15,23,42,.62);padding:16px;">
             <div class="bg-white rounded-xl shadow-2xl border w-full overflow-hidden"
-                style="max-width:560px;max-height:calc(100dvh - 32px);text-align:center;font-size:13px;display:flex;flex-direction:column;position:relative;z-index:2147483001;border-color:#bfdbfe;background:#f8fbff;"
+                style="max-width:560px;max-height:calc(100dvh - 32px);text-align:center;font-size:13px;display:flex;flex-direction:column;position:relative;z-index:2147483001;border-color:#93c5fd;background:#eef6ff;"
                 x-data="{
                     // Total contado del dia (efectivo + transferencia)
                     efectivoNeto: {{ (int) ($resumenCaja['efectivo'] ?? 0) }},
@@ -2335,7 +2335,7 @@
                     <h2 class="text-lg font-bold" style="color:#fff;">Cerrar Caja</h2>
                 </div>
 
-                <div class="p-4 flex-1 overflow-hidden flex flex-col" style="background:#f8fbff;min-height:0;">
+                <div class="p-4 flex-1 overflow-hidden flex flex-col" style="background:#eef6ff;min-height:0;">
 
                 @php
                     $usaHotelCierre = (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_hotel');
@@ -2902,7 +2902,7 @@
 
             // Badge de tipo pedido para cuando hay mesa (dato ya capturado)
             const tipoPedidoBadges = { local: '🏠 Local', domicilio: '🛵 Domicilio', para_llevar: '🥡 Para llevar' };
-            const tipoPedidoBadgeColors = { local: '#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe', domicilio: '#fffbeb;color:#92400e;border:1px solid #fde68a', para_llevar: '#f0fdf4;color:#166534;border:1px solid #86efac' };
+            const tipoPedidoBadgeColors = { local: '#eff6ff;color:#1d4ed8;border:1px solid #93c5fd', domicilio: '#fffbeb;color:#92400e;border:1px solid #fde68a', para_llevar: '#f0fdf4;color:#166534;border:1px solid #86efac' };
             const badgeEstilo = tipoPedidoBadgeColors[tipoPedidoOrden] || tipoPedidoBadgeColors.local;
 
             // Bloque tipo pedido: badge si hay mesa, selector si no
@@ -3020,12 +3020,12 @@
                                     style="display:block;width:100%;height:36px;border:2px solid #a5b4fc;border-radius:8px;padding:4px 10px;text-align:center;font-weight:900;font-size:20px;margin-bottom:4px;" autocomplete="off">
                                 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:4px;">
                                     <button type="button" data-cash-exact="1"    style="border:0;border-radius:6px;background:#2563eb;color:white;font-weight:800;font-size:11px;padding:5px 2px;">Exacto</button>
-                                    <button type="button" data-cash-add="5000"   style="border:0;border-radius:6px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:5px 2px;">+5.000</button>
-                                    <button type="button" data-cash-add="10000"  style="border:0;border-radius:6px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:5px 2px;">+10.000</button>
-                                    <button type="button" data-cash-add="20000"  style="border:0;border-radius:6px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:5px 2px;">+20.000</button>
-                                    <button type="button" data-cash-add="50000"  style="border:0;border-radius:6px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:5px 2px;">+50.000</button>
-                                    <button type="button" data-cash-add="100000" style="border:0;border-radius:6px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:5px 2px;">+100.000</button>
-                                    <button type="button" data-cash-add="200000" style="border:0;border-radius:6px;background:#eef2ff;color:#4338ca;font-weight:800;font-size:11px;padding:5px 2px;">+200.000</button>
+                                    <button type="button" data-cash-add="5000"   style="border:0;border-radius:6px;background:#e0e7ff;color:#4338ca;font-weight:800;font-size:11px;padding:5px 2px;">+5.000</button>
+                                    <button type="button" data-cash-add="10000"  style="border:0;border-radius:6px;background:#e0e7ff;color:#4338ca;font-weight:800;font-size:11px;padding:5px 2px;">+10.000</button>
+                                    <button type="button" data-cash-add="20000"  style="border:0;border-radius:6px;background:#e0e7ff;color:#4338ca;font-weight:800;font-size:11px;padding:5px 2px;">+20.000</button>
+                                    <button type="button" data-cash-add="50000"  style="border:0;border-radius:6px;background:#e0e7ff;color:#4338ca;font-weight:800;font-size:11px;padding:5px 2px;">+50.000</button>
+                                    <button type="button" data-cash-add="100000" style="border:0;border-radius:6px;background:#e0e7ff;color:#4338ca;font-weight:800;font-size:11px;padding:5px 2px;">+100.000</button>
+                                    <button type="button" data-cash-add="200000" style="border:0;border-radius:6px;background:#e0e7ff;color:#4338ca;font-weight:800;font-size:11px;padding:5px 2px;">+200.000</button>
                                     <button type="button" data-cash-clear="1"   style="border:0;border-radius:6px;background:#f3f4f6;color:#374151;font-weight:800;font-size:11px;padding:5px 2px;">Limpiar</button>
                                 </div>
                                 <div style="display:flex;justify-content:space-between;align-items:center;background:#f0fdf4;border:1px solid #86efac;border-radius:7px;padding:5px 10px;">
@@ -3040,7 +3040,7 @@
                         </div>
 
                         <div id="swal_credito_wrap" style="display:none;">
-                            <div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:6px 10px;color:#3730a3;font-size:11px;">
+                            <div style="background:#e0e7ff;border:1px solid #c7d2fe;border-radius:8px;padding:6px 10px;color:#3730a3;font-size:11px;">
                                 <div style="display:flex;justify-content:space-between;"><span>Cupo disponible</span><b>${formatMoney(cupoDisponible)}</b></div>
                                 <div style="display:flex;justify-content:space-between;"><span>Deuda actual</span><b>${formatMoney(deudaCliente)}</b></div>
                                 <div style="display:flex;justify-content:space-between;"><span>Dias credito</span><b>${diasCredito}</b></div>

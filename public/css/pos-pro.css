@@ -21,21 +21,21 @@
     height: 100%;
     overflow: hidden;
     border-right: 1px solid #cbd5e1;
-    background: #eef6ff;
+    background: #dbeafe;
 }
 
 .pos-cartera-dialog,
 .pos-prefacturas-dialog,
 .pos-devolucion-dialog {
-    background: #f8fbff !important;
-    border-color: #bfdbfe !important;
+    background: #eef6ff !important;
+    border-color: #93c5fd !important;
 }
 
 .pos-cart-pane {
     width: 55%;
     height: 100%;
     overflow: hidden;
-    background: #fff7ed;
+    background: #ffedd5;
 }
 
 .pos-mobile-tabs {
@@ -1912,7 +1912,7 @@ button:hover {
         font-size: 11px !important;
         font-weight: 900 !important;
         background: #eff6ff !important;
-        border: 1px solid #bfdbfe !important;
+        border: 1px solid #93c5fd !important;
         border-radius: 999px !important;
         padding: 3px 7px !important;
         white-space: nowrap !important;
@@ -1937,7 +1937,7 @@ button:hover {
 
 .pos-product-card-desktop > div:nth-child(5) {
     background: #eff6ff !important;
-    border: 1px solid #bfdbfe !important;
+    border: 1px solid #93c5fd !important;
     border-radius: 999px !important;
     padding: 5px 9px !important;
     white-space: nowrap !important;
@@ -2025,7 +2025,7 @@ button:hover {
     height: min(760px, calc(100dvh - 32px)) !important;
     max-height: calc(100dvh - 32px) !important;
     padding: 16px !important;
-    border: 1px solid #bfdbfe !important;
+    border: 1px solid #93c5fd !important;
     overflow: hidden !important;
 }
 
@@ -2156,7 +2156,7 @@ button:hover {
     overflow-y: auto !important;
     padding: 18px !important;
     border-radius: 14px !important;
-    border: 1px solid #bfdbfe !important;
+    border: 1px solid #93c5fd !important;
     background: #ffffff !important;
 }
 
@@ -2256,7 +2256,7 @@ button:hover {
     z-index: 2147482501 !important;
     width: min(520px, calc(100vw - 28px)) !important;
     max-width: min(520px, calc(100vw - 28px)) !important;
-    border: 1px solid #bfdbfe !important;
+    border: 1px solid #93c5fd !important;
     border-radius: 16px !important;
     overflow: hidden auto !important;
     background: #ffffff !important;
@@ -2287,9 +2287,9 @@ button:hover {
 .pos-cierre-caja-overlay input,
 .pos-cierre-caja-overlay select,
 .pos-cierre-caja-overlay textarea {
-    border-color: #bfdbfe !important;
+    border-color: #93c5fd !important;
     border-radius: 10px !important;
-    background: #f8fbff !important;
+    background: #eef6ff !important;
     color: #111827 !important;
     font-size: 14px !important;
 }
@@ -2366,7 +2366,7 @@ button:hover {
     max-width: min(1120px, calc(100vw - 32px)) !important;
     height: min(720px, calc(100dvh - 32px)) !important;
     max-height: calc(100dvh - 32px) !important;
-    border: 1px solid #bfdbfe !important;
+    border: 1px solid #93c5fd !important;
     border-radius: 16px !important;
     background: #ffffff !important;
     box-shadow: 0 24px 60px rgba(15, 23, 42, .32) !important;
@@ -2396,7 +2396,7 @@ button:hover {
 .pos-cartera-body {
     min-height: 0 !important;
     overflow: hidden !important;
-    background: #f8fbff !important;
+    background: #eef6ff !important;
 }
 
 .pos-cartera-grid {
@@ -2466,7 +2466,7 @@ button:hover {
     width: min(720px, calc(100vw - 24px)) !important;
     max-width: min(720px, calc(100vw - 24px)) !important;
     height: min(86dvh, 760px) !important;
-    border: 1px solid #bfdbfe !important;
+    border: 1px solid #93c5fd !important;
     border-radius: 16px !important;
     box-shadow: 0 24px 60px rgba(15, 23, 42, .35) !important;
 }
@@ -2504,7 +2504,7 @@ button:hover {
     z-index: 2147482801 !important;
     width: min(540px, calc(100vw - 24px)) !important;
     max-width: min(540px, calc(100vw - 24px)) !important;
-    border: 1px solid #bfdbfe !important;
+    border: 1px solid #93c5fd !important;
     border-radius: 16px !important;
     box-shadow: 0 24px 60px rgba(15, 23, 42, .35) !important;
 }
