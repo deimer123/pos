@@ -82,7 +82,7 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
 
             $nombre = $this->textoValido(trim((string) ($row['producto'] ?? '')));
             $cantidad = $this->numero($row['cantidad'] ?? null);
-            $costo = $this->numero($row['costo_unitario'] ?? null);
+            $costoRaw = $this->numero($row['costo_unitario'] ?? null);
 
             // Fila sin tocar: se decide SOLO por las columnas que uno
             // realmente escribe (Producto/Cantidad/Costo), no por todas.
@@ -91,7 +91,7 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
             // texto de la formula en vez de "", segun como se guardo el
             // archivo) -- si se revisaran esas tambien, una fila vacia de
             // verdad podia salir marcada como "con datos" por error.
-            if ($nombre === '' && $cantidad === null && $costo === null) {
+            if ($nombre === '' && $cantidad === null && $costoRaw === null) {
                 continue;
             }
 
@@ -109,13 +109,23 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
                 continue;
             }
 
+            $productoExistente = $this->buscarProducto($nombre);
+            $esNuevo = $productoExistente === null;
+
+            // Costo Unitario se autollena en Excel con una formula VLOOKUP
+            // contra la hoja 'Productos existentes'. A veces esa formula no
+            // se puede leer al importar (depende de otra hoja del mismo
+            // archivo, y no todos los lectores de Excel la recalculan
+            // igual) y llega vacia aunque en Excel se vea el numero
+            // correcto -- en ese caso, si el producto ya existe, se usa su
+            // costo actual (es exactamente el mismo dato que esa formula
+            // intenta mostrar). Mismo patron que ya se usaba para IVA.
+            $costo = $costoRaw ?? ($esNuevo ? null : (float) $productoExistente->precio_costo);
+
             if ($costo === null) {
                 $this->errores[] = "Fila {$numeroFila} ({$nombre}): falta el Costo Unitario.";
                 continue;
             }
-
-            $productoExistente = $this->buscarProducto($nombre);
-            $esNuevo = $productoExistente === null;
 
             $descP = $this->numero($row['descuento_comercial'] ?? null) ?? 0;
             $iva = $this->numero($row['iva'] ?? null) ?? ($esNuevo ? 19.0 : (float) $productoExistente->iva_compra);

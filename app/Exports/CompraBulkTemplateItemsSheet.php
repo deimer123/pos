@@ -140,6 +140,19 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
 
                 $ultimaFila = self::ULTIMA_FILA_FORMULAS;
 
+                // Rango real de 'Productos existentes' (encabezado + una
+                // fila por producto), en vez de columnas enteras ($A:$I).
+                // Un VLOOKUP/COINCIDIR sobre una columna entera (mas de un
+                // millon de filas) es carisimo de EVALUAR de verdad -- Excel
+                // lo tolera mostrando solo el resultado en pantalla, pero
+                // CompraBulkImport (WithCalculatedFormulas) si necesita
+                // calcularlo de verdad al importar, y con rango sin limite
+                // se quedaba sin memoria. Acotado al tamaño real, es
+                // practicamente instantaneo.
+                $ultimaFilaExistentes = max(count($this->productosExistentes) + 1, 2);
+                $rangoExistentesA = "'Productos existentes'!\$A\$1:\$A\${$ultimaFilaExistentes}";
+                $rangoExistentesCompleto = "'Productos existentes'!\$A\$1:\$I\${$ultimaFilaExistentes}";
+
                 // Desplegable de la columna Producto: en vez de una lista
                 // fija, la fuente es una formula OFFSET+COINCIDIR+CONTAR.SI
                 // que filtra 'Productos existentes'!A por lo que ya llevas
@@ -157,7 +170,7 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
                         $validation->setPromptTitle('Producto de este proveedor');
                         $validation->setPrompt('Escribe parte del nombre: el desplegable se filtra solo. Si no aparece, se crea un producto nuevo con ese nombre.');
                         $validation->setFormula1(
-                            "OFFSET('Productos existentes'!\$A\$1,MATCH(A{$fila}&\"*\",'Productos existentes'!\$A:\$A,0)-1,0,COUNTIF('Productos existentes'!\$A:\$A,A{$fila}&\"*\"),1)"
+                            "OFFSET('Productos existentes'!\$A\$1,MATCH(A{$fila}&\"*\",{$rangoExistentesA},0)-1,0,COUNTIF({$rangoExistentesA},A{$fila}&\"*\"),1)"
                         );
 
                         $sheet->getCell('A' . $fila)->setDataValidation($validation);
@@ -195,9 +208,18 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
                         'C' => 2, // Costo Unitario
                         'E' => 4, // IVA
                     ] as $columna => $indiceProductosExistentes) {
+                        // Coincidencia EXACTA (sin comodines "*"): la
+                        // libreria que calcula formulas al importar
+                        // (WithCalculatedFormulas en CompraBulkImport) no
+                        // soporta bien los comodines en VLOOKUP -- con
+                        // comodin devolvia vacio o error en vez del dato
+                        // real. Coincidencia exacta funciona igual de bien
+                        // aca porque el desplegable de Producto (arriba)
+                        // pega el nombre completo tal cual esta en
+                        // 'Productos existentes', asi que siempre calza.
                         $sheet->setCellValue(
                             $columna . $fila,
-                            "=IF(\$A{$fila}=\"\",\"\",IFERROR(VLOOKUP(\"*\"&\$A{$fila}&\"*\",'Productos existentes'!\$A:\$I,{$indiceProductosExistentes},FALSE),\"\"))"
+                            "=IF(\$A{$fila}=\"\",\"\",IFERROR(VLOOKUP(\$A{$fila},{$rangoExistentesCompleto},{$indiceProductosExistentes},FALSE),\"\"))"
                         );
                     }
 
