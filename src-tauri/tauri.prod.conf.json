@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "build": {
-    "frontendDist": "http://159.89.81.81",
+    "frontendDist": "https://159-89-81-81.sslip.io",
     "beforeBuildCommand": ""
   }
 }
