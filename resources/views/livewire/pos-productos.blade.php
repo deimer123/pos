@@ -165,6 +165,21 @@
                 }
 
                 function agregarAlCarrito(idProducto) {
+                    if (navigator.onLine === false) {
+                        if (window.posMesaId || window.posTallerOrdenId || window.posHotelReservaId) {
+                            window.Swal?.fire('Sin conexion', 'Mesas, taller y hotel necesitan internet.', 'warning');
+                            return;
+                        }
+
+                        // Venta simple sin conexion: el carrito se arma
+                        // localmente (no toca la base de datos hasta
+                        // facturar), ver carrito-venta.blade.php.
+                        if (window.posAgregarProductoOffline) {
+                            window.posAgregarProductoOffline(idProducto);
+                        }
+                        return;
+                    }
+
                     const wire = wireComponent();
                     if (wire) wire.call('agregarAlCarrito', idProducto);
                 }

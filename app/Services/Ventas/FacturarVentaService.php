@@ -47,7 +47,13 @@ class FacturarVentaService
             $vencRaw = $opciones['fecha_vencimiento'] ?? null;
             $tipoPedido = $opciones['tipo_pedido'] ?? 'local';
             $costoEmpaque = (float) ($opciones['costo_empaque'] ?? 0);
-            $cobroDomicilio = $opciones['cobro_domicilio'] ?? null;
+            // La columna cobro_domicilio no acepta null (tiene default
+            // 'anticipado' en la migracion, pero un null EXPLICITO en el
+            // insert no toma ese default -- solo lo toma si la columna se
+            // omite del todo). Sin este respaldo, cualquier venta que no
+            // mande este dato (ej. la sincronizacion offline) fallaba con
+            // "Column 'cobro_domicilio' cannot be null".
+            $cobroDomicilio = $opciones['cobro_domicilio'] ?? 'anticipado';
 
             if ($tipoFactura === 'electronica' && ! $this->facturacionElectronicaDisponible($empresaId)) {
                 throw new \Exception('La facturacion electronica no esta activa o no tiene rango Factus configurado para esta empresa.');

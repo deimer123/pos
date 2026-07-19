@@ -10,6 +10,7 @@ use App\Models\Caja;
 use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\KardexController;
 use App\Http\Controllers\PosCatalogoController;
+use App\Http\Controllers\PosSyncController;
 
 
 
@@ -339,6 +340,9 @@ Route::middleware(['auth', 'no.cocina.en.pos'])->group(function () {
 
     Route::get('/pos/catalogo.json', [PosCatalogoController::class, 'index'])
         ->name('pos.catalogo');
+
+    Route::post('/pos/sync/venta', [PosSyncController::class, 'venta'])
+        ->name('pos.sync.venta');
 
     Route::get('/pos/mesa/{mesa}', function (\App\Models\Mesa $mesa) {
         $empresaId = auth()->user()->getEmpresaActualId();

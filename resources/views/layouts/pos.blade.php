@@ -7,10 +7,11 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <script>
         // Empresa del usuario que tiene la sesion activa en ESTE momento.
-        // Usado para que el catalogo guardado en este navegador (IndexedDB,
-        // compartido entre sesiones) nunca se muestre ni se sincronice
-        // mezclado si en este mismo dispositivo se usa el POS con otro
-        // negocio (ver pos-catalogo-offline.js).
+        // Usado para que el catalogo/cola de ventas offline guardados en
+        // este navegador (IndexedDB, compartido entre sesiones) nunca se
+        // muestren ni se sincronicen mezclados si en este mismo
+        // dispositivo se usa el POS con otro negocio (ver pos-catalogo-
+        // offline.js y pos-offline-queue.js).
         window.posEmpresaId = @json(auth()->check() ? auth()->user()->getEmpresaActualId() : null);
     </script>
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
@@ -18,7 +19,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
     <link rel="manifest" href="{{ asset('manifest.json') }}">
-    @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/pos-catalogo-offline.js'])
+    @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/pos-catalogo-offline.js', 'resources/js/pos-offline-queue.js'])
     @livewireStyles
     <link rel="stylesheet" href="{{ asset('css/pos-pro.css') }}?v={{ filemtime(public_path('css/pos-pro.css')) }}">
 </head>
@@ -127,6 +128,11 @@
         Administracion
     </a>
 
+    <button type="button" id="pos-pendientes-badge"
+        class="bg-indigo-700 hover:bg-indigo-800 text-white px-4 py-2 text-sm rounded shadow"
+        style="display:none;">
+    </button>
+
     <form method="POST" action="{{ route('cerrar.sesion') }}">
         @csrf
 
@@ -141,6 +147,10 @@
 @else
 
 <div class="pos-actions-list flex gap-2" :class="{ 'is-open': menuOpen }">
+<button type="button" id="pos-pendientes-badge"
+    class="bg-indigo-700 hover:bg-indigo-800 text-white px-4 py-2 text-sm rounded shadow"
+    style="display:none;">
+</button>
 <form method="POST" action="{{ route('cerrar.sesion') }}">
     @csrf
     <button type="submit"
@@ -390,6 +400,7 @@
             window.addEventListener('online', () => {
                 ocultarBannerOffline();
                 window.PosCatalogoOffline?.sincronizarCatalogo();
+                window.PosOfflineQueue?.procesarCola();
             });
 
             if (navigator.onLine === false) mostrarBannerOffline();
@@ -399,6 +410,81 @@
                     navigator.serviceWorker.register('/service-worker.js').catch(() => {});
                 });
             }
+        })();
+    </script>
+
+    {{-- Indicador de ventas pendientes de sincronizar (guardadas mientras
+         no habia conexion) --}}
+    <script>
+        (function () {
+            let badge = null;
+
+            function crearBadge() {
+                badge = document.getElementById('pos-pendientes-badge');
+                if (!badge) return;
+                badge.addEventListener('click', async () => {
+                    if (navigator.onLine === false) {
+                        window.Swal?.fire({
+                            icon: 'info',
+                            title: 'Sin conexion',
+                            text: 'Se van a enviar solas apenas vuelva el internet. No se puede sincronizar mientras no haya conexion.',
+                            confirmButtonText: 'Entendido',
+                        });
+                        return;
+                    }
+
+                    badge.disabled = true;
+                    const textoOriginal = badge.textContent;
+                    badge.textContent = '⏳ Sincronizando...';
+
+                    await window.PosOfflineQueue?.reintentarConflictos();
+                    await window.PosOfflineQueue?.procesarCola();
+
+                    badge.disabled = false;
+                    badge.textContent = textoOriginal;
+                });
+            }
+
+            async function actualizarBadge() {
+                if (!window.PosOfflineQueue) return;
+                if (!badge) crearBadge();
+                if (!badge) return;
+
+                const total = await window.PosOfflineQueue.contarPendientes();
+
+                if (total > 0) {
+                    badge.textContent = '🕓 ' + total + ' pendiente' + (total === 1 ? '' : 's') + ' de sincronizar';
+                    badge.style.display = 'block';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+
+            window.addEventListener('pos-cola-cambio', actualizarBadge);
+
+            window.addEventListener('pos-operacion-sincronizada', () => {
+                if (window.Swal) {
+                    window.Swal.fire({
+                        icon: 'success', title: 'Sincronizado', timer: 1500, showConfirmButton: false,
+                    });
+                }
+            });
+
+            window.addEventListener('pos-operacion-conflicto', (event) => {
+                if (window.Swal) {
+                    window.Swal.fire({
+                        icon: 'warning',
+                        title: 'Quedo pendiente de revisar',
+                        text: event.detail?.error || 'No se pudo sincronizar una venta.',
+                        confirmButtonText: 'Entendido',
+                    });
+                }
+            });
+
+            document.addEventListener('DOMContentLoaded', () => {
+                actualizarBadge();
+                if (navigator.onLine !== false) window.PosOfflineQueue?.procesarCola();
+            });
         })();
     </script>
 

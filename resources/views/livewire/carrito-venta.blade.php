@@ -13,7 +13,7 @@
                 value="{{ $clienteSeleccionadoNombre ?? 'Nombre Cliente' }}" disabled />
 
             @if (auth()->user()->puedeVerBotonPos('buscar_cliente'))
-            <button type="button" id="btn-buscar-cliente" wire:click="abrirModalBuscarCliente"
+            <button type="button" id="btn-buscar-cliente"
                 class="inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-full shadow-sm transition">
 
                 Buscar Cliente
@@ -663,7 +663,7 @@
                 </button>
                 @if ((auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa')) && auth()->user()->puedeVerBotonPos('facturar'))
                 <button id="btn-mesa-facturar"
-                    onclick="window.Livewire.dispatch('mesa-facturar')"
+                    onclick="if (navigator.onLine === false) { window.Swal?.fire('Sin conexion', 'Cerrar una mesa necesita internet.', 'warning'); } else { window.Livewire.dispatch('mesa-facturar'); }"
                     class="pos-mesa-total-btn"
                     style="background:#16a34a; color:white; border:none; border-radius:9999px; padding:0 14px; height:34px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">
                     💳 Facturar
@@ -672,7 +672,7 @@
             </div>
         @else
         @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion']) && auth()->user()->puedeVerBotonPos('facturar'))
-            <button type="button" id="btn-abrir-facturar" wire:click="confirmarFacturar"
+            <button type="button" id="btn-abrir-facturar"
                 class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow"
                 wire:loading.attr="disabled" wire:target="confirmarFacturar">
                 Facturar
@@ -3404,4 +3404,337 @@ function abrirIngresoTaller(nombreCliente, telefonoCliente) {
         }
     });
 }
+</script>
+
+<script>
+    // Facturar una venta simple sin conexion: guarda la venta en la cola
+    // local (IndexedDB) en vez de llamar a Livewire, y se sincroniza sola
+    // cuando vuelve el internet (ver resources/js/pos-offline-queue.js).
+    // No aplica a mesas/taller/hotel -- eso siempre necesita internet.
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.__posFacturarOfflineInicializado) return;
+        window.__posFacturarOfflineInicializado = true;
+
+        const boton = document.getElementById('btn-abrir-facturar');
+        if (!boton) return;
+
+        function wireCarrito() {
+            const el = boton.closest('[wire\\:id]');
+            return el ? window.Livewire.find(el.getAttribute('wire:id')) : null;
+        }
+
+        function itemsParaOffline() {
+            // Si se agrego algun producto mientras estaba offline, el
+            // carrito local (window.__posCarritoOffline) manda porque ya
+            // incluye eso; si no, se usa el carrito tal cual lo tenia
+            // Livewire al momento de perder la conexion.
+            if (window.__posCarritoOffline && Object.keys(window.__posCarritoOffline).length > 0) {
+                return Object.values(window.__posCarritoOffline);
+            }
+
+            const wire = wireCarrito();
+            const carrito = wire ? wire.get('carrito') : {};
+
+            return Object.values(carrito || {}).map((item) => ({
+                id_producto: item.id_producto,
+                nombre: item.nombre,
+                cantidad: item.cantidad,
+                precio: item.precio,
+                nuevo_precio: item.nuevo_precio,
+                descuento: item.descuento,
+                permite_decimal: item.permite_decimal,
+                vende_por: item.vende_por,
+                permite_fraccion: item.permite_fraccion,
+                id_unidad_de_medida: item.id_unidad_de_medida,
+            }));
+        }
+
+        function mostrarCarritoVendidoOffline(datosTicket) {
+            window.__posCarritoOffline = {};
+
+            const contenedor = document.querySelector('.pos-cart-table-scroll');
+            if (!contenedor) return;
+
+            const botonImprimir = datosTicket
+                ? '<button type="button" id="btn-offline-imprimir-ticket" style="background:#0f766e; color:white; border:none; border-radius:9999px; padding:8px 16px; font-size:12px; font-weight:700; cursor:pointer; margin-right:8px;">🖨️ Imprimir ticket</button>'
+                : '';
+
+            contenedor.innerHTML = '<div style="padding:32px 16px; text-align:center; color:#166534;">'
+                + '<div style="font-size:40px; margin-bottom:8px;">🕓</div>'
+                + '<div style="font-weight:700; margin-bottom:4px;">Venta guardada sin conexion</div>'
+                + '<div style="font-size:12px; color:#64748b; margin-bottom:14px;">Se va a facturar sola (a nombre de Consumidor Final) apenas vuelva el internet.</div>'
+                + botonImprimir
+                + '<button type="button" id="btn-offline-nueva-venta" style="background:#4f46e5; color:white; border:none; border-radius:9999px; padding:8px 16px; font-size:12px; font-weight:700; cursor:pointer;">Iniciar otra venta</button>'
+                + '</div>';
+
+            document.getElementById('btn-offline-nueva-venta')?.addEventListener('click', () => {
+                window.location.reload();
+            });
+
+            document.getElementById('btn-offline-imprimir-ticket')?.addEventListener('click', () => {
+                imprimirTicketProvisional(datosTicket);
+            });
+        }
+
+        function imprimirTicketProvisional(datosTicket) {
+            const empresa = window.posEmpresaContexto || {};
+            const fecha = new Date().toLocaleString('es-CO');
+
+            let filas = '';
+            let total = 0;
+
+            (datosTicket.items || []).forEach((item) => {
+                const precio = item.nuevo_precio ?? item.precio;
+                const subtotal = precio * item.cantidad;
+                total += subtotal;
+                filas += '<tr><td colspan="2">' + posEscapeHtml(item.nombre) + '</td></tr>'
+                    + '<tr><td>' + item.cantidad + ' x $' + Math.round(precio).toLocaleString('es-CO') + '</td>'
+                    + '<td style="text-align:right;">$' + Math.round(subtotal).toLocaleString('es-CO') + '</td></tr>';
+            });
+
+            const html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Ticket provisional</title>'
+                + '<style>body{font-family:monospace;font-size:12px;width:250px;margin:auto;color:#111;}'
+                + '.header,.footer{text-align:center;}.items td{padding:2px 0;vertical-align:top;}'
+                + '.advertencia{text-align:center;font-weight:bold;font-size:13px;margin:12px 0;text-transform:uppercase;border:2px dashed #b91c1c;color:#b91c1c;padding:8px;}'
+                + '.sep{margin:6px 0;}@media print{@page{size:auto;margin:0;}body{margin:0;}}</style></head>'
+                + '<body onload="window.print()">'
+                + '<div class="header"><div style="font-weight:700;">' + posEscapeHtml(empresa.nombre_empresa || 'EMPRESA') + '</div>'
+                + '<div class="sep">------------------------</div>'
+                + 'Fecha: ' + fecha + '<br>'
+                + 'Pago: ' + posEscapeHtml(datosTicket.medioPago || 'contado') + '<br>'
+                + '<div class="sep">------------------------</div></div>'
+                + '<table class="items" width="100%">' + filas + '</table>'
+                + '<br><div style="text-align:right;"><strong>Total: $' + Math.round(total).toLocaleString('es-CO') + '</strong></div>'
+                + '<div class="advertencia">⚠️ Pendiente de sincronizar<br>No es un documento fiscal valido</div>'
+                + '<div class="footer">Se reemplaza por el ticket real al recuperar internet.</div>'
+                + '</body></html>';
+
+            window.posImprimirHTML(html);
+        }
+
+        async function cobrarSinConexion() {
+            if (window.posTallerOrdenId || window.posHotelReservaId || window.posMesaId) {
+                window.Swal?.fire('Sin conexion', 'Taller, hotel y mesas necesitan internet para facturar.', 'warning');
+                return;
+            }
+
+            const items = itemsParaOffline();
+
+            if (items.length === 0) {
+                window.Swal?.fire('El carrito esta vacio', '', 'warning');
+                return;
+            }
+
+            const { value: medioPago } = await window.Swal.fire({
+                title: 'Cobrar sin conexion',
+                text: 'Esta venta se guarda a nombre de Consumidor Final, como "salida" (no fiscal) y de contado. Se factura de verdad al recuperar internet.',
+                input: 'radio',
+                inputOptions: { efectivo: 'Efectivo', transferencia: 'Transferencia' },
+                inputValue: 'efectivo',
+                showCancelButton: true,
+                confirmButtonText: 'Guardar venta',
+                cancelButtonText: 'Cancelar',
+                inputValidator: (v) => (!v ? 'Elige un medio de pago' : undefined),
+            });
+
+            if (!medioPago) return;
+
+            await window.PosOfflineQueue.agregarOperacion({
+                payload: { carrito: items, medio_pago: medioPago },
+            });
+
+            mostrarCarritoVendidoOffline({ items, medioPago });
+        }
+
+        boton.addEventListener('click', () => {
+            if (navigator.onLine === false) {
+                cobrarSinConexion();
+                return;
+            }
+
+            wireCarrito()?.call('confirmarFacturar');
+        });
+    });
+</script>
+
+<script>
+    // Agregar productos al carrito de la venta simple (sin mesa/taller/
+    // hotel) estando offline. Se puede armar 100% en el navegador porque,
+    // a diferencia de mesas/taller/hotel, agregar un producto al carrito
+    // normal no escribe nada en la base de datos hasta facturar.
+    function posFormatoMoneda(valor) {
+        return '$' + Math.round(Number(valor) || 0).toLocaleString('es-CO');
+    }
+
+    function posCarritoOfflineActual() {
+        if (!window.__posCarritoOffline) {
+            const el = document.querySelector('.pos-cart-table-scroll')?.closest('[wire\\:id]');
+            const wire = el ? window.Livewire.find(el.getAttribute('wire:id')) : null;
+            const carritoActual = wire ? wire.get('carrito') : {};
+
+            window.__posCarritoOffline = {};
+            Object.values(carritoActual || {}).forEach((item) => {
+                window.__posCarritoOffline[String(item.id_producto)] = {
+                    id_producto: item.id_producto,
+                    nombre: item.nombre,
+                    cantidad: item.cantidad,
+                    precio: item.precio,
+                    nuevo_precio: item.nuevo_precio,
+                    descuento: item.descuento ?? 0,
+                    permite_decimal: item.permite_decimal,
+                    vende_por: item.vende_por,
+                    permite_fraccion: item.permite_fraccion,
+                    id_unidad_de_medida: item.id_unidad_de_medida,
+                };
+            });
+        }
+
+        return window.__posCarritoOffline;
+    }
+
+    function posRenderCarritoOffline() {
+        const contenedor = document.querySelector('.pos-cart-table-scroll');
+        if (!contenedor) return;
+
+        const entradas = Object.entries(window.__posCarritoOffline || {});
+
+        if (entradas.length === 0) {
+            contenedor.innerHTML = '<div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:48px 16px; color:#94a3b8;">'
+                + '<div style="font-size:40px; margin-bottom:10px;">🛒</div>'
+                + '<div style="font-size:13px; font-weight:600;">Sin productos en la orden</div>'
+                + '</div>';
+        } else {
+            let total = 0;
+
+            contenedor.innerHTML = entradas.map(([key, item]) => {
+                const subtotal = (item.nuevo_precio ?? item.precio) * item.cantidad;
+                const descuentoPositivo = Math.abs(item.descuento || 0);
+                total += subtotal;
+
+                const maxLocal = window.PosCatalogoOffline?.descuentoMaximoPermitidoLocal();
+                const maxAttr = (maxLocal === null || maxLocal === undefined) ? '100' : maxLocal;
+
+                return '<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:10px;display:flex;align-items:center;gap:8px;">'
+                    + '<div style="flex:1;min-width:0;font-size:13px;font-weight:700;color:#1e293b;">' + posEscapeHtml(item.nombre) + '</div>'
+                    + '<div style="font-size:11px;color:#92400e;font-weight:700;white-space:nowrap;">🕓 offline</div>'
+                    + '<div style="font-size:12px;color:#64748b;white-space:nowrap;">x' + item.cantidad + '</div>'
+                    + '<div style="display:flex;align-items:center;gap:2px;white-space:nowrap;">'
+                    + '<input type="number" class="pos-carrito-offline-descuento" data-key="' + key + '" value="' + descuentoPositivo + '" min="0" max="' + maxAttr + '" step="0.01" style="width:48px;font-size:12px;text-align:center;border:1px solid #fdba74;border-radius:6px;padding:2px;">'
+                    + '<span style="font-size:11px;color:#92400e;">% dto</span>'
+                    + '</div>'
+                    + '<div style="font-size:14px;font-weight:800;color:#0f766e;white-space:nowrap;min-width:80px;text-align:right;">' + posFormatoMoneda(subtotal) + '</div>'
+                    + '</div>';
+            }).join('');
+
+            const totalEl = document.getElementById('pos-total-general');
+            if (totalEl) totalEl.textContent = posFormatoMoneda(total);
+
+            contenedor.querySelectorAll('.pos-carrito-offline-descuento').forEach((input) => {
+                const aplicarDescuento = (avisar) => {
+                    const item = window.__posCarritoOffline?.[input.dataset.key];
+                    if (!item) return;
+
+                    const max = window.PosCatalogoOffline?.descuentoMaximoPermitidoLocal();
+                    const crudo = Math.max(0, Number(input.value) || 0);
+                    const descuentoPositivo = (max === null || max === undefined) ? crudo : Math.min(crudo, max);
+
+                    if (avisar && descuentoPositivo < crudo) {
+                        input.value = descuentoPositivo;
+                        input.style.borderColor = '#dc2626';
+                        input.style.background = '#fef2f2';
+                        setTimeout(() => { input.style.borderColor = '#fdba74'; input.style.background = ''; }, 900);
+                        window.Swal?.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'warning',
+                            title: 'Descuento máximo permitido: ' + max + '%',
+                            showConfirmButton: false,
+                            timer: 1800,
+                            timerProgressBar: true,
+                        });
+                    }
+
+                    item.descuento = -descuentoPositivo;
+                    item.nuevo_precio = item.precio * (1 + item.descuento / 100);
+                };
+
+                // Bloquea en el momento (mientras se escribe), sin re-renderizar
+                // toda la tabla para no perder el foco del input.
+                input.addEventListener('input', () => aplicarDescuento(true));
+
+                // Al salir del campo, sí re-renderiza para refrescar subtotal/total.
+                input.addEventListener('change', () => {
+                    aplicarDescuento(true);
+                    posRenderCarritoOffline();
+                });
+            });
+        }
+    }
+
+    function posEscapeHtml(texto) {
+        return String(texto ?? '').replace(/[&<>"']/g, (c) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+        })[c]);
+    }
+
+    window.posAgregarProductoOffline = function (idProducto) {
+        const producto = window.PosCatalogoOffline?.getCatalogo().find((p) => String(p.id_producto) === String(idProducto));
+        if (!producto) return;
+
+        const carrito = posCarritoOfflineActual();
+        const key = String(idProducto);
+
+        if (carrito[key]) {
+            carrito[key].cantidad += 1;
+        } else {
+            carrito[key] = {
+                id_producto: producto.id_producto,
+                nombre: producto.descripcion_larga,
+                cantidad: 1,
+                precio: producto.precio_venta1,
+                nuevo_precio: producto.precio_venta1,
+                descuento: 0,
+                permite_decimal: producto.vende_por !== 'unidad',
+                vende_por: producto.vende_por,
+                permite_fraccion: false,
+                id_unidad_de_medida: producto.id_unidad_de_medida,
+            };
+        }
+
+        window.PosCatalogoOffline?.descontarStockVisual(idProducto, 1);
+        posRenderCarritoOffline();
+    };
+</script>
+
+<script>
+    // Boton "Buscar Cliente" en escritorio: sin conexion no se puede
+    // buscar/crear cliente (regla de negocio: toda venta offline queda a
+    // nombre de Consumidor Final; el cliente real se asigna despues, ya
+    // con internet, editando la venta si hace falta).
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.__posBuscarClienteInicializado) return;
+        window.__posBuscarClienteInicializado = true;
+
+        const boton = document.getElementById('btn-buscar-cliente');
+        if (!boton) return;
+
+        function wireCarritoCliente() {
+            const el = boton.closest('[wire\\:id]');
+            return el ? window.Livewire.find(el.getAttribute('wire:id')) : null;
+        }
+
+        boton.addEventListener('click', () => {
+            if (navigator.onLine === false) {
+                window.Swal?.fire({
+                    icon: 'info',
+                    title: 'Sin conexion',
+                    text: 'Sin internet la venta queda a nombre de Consumidor Final. Puedes asignarle el cliente real despues, cuando vuelva la conexion.',
+                    confirmButtonText: 'Entendido',
+                });
+                return;
+            }
+
+            wireCarritoCliente()?.call('abrirModalBuscarCliente');
+        });
+    });
 </script>
