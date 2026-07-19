@@ -105,7 +105,7 @@
             </h2>
 
             {{-- BOTÓN POS --}}
-            <a href="{{ route('pos', $user->hasRole('admin_empresa') ? ['modo' => 'normal'] : []) }}"
+            <a href="{{ route('pos', ['modo' => 'normal']) }}"
                 style="
                     text-decoration:none;
                     display:block;

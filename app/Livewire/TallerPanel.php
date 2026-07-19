@@ -268,12 +268,14 @@ class TallerPanel extends Component
             if (! empty($r['descripcion']) && (float)$r['precio_unitario'] > 0) {
                 $subtotal = round((float)$r['cantidad'] * (float)$r['precio_unitario'], 2);
                 if ($r['id']) {
-                    TallerRepuesto::where('id', $r['id'])->update([
-                        'descripcion'     => $r['descripcion'],
-                        'cantidad'        => $r['cantidad'],
-                        'precio_unitario' => $r['precio_unitario'],
-                        'subtotal'        => $subtotal,
-                    ]);
+                    TallerRepuesto::where('id', $r['id'])
+                        ->where('orden_id', $orden->id)
+                        ->update([
+                            'descripcion'     => $r['descripcion'],
+                            'cantidad'        => $r['cantidad'],
+                            'precio_unitario' => $r['precio_unitario'],
+                            'subtotal'        => $subtotal,
+                        ]);
                     $idsExistentes[] = $r['id'];
                 } else {
                     $nuevo = TallerRepuesto::create([

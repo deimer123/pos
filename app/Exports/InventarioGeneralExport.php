@@ -51,6 +51,19 @@ class InventarioGeneralExport implements FromQuery, ShouldAutoSize, WithColumnFo
         ];
     }
 
+    // Si un nombre de producto quedo guardado empezando como formula
+    // (=, +, -, @), Excel/LibreOffice lo ejecutaria como formula real al
+    // abrir este reporte. Se neutraliza igual que en las demas plantillas
+    // de exportacion (ver CompraBulkTemplateProductosExistentesSheet).
+    protected function textoSeguro(?string $valor): string
+    {
+        if (! $valor || preg_match('/^[=+\-@]/', $valor)) {
+            return '-';
+        }
+
+        return $valor;
+    }
+
     public function map($product): array
     {
         $costWithTax = $this->unitCostWithTax($product);
@@ -61,7 +74,7 @@ class InventarioGeneralExport implements FromQuery, ShouldAutoSize, WithColumnFo
 
         return [
             $product->id_producto,
-            $product->descripcion_larga,
+            $this->textoSeguro($product->descripcion_larga),
             $product->proveedor?->nombre,
             $product->familia1?->nombre,
             $product->subfamilia?->nombre,

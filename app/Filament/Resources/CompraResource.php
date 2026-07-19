@@ -60,12 +60,14 @@ class CompraResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        return auth()->check() && ! auth()->user()->hasRole('super_admin');
+        return auth()->check() && ! auth()->user()->hasRole('super_admin')
+            && auth()->user()->puedeVerResource('compras');
     }
 
     public static function canAccess(): bool
     {
-        return auth()->check() && ! auth()->user()->hasRole('super_admin');
+        return auth()->check() && ! auth()->user()->hasRole('super_admin')
+            && auth()->user()->puedeVerResource('compras');
     }
 
     /** FORM (Filament v3) */

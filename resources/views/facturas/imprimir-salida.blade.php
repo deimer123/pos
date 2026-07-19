@@ -121,10 +121,10 @@
 </div>
 
 <table class="items" width="100%">
-  @foreach ($factura->detalles as $d)
-    <tr><td colspan="2">{{ $d->descripcion_larga }}</td></tr>
+  @foreach ($factura->detalles as $i => $d)
+    <tr><td colspan="2">{{ $i + 1 }}. {{ $d->descripcion_larga }}</td></tr>
     <tr>
-      <td>{{ $fmtCant($d->cantidad) }} x ${{ number_format($d->precio, 0, ',', '.') }}</td>
+      <td>Cantidad: {{ $fmtCant($d->cantidad) }}</td>
       <td style="text-align:right;">${{ number_format($d->subtotal, 0, ',', '.') }}</td>
     </tr>
   @endforeach
@@ -146,10 +146,10 @@
     @else
       Desechables / empaque: ${{ number_format($costoEmpaque, 0, ',', '.') }}<br>
     @endif
-    <strong>Total: ${{ number_format($factura->total, 0, ',', '.') }}</strong>
-  @else
-    <strong>Total: ${{ number_format($factura->total, 0, ',', '.') }}</strong>
   @endif
+  <div style="border-top:1px solid #111; margin-top:4px; padding-top:4px;">
+    <strong style="font-size:16px;">Total: ${{ number_format($factura->total, 0, ',', '.') }}</strong>
+  </div>
 </div>
 
 @if($factura->observaciones)

@@ -23,12 +23,15 @@ class CatalogoResource extends Resource
 
     public static function canAccess(): bool
     {
-        return auth()->check() && auth()->user()->hasAnyRole(['super_admin', 'admin_empresa']);
+        $user = auth()->user();
+        if (! $user) return false;
+        if ($user->hasAnyRole(['super_admin', 'admin_empresa'])) return true;
+        return $user->hasRole('digitador') && $user->puedeVerResource('catalogo');
     }
 
     public static function shouldRegisterNavigation(): bool
     {
-        return auth()->check() && auth()->user()->hasAnyRole(['super_admin', 'admin_empresa']);
+        return static::canAccess();
     }
 
     public static function form(Form $form): Form

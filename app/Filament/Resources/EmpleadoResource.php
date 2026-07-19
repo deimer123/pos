@@ -162,6 +162,7 @@ class EmpleadoResource extends Resource
                             })
                             ->required()
                             ->columns(1)
+                            ->live()
                             ->afterStateHydrated(function (Forms\Components\CheckboxList $component, $state, $record) {
                                 if ($record) {
                                     $component->state($record->roles->pluck('name')->toArray());
@@ -196,6 +197,7 @@ class EmpleadoResource extends Resource
                                 'buscar_cliente' => 'Buscar Cliente',
                                 'caja' => 'Abrir/Cerrar caja',
                                 'editar' => 'Editar',
+                                'editar_cliente' => 'Editar cliente (tel/correo) en Buscar Cliente',
                                 'mas_cliente' => '+ Cliente',
                                 'cartera' => 'Cartera',
                                 'entrada_salida' => 'Entrada/Salida',
@@ -203,6 +205,65 @@ class EmpleadoResource extends Resource
                                 'guardar' => 'Guardar',
                                 'ver' => 'Ver',
                             ])
+                            ->columns(2),
+                    ]),
+
+                Forms\Components\Section::make('Recursos visibles en el Admin')
+                    ->description('Solo aplica a Digitador (es el unico rol, aparte de Admin Empresa, que entra al panel de administracion). Se listan todos los modulos operativos que aplican al tipo de negocio; marca los que NO quieres que este empleado vea. Los modulos contables/reportes y la gestion de empleados siguen siendo exclusivos de Admin Empresa. Admin Empresa siempre ve todo.')
+                    ->extraAttributes(['class' => 'combo-franja-azul'])
+                    ->visible(fn (Forms\Get $get) => in_array('digitador', $get('roles') ?? []))
+                    ->schema([
+                        Forms\Components\CheckboxList::make('recursos_ocultos_admin')
+                            ->extraAttributes(['class' => 'producto-linea-2'])
+                            ->label('Ocultar estos recursos')
+                            ->options(function () {
+                                $empresaId = auth()->user()->getEmpresaActualId();
+                                $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();
+
+                                // Todos los resources operativos/de catalogo que
+                                // Digitador puede llegar a usar (se excluyen a
+                                // proposito los contables/reportes financieros y
+                                // Empleados/Configuracion de Empresa, que se
+                                // quedan exclusivos de Admin Empresa). Marcar uno
+                                // aca lo oculta aunque antes fuera visible por
+                                // defecto -- los propios de un tipo de negocio
+                                // solo aparecen en la lista si la empresa los
+                                // tiene activados.
+                                $opciones = [
+                                    'productos' => 'Productos',
+                                    'combos'    => 'Combos',
+                                    'familias'  => 'Categorías',
+                                    'subfamilias' => 'Subcategorías',
+                                    'compras'   => 'Compras a Proveedor',
+                                    'clientes'  => 'Clientes y Proveedores',
+                                    'catalogo'  => 'Catálogo público',
+                                    'ajustes_inventario' => 'Ajustes de Inventario',
+                                    'notas_credito' => 'Notas Crédito',
+                                    'kardex' => 'Kardex',
+                                ];
+
+                                if ($config?->usa_recetas) {
+                                    $opciones['recetas'] = 'Recetas';
+                                }
+
+                                if ($config?->usa_servicios) {
+                                    $opciones['servicios'] = 'Servicios';
+                                }
+
+                                if ($config?->usa_taller) {
+                                    $opciones['mecanicos'] = 'Mecánicos';
+                                }
+
+                                if ($config?->usa_mesas) {
+                                    $opciones['mesas'] = 'Mesas';
+                                }
+
+                                if ($config?->usa_hotel) {
+                                    $opciones['habitaciones'] = 'Habitaciones';
+                                }
+
+                                return $opciones;
+                            })
                             ->columns(2),
                     ]),
             ]);

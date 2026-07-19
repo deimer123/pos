@@ -252,6 +252,12 @@ tr:nth-child(even) {
 </div>
 
 <script>
+function escapeHtml(texto) {
+    return String(texto ?? '').replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    })[c]);
+}
+
 async function verDocumento(tipo, referencia) {
 
     try {
@@ -358,9 +364,9 @@ async function verDocumento(tipo, referencia) {
 
             html += `
                 <tr>
-                    <td>${d.producto_id}</td>
-                    <td style="text-align:left;">${d.nombre}</td>
-                    <td>${d.cantidad}</td>
+                    <td>${escapeHtml(d.producto_id)}</td>
+                    <td style="text-align:left;">${escapeHtml(d.nombre)}</td>
+                    <td>${escapeHtml(d.cantidad)}</td>
 
                     <td style="white-space:nowrap;">
                         $ ${costoFormat}
@@ -451,7 +457,7 @@ async function cargarProductos(busqueda = '') {
             <div style="padding:5px; border-bottom:1px solid #ccc; cursor:pointer;"
                  onclick="seleccionarProducto('${p.id_producto}')">
 
-                <strong>${p.id_producto}</strong> - ${p.descripcion_larga}
+                <strong>${escapeHtml(p.id_producto)}</strong> - ${escapeHtml(p.descripcion_larga)}
 
             </div>
         `;

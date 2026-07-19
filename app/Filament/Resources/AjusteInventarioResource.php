@@ -157,7 +157,8 @@ class AjusteInventarioResource extends Resource
 
     public static function canAccess(): bool
     {
-        return auth()->user()->hasRole('admin_empresa');
+        $user = auth()->user();
+        return (bool) $user && ($user->hasRole('admin_empresa') || ($user->hasRole('digitador') && $user->puedeVerResource('ajustes_inventario')));
     }
 
 

@@ -58,10 +58,34 @@ class LoginResponse implements FilamentLoginResponseContract, FortifyLoginRespon
             return redirect()->intended(route('filament.admin.pages.dashboard'));
         }
 
-        if ($user?->necesitaConfiguracionInicial()) {
+        // Solo el admin de la empresa debe terminar el wizard de
+        // configuracion inicial. Sin este filtro por rol, un vendedor o
+        // cajero que vuelve a iniciar sesion (ej. despues de que la sesion
+        // unica lo saco por haber entrado en otro dispositivo) tambien
+        // caia aca si la ConfiguracionEmpresa quedaba incompleta, y como
+        // esas rutas de /admin estan bloqueadas para esos roles
+        // (RestrictVendedorFromPanel), terminaba viendo un 403 en vez del
+        // POS.
+        if ($user?->hasRole('admin_empresa') && $user->necesitaConfiguracionInicial()) {
             return redirect()->intended(route('filament.admin.resources.configuracion-empresas.create'));
         }
 
-        return redirect()->intended('/eleccion');
+        // Laravel guarda en la sesion la URL que se intentaba visitar
+        // cuando no habia sesion activa (redirect()->guest(), disparado
+        // automaticamente por el middleware de auth) y redirect()->intended()
+        // la usa apenas hay login exitoso -- sin importar el rol. Si en
+        // algun momento el navegador llego a tocar una URL de /admin/*
+        // estando ya deslogueado (ej. una peticion de fondo de una pestana
+        // vieja justo despues de que la sesion unica invalido la sesion),
+        // esa URL de /admin queda "recordada" y el siguiente login manda
+        // ahi directo a CUALQUIER rol, incluidos los que no deberian entrar
+        // a /admin (taller, cajero, vendedor, recepcion, mesero). Por eso
+        // solo se honra intended() para los roles que si tienen acceso
+        // normal al panel; todos los demas van siempre a /eleccion.
+        if ($user?->hasAnyRole(['admin_empresa', 'super_admin'])) {
+            return redirect()->intended('/eleccion');
+        }
+
+        return redirect()->to('/eleccion');
     }
 }

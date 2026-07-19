@@ -31,6 +31,7 @@ class User extends Authenticatable implements FilamentUser
         'empresa_id',
         'activo',
         'botones_ocultos_pos',
+        'recursos_ocultos_admin',
         'plan_meses',
         'plan_started_at',
         'plan_ends_at',
@@ -58,6 +59,7 @@ class User extends Authenticatable implements FilamentUser
         'email_verified_at' => 'datetime',
         'activo' => 'boolean',
         'botones_ocultos_pos' => 'array',
+        'recursos_ocultos_admin' => 'array',
         'plan_started_at' => 'date',
         'plan_ends_at' => 'date',
     ];
@@ -69,6 +71,25 @@ class User extends Authenticatable implements FilamentUser
         }
 
         return ! in_array($boton, $this->botones_ocultos_pos ?? []);
+    }
+
+    /**
+     * Igual que puedeVerBotonPos() pero para los resources del panel de
+     * admin (Productos, Recetas, Compras, etc.) -- admin_empresa siempre
+     * los ve todos; para el resto (en la practica, solo digitador llega a
+     * tener acceso al panel de admin) se revisa la lista de resources
+     * marcados como ocultos para ese empleado en particular. Es una lista
+     * de exclusion (igual que botones_ocultos_pos), no de permisos: si el
+     * rol ya no tiene acceso al resource por su propia regla (ej. un
+     * modulo que la empresa no tiene activado), esto no se lo devuelve.
+     */
+    public function puedeVerResource(string $resource): bool
+    {
+        if ($this->hasRole('admin_empresa')) {
+            return true;
+        }
+
+        return ! in_array($resource, $this->recursos_ocultos_admin ?? []);
     }
 
     protected $appends = [

@@ -1,12 +1,20 @@
 /**
  * Apertura compartida de la base IndexedDB "pos_offline". Centralizada
- * aqui para que el catalogo de productos (Fase 1) y la cola de
- * operaciones offline (Fase 2) usen siempre la MISMA version de la base
- * y no se pisen entre si al crear/actualizar los object stores.
+ * aqui para que el catalogo de productos (Fase 1), clientes, auth offline
+ * y la cola de operaciones offline (Fase 2/3) usen siempre la MISMA
+ * version de la base y no se pisen entre si al crear/actualizar los
+ * object stores.
+ *
+ * Ojo: este numero solo puede SUBIR, nunca bajar. Si el navegador de
+ * alguien ya abrio esta base ("pos_offline") en una version mas alta
+ * (distintas ramas de desarrollo llegaron a usar hasta la 10 antes de
+ * centralizarse aqui), pedir una version menor rompe la apertura con un
+ * VersionError que este codigo atrapa en silencio -- se queda pegado
+ * sin ningun error visible en consola. Por eso arranca en 11, por encima
+ * de cualquier version usada antes en cualquier rama.
  */
-
 export const DB_NAME = 'pos_offline';
-export const DB_VERSION = 3;
+export const DB_VERSION = 11;
 export const STORE_PRODUCTOS = 'productos';
 export const STORE_OPERACIONES = 'operaciones';
 export const STORE_CLIENTES = 'clientes';

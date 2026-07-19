@@ -698,7 +698,7 @@
 
     <div class="pos-desktop-cart-actions flex items-center justify-between">
         @if(! $mesaId)
-        @php $usaTallerPos = (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_taller') && auth()->user()->hasAnyRole(['taller', 'admin_empresa']); @endphp
+        @php $usaTallerPos = request()->get('modo') !== 'normal' && (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_taller') && auth()->user()->hasAnyRole(['taller', 'admin_empresa']); @endphp
         @if($usaTallerPos)
         {{-- POS con Taller: en escritorio, todos los botones en una sola fila
              pareja (sin menu "Más acciones"). En movil esta fila se oculta
@@ -936,7 +936,7 @@
 
     @php
         $esMeseroPuroMenu = auth()->user()->hasRole('mesero') && ! auth()->user()->hasAnyRole(['cajero','admin_empresa','vendedor']);
-        $usaTallerPosMobile = (! $mesaId) && (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_taller') && auth()->user()->hasAnyRole(['taller', 'admin_empresa']);
+        $usaTallerPosMobile = (! $mesaId) && request()->get('modo') !== 'normal' && (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_taller') && auth()->user()->hasAnyRole(['taller', 'admin_empresa']);
     @endphp
     @if(! $usaTallerPosMobile)
     <div class="pos-cart-mobile-more pos-cart-mobile-more-side" x-data="{ open: false }" wire:key="mobile-actions-root-{{ $cajaEstado }}">
@@ -1328,16 +1328,65 @@
                 <div class="flex-1 min-h-0 overflow-y-auto p-3" style="background:#f8fbff;">
                     <table class="w-full text-sm bg-white rounded-lg overflow-hidden shadow-sm border" style="border-color:#dbeafe;">
                         @forelse ($clientes as $cliente)
-                            <tr wire:key="cliente-{{ $cliente->id }}"
-                                wire:click="seleccionarCliente({{ $cliente->id_clip_pro }})"
-                                class="hover:bg-indigo-50 cursor-pointer border-b">
-                                <td class="px-3 py-2">
-                                    <div class="font-semibold">{{ $cliente->nombre }}</div>
-                                    <div class="text-xs text-gray-500">
-                                        Cedula: {{ $cliente->identificacion ?? '-' }}
-                                    </div>
-                                </td>
-                            </tr>
+                            @if ($editandoClienteId === $cliente->id_clip_pro)
+                                <tr wire:key="cliente-edit-{{ $cliente->id }}" class="border-b" style="background:#eef2ff;">
+                                    <td class="px-3 py-3">
+                                        <div class="font-semibold mb-2">{{ $cliente->nombre }}</div>
+                                        <div class="grid grid-cols-1 gap-2">
+                                            <div>
+                                                <label class="text-xs font-semibold" style="color:#4b5563;">Telefono</label>
+                                                <input type="text" wire:model.defer="editClienteTelefono"
+                                                    placeholder="Telefono"
+                                                    class="w-full px-2 py-1.5 border rounded-md text-sm" />
+                                                @error('editClienteTelefono') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                                            </div>
+                                            <div>
+                                                <label class="text-xs font-semibold" style="color:#4b5563;">Correo</label>
+                                                <input type="text" wire:model.defer="editClienteEmail"
+                                                    placeholder="Correo"
+                                                    class="w-full px-2 py-1.5 border rounded-md text-sm" />
+                                                @error('editClienteEmail') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                                            </div>
+                                        </div>
+                                        <div class="flex gap-2 mt-2">
+                                            <button wire:click="guardarEdicionCliente" type="button"
+                                                class="text-xs font-semibold"
+                                                style="background:#2563eb;color:#fff;padding:6px 12px;border-radius:6px;border:none;">
+                                                Guardar
+                                            </button>
+                                            <button wire:click="cancelarEdicionCliente" type="button"
+                                                class="text-xs font-semibold"
+                                                style="background:#e5e7eb;color:#374151;padding:6px 12px;border-radius:6px;border:none;">
+                                                Cancelar
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @else
+                                <tr wire:key="cliente-{{ $cliente->id }}"
+                                    class="hover:bg-indigo-50 border-b">
+                                    <td class="px-3 py-2 cursor-pointer" wire:click="seleccionarCliente({{ $cliente->id_clip_pro }})">
+                                        <div class="font-semibold">{{ $cliente->nombre }}</div>
+                                        <div class="text-xs text-gray-500">
+                                            Cedula: {{ $cliente->identificacion ?? '-' }}
+                                        </div>
+                                        @if ($cliente->telefono || $cliente->email)
+                                            <div class="text-xs text-gray-400">
+                                                {{ $cliente->telefono ?? '-' }} @if($cliente->email) &middot; {{ $cliente->email }} @endif
+                                            </div>
+                                        @endif
+                                    </td>
+                                    @if (auth()->user()->puedeVerBotonPos('editar_cliente'))
+                                        <td class="px-3 py-2 text-right" style="width:36px;">
+                                            <button type="button" title="Editar telefono/correo"
+                                                wire:click.stop="iniciarEdicionCliente({{ $cliente->id_clip_pro }})"
+                                                class="text-gray-400 hover:text-blue-600">
+                                                ✏️
+                                            </button>
+                                        </td>
+                                    @endif
+                                </tr>
+                            @endif
                         @empty
                             <tr>
                                 <td class="px-3 py-4 text-center text-gray-500">
@@ -1965,6 +2014,22 @@
                                     class="h-9 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-full shadow-sm">
                                     Cargar
                                 </button>
+
+                                @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa']) && auth()->user()->puedeVerBotonPos('facturar'))
+                                <button x-data="{ hayProductos: {{ $hayProductosEnCarrito ? 'true' : 'false' }} }"
+                                    x-on:click="
+                                    if (hayProductos) {
+                                      Swal.fire({icon:'warning',title:'Carrito con productos',text:'Limpie el carrito antes de facturar otra prefactura.',confirmButtonText:'Entendido'});
+                                    } else {
+                                      $wire.facturarPrefacturaDirecto({{ $prefacturaSeleccionada->id }});
+                                    }"
+                                    wire:key="prefactura-facturar-btn-{{ $prefacturaSeleccionada->id }}"
+                                    wire:loading.attr="disabled" wire:target="facturarPrefacturaDirecto"
+                                    class="h-9 px-4 text-white text-sm font-semibold rounded-full shadow-sm"
+                                    style="background:#16a34a;">
+                                    💳 Facturar
+                                </button>
+                                @endif
                             @endif
 
                             <button wire:click="$set('mostrarModalPrefacturas', false)"

@@ -24,18 +24,14 @@ class MesaResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        $user = auth()->user();
-        if (!$user || !$user->hasRole('admin_empresa')) {
-            return false;
-        }
-        $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $user->getEmpresaActualId())->first();
-        return (bool) ($config?->usa_mesas ?? false);
+        return static::canAccess();
     }
 
     public static function canAccess(): bool
     {
         $user = auth()->user();
-        if (!$user || !$user->hasRole('admin_empresa')) {
+        $tieneRol = $user && ($user->hasRole('admin_empresa') || ($user->hasRole('digitador') && $user->puedeVerResource('mesas')));
+        if (! $tieneRol) {
             return false;
         }
         $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $user->getEmpresaActualId())->first();

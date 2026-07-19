@@ -69,6 +69,9 @@ class CarritoVenta extends Component
     public string  $ordenDomObservaciones = '';
     public $buscarCliente             = '';
     public $mostrarModalCrearCliente  = false;
+    public $editandoClienteId         = null;
+    public $editClienteTelefono       = '';
+    public $editClienteEmail          = '';
     public $nuevoCliente              = [
         'tipo_documento_id'  => '',
         'identificacion'     => '',
@@ -640,14 +643,24 @@ if (request()->hasSession() && session()->has('observaciones_guardadas')) {
         $this->cargarCajaActual();
     }
 
-    // Si no hay caja abierta hoy, pedir abrir caja
+    // Si no hay caja abierta hoy, se abre sola en $0 -- sin modal, sin
+    // pedir monto. El dia siempre arranca con la caja en cero; el boton
+    // manual "Abrir caja" sigue disponible para casos aparte (ej. alguien
+    // cierra la caja a mitad del dia por error y necesita reabrirla).
     $user = auth()->user();
 
         if (
             !$this->cajaActual &&
             $user->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion'])
         ) {
-            $this->mostrarModalAbrirCaja = true;
+            \App\Models\Caja::create([
+                'user_id'        => auth()->id(),
+                'empresa_id'     => $this->getEmpresaId(),
+                'monto_apertura' => 0,
+                'opened_at'      => now(),
+                'estado'         => 'abierta',
+            ]);
+            $this->cargarCajaActual();
         }
 
     // Cargar orden de taller desde query param ?taller={id}
@@ -687,9 +700,10 @@ public function asignarConsumidorFinalPorDefecto()
         $this->clientes = Actor::whereIn('tipo', [1, 2])
             ->where('empresa_id', $empresaId)
             ->orderBy('nombre')
-            ->get(['id', 'id_clip_pro', 'nombre', 'identificacion']);
+            ->get(['id', 'id_clip_pro', 'nombre', 'identificacion', 'telefono', 'email']);
 
         $this->buscarCliente = '';
+        $this->editandoClienteId = null;
         $this->mostrarModalClientes = true;
     }
 
@@ -828,6 +842,90 @@ public function asignarConsumidorFinalPorDefecto()
 
 }
 
+public function iniciarEdicionCliente($idClipPro)
+{
+    if (! auth()->user()->puedeVerBotonPos('editar_cliente')) {
+        abort(403);
+    }
+
+    $empresaId = $this->getEmpresaId();
+
+    $cliente = \App\Models\Actor::where('empresa_id', $empresaId)
+        ->where('id_clip_pro', $idClipPro)
+        ->first();
+
+    if (! $cliente) {
+        $this->dispatch('error', 'Cliente no encontrado');
+        return;
+    }
+
+    $this->resetErrorBag();
+    $this->editandoClienteId   = $idClipPro;
+    $this->editClienteTelefono = $cliente->telefono;
+    $this->editClienteEmail    = $cliente->email;
+}
+
+public function cancelarEdicionCliente()
+{
+    $this->resetErrorBag();
+    $this->editandoClienteId = null;
+}
+
+public function guardarEdicionCliente()
+{
+    if (! auth()->user()->puedeVerBotonPos('editar_cliente')) {
+        abort(403);
+    }
+
+    $empresaId = $this->getEmpresaId();
+
+    $cliente = \App\Models\Actor::where('empresa_id', $empresaId)
+        ->where('id_clip_pro', $this->editandoClienteId)
+        ->first();
+
+    if (! $cliente) {
+        $this->dispatch('error', 'Cliente no encontrado');
+        $this->editandoClienteId = null;
+        return;
+    }
+
+    $this->validate([
+        'editClienteTelefono' => [
+            'required',
+            'numeric',
+            Rule::unique('actors', 'telefono')
+                ->where(fn ($query) => $query->where('empresa_id', $empresaId))
+                ->ignore($cliente->id),
+        ],
+        'editClienteEmail' => [
+            'required',
+            'email',
+            Rule::unique('actors', 'email')
+                ->where(fn ($query) => $query->where('empresa_id', $empresaId))
+                ->ignore($cliente->id),
+        ],
+    ], [
+        'editClienteTelefono.required' => 'Debe ingresar un telefono.',
+        'editClienteTelefono.numeric'  => 'El telefono debe ser numerico.',
+        'editClienteTelefono.unique'   => 'Este telefono ya esta registrado en otro cliente.',
+        'editClienteEmail.required'    => 'Debe ingresar un correo.',
+        'editClienteEmail.email'       => 'Debe ingresar un correo valido.',
+        'editClienteEmail.unique'      => 'Este correo ya esta registrado en otro cliente.',
+    ]);
+
+    $cliente->update([
+        'telefono' => $this->editClienteTelefono,
+        'email'    => $this->editClienteEmail,
+    ]);
+
+    if ($this->clienteId === $cliente->id) {
+        $this->clienteTelefono = $cliente->telefono;
+    }
+
+    $this->editandoClienteId = null;
+    $this->dispatch('success', 'Datos del cliente actualizados.');
+}
+
 
   public function agregarProducto($idProducto)
 {
@@ -836,7 +934,10 @@ public function asignarConsumidorFinalPorDefecto()
     // Si usa_taller Y el usuario opera el POS de Taller (rol taller/admin_empresa),
     // exigir que haya una orden activa antes de agregar productos. Para otros
     // roles (ej. vendedor) el negocio se ve como una tienda normal, sin esta regla.
-    $usaTaller = (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_taller')
+    // ?modo=normal (boton "Punto de Venta" en /eleccion) tambien la desactiva:
+    // fuerza el POS base sin taller, aunque la empresa lo tenga configurado.
+    $usaTaller = request()->get('modo') !== 'normal'
+        && (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_taller')
         && auth()->user()->hasAnyRole(['taller', 'admin_empresa']);
     if ($usaTaller && ! $this->tallerOrdenId) {
         $this->dispatch('error', 'Debes crear un ingreso de taller primero (botón "Ingresar").');
@@ -2076,8 +2177,24 @@ $prefactura = $query->first();
 
 $this->calcularTotalGeneral(); // âœ… RECALCULAR TOTAL DESPUÃ‰S DE CARGAR
 $this->dispatch('guardar-carrito-en-cache', $this->carrito); // âœ… GUARDAR EN CACHE
-    
+
 }
+
+    // Igual que cargarPrefacturaAlCarrito, pero de una vez abre el modal de
+    // facturar (confirmarFacturar) con los productos ya cargados, para el
+    // boton "Facturar" del modal de Gestion de Prefacturas.
+    public function facturarPrefacturaDirecto($id)
+    {
+        if (! auth()->user()->hasAnyRole(['cajero', 'admin_empresa'])) {
+            abort(403);
+        }
+
+        $this->cargarPrefacturaAlCarrito($id);
+
+        if (empty($this->carrito)) return;
+
+        $this->confirmarFacturar();
+    }
 
     public function render()
 {
@@ -2094,7 +2211,7 @@ $this->dispatch('guardar-carrito-en-cache', $this->carrito); // âœ… GUARDAR 
             });
         })
         ->orderBy('nombre')
-        ->get(['id', 'id_clip_pro', 'nombre', 'identificacion']);
+        ->get(['id', 'id_clip_pro', 'nombre', 'identificacion', 'telefono', 'email']);
 
     $carrito = $this->limpiarUtf8Array($this->carrito);
     $observacionesPrefactura = $this->textoUtf8($this->observacionesPrefactura);

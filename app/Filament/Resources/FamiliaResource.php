@@ -88,12 +88,13 @@ class FamiliaResource extends Resource
 
     public static function canAccess(): bool
 {
-    return auth()->user()?->hasRole('admin_empresa');
+    $user = auth()->user();
+    return (bool) $user && ($user->hasRole('admin_empresa') || ($user->hasRole('digitador') && $user->puedeVerResource('familias')));
 }
 
 public static function shouldRegisterNavigation(): bool
 {
-    return auth()->user()?->hasRole('admin_empresa');
+    return static::canAccess();
 }
 
 public static function canCreate(): bool

@@ -39,6 +39,7 @@ class PantallaCocina extends Component
     public function marcarListo(int $itemId): void
     {
         OrdenMesaItem::where('id', $itemId)
+            ->where('empresa_id', $this->empresaId())
             ->whereIn('estado_cocina', ['enviado', 'preparando'])
             ->update(['estado_cocina' => 'listo']);
     }

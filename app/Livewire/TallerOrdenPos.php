@@ -115,7 +115,7 @@ class TallerOrdenPos extends Component
 
     public function editarItem(int $id): void
     {
-        $item = TallerRepuesto::find($id);
+        $item = TallerRepuesto::where('id', $id)->where('orden_id', $this->ordenId)->first();
         if (! $item) return;
 
         $this->editandoId = $id;
@@ -130,21 +130,23 @@ class TallerOrdenPos extends Component
     {
         if (! $this->editandoId) return;
 
-        TallerRepuesto::where('id', $this->editandoId)->update([
-            'descripcion'     => $this->editDesc,
-            'cantidad'        => max(0.001, $this->editCant),
-            'precio_unitario' => max(0, $this->editPrecio),
-            'subtotal'        => round(max(0.001, $this->editCant) * max(0, $this->editPrecio), 2),
-            'tipo'            => $this->editTipo,
-            'costo_proveedor' => max(0, $this->editCosto),
-        ]);
+        TallerRepuesto::where('id', $this->editandoId)
+            ->where('orden_id', $this->ordenId)
+            ->update([
+                'descripcion'     => $this->editDesc,
+                'cantidad'        => max(0.001, $this->editCant),
+                'precio_unitario' => max(0, $this->editPrecio),
+                'subtotal'        => round(max(0.001, $this->editCant) * max(0, $this->editPrecio), 2),
+                'tipo'            => $this->editTipo,
+                'costo_proveedor' => max(0, $this->editCosto),
+            ]);
 
         $this->editandoId = null;
     }
 
     public function quitarItem(int $id): void
     {
-        TallerRepuesto::where('id', $id)->delete();
+        TallerRepuesto::where('id', $id)->where('orden_id', $this->ordenId)->delete();
         if ($this->editandoId === $id) {
             $this->editandoId = null;
         }

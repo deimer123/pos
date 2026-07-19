@@ -12,27 +12,6 @@ const SYNC_STALE_MS = 30 * 60 * 1000; // 30 min
 
 let catalogoEnMemoria = [];
 
-/**
- * IndexedDB es una sola base compartida por el navegador, no por empresa.
- * Si en este mismo dispositivo antes se uso el POS con OTRO negocio, lo
- * guardado ahi (productos/clientes/pendientes) no es de quien tiene la
- * sesion activa ahora. Se compara contra la empresa de la sesion actual
- * (window.posEmpresaId, fijado en pos.blade.php) para no mostrar ni
- * sincronizar datos mezclados entre negocios.
- */
-function esCacheDeOtraEmpresa() {
-    if (window.posEmpresaId === undefined || window.posEmpresaId === null) return false;
-    const guardada = localStorage.getItem(EMPRESA_KEY);
-    // Si nunca se registro de que empresa es lo guardado (dispositivos que
-    // ya tenian cache ANTES de este cambio), no se puede confiar en que
-    // sea de la empresa actual: se trata igual que un cache de otra
-    // empresa, forzando una sincronizacion fresca. Una vez que corra una
-    // vez con esta version, EMPRESA_KEY queda registrado y esta rama ya
-    // no se vuelve a usar para esta empresa.
-    if (guardada === null) return true;
-    return Number(guardada) !== Number(window.posEmpresaId);
-}
-
 async function leerTodoDeIndexedDB() {
     const db = await abrirDB();
 
@@ -81,8 +60,10 @@ async function sincronizarCatalogo() {
         catalogoEnMemoria = productos;
         localStorage.setItem(SYNC_AT_KEY, String(Date.now()));
 
-        if (data.empresa_id !== undefined && data.empresa_id !== null) {
-            localStorage.setItem(EMPRESA_KEY, String(data.empresa_id));
+        // Marca de que empresa es este catalogo guardado localmente (ver
+        // catalogoLocalEsDeEmpresaActual en cargarCatalogoLocal).
+        if (window.posEmpresaId !== undefined && window.posEmpresaId !== null) {
+            localStorage.setItem(EMPRESA_KEY, String(window.posEmpresaId));
         }
 
         if (data.descuento_maximo_permitido === null || data.descuento_maximo_permitido === undefined) {
@@ -102,16 +83,43 @@ async function sincronizarCatalogo() {
 }
 
 /**
+ * Este dispositivo/navegador puede haberse usado antes con OTRA empresa
+ * (ej. un tablet compartido, o probando con varias cuentas). El catalogo
+ * guardado en IndexedDB no lleva el empresa_id producto por producto, asi
+ * que se compara contra una marca aparte guardada la ultima vez que se
+ * sincronizo de verdad (ver sincronizarCatalogo). Si no coincide con la
+ * empresa de la sesion actual, el catalogo viejo NO se muestra -- se
+ * descarta y se espera la sincronizacion real, para no mezclar productos
+ * de un negocio distinto.
+ */
+function catalogoLocalEsDeEmpresaActual() {
+    if (window.posEmpresaId === undefined || window.posEmpresaId === null) return true;
+
+    // Sin marca guardada (primera vez con esta version del codigo, o un
+    // catalogo que quedo de antes de que existiera esta marca) no se da
+    // por buena: es preferible resincronizar una vez de mas que arriesgarse
+    // a mostrar productos de otro negocio sin saberlo.
+    const empresaGuardada = localStorage.getItem(EMPRESA_KEY);
+    if (empresaGuardada === null) return false;
+
+    return empresaGuardada === String(window.posEmpresaId);
+}
+
+/**
  * Hidrata el array en memoria desde IndexedDB al cargar la pagina, y
- * sincroniza en segundo plano si no hay datos o estan viejos.
+ * sincroniza en segundo plano si no hay datos, estan viejos, o son de
+ * otra empresa.
  */
 async function cargarCatalogoLocal() {
-    if (esCacheDeOtraEmpresa()) {
-        // Lo que hay en IndexedDB es de otro negocio: no se muestra (se
-        // veria como productos/precios que no existen aqui) hasta que
-        // termine de llegar el catalogo real de esta empresa.
+    if (!catalogoLocalEsDeEmpresaActual()) {
+        // Lo que hay en IndexedDB es de otro negocio: se descarta (se
+        // veria como productos/precios que no existen aqui) y se espera
+        // la sincronizacion real de esta empresa antes de mostrar nada.
+        await reemplazarEnIndexedDB([]);
         catalogoEnMemoria = [];
-        sincronizarCatalogo();
+        localStorage.removeItem(SYNC_AT_KEY);
+        localStorage.removeItem(EMPRESA_KEY);
+        await sincronizarCatalogo();
         return catalogoEnMemoria;
     }
 

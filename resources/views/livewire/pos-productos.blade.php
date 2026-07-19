@@ -17,6 +17,10 @@
             <div style="display:flex; align-items:center; gap:8px;">
                 <input type="text" id="pos-buscar-producto" placeholder="{{ $placeholderBusqueda }}" autocomplete="off"
                     class="w-full p-2 border border-gray-300 rounded-full shadow focus:ring focus:ring-blue-200" />
+                <button type="button" id="pos-verificar-precio" title="Verificar precio (no agrega al carrito)"
+                    style="flex-shrink:0; width:36px; height:36px; border-radius:9999px; border:1px solid #d1d5db; background:white; cursor:pointer; font-size:15px;">
+                    🏷️
+                </button>
                 <button type="button" id="pos-actualizar-catalogo" title="Actualizar catalogo"
                     style="flex-shrink:0; width:36px; height:36px; border-radius:9999px; border:1px solid #d1d5db; background:white; cursor:pointer; font-size:15px;">
                     🔄
@@ -385,6 +389,174 @@
                     await Catalogo.sincronizarCatalogo();
                     actualizarInfoSync();
                     renderizar();
+                });
+
+                // Verificador de precios: busca en el catalogo guardado
+                // localmente (funciona igual con o sin conexion) y solo
+                // muestra nombre/precio -- no agrega nada al carrito ni
+                // guarda nada, es solo para consultar. El resultado se arma
+                // creando elementos DOM directamente (createElement/
+                // textContent) en vez de strings de HTML, para no tener
+                // ningun texto con pinta de etiqueta suelto en este archivo.
+                const botonPrecio = document.getElementById('pos-verificar-precio');
+
+                function formatoMonedaPrecio(valor) {
+                    return '$' + Math.round(Number(valor) || 0).toLocaleString('es-CO');
+                }
+
+                function crearFilaPrecio(producto) {
+                    const fila = document.createElement('div');
+                    fila.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 4px;border-bottom:1px solid #dbeafe;';
+
+                    const info = document.createElement('div');
+                    info.style.minWidth = '0';
+
+                    const nombre = document.createElement('div');
+                    nombre.style.cssText = 'font-weight:700;font-size:17px;color:#1e293b;';
+                    nombre.textContent = producto.descripcion_larga;
+
+                    const codigo = document.createElement('div');
+                    codigo.style.cssText = 'font-size:14px;color:#94a3b8;';
+                    codigo.textContent = 'Codigo ' + producto.id_producto;
+
+                    info.appendChild(nombre);
+                    info.appendChild(codigo);
+
+                    const precio = document.createElement('div');
+                    precio.style.cssText = 'font-size:20px;font-weight:800;color:#4338ca;white-space:nowrap;text-align:right;';
+                    precio.textContent = formatoMonedaPrecio(producto.precio_venta1) + ' ' + (producto.sufijo_venta || '');
+
+                    fila.appendChild(info);
+                    fila.appendChild(precio);
+                    return fila;
+                }
+
+                // Cuadro grande centrado: se usa cuando queda UN solo
+                // resultado (tipico al escanear/escribir un codigo exacto),
+                // para poder leer el precio de un vistazo sin achicar los
+                // ojos. Con varias coincidencias (buscando por nombre) se
+                // usa la lista de crearFilaPrecio en su lugar.
+                function crearCuadroPrecio(producto) {
+                    const cuadro = document.createElement('div');
+                    cuadro.style.cssText = 'text-align:center;padding:18px 10px;';
+
+                    const nombre = document.createElement('div');
+                    nombre.style.cssText = 'font-weight:700;font-size:20px;color:#1e293b;margin-bottom:4px;';
+                    nombre.textContent = producto.descripcion_larga;
+
+                    const codigo = document.createElement('div');
+                    codigo.style.cssText = 'font-size:14px;color:#94a3b8;margin-bottom:16px;';
+                    codigo.textContent = 'Codigo ' + producto.id_producto;
+
+                    const precio = document.createElement('div');
+                    precio.style.cssText = 'font-size:52px;font-weight:800;color:#4338ca;line-height:1.1;';
+                    precio.textContent = formatoMonedaPrecio(producto.precio_venta1);
+
+                    const sufijo = document.createElement('div');
+                    sufijo.style.cssText = 'font-size:15px;font-weight:600;color:#6366f1;margin-top:4px;';
+                    sufijo.textContent = producto.sufijo_venta || '';
+
+                    cuadro.appendChild(nombre);
+                    cuadro.appendChild(codigo);
+                    cuadro.appendChild(precio);
+                    cuadro.appendChild(sufijo);
+                    return cuadro;
+                }
+
+                botonPrecio?.addEventListener('click', () => {
+                    // Modal fijo a casi toda la altura de la pantalla, con
+                    // el campo de busqueda siempre visible arriba y solo la
+                    // lista de resultados con scroll propio adentro -- asi
+                    // el popup completo no se desplaza (antes al hacer
+                    // scroll en la lista, el campo de busqueda tambien se
+                    // iba hacia arriba y quedaba fuera de vista). Mismo
+                    // patron que el modal de "Ingreso al taller" en
+                    // carrito-venta.blade.php.
+                    // Mismos colores/formato que el modal "Movimiento de
+                    // caja" (.pos-cierre-caja-overlay en pos-pro.css):
+                    // encabezado en degrade azul con letras blancas,
+                    // tarjeta con borde celeste, campos con fondo celeste
+                    // clarito, y botones en pastilla.
+                    if (!document.getElementById('precio-modal-style')) {
+                        const estilo = document.createElement('style');
+                        estilo.id = 'precio-modal-style';
+                        estilo.textContent = `
+                            .swal-precio-popup { display:flex !important; flex-direction:column; height:92vh !important; max-height:92vh !important; padding:0 !important; border:1px solid #bfdbfe !important; border-radius:16px !important; overflow:hidden !important; }
+                            .swal-precio-popup .swal2-title { margin:0 !important; padding:14px 18px !important; background:linear-gradient(180deg, #2563eb 0%, #4f46e5 100%) !important; color:#ffffff !important; font-size:20px !important; font-weight:800 !important; }
+                            .swal-precio-html { flex:1 1 auto; display:flex; flex-direction:column; min-height:0; overflow:hidden; margin:0 !important; padding:18px !important; box-sizing:border-box; }
+                            .swal-precio-popup .swal2-actions { margin:0 !important; padding:14px 18px !important; border-top:1px solid #dbeafe !important; }
+                            .swal-precio-popup .swal2-cancel { min-width:118px !important; min-height:42px !important; border-radius:999px !important; font-size:14px !important; font-weight:800 !important; background:#64748b !important; box-shadow:0 8px 16px rgba(15,23,42,.16) !important; }
+                        `;
+                        document.head.appendChild(estilo);
+                    }
+
+                    const campoInput = document.createElement('input');
+                    campoInput.id = 'precio-buscar';
+                    campoInput.type = 'text';
+                    campoInput.className = 'swal2-input';
+                    campoInput.placeholder = 'Nombre o codigo del producto...';
+                    campoInput.autocomplete = 'off';
+                    campoInput.style.cssText = 'width:100%;max-width:100%;height:56px;font-size:20px;margin-left:0;margin-right:0;box-sizing:border-box;flex-shrink:0;border-color:#bfdbfe;border-radius:10px;background:#f8fbff;color:#111827;';
+
+                    const contenedorResultados = document.createElement('div');
+                    contenedorResultados.id = 'precio-resultados';
+                    contenedorResultados.style.cssText = 'flex:1 1 auto;min-height:0;overflow-y:auto;text-align:left;margin-top:10px;';
+
+                    const cuerpo = document.createElement('div');
+                    cuerpo.style.cssText = 'display:flex;flex-direction:column;height:100%;min-height:0;';
+                    cuerpo.appendChild(campoInput);
+                    cuerpo.appendChild(contenedorResultados);
+
+                    window.Swal.fire({
+                        title: '🏷️ Verificar precio',
+                        html: cuerpo,
+                        width: 620,
+                        heightAuto: false,
+                        customClass: { popup: 'swal-precio-popup', htmlContainer: 'swal-precio-html' },
+                        showConfirmButton: false,
+                        showCancelButton: true,
+                        cancelButtonText: 'Cerrar',
+                        didOpen: () => {
+                            const input = document.getElementById('precio-buscar');
+                            const resultados = document.getElementById('precio-resultados');
+
+                            function render() {
+                                resultados.replaceChildren();
+
+                                // Codigo exacto (propio o alterno/barcode): se muestra
+                                // solo ese, aunque la busqueda amplia tambien
+                                // encuentre otros productos por una coincidencia
+                                // parcial de barcode (ej. "10056" adentro de un
+                                // codigo de barras mas largo de otro producto).
+                                const exacto = Catalogo.buscarCoincidenciaExacta(input.value);
+                                if (exacto) {
+                                    resultados.appendChild(crearCuadroPrecio(exacto));
+                                    return;
+                                }
+
+                                const lista = Catalogo.buscarLocal(input.value, '');
+
+                                if (lista.length === 0) {
+                                    const vacio = document.createElement('div');
+                                    vacio.style.cssText = 'padding:16px;text-align:center;color:#94a3b8;font-size:16px;';
+                                    vacio.textContent = 'Sin resultados';
+                                    resultados.appendChild(vacio);
+                                    return;
+                                }
+
+                                if (lista.length === 1) {
+                                    resultados.appendChild(crearCuadroPrecio(lista[0]));
+                                    return;
+                                }
+
+                                lista.forEach((producto) => resultados.appendChild(crearFilaPrecio(producto)));
+                            }
+
+                            input.addEventListener('input', render);
+                            input.focus();
+                            render();
+                        },
+                    });
                 });
 
                 window.addEventListener('pos-catalogo-sincronizado', () => {

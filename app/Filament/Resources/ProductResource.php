@@ -807,12 +807,14 @@ public static function mutateFormDataBeforeCreate(array $data): array
 public static function shouldRegisterNavigation(): bool
 {
     // Solo mostrar si NO es vendedor
-    return !auth()->user()->hasRole('vendedor') && !auth()->user()->hasRole('super_admin');
+    return !auth()->user()->hasRole('vendedor') && !auth()->user()->hasRole('super_admin')
+        && auth()->user()->puedeVerResource('productos');
 }
 
 public static function canAccess(): bool
 {
-    return !auth()->user()->hasRole('vendedor') && !auth()->user()->hasRole('super_admin');
+    return !auth()->user()->hasRole('vendedor') && !auth()->user()->hasRole('super_admin')
+        && auth()->user()->puedeVerResource('productos');
 }
 
 protected static function calcularValores(Get $get, Set $set, bool $forzarUtilidad = false): void
