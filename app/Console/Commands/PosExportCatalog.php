@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\Turion\CatalogoExporter;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -13,10 +14,8 @@ use Illuminate\Support\Facades\DB;
  * combos, recetas y variantes), configuracion de la empresa, mesas,
  * habitaciones de hotel y mecanicos de taller.
  *
- * Deliberadamente NO incluye historico de facturas/kardex/ordenes/reservas:
- * eso es transaccional y se crea localmente desde cero en cada terminal
- * (ver Fase 4 del plan de Turion) -- este comando solo exporta el estado
- * "de catalogo" que hace falta para operar, tal como esta HOY en el droplet.
+ * Uso manual/diagnostico -- el emparejamiento real de una terminal usa el
+ * mismo paquete (via CatalogoExporter) a traves de PairingController.
  */
 class PosExportCatalog extends Command
 {
@@ -26,7 +25,7 @@ class PosExportCatalog extends Command
 
     protected $description = 'Arma el paquete JSON de catalogo/emparejamiento que Turion descarga para operar sin conexion.';
 
-    public function handle(): int
+    public function handle(CatalogoExporter $exporter): int
     {
         $empresaId = (int) $this->argument('empresa');
 
@@ -41,47 +40,7 @@ class PosExportCatalog extends Command
             return self::FAILURE;
         }
 
-        $productIds = DB::table('products')
-            ->where('empresa_id', $empresaId)
-            ->pluck('id');
-
-        $userIds = DB::table('users')
-            ->where(fn ($q) => $q->where('id', $empresaId)->orWhere('empresa_id', $empresaId))
-            ->pluck('id');
-
-        $paquete = [
-            'version' => 1,
-            'generado_at' => now()->toIso8601String(),
-            'empresa_id' => $empresaId,
-
-            'users' => DB::table('users')->whereIn('id', $userIds)->get(),
-            'roles' => DB::table('roles')->get(),
-            'permissions' => DB::table('permissions')->get(),
-            'role_has_permissions' => DB::table('role_has_permissions')->get(),
-            'model_has_roles' => DB::table('model_has_roles')
-                ->whereIn('model_id', $userIds)
-                ->where('model_type', \App\Models\User::class)
-                ->get(),
-            'model_has_permissions' => DB::table('model_has_permissions')
-                ->whereIn('model_id', $userIds)
-                ->where('model_type', \App\Models\User::class)
-                ->get(),
-
-            'configuracion_empresas' => DB::table('configuracion_empresas')->where('empresa_id', $empresaId)->get(),
-            'cuentas_contables' => DB::table('cuentas_contables')->where('empresa_id', $empresaId)->get(),
-            'actors' => DB::table('actors')->where('empresa_id', $empresaId)->get(),
-
-            'products' => DB::table('products')->where('empresa_id', $empresaId)->get(),
-            'alternate_codes' => DB::table('alternate_codes')->whereIn('product_id', $productIds)->get(),
-            'product_combos' => DB::table('product_combos')->where('empresa_id', $empresaId)->get(),
-            'producto_variantes' => DB::table('producto_variantes')->where('empresa_id', $empresaId)->get(),
-            'recetas' => DB::table('recetas')->where('empresa_id', $empresaId)->get(),
-            'receta_items' => DB::table('receta_items')->where('empresa_id', $empresaId)->get(),
-
-            'mesas' => DB::table('mesas')->where('empresa_id', $empresaId)->get(),
-            'hotel_habitaciones' => DB::table('hotel_habitaciones')->where('empresa_id', $empresaId)->get(),
-            'mecanicos' => DB::table('mecanicos')->where('empresa_id', $empresaId)->get(),
-        ];
+        $paquete = $exporter->paraEmpresa($empresaId);
 
         $json = json_encode($paquete, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 
@@ -97,8 +56,8 @@ class PosExportCatalog extends Command
             'Paquete exportado a %s (%s KB, %d productos, %d usuarios).',
             $output,
             number_format(strlen($json) / 1024, 1),
-            $productIds->count(),
-            $userIds->count(),
+            count($paquete['products']),
+            count($paquete['users']),
         ));
 
         return self::SUCCESS;

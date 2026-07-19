@@ -11,6 +11,7 @@ use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\KardexController;
 use App\Http\Controllers\PosCatalogoController;
 use App\Http\Controllers\PosSyncController;
+use App\Http\Controllers\EmparejarTerminalController;
 
 
 
@@ -26,6 +27,11 @@ Route::get('/', fn () => view('landing'));
 
 // Manual de usuario, público (sin login)
 Route::get('/manual', fn () => view('manual'))->name('manual');
+
+// Emparejamiento de terminal de Turion (solo relevante en la base de datos
+// local SQLite -- ver App\Http\Middleware\EnsureTerminalEmparejada).
+Route::get('/emparejar', [EmparejarTerminalController::class, 'mostrar'])->name('emparejar');
+Route::post('/emparejar', [EmparejarTerminalController::class, 'emparejar']);
 
 // Catálogo público de productos por empresa (sin login, para compartir con clientes)
 Route::get('/catalogo/{slug}', \App\Livewire\CatalogoPublico::class)->name('catalogo.publico');
