@@ -83,22 +83,70 @@
     </form>
 
     @if(!empty($resultado))
-        <div class="compra-franja-azul bg-white px-6 py-5 space-y-2">
-            @if($resultado['compra'])
-                <div class="font-semibold text-green-700">Compra #{{ $resultado['compra']->numero_factura }} creada con {{ $resultado['items'] }} ítem{{ $resultado['items'] === 1 ? '' : 's' }}.</div>
-            @else
-                <div class="font-semibold text-red-700">No se creó ninguna compra: mientras haya una fila con error, no se crea nada (ni la factura ni los productos). Corrige lo de abajo y vuelve a subir el mismo archivo.</div>
-            @endif
+        @if($resultado['compra'])
+            <div class="compra-franja-azul bg-white">
+                <div class="px-6 py-4">
+                    <div class="text-base font-bold text-green-700">✅ Compra #{{ $resultado['compra']->numero_factura }} creada correctamente</div>
+                </div>
 
-            @if(!empty($resultado['errores']))
+                <div class="compra-tot-linea-1">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 px-6 py-4">
+                        <div>
+                            <div class="text-xs font-bold uppercase tracking-wide text-gray-500">🧾 Ítems</div>
+                            <div class="font-semibold text-gray-700 mt-1">{{ $resultado['items'] }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold uppercase tracking-wide text-gray-500">📦 Cant. total</div>
+                            <div class="font-semibold text-gray-700 mt-1">{{ number_format($resultado['cantidad_total'], 0, ',', '.') }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold uppercase tracking-wide text-gray-500">🆕 Productos nuevos / existentes</div>
+                            <div class="font-semibold text-gray-700 mt-1">{{ $resultado['productos_nuevos'] }} nuevos · {{ $resultado['productos_existentes'] }} existentes</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="compra-tot-linea-2">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 px-6 py-4">
+                        <div>
+                            <div class="text-xs font-bold uppercase tracking-wide text-gray-500">Subtotal (sin descuento)</div>
+                            <div class="font-semibold mt-1" style="color:#111827;">$ {{ number_format($resultado['compra']->subtotal, 0, ',', '.') }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold uppercase tracking-wide text-gray-500">💸 Descuento comercial</div>
+                            <div class="font-semibold mt-1" style="color:#b91c1c;">$ {{ number_format($resultado['compra']->descuento_total, 0, ',', '.') }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold uppercase tracking-wide text-gray-500">Subtotal con descuento (sin IVA)</div>
+                            <div class="font-semibold mt-1" style="color:#0d9488;">$ {{ number_format($resultado['compra']->subtotal - $resultado['compra']->descuento_total, 0, ',', '.') }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div>
+                        <div class="text-xs font-bold uppercase tracking-wide text-gray-500">IVA total</div>
+                        <div class="font-semibold mt-1" style="color:#ca8a04;">$ {{ number_format($resultado['compra']->impuesto_total, 0, ',', '.') }}</div>
+                    </div>
+                    <div class="text-xl font-extrabold" style="color:#0f172a;">💰 TOTAL: $ {{ number_format($resultado['compra']->total, 0, ',', '.') }}</div>
+                </div>
+            </div>
+        @else
+            <div class="compra-franja-azul bg-white px-6 py-5">
+                <div class="font-semibold text-red-700">No se creó ninguna compra: mientras haya una fila con error, no se crea nada (ni la factura ni los productos). Corrige lo de abajo y vuelve a subir el mismo archivo.</div>
+            </div>
+        @endif
+
+        @if(!empty($resultado['errores']))
+            <div class="compra-franja-azul bg-white px-6 py-5">
                 <div class="font-semibold text-red-700">{{ count($resultado['errores']) }} fila(s) con error:</div>
-                <ul class="list-disc list-inside text-sm text-red-600 max-h-64 overflow-y-auto">
+                <ul class="list-disc list-inside text-sm text-red-600 max-h-64 overflow-y-auto mt-2">
                     @foreach($resultado['errores'] as $error)
                         <li>{{ $error }}</li>
                     @endforeach
                 </ul>
-            @endif
-        </div>
+            </div>
+        @endif
     @endif
 
 </div>

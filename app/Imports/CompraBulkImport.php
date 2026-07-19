@@ -29,6 +29,8 @@ use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleSheets
 {
     protected int $creados = 0;
+    protected int $productosNuevos = 0;
+    protected float $cantidadTotal = 0;
     protected array $errores = [];
     protected ?Compra $compra = null;
 
@@ -227,6 +229,10 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
                 ];
 
                 $this->creados++;
+                $this->cantidadTotal += $p['cantidad'];
+                if ($p['es_nuevo']) {
+                    $this->productosNuevos++;
+                }
             }
 
             $compra = Compra::create([
@@ -259,6 +265,9 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
         return [
             'compra' => $this->compra,
             'items' => $this->creados,
+            'productos_nuevos' => $this->productosNuevos,
+            'productos_existentes' => $this->creados - $this->productosNuevos,
+            'cantidad_total' => $this->cantidadTotal,
             'errores' => $this->errores,
         ];
     }
