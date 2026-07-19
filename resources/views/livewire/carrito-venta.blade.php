@@ -914,7 +914,7 @@
                     if (Object.keys($wire.get('carrito') ?? {}).length === 0) {
                         Swal.fire({icon:'warning', title:'Mesa sin productos', text:'Debe haber una mesa activa con productos para imprimir la cuenta.'});
                     } else {
-                        window.open('/pos/mesa/{{ $mesaId }}/cuenta', '_blank', 'width=420,height=680');
+                        window.posImprimirURL('/pos/mesa/{{ $mesaId }}/cuenta');
                     }
                 "
                 class="pos-cart-main-action text-white text-xs px-3 h-8 rounded-full"
@@ -1930,7 +1930,7 @@
                                 <div class="pos-prefacturas-footer p-3 flex justify-end gap-3 border-t mt-2 bg-white">
                                     @if ($facturaSeleccionada)
                                         <button
-                                            onclick="window.open('{{ route('factura.imprimir', $facturaSeleccionada->id) }}','_blank','width=400,height=600')"
+                                            onclick="window.posImprimirURL('{{ route('factura.imprimir', $facturaSeleccionada->id) }}')"
                                             class="h-9 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-full shadow-sm">
                                             Imprimir
                                         </button>
@@ -1979,7 +1979,7 @@
                         <div class="pos-prefacturas-footer p-4 border-t flex justify-end gap-3 bg-white">
                             @if ($prefacturaSeleccionada)
                                 <button
-                                    onclick="window.open('{{ route('prefactura.imprimir', $prefacturaSeleccionada->id) }}','_blank','width=400,height=600')"
+                                    onclick="window.posImprimirURL('{{ route('prefactura.imprimir', $prefacturaSeleccionada->id) }}')"
                                     class="h-9 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-full shadow-sm">
                                     Imprimir
                                 </button>
@@ -2500,9 +2500,7 @@
 
 <script>
     function openPrintPopup(url) {
-        const popup = window.open(url, '_blank', 'width=420,height=700');
-        if (popup) popup.focus();
-        else window.location.href = url;
+        window.posImprimirURL(url);
     }
 
     window.uiAbrirFacturar = function () {
@@ -2707,37 +2705,21 @@
         }).then((result) => {
             if (!result.isConfirmed) return;
 
-            const popup = window.open('', '_blank', 'width=420,height=700');
-            if (popup) {
-                popup.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Imprimiendo</title></head><body style="font:14px sans-serif;padding:12px">Generando comprobante...</body></html>');
-                popup.document.close();
-            }
-
             component.call('pagarEImprimir', facturaId, result.value)
                 .then((r) => {
                     r = r || {};
                     if (r.print_url) {
-                        if (popup && !popup.closed) popup.location.replace(r.print_url);
-                        else window.open(r.print_url, '_blank');
+                        window.posImprimirURL(r.print_url);
                         if (r.redirect_url) setTimeout(() => { window.location.href = r.redirect_url; }, 600);
                         return;
                     }
                     if (r.html) {
-                        const w = (popup && !popup.closed) ? popup : window.open('', '_blank', 'width=420,height=700');
-                        if (w) {
-                            w.document.open();
-                            w.document.write(r.html);
-                            w.document.close();
-                            w.focus();
-                            setTimeout(function () { try { w.print(); } catch (e) {} }, 300);
-                        }
+                        window.posImprimirHTML(r.html);
                         return;
                     }
-                    if (popup && !popup.closed) popup.close();
                     Swal.fire('Error', 'No llego el comprobante para imprimir.', 'warning');
                 })
                 .catch((e) => {
-                    if (popup && !popup.closed) popup.close();
                     console.error(e);
                     Swal.fire('Error', 'No se pudo registrar o imprimir el pago.', 'error');
                 });
@@ -2748,7 +2730,7 @@
 
         Livewire.on('open-print', (event) => {
             const url = event?.url ?? event?.[0]?.url;
-            if (url) openPrintPopup(url);
+            if (url) window.posImprimirURL(url);
         });
 
         Livewire.on('enfocar-cantidad-carrito', (event) => {
@@ -3186,26 +3168,17 @@
                         return;
                     }
 
-                    const popup = window.open('', '_blank', 'width=420,height=700');
-                    if (popup) {
-                        popup.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Imprimiendo</title></head><body style="font:14px sans-serif;padding:12px">Generando factura...</body></html>');
-                        popup.document.close();
-                    }
-
                     component.call('facturarEImprimir', result.value)
                         .then((r) => {
                             r = r || {};
                             if (r.print_url) {
-                                if (popup && !popup.closed) popup.location.replace(r.print_url);
-                                else window.open(r.print_url, '_blank');
+                                window.posImprimirURL(r.print_url);
                                 if (r.redirect_url) setTimeout(() => { window.location.href = r.redirect_url; }, 600);
                                 return;
                             }
-                            if (popup && !popup.closed) popup.close();
                             Swal.fire('Error', r.error || 'No llego la factura para imprimir.', 'warning');
                         })
                         .catch((e) => {
-                            if (popup && !popup.closed) popup.close();
                             console.error(e);
                             Swal.fire('Error', 'No se pudo facturar e imprimir.', 'error');
                         });

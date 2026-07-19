@@ -229,13 +229,45 @@
     </script>
     <script src="{{ asset('js/pos-responsive-actions.js') }}?v={{ filemtime(public_path('js/pos-responsive-actions.js')) }}"></script>
 
+    {{-- Impresion de tickets/facturas: Tauri (WebView2) bloquea window.open()
+         y siempre devuelve null, asi que la impresion se hace con un iframe
+         invisible en vez de una ventana emergente -- funciona igual en
+         navegador normal y dentro de la app de escritorio. Cuando el
+         documento que carga el iframe llama a window.print() (ver los
+         .../imprimir.blade.php de facturas/prefactura/tickets), los
+         navegadores basados en Chromium imprimen ese iframe especificamente,
+         no toda la pagina. --}}
+    <script>
+        function posObtenerIframeImpresion() {
+            let iframe = document.getElementById('pos-print-iframe');
+            if (!iframe) {
+                iframe = document.createElement('iframe');
+                iframe.id = 'pos-print-iframe';
+                iframe.style.cssText = 'position:fixed; left:-9999px; top:0; width:1px; height:1px; border:0;';
+                document.body.appendChild(iframe);
+            }
+            return iframe;
+        }
+
+        window.posImprimirURL = function (url) {
+            const iframe = posObtenerIframeImpresion();
+            iframe.src = 'about:blank';
+            setTimeout(() => { iframe.src = url; }, 0);
+        };
+
+        window.posImprimirHTML = function (html) {
+            const iframe = posObtenerIframeImpresion();
+            iframe.srcdoc = html;
+        };
+    </script>
+
     <script>
         document.addEventListener('livewire:init', () => {
             Livewire.on('imprimir-cierre-caja', (event) => {
                 const cajaId = event?.cajaId ?? event?.[0] ?? event;
 
                 if (cajaId) {
-                    window.open('/ticket-cierre-caja/' + cajaId, '_blank', 'width=420,height=680');
+                    window.posImprimirURL('/ticket-cierre-caja/' + cajaId);
                 }
             });
 
@@ -243,7 +275,7 @@
                 const url = event?.url ?? event?.[0]?.url ?? event;
 
                 if (url) {
-                    window.open(url, '_blank', 'width=400,height=600');
+                    window.posImprimirURL(url);
                 }
             });
         });
