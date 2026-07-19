@@ -19,3 +19,7 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
+
+# PHP portable descargado por scripts/setup-php-portable.sh -- no se versiona
+# (binarios ~75MB); cada maquina que empaque Turion lo regenera localmente.
+/src-tauri/binaries/php/runtime
