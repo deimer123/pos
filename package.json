@@ -3,11 +3,14 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "vite build"
+        "build": "vite build",
+        "tauri": "tauri",
+        "tauri:build:prod": "tauri build --config src-tauri/tauri.prod.conf.json"
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.2",
         "@tailwindcss/typography": "^0.5.0",
+        "@tauri-apps/cli": "^2.11.4",
         "autoprefixer": "^10.4.7",
         "axios": "^1.6.4",
         "laravel-vite-plugin": "^1.0.0",
