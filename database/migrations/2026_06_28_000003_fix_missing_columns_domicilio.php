@@ -1,77 +1,133 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
+// Reescrita con Schema::table() (antes usaba DB::statement con
+// "ALTER TABLE ... ADD COLUMN ... AFTER", sintaxis exclusiva de MySQL) para
+// poder correr esta migracion tambien contra SQLite. El ->after() se
+// mantiene: MySQL lo respeta, SQLite simplemente lo ignora y agrega la
+// columna al final -- inofensivo.
 return new class extends Migration
 {
     public function up(): void
     {
-        // Columnas faltantes en facturas
-        $facturasCols = [
-            'tipo_pedido'     => "ALTER TABLE facturas ADD COLUMN tipo_pedido ENUM('local','domicilio','para_llevar') DEFAULT 'local' AFTER transferencia_obs",
-            'costo_empaque'   => "ALTER TABLE facturas ADD COLUMN costo_empaque DECIMAL(10,2) DEFAULT 0 AFTER tipo_pedido",
-            'dom_nombre'      => "ALTER TABLE facturas ADD COLUMN dom_nombre VARCHAR(200) NULL AFTER costo_empaque",
-            'dom_telefono'    => "ALTER TABLE facturas ADD COLUMN dom_telefono VARCHAR(30) NULL AFTER dom_nombre",
-            'dom_direccion'   => "ALTER TABLE facturas ADD COLUMN dom_direccion VARCHAR(300) NULL AFTER dom_telefono",
-            'dom_ciudad'      => "ALTER TABLE facturas ADD COLUMN dom_ciudad VARCHAR(100) NULL AFTER dom_direccion",
-            'dom_nit'         => "ALTER TABLE facturas ADD COLUMN dom_nit VARCHAR(30) NULL AFTER dom_ciudad",
-            'dom_email'       => "ALTER TABLE facturas ADD COLUMN dom_email VARCHAR(150) NULL AFTER dom_nit",
-            'dom_razon_social'=> "ALTER TABLE facturas ADD COLUMN dom_razon_social VARCHAR(200) NULL AFTER dom_email",
-            'cobro_domicilio' => "ALTER TABLE facturas ADD COLUMN cobro_domicilio ENUM('anticipado','entrega') DEFAULT 'anticipado' AFTER dom_razon_social",
-        ];
-
-        foreach ($facturasCols as $col => $sql) {
-            if (!$this->columnExists('facturas', $col)) {
-                DB::statement($sql);
-            }
+        if (!Schema::hasColumn('facturas', 'tipo_pedido')) {
+            Schema::table('facturas', function (Blueprint $table) {
+                $table->enum('tipo_pedido', ['local', 'domicilio', 'para_llevar'])->default('local')->after('transferencia_obs');
+            });
         }
 
-        // Columnas faltantes en ordenes_mesas
-        $ordenesCols = [
-            'tipo_pedido'  => "ALTER TABLE ordenes_mesas ADD COLUMN tipo_pedido ENUM('mesa','domicilio','para_llevar') DEFAULT 'mesa'",
-            'costo_empaque'=> "ALTER TABLE ordenes_mesas ADD COLUMN costo_empaque DECIMAL(10,2) DEFAULT 0",
-            'dom_nombre'   => "ALTER TABLE ordenes_mesas ADD COLUMN dom_nombre VARCHAR(200) NULL",
-            'dom_telefono' => "ALTER TABLE ordenes_mesas ADD COLUMN dom_telefono VARCHAR(30) NULL",
-            'dom_direccion'=> "ALTER TABLE ordenes_mesas ADD COLUMN dom_direccion VARCHAR(300) NULL",
-        ];
-
-        foreach ($ordenesCols as $col => $sql) {
-            if (!$this->columnExists('ordenes_mesas', $col)) {
-                DB::statement($sql);
-            }
+        if (!Schema::hasColumn('facturas', 'costo_empaque')) {
+            Schema::table('facturas', function (Blueprint $table) {
+                $table->decimal('costo_empaque', 10, 2)->default(0)->after('tipo_pedido');
+            });
         }
 
-        // Columna en configuracion_empresas
-        if (!$this->columnExists('configuracion_empresas', 'usa_domicilios')) {
-            DB::statement("ALTER TABLE configuracion_empresas ADD COLUMN usa_domicilios TINYINT(1) DEFAULT 0");
+        if (!Schema::hasColumn('facturas', 'dom_nombre')) {
+            Schema::table('facturas', function (Blueprint $table) {
+                $table->string('dom_nombre', 200)->nullable()->after('costo_empaque');
+            });
+        }
+
+        if (!Schema::hasColumn('facturas', 'dom_telefono')) {
+            Schema::table('facturas', function (Blueprint $table) {
+                $table->string('dom_telefono', 30)->nullable()->after('dom_nombre');
+            });
+        }
+
+        if (!Schema::hasColumn('facturas', 'dom_direccion')) {
+            Schema::table('facturas', function (Blueprint $table) {
+                $table->string('dom_direccion', 300)->nullable()->after('dom_telefono');
+            });
+        }
+
+        if (!Schema::hasColumn('facturas', 'dom_ciudad')) {
+            Schema::table('facturas', function (Blueprint $table) {
+                $table->string('dom_ciudad', 100)->nullable()->after('dom_direccion');
+            });
+        }
+
+        if (!Schema::hasColumn('facturas', 'dom_nit')) {
+            Schema::table('facturas', function (Blueprint $table) {
+                $table->string('dom_nit', 30)->nullable()->after('dom_ciudad');
+            });
+        }
+
+        if (!Schema::hasColumn('facturas', 'dom_email')) {
+            Schema::table('facturas', function (Blueprint $table) {
+                $table->string('dom_email', 150)->nullable()->after('dom_nit');
+            });
+        }
+
+        if (!Schema::hasColumn('facturas', 'dom_razon_social')) {
+            Schema::table('facturas', function (Blueprint $table) {
+                $table->string('dom_razon_social', 200)->nullable()->after('dom_email');
+            });
+        }
+
+        if (!Schema::hasColumn('facturas', 'cobro_domicilio')) {
+            Schema::table('facturas', function (Blueprint $table) {
+                $table->enum('cobro_domicilio', ['anticipado', 'entrega'])->default('anticipado')->after('dom_razon_social');
+            });
+        }
+
+        if (!Schema::hasColumn('ordenes_mesas', 'tipo_pedido')) {
+            Schema::table('ordenes_mesas', function (Blueprint $table) {
+                $table->enum('tipo_pedido', ['mesa', 'domicilio', 'para_llevar'])->default('mesa');
+            });
+        }
+
+        if (!Schema::hasColumn('ordenes_mesas', 'costo_empaque')) {
+            Schema::table('ordenes_mesas', function (Blueprint $table) {
+                $table->decimal('costo_empaque', 10, 2)->default(0);
+            });
+        }
+
+        if (!Schema::hasColumn('ordenes_mesas', 'dom_nombre')) {
+            Schema::table('ordenes_mesas', function (Blueprint $table) {
+                $table->string('dom_nombre', 200)->nullable();
+            });
+        }
+
+        if (!Schema::hasColumn('ordenes_mesas', 'dom_telefono')) {
+            Schema::table('ordenes_mesas', function (Blueprint $table) {
+                $table->string('dom_telefono', 30)->nullable();
+            });
+        }
+
+        if (!Schema::hasColumn('ordenes_mesas', 'dom_direccion')) {
+            Schema::table('ordenes_mesas', function (Blueprint $table) {
+                $table->string('dom_direccion', 300)->nullable();
+            });
+        }
+
+        if (!Schema::hasColumn('configuracion_empresas', 'usa_domicilios')) {
+            Schema::table('configuracion_empresas', function (Blueprint $table) {
+                $table->boolean('usa_domicilios')->default(false);
+            });
         }
     }
 
     public function down(): void
     {
-        $facturasCols = ['tipo_pedido','costo_empaque','dom_nombre','dom_telefono','dom_direccion','dom_ciudad','dom_nit','dom_email','dom_razon_social','cobro_domicilio'];
+        $facturasCols = ['tipo_pedido', 'costo_empaque', 'dom_nombre', 'dom_telefono', 'dom_direccion', 'dom_ciudad', 'dom_nit', 'dom_email', 'dom_razon_social', 'cobro_domicilio'];
         foreach ($facturasCols as $col) {
-            if ($this->columnExists('facturas', $col)) {
-                DB::statement("ALTER TABLE facturas DROP COLUMN {$col}");
+            if (Schema::hasColumn('facturas', $col)) {
+                Schema::table('facturas', fn (Blueprint $table) => $table->dropColumn($col));
             }
         }
 
-        $ordenesCols = ['tipo_pedido','costo_empaque','dom_nombre','dom_telefono','dom_direccion'];
+        $ordenesCols = ['tipo_pedido', 'costo_empaque', 'dom_nombre', 'dom_telefono', 'dom_direccion'];
         foreach ($ordenesCols as $col) {
-            if ($this->columnExists('ordenes_mesas', $col)) {
-                DB::statement("ALTER TABLE ordenes_mesas DROP COLUMN {$col}");
+            if (Schema::hasColumn('ordenes_mesas', $col)) {
+                Schema::table('ordenes_mesas', fn (Blueprint $table) => $table->dropColumn($col));
             }
         }
 
-        if ($this->columnExists('configuracion_empresas', 'usa_domicilios')) {
-            DB::statement("ALTER TABLE configuracion_empresas DROP COLUMN usa_domicilios");
+        if (Schema::hasColumn('configuracion_empresas', 'usa_domicilios')) {
+            Schema::table('configuracion_empresas', fn (Blueprint $table) => $table->dropColumn('usa_domicilios'));
         }
-    }
-
-    private function columnExists(string $table, string $column): bool
-    {
-        return DB::getSchemaBuilder()->hasColumn($table, $column);
     }
 };

@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -9,7 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         if (!Schema::hasColumn('facturas', 'dom_observaciones')) {
-            DB::statement("ALTER TABLE facturas ADD COLUMN dom_observaciones TEXT NULL");
+            Schema::table('facturas', function (Blueprint $table) {
+                $table->text('dom_observaciones')->nullable();
+            });
         }
     }
 

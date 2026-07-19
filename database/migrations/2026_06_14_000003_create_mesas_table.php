@@ -15,7 +15,12 @@ return new class extends Migration
             $table->string('nombre', 100);
             $table->string('zona', 100)->nullable();
             $table->unsignedSmallInteger('capacidad')->nullable();
-            $table->enum('estado', ['libre', 'ocupada', 'reservada', 'cerrada'])->default('libre');
+            // 'lista' se agrego despues via 2026_06_21_000001_add_lista_to_mesas_estado;
+            // se incluye aqui directamente para que una instalacion nueva contra SQLite
+            // (base de datos local de Turion) quede con el CHECK constraint correcto
+            // desde el arranque, ya que esa migracion posterior no puede alterar un
+            // enum existente en SQLite (ver nota en esa migracion).
+            $table->enum('estado', ['libre', 'ocupada', 'reservada', 'cerrada', 'lista'])->default('libre');
             $table->boolean('activo')->default(true);
             $table->timestamps();
 

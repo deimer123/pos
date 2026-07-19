@@ -54,7 +54,9 @@ class PanelMesas extends Component
     {
         return \App\Models\TallerOrden::where('empresa_id', $this->empresaId())
             ->with('repuestos')
-            ->orderByRaw("FIELD(estado,'listo','en_proceso','pendiente','entregado','cancelado')")
+            // CASE WHEN en vez de FIELD() (exclusivo de MySQL) para que
+            // tambien funcione contra SQLite (base de datos local de Turion).
+            ->orderByRaw("CASE estado WHEN 'listo' THEN 1 WHEN 'en_proceso' THEN 2 WHEN 'pendiente' THEN 3 WHEN 'entregado' THEN 4 WHEN 'cancelado' THEN 5 ELSE 6 END")
             ->orderByDesc('created_at')
             ->get();
     }

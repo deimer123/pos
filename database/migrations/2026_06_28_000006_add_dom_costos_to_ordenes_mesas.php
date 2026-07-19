@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -9,10 +9,14 @@ return new class extends Migration
     public function up(): void
     {
         if (!Schema::hasColumn('ordenes_mesas', 'dom_costo_domicilio')) {
-            DB::statement("ALTER TABLE ordenes_mesas ADD COLUMN dom_costo_domicilio DECIMAL(10,2) DEFAULT 0");
+            Schema::table('ordenes_mesas', function (Blueprint $table) {
+                $table->decimal('dom_costo_domicilio', 10, 2)->default(0);
+            });
         }
         if (!Schema::hasColumn('ordenes_mesas', 'dom_costo_desechables')) {
-            DB::statement("ALTER TABLE ordenes_mesas ADD COLUMN dom_costo_desechables DECIMAL(10,2) DEFAULT 0");
+            Schema::table('ordenes_mesas', function (Blueprint $table) {
+                $table->decimal('dom_costo_desechables', 10, 2)->default(0);
+            });
         }
     }
 
