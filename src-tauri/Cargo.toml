@@ -17,6 +17,20 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 [build-dependencies]
 tauri-build = { version = "2.6.3", features = [] }
 
+# opt-level/lto/codegen-units mas conservadores que el default de Cargo:
+# con los valores normales de release, esta version de Rust (1.97.1) falla
+# al compilar crates de proc-macro (derive_more-impl, phf_macros) que Tauri
+# necesita, con "crate proc_macro required to be available in rlib format,
+# but was not found in this form" -- parece una regresion del compilador
+# especifica de esta version muy reciente, combinada con crate-type
+# staticlib+cdylib+rlib. Bajar la optimizacion evita el camino de codigo
+# que dispara el error.
+[profile.release]
+opt-level = 1
+lto = false
+codegen-units = 16
+panic = "unwind"
+
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
