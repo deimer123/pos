@@ -4,25 +4,11 @@
   "version": "0.1.0",
   "identifier": "com.deimer.sistemapos",
   "build": {
-    "frontendDist": "../public",
-    "devUrl": "http://posapp.test",
-    "beforeDevCommand": "npm run dev",
+    "frontendDist": "splash",
     "beforeBuildCommand": "npm run build"
   },
   "app": {
-    "windows": [
-      {
-        "title": "Sistema POS",
-        "width": 1280,
-        "height": 800,
-        "minWidth": 1024,
-        "minHeight": 640,
-        "resizable": true,
-        "maximized": true,
-        "fullscreen": false,
-        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --unsafely-treat-insecure-origin-as-secure=http://posapp.test"
-      }
-    ],
+    "windows": [],
     "security": {
       "csp": null
     }
@@ -37,6 +23,24 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "resources": {
+      "binaries/php/runtime": "php",
+      "../app": "laravel/app",
+      "../bootstrap": "laravel/bootstrap",
+      "../config": "laravel/config",
+      "../database": "laravel/database",
+      "../public": "laravel/public",
+      "../resources": "laravel/resources",
+      "../routes": "laravel/routes",
+      "../vendor": "laravel/vendor",
+      "../artisan": "laravel/artisan",
+      "../composer.json": "laravel/composer.json"
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    },
     "android": {
       "debugApplicationIdSuffix": ".debug"
     }
