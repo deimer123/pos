@@ -4,7 +4,40 @@
  * sincroniza en segundo plano contra /pos/catalogo.json.
  */
 
-import { abrirDB, STORE_PRODUCTOS } from './pos-offline-db.js';
+// Ojo: este numero solo puede SUBIR, nunca bajar. Si el navegador de
+// alguien ya abrio esta misma base de datos ("pos_offline") en una version
+// mas alta, pedir una version menor rompe la apertura con un VersionError
+// que este codigo atrapa en silencio -- se queda pegado en "Sincronizando
+// catalogo..." sin ningun error visible en consola. Por eso se deja en 11,
+// bien por encima de cualquier version usada antes (distintas ramas de
+// desarrollo llegaron a usar hasta la 10), para que siempre pueda abrir
+// sin importar el historial de ese navegador.
+const DB_NAME = 'pos_offline';
+const DB_VERSION = 11;
+const STORE_PRODUCTOS = 'productos';
+
+let dbPromise = null;
+
+function abrirDB() {
+    if (dbPromise) return dbPromise;
+
+    dbPromise = new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onupgradeneeded = () => {
+            const db = request.result;
+
+            if (!db.objectStoreNames.contains(STORE_PRODUCTOS)) {
+                db.createObjectStore(STORE_PRODUCTOS, { keyPath: 'id_producto' });
+            }
+        };
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+
+    return dbPromise;
+}
 
 const SYNC_AT_KEY = 'pos_catalogo_sincronizado_en';
 const EMPRESA_KEY = 'pos_catalogo_empresa_id';

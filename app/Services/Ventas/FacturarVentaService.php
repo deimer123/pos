@@ -17,14 +17,8 @@ use Illuminate\Support\Facades\DB;
 /**
  * Logica central de "facturar" extraida de
  * App\Livewire\CarritoVenta::facturarConfirmada()/facturarEImprimir()
- * (extraccion pura, sin cambiar comportamiento) para poder reutilizarla
- * tanto desde el flujo online (Livewire) como desde la sincronizacion de
- * ventas guardadas offline (App\Http\Controllers\PosSyncController).
- *
- * Las llamadas offline SIEMPRE usan tipo_pago='contado' y
- * tipo_factura='salida' (regla de negocio acordada: sin credito ni
- * factura electronica offline), pero el metodo sigue soportando ambos
- * casos para no perder funcionalidad del flujo online existente.
+ * (extraccion pura, sin cambiar comportamiento) para tenerla separada
+ * del componente Livewire.
  */
 class FacturarVentaService
 {
@@ -246,12 +240,7 @@ class FacturarVentaService
     /**
      * Ultima linea de defensa del limite de descuento (ConfiguracionEmpresa::
      * descuento_maximo_permitido), replicando App\Livewire\CarritoVenta::
-     * descuentoMaximoPermitido()/clampDescuento(). El flujo online ya bloquea
-     * esto en CarritoVenta::aplicarCambiosModal() antes de llegar aqui, pero
-     * el flujo offline (App\Http\Controllers\PosSyncController::venta())
-     * arma el carrito en el navegador y lo envia directo a facturar(), asi
-     * que sin esta revalidacion cualquier descuento offline pasaba sin
-     * control.
+     * descuentoMaximoPermitido()/clampDescuento().
      */
     private function validarDescuentoCarrito(array $carrito, int $empresaId): void
     {

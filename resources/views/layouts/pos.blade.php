@@ -7,11 +7,10 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <script>
         // Empresa del usuario que tiene la sesion activa en ESTE momento.
-        // Usado para que el catalogo/clientes/cola offline guardados en
-        // este navegador (IndexedDB, compartido entre sesiones) nunca se
-        // muestren ni se sincronicen mezclados si en este mismo
-        // dispositivo se usa el POS con otro negocio (ver pos-catalogo-
-        // offline.js, pos-clientes-offline.js y pos-offline-queue.js).
+        // Usado para que el catalogo guardado en este navegador (IndexedDB,
+        // compartido entre sesiones) nunca se muestre ni se sincronice
+        // mezclado si en este mismo dispositivo se usa el POS con otro
+        // negocio (ver pos-catalogo-offline.js).
         window.posEmpresaId = @json(auth()->check() ? auth()->user()->getEmpresaActualId() : null);
     </script>
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
@@ -19,7 +18,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
     <link rel="manifest" href="{{ asset('manifest.json') }}">
-    @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/pos-catalogo-offline.js', 'resources/js/pos-offline-queue.js', 'resources/js/pos-offline-auth.js', 'resources/js/pos-clientes-offline.js'])
+    @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/pos-catalogo-offline.js'])
     @livewireStyles
     <link rel="stylesheet" href="{{ asset('css/pos-pro.css') }}?v={{ filemtime(public_path('css/pos-pro.css')) }}">
 </head>
@@ -128,16 +127,6 @@
         Administracion
     </a>
 
-    <button type="button" id="btn-activar-offline"
-        class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 text-sm rounded shadow">
-        🔒 Acceso offline
-    </button>
-
-    <button type="button" id="pos-pendientes-badge"
-        class="bg-indigo-700 hover:bg-indigo-800 text-white px-4 py-2 text-sm rounded shadow"
-        style="display:none;">
-    </button>
-
     <form method="POST" action="{{ route('cerrar.sesion') }}">
         @csrf
 
@@ -152,14 +141,6 @@
 @else
 
 <div class="pos-actions-list flex gap-2" :class="{ 'is-open': menuOpen }">
-<button type="button" id="btn-activar-offline"
-    class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 text-sm rounded shadow">
-    🔒 Acceso offline
-</button>
-<button type="button" id="pos-pendientes-badge"
-    class="bg-indigo-700 hover:bg-indigo-800 text-white px-4 py-2 text-sm rounded shadow"
-    style="display:none;">
-</button>
 <form method="POST" action="{{ route('cerrar.sesion') }}">
     @csrf
     <button type="submit"
@@ -377,12 +358,6 @@
             window.addEventListener('online', () => {
                 ocultarBannerOffline();
                 window.PosCatalogoOffline?.sincronizarCatalogo();
-                window.PosClientesOffline?.sincronizarClientes();
-                window.PosOfflineQueue?.procesarCola();
-            });
-
-            document.addEventListener('DOMContentLoaded', () => {
-                window.PosClientesOffline?.cargarClientesLocal();
             });
 
             if (navigator.onLine === false) mostrarBannerOffline();
@@ -392,176 +367,6 @@
                     navigator.serviceWorker.register('/service-worker.js').catch(() => {});
                 });
             }
-        })();
-    </script>
-
-    {{-- Desbloqueo offline: activar acceso en este dispositivo + pantalla de
-         bloqueo que pide la contraseña de nuevo si se recarga la pagina sin
-         conexion. Ver resources/js/pos-offline-auth.js para el detalle de
-         que esto NO es un login nuevo, es reafirmar identidad en un
-         dispositivo que ya tiene una sesion de Laravel valida. --}}
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            if (window.__posOfflineAuthInicializado) return;
-            window.__posOfflineAuthInicializado = true;
-
-            document.getElementById('btn-activar-offline')?.addEventListener('click', async () => {
-                const { value: password } = await window.Swal.fire({
-                    title: 'Activar acceso offline en este dispositivo',
-                    text: 'Escribe tu contraseña actual para poder volver a entrar aqui sin internet si se recarga la pagina. Se necesita conexion para activarlo.',
-                    input: 'password',
-                    inputPlaceholder: 'Tu contraseña',
-                    showCancelButton: true,
-                    confirmButtonText: 'Activar',
-                    cancelButtonText: 'Cancelar',
-                });
-
-                if (!password) return;
-
-                try {
-                    await window.PosOfflineAuth.activarAccesoOffline(password);
-                    window.Swal.fire({
-                        icon: 'success',
-                        title: 'Acceso offline activado',
-                        text: 'Ya puedes volver a entrar en este dispositivo sin internet.',
-                        timer: 2500,
-                        showConfirmButton: false,
-                    });
-                } catch (e) {
-                    window.Swal.fire('No se pudo activar', e.message, 'error');
-                }
-            });
-
-            async function mostrarBloqueoOfflineSiHaceFalta() {
-                if (navigator.onLine !== false) return;
-                if (window.PosOfflineAuth?.yaDesbloqueadoEnEstaPestana()) return;
-
-                const hayCredenciales = await window.PosOfflineAuth?.hayAccesoOfflineActivado();
-                if (!hayCredenciales) return;
-
-                const overlay = document.createElement('div');
-                overlay.id = 'pos-bloqueo-offline';
-                overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.92);z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:16px;';
-                overlay.innerHTML = `
-                    <div style="background:#1f2937;border-radius:16px;padding:32px;max-width:360px;width:100%;text-align:center;box-shadow:0 20px 40px rgba(0,0,0,.4);">
-                        <div style="font-size:40px;margin-bottom:10px;">🔒</div>
-                        <h2 style="color:#f1f5f9;font-size:18px;font-weight:800;margin:0 0 6px;">Sin conexión</h2>
-                        <p style="color:#94a3b8;font-size:13px;margin:0 0 18px;">Escribe tu contraseña para seguir usando el POS en este dispositivo.</p>
-                        <input type="password" id="pos-bloqueo-offline-input" placeholder="Contraseña"
-                            style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid #374151;background:#111827;color:#f1f5f9;font-size:14px;margin-bottom:10px;box-sizing:border-box;" />
-                        <div id="pos-bloqueo-offline-error" style="color:#f87171;font-size:12px;min-height:16px;margin-bottom:10px;"></div>
-                        <button type="button" id="pos-bloqueo-offline-btn"
-                            style="width:100%;background:#4f46e5;color:white;border:none;border-radius:8px;padding:10px;font-size:14px;font-weight:700;cursor:pointer;">
-                            Entrar
-                        </button>
-                    </div>
-                `;
-                document.body.appendChild(overlay);
-
-                const input = document.getElementById('pos-bloqueo-offline-input');
-                const errorEl = document.getElementById('pos-bloqueo-offline-error');
-
-                async function intentar() {
-                    errorEl.textContent = '';
-                    try {
-                        const ok = await window.PosOfflineAuth.verificarPasswordOffline(input.value);
-                        if (ok) {
-                            overlay.remove();
-                        } else {
-                            errorEl.textContent = 'Contraseña incorrecta.';
-                            input.value = '';
-                            input.focus();
-                        }
-                    } catch (e) {
-                        errorEl.textContent = e.message;
-                    }
-                }
-
-                document.getElementById('pos-bloqueo-offline-btn').addEventListener('click', intentar);
-                input.addEventListener('keydown', (e) => { if (e.key === 'Enter') intentar(); });
-                input.focus();
-            }
-
-            mostrarBloqueoOfflineSiHaceFalta();
-
-            window.addEventListener('online', () => {
-                document.getElementById('pos-bloqueo-offline')?.remove();
-            });
-        });
-    </script>
-
-    {{-- Indicador de operaciones pendientes de sincronizar (ventas, mesas,
-         taller, hotel guardadas mientras no habia conexion) --}}
-    <script>
-        (function () {
-            let badge = null;
-
-            function crearBadge() {
-                badge = document.getElementById('pos-pendientes-badge');
-                if (!badge) return;
-                badge.addEventListener('click', async () => {
-                    if (navigator.onLine === false) {
-                        window.Swal?.fire({
-                            icon: 'info',
-                            title: 'Sin conexion',
-                            text: 'Se van a enviar solas apenas vuelva el internet. No se puede sincronizar mientras no haya conexion.',
-                            confirmButtonText: 'Entendido',
-                        });
-                        return;
-                    }
-
-                    badge.disabled = true;
-                    const textoOriginal = badge.textContent;
-                    badge.textContent = '⏳ Sincronizando...';
-
-                    await window.PosOfflineQueue?.reintentarConflictos();
-                    await window.PosOfflineQueue?.procesarCola();
-
-                    badge.disabled = false;
-                    badge.textContent = textoOriginal;
-                });
-            }
-
-            async function actualizarBadge() {
-                if (!window.PosOfflineQueue) return;
-                if (!badge) crearBadge();
-                if (!badge) return;
-
-                const total = await window.PosOfflineQueue.contarPendientes();
-
-                if (total > 0) {
-                    badge.textContent = '🕓 ' + total + ' pendiente' + (total === 1 ? '' : 's') + ' de sincronizar';
-                    badge.style.display = 'block';
-                } else {
-                    badge.style.display = 'none';
-                }
-            }
-
-            window.addEventListener('pos-cola-cambio', actualizarBadge);
-
-            window.addEventListener('pos-operacion-sincronizada', () => {
-                if (window.Swal) {
-                    window.Swal.fire({
-                        icon: 'success', title: 'Sincronizado', timer: 1500, showConfirmButton: false,
-                    });
-                }
-            });
-
-            window.addEventListener('pos-operacion-conflicto', (event) => {
-                if (window.Swal) {
-                    window.Swal.fire({
-                        icon: 'warning',
-                        title: 'Quedo pendiente de revisar',
-                        text: event.detail?.error || 'No se pudo sincronizar una operacion.',
-                        confirmButtonText: 'Entendido',
-                    });
-                }
-            });
-
-            document.addEventListener('DOMContentLoaded', () => {
-                actualizarBadge();
-                if (navigator.onLine !== false) window.PosOfflineQueue?.procesarCola();
-            });
         })();
     </script>
 

@@ -10,9 +10,6 @@ use App\Models\Caja;
 use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\KardexController;
 use App\Http\Controllers\PosCatalogoController;
-use App\Http\Controllers\PosSyncController;
-use App\Http\Controllers\PosAuthOfflineController;
-use App\Http\Controllers\PosClientesController;
 
 
 
@@ -340,42 +337,8 @@ Route::middleware(['auth', 'no.cocina.en.pos'])->group(function () {
     Route::view('/pos', 'pos')
         ->name('pos');
 
-    Route::post('/pos/activar-offline', [PosAuthOfflineController::class, 'confirmarPassword'])
-        ->middleware('throttle:10,1')
-        ->name('pos.activar-offline');
-
     Route::get('/pos/catalogo.json', [PosCatalogoController::class, 'index'])
         ->name('pos.catalogo');
-
-    Route::get('/pos/clientes.json', [PosClientesController::class, 'index'])
-        ->name('pos.clientes');
-
-    Route::post('/pos/sync/venta', [PosSyncController::class, 'venta'])
-        ->name('pos.sync.venta');
-
-    Route::post('/pos/sync/cliente-crear', [PosSyncController::class, 'clienteCrear'])
-        ->name('pos.sync.cliente-crear');
-
-    Route::post('/pos/sync/mesa-item', [PosSyncController::class, 'mesaItem'])
-        ->name('pos.sync.mesa-item');
-
-    Route::post('/pos/sync/mesa-facturar', [PosSyncController::class, 'mesaFacturar'])
-        ->name('pos.sync.mesa-facturar');
-
-    Route::post('/pos/sync/taller-item', [PosSyncController::class, 'tallerItem'])
-        ->name('pos.sync.taller-item');
-
-    Route::post('/pos/sync/taller-facturar', [PosSyncController::class, 'tallerFacturar'])
-        ->name('pos.sync.taller-facturar');
-
-    Route::post('/pos/sync/hotel-item', [PosSyncController::class, 'hotelItem'])
-        ->name('pos.sync.hotel-item');
-
-    Route::post('/pos/sync/hotel-facturar', [PosSyncController::class, 'hotelFacturar'])
-        ->name('pos.sync.hotel-facturar');
-
-    Route::post('/pos/sync/reportar-conflicto', [PosSyncController::class, 'reportarConflicto'])
-        ->name('pos.sync.reportar-conflicto');
 
     Route::get('/pos/mesa/{mesa}', function (\App\Models\Mesa $mesa) {
         $empresaId = auth()->user()->getEmpresaActualId();
