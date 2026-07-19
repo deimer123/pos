@@ -182,10 +182,14 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
                 // Utilidad (F) sigue SIN formula a proposito: es una
                 // decision de precio de esta compra, no algo que deba
                 // copiarse ciego del historico. Precio de Venta (G) se
-                // calcula solo a partir de Costo+IVA+Utilidad (no se copia
-                // el precio de venta anterior del producto), redondeado a
-                // la centena, para que siempre quede consistente con lo que
-                // el usuario haya puesto en C/E/F.
+                // calcula a partir de Costo con Descuento Comercial (D)
+                // aplicado primero, despues IVA, despues Utilidad (no se
+                // copia el precio de venta anterior del producto), redondeado
+                // a la centena, para que siempre quede consistente con lo que
+                // el usuario haya puesto en C/D/E/F. Misma formula que usa
+                // CompraBulkImport::validar() como respaldo (costoConDesc =
+                // costo*(1-desc/100), costoConIva = costoConDesc*(1+iva/100),
+                // pv = costoConIva/(1-utilidad/100)).
                 for ($fila = 3; $fila <= $ultimaFila; $fila++) {
                     foreach ([
                         'C' => 2, // Costo Unitario
@@ -199,7 +203,7 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
 
                     $sheet->setCellValue(
                         'G' . $fila,
-                        "=IF(\$A{$fila}=\"\",\"\",IF(F{$fila}=\"\",\"\",MROUND(C{$fila}*(1+E{$fila}/100)/(1-F{$fila}/100),100)))"
+                        "=IF(\$A{$fila}=\"\",\"\",IF(F{$fila}=\"\",\"\",MROUND(C{$fila}*(1-D{$fila}/100)*(1+E{$fila}/100)/(1-F{$fila}/100),100)))"
                     );
                 }
             },
