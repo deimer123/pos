@@ -6,6 +6,7 @@ use App\Models\Mesa;
 use App\Models\OrdenMesa;
 use App\Models\OrdenMesaItem;
 use App\Models\Product;
+use App\Services\Turion\ColaSincronizacion;
 
 /**
  * Logica de "agregar producto a la cuenta de una mesa" extraida de
@@ -125,6 +126,12 @@ class AgregarItemMesaService
 
         Mesa::where('id', $mesaId)->update(['estado' => 'ocupada']);
         $this->recalcularTotalOrden($orden->id);
+
+        ColaSincronizacion::encolar('mesa_item', [
+            'mesa_id' => $mesaId,
+            'id_producto' => $idProducto,
+            'cantidad_delta' => $cantidadDelta,
+        ]);
 
         return $item;
     }

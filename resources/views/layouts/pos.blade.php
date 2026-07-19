@@ -161,6 +161,8 @@
 </div>
 
 @endif
+
+              @livewire('turion-sync-bar')
             </div>
         </div>
     </div>

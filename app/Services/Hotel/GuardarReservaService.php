@@ -6,14 +6,15 @@ use App\Models\ConfiguracionEmpresa;
 use App\Models\HotelReserva;
 use App\Models\HotelReservaConsumo;
 use App\Models\Product;
+use App\Services\Turion\ColaSincronizacion;
 
 /**
  * Logica de consumos de una reserva de hotel extraida de
  * App\Livewire\CarritoVenta::sincronizarCarritoConHotelReserva() /
  * cargarHotelReserva() (extraccion pura, sin cambiar el comportamiento
  * online), para reutilizarla desde la sincronizacion de pedidos guardados
- * offline. Solo cubre reservas que ya existian (creadas con conexion) —
- * crear una reserva nueva sigue necesitando internet.
+ * offline. Solo cubre reservas que ya existian -- crear una reserva nueva
+ * estando offline se encola por separado (ver HotelReserva::booted()).
  */
 class GuardarReservaService
 {
@@ -50,6 +51,18 @@ class GuardarReservaService
                 'subtotal' => round($precio * $cant, 2),
             ]);
         }
+
+        $itemsParaSubir = array_values(array_filter($carrito, fn ($item) => ! str_starts_with((string) ($item['id_producto'] ?? ''), 'hotel-reserva-')));
+
+        ColaSincronizacion::encolar('hotel_item', [
+            'hotel_reserva_id' => $reservaId,
+            'items' => array_map(fn ($item) => [
+                'id_producto' => $item['id_producto'],
+                'nombre' => $item['nombre'] ?? 'Sin descripción',
+                'cantidad' => (float) ($item['cantidad'] ?? 1),
+                'precio' => (float) ($item['nuevo_precio'] ?? $item['precio'] ?? 0),
+            ], $itemsParaSubir),
+        ]);
 
         return $reserva;
     }

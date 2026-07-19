@@ -5,14 +5,15 @@ namespace App\Services\Taller;
 use App\Models\Product;
 use App\Models\TallerOrden;
 use App\Models\TallerRepuesto;
+use App\Services\Turion\ColaSincronizacion;
 
 /**
  * Logica de repuestos de una orden de taller extraida de
  * App\Livewire\CarritoVenta::sincronizarCarritoConOrdenTaller() /
  * cargarOrdenTaller() (extraccion pura, sin cambiar el comportamiento
  * online), para reutilizarla desde la sincronizacion de pedidos guardados
- * offline. Solo cubre ordenes que ya existian (creadas con conexion) —
- * crear una orden de taller nueva sigue necesitando internet.
+ * offline. Solo cubre ordenes que ya existian -- crear una orden de taller
+ * nueva estando offline se encola por separado (ver TallerOrden::booted()).
  */
 class GuardarOrdenTallerService
 {
@@ -44,6 +45,16 @@ class GuardarOrdenTallerService
                 'subtotal' => round($precio * $cant, 2),
             ]);
         }
+
+        ColaSincronizacion::encolar('taller_item', [
+            'taller_orden_id' => $tallerOrdenId,
+            'items' => array_map(fn ($item) => [
+                'id_producto' => $item['id_producto'],
+                'nombre' => $item['nombre'] ?? 'Sin descripción',
+                'cantidad' => (float) ($item['cantidad'] ?? 1),
+                'precio' => (float) ($item['nuevo_precio'] ?? $item['precio'] ?? 0),
+            ], $carrito),
+        ]);
 
         return $orden;
     }

@@ -12,6 +12,7 @@ use App\Models\Product;
 use App\Models\Receta;
 use App\Models\TallerOrden;
 use App\Services\Factus\FactusInvoiceService;
+use App\Services\Turion\ColaSincronizacion;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -213,7 +214,52 @@ class FacturarVentaService
             $this->liberarMesaSiCorresponde($opciones['mesa_id']);
         }
 
+        $this->encolarSubidaSiEsLocal($carrito, $opciones);
+
         return $factura;
+    }
+
+    /**
+     * En la base de datos local de Turion (SQLite), cada factura hecha sin
+     * conexion queda pendiente de subir al droplet -- ahi es donde se le
+     * asigna el numero fiscal real. No-op en el droplet mismo.
+     */
+    private function encolarSubidaSiEsLocal(array $carrito, array $opciones): void
+    {
+        $medioPago = $opciones['medio_pago'] ?? null;
+
+        if (! empty($opciones['taller_orden_id'])) {
+            ColaSincronizacion::encolar('taller_facturar', [
+                'taller_orden_id' => $opciones['taller_orden_id'],
+                'medio_pago' => $medioPago,
+            ]);
+
+            return;
+        }
+
+        if (! empty($opciones['hotel_reserva_id'])) {
+            ColaSincronizacion::encolar('hotel_facturar', [
+                'hotel_reserva_id' => $opciones['hotel_reserva_id'],
+                'medio_pago' => $medioPago,
+            ]);
+
+            return;
+        }
+
+        if (! empty($opciones['mesa_id'])) {
+            ColaSincronizacion::encolar('mesa_facturar', [
+                'mesa_id' => $opciones['mesa_id'],
+                'medio_pago' => $medioPago,
+            ]);
+
+            return;
+        }
+
+        ColaSincronizacion::encolar('venta', [
+            'carrito' => $carrito,
+            'medio_pago' => $medioPago,
+            'observaciones' => $opciones['observaciones'] ?? null,
+        ]);
     }
 
     public function getConsumidorFinalId(int $empresaId): ?int

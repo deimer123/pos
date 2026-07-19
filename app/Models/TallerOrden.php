@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Turion\ColaSincronizacion;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -48,6 +49,25 @@ class TallerOrden extends Model
                 $max = static::where('empresa_id', $orden->empresa_id)->max('numero_orden') ?? 0;
                 $orden->numero_orden = $max + 1;
             }
+        });
+
+        // Solo tiene efecto en la base de datos local de Turion: una orden
+        // de taller abierta sin conexion se encola completa para crearse
+        // en el servidor al pulsar "Subir" (ver PosSyncController::tallerCrear()).
+        static::created(function (self $orden) {
+            ColaSincronizacion::encolar('taller_crear', [
+                'local_id' => $orden->id,
+                'cliente_nombre' => $orden->cliente_nombre,
+                'cliente_telefono' => $orden->cliente_telefono,
+                'placa' => $orden->placa,
+                'marca' => $orden->marca,
+                'modelo' => $orden->modelo,
+                'color' => $orden->color,
+                'km_ingreso' => $orden->km_ingreso,
+                'diagnostico' => $orden->diagnostico,
+                'observaciones' => $orden->observaciones,
+                'fecha_entrega_estimada' => $orden->fecha_entrega_estimada?->toIso8601String(),
+            ]);
         });
     }
 

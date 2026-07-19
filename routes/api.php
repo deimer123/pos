@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\PairingController;
+use App\Http\Controllers\PosSyncController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -30,5 +31,21 @@ Route::prefix('pairing')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/catalogo', [PairingController::class, 'refrescarCatalogo'])
             ->name('api.pairing.catalogo');
+
+        // Subida de lo hecho offline en una terminal de Turion (boton
+        // "Subir"): mismo controlador que ya usaba el navegador (sesion
+        // web), aqui autenticado por el token de Sanctum que "bootstrap"
+        // entrego al emparejar.
+        Route::prefix('subir')->group(function () {
+            Route::post('/venta', [PosSyncController::class, 'venta'])->name('api.pairing.subir.venta');
+            Route::post('/mesa/item', [PosSyncController::class, 'mesaItem'])->name('api.pairing.subir.mesa-item');
+            Route::post('/mesa/facturar', [PosSyncController::class, 'mesaFacturar'])->name('api.pairing.subir.mesa-facturar');
+            Route::post('/taller/crear', [PosSyncController::class, 'tallerCrear'])->name('api.pairing.subir.taller-crear');
+            Route::post('/taller/item', [PosSyncController::class, 'tallerItem'])->name('api.pairing.subir.taller-item');
+            Route::post('/taller/facturar', [PosSyncController::class, 'tallerFacturar'])->name('api.pairing.subir.taller-facturar');
+            Route::post('/hotel/crear', [PosSyncController::class, 'hotelCrear'])->name('api.pairing.subir.hotel-crear');
+            Route::post('/hotel/item', [PosSyncController::class, 'hotelItem'])->name('api.pairing.subir.hotel-item');
+            Route::post('/hotel/facturar', [PosSyncController::class, 'hotelFacturar'])->name('api.pairing.subir.hotel-facturar');
+        });
     });
 });

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Turion\ColaSincronizacion;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -35,6 +36,24 @@ class HotelReserva extends Model
                 $max = static::where('empresa_id', $reserva->empresa_id)->max('numero_reserva') ?? 0;
                 $reserva->numero_reserva = $max + 1;
             }
+        });
+
+        // Solo tiene efecto en la base de datos local de Turion: una
+        // reserva abierta sin conexion se encola completa para crearse en
+        // el servidor al pulsar "Subir" (ver PosSyncController::hotelCrear()).
+        static::created(function (self $reserva) {
+            ColaSincronizacion::encolar('hotel_crear', [
+                'local_id' => $reserva->id,
+                'habitacion_id' => $reserva->habitacion_id,
+                'huesped_nombre' => $reserva->huesped_nombre,
+                'huesped_telefono' => $reserva->huesped_telefono,
+                'huesped_documento' => $reserva->huesped_documento,
+                'numero_personas' => $reserva->numero_personas,
+                'fecha_checkin' => $reserva->fecha_checkin?->toDateString(),
+                'fecha_checkout' => $reserva->fecha_checkout?->toDateString(),
+                'precio_noche' => $reserva->precio_noche,
+                'observaciones' => $reserva->observaciones,
+            ]);
         });
     }
 
