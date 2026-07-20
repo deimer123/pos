@@ -70,6 +70,13 @@ cd "${PHP_DIR}"
 mv extracted runtime
 rm -f "${ZIP_PATH}"
 cp "${PHP_DIR}/php.ini" "${RUNTIME_DIR}/php.ini" 2>/dev/null || true
+# Paquete de certificados CA (Mozilla via curl.se) -- windows.php.net no trae
+# uno, y sin el cualquier llamada HTTPS saliente (emparejar/sincronizar/subir
+# al droplet) falla con "unable to get local issuer certificate".
+if [ ! -f "${PHP_DIR}/cacert.pem" ]; then
+    curl -sL --fail -o "${PHP_DIR}/cacert.pem" "https://curl.se/ca/cacert.pem"
+fi
+cp "${PHP_DIR}/cacert.pem" "${RUNTIME_DIR}/cacert.pem"
 
 echo "==> Verificando"
 "${RUNTIME_DIR}/php.exe" -v

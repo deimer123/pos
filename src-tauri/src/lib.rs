@@ -29,6 +29,7 @@ struct PhpServerHandle(Mutex<Option<Child>>);
 struct LocalEnv {
     php_exe: PathBuf,
     php_ini: PathBuf,
+    cacert_path: PathBuf,
     laravel_dir: PathBuf,
     router_script: PathBuf,
     vars: Vec<(String, String)>,
@@ -105,6 +106,7 @@ fn preparar_entorno_local(app: &tauri::App) -> LocalEnv {
     let php_dir = resource_dir.join("php");
     let php_exe = php_dir.join("php.exe");
     let php_ini = php_dir.join("php.ini");
+    let cacert_path = php_dir.join("cacert.pem");
 
     let laravel_dir = resource_dir.join("laravel");
     let router_script = laravel_dir
@@ -168,6 +170,7 @@ fn preparar_entorno_local(app: &tauri::App) -> LocalEnv {
     LocalEnv {
         php_exe,
         php_ini,
+        cacert_path,
         laravel_dir,
         router_script,
         vars,
@@ -179,6 +182,10 @@ fn correr_artisan(env: &LocalEnv, args: &[&str], app_url: &str) {
     cmd.current_dir(&env.laravel_dir)
         .arg("-c")
         .arg(&env.php_ini)
+        .arg("-d")
+        .arg(format!("curl.cainfo={}", env.cacert_path.display()))
+        .arg("-d")
+        .arg(format!("openssl.cafile={}", env.cacert_path.display()))
         .arg("artisan")
         .args(args)
         .envs(env.vars.iter().map(|(k, v)| (k.as_str(), v.as_str())))
@@ -206,6 +213,10 @@ fn lanzar_servidor_php(env: &LocalEnv, port: u16, app_url: &str) -> Child {
     cmd.current_dir(env.laravel_dir.join("public"))
         .arg("-c")
         .arg(&env.php_ini)
+        .arg("-d")
+        .arg(format!("curl.cainfo={}", env.cacert_path.display()))
+        .arg("-d")
+        .arg(format!("openssl.cafile={}", env.cacert_path.display()))
         .arg("-S")
         .arg(format!("127.0.0.1:{port}"))
         .arg(&env.router_script)

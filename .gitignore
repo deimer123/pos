@@ -23,3 +23,6 @@ yarn-error.log
 # PHP portable descargado por scripts/setup-php-portable.sh -- no se versiona
 # (binarios ~75MB); cada maquina que empaque Turion lo regenera localmente.
 /src-tauri/binaries/php/runtime
+# Paquete de certificados CA (Mozilla via curl.se) -- lo descarga el mismo
+# script, no hace falta versionarlo.
+/src-tauri/binaries/php/cacert.pem

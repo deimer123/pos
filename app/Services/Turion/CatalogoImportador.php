@@ -3,6 +3,7 @@
 namespace App\Services\Turion;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Siembra en la base de datos LOCAL (SQLite) el paquete de catalogo que
@@ -45,12 +46,26 @@ class CatalogoImportador
 
                     DB::table($tabla)->delete();
 
+                    // El droplet puede tener columnas en produccion que no
+                    // estan (o ya no estan) en nuestras migraciones -- ej.
+                    // agregadas a mano en algun momento sin registrar una
+                    // migracion. Se descartan al sembrar en vez de fallar,
+                    // para que el catalogo local no dependa de que el
+                    // esquema del droplet este perfectamente sincronizado
+                    // con el historial de migraciones.
+                    $columnasLocales = Schema::getColumnListing($tabla);
+
                     foreach (array_chunk($catalogo[$tabla], 200) as $lote) {
                         if (empty($lote)) {
                             continue;
                         }
 
-                        DB::table($tabla)->insert(array_map(fn ($fila) => (array) $fila, $lote));
+                        $filas = array_map(
+                            fn ($fila) => array_intersect_key((array) $fila, array_flip($columnasLocales)),
+                            $lote
+                        );
+
+                        DB::table($tabla)->insert($filas);
                     }
                 }
             });
