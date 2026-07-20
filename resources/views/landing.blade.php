@@ -17,35 +17,35 @@
 
     <style>
         :root {
-            --bg: #F2F4EC;
-            --bg-alt: #E7EBDD;
+            --bg: #F5F8FE;
+            --bg-alt: #E9F0FE;
             --card: #FFFFFF;
-            --ink: #16241C;
-            --ink-soft: #55665A;
-            --ink-faint: #8A9A8C;
-            --accent: #0F7A4C;
-            --accent-strong: #0B5C39;
-            --accent-tint: #E3EEE3;
-            --gold: #B97A22;
-            --gold-tint: #F5E9D3;
-            --line: #D8DECB;
-            --shadow: 0 20px 44px rgba(20, 36, 26, 0.10);
+            --ink: #121C33;
+            --ink-soft: #4B5875;
+            --ink-faint: #8492AC;
+            --accent: #4F46E5;
+            --accent-strong: #3730A3;
+            --accent-tint: #E0E7FF;
+            --peach: #F59E0B;
+            --peach-tint: #FFEDD5;
+            --line: #DCE4F5;
+            --shadow: 0 20px 44px rgba(30, 41, 89, 0.10);
         }
 
         @media (prefers-color-scheme: dark) {
             :root {
-                --bg: #0C1712;
-                --bg-alt: #101E17;
-                --card: #12211A;
-                --ink: #E9EFE5;
-                --ink-soft: #A6B6A9;
-                --ink-faint: #6C7D70;
-                --accent: #34C77E;
-                --accent-strong: #22A866;
-                --accent-tint: #16281F;
-                --gold: #E3A44A;
-                --gold-tint: #2A2115;
-                --line: #22342A;
+                --bg: #0A1120;
+                --bg-alt: #101B32;
+                --card: #131F38;
+                --ink: #E7ECFB;
+                --ink-soft: #A6B3CE;
+                --ink-faint: #67759A;
+                --accent: #818CF8;
+                --accent-strong: #6366F1;
+                --accent-tint: #1E2A4A;
+                --peach: #FBBF61;
+                --peach-tint: #3B2A14;
+                --line: #223357;
                 --shadow: 0 20px 44px rgba(0, 0, 0, 0.45);
             }
         }
@@ -90,11 +90,12 @@
             transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
         }
         .btn:hover { transform: translateY(-1px); }
-        .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 10px 24px rgba(15,122,76,.28); }
+        .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 10px 24px rgba(79,70,229,.28); }
         .btn-primary:hover { background: var(--accent-strong); }
         .btn-ghost { background: transparent; border-color: var(--line); color: var(--ink); }
         .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
-        .btn-gold { background: var(--gold); color: #2A1B02; box-shadow: 0 10px 24px rgba(185,122,34,.25); }
+        .btn-peach { background: var(--peach); color: #402A06; box-shadow: 0 10px 24px rgba(245,158,11,.25); }
+        .btn-peach:hover { filter: brightness(0.94); }
 
         /* ---------- Hero ---------- */
         .hero { background: var(--bg-alt); padding: 64px 0 0; }
@@ -164,21 +165,75 @@
         .feature h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 8px; }
         .feature p { color: var(--ink-soft); font-size: .92rem; line-height: 1.55; margin: 0; }
 
+        /* ---------- Por qué elegirnos ---------- */
+        .why-chips {
+            list-style: none; margin: 0 auto 56px; padding: 0; max-width: 900px;
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 20px;
+        }
+        .why-chips li { display: flex; gap: 9px; align-items: flex-start; font-size: .92rem; color: var(--ink); }
+        .why-chips svg { flex-shrink: 0; color: var(--accent); margin-top: 3px; }
+
         /* ---------- Planes ---------- */
+        .plans-included {
+            text-align: center; color: var(--ink-soft); font-size: .92rem;
+            max-width: 720px; margin: 0 auto 32px; line-height: 1.6;
+        }
+        .plans-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px;
+            align-items: stretch; margin-bottom: 40px;
+        }
         .plan-card {
             background: var(--card); border: 1px solid var(--line); border-radius: 20px;
-            box-shadow: var(--shadow); max-width: 620px; margin: 0 auto;
-            padding: 40px; position: relative; overflow: hidden;
+            box-shadow: var(--shadow); padding: 32px 28px; position: relative; overflow: hidden;
+            display: flex; flex-direction: column;
         }
         .plan-card::before {
             content: ''; position: absolute; top: 0; left: 0; right: 0; height: 6px;
-            background: linear-gradient(90deg, var(--accent), var(--gold));
+            background: linear-gradient(90deg, var(--accent), var(--peach));
         }
-        .plan-card h3 { font-size: 1.5rem; margin-bottom: 6px; }
-        .plan-card .price { font-family: 'IBM Plex Mono', monospace; color: var(--ink-faint); font-size: .95rem; margin-bottom: 22px; }
-        .plan-list { list-style: none; margin: 0 0 28px; padding: 0; display: grid; gap: 12px; }
-        .plan-list li { display: flex; gap: 10px; font-size: .95rem; color: var(--ink); }
+        .plan-card.is-featured {
+            border-color: var(--accent); transform: translateY(-6px);
+            box-shadow: 0 26px 54px rgba(79,70,229,.22);
+        }
+        .plan-badge {
+            position: absolute; top: 18px; right: -34px; transform: rotate(40deg);
+            background: var(--peach); color: #402A06; font-size: .68rem; font-weight: 700;
+            letter-spacing: .05em; text-transform: uppercase; padding: 4px 40px;
+        }
+        .plan-card .duracion {
+            font-size: .78rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+            color: var(--accent-strong); margin-bottom: 4px;
+        }
+        .plan-card h3 { font-size: 1.35rem; margin-bottom: 14px; }
+        .plan-card .price {
+            font-family: 'IBM Plex Mono', monospace; color: var(--ink); font-size: 1.7rem; font-weight: 600;
+            margin-bottom: 2px;
+        }
+        .plan-card .price small { font-size: .6em; color: var(--ink-faint); font-weight: 500; }
+        .plan-card .plan-meta { color: var(--ink-soft); font-size: .85rem; margin-bottom: 20px; }
+        .plan-list { list-style: none; margin: 0 0 24px; padding: 0; display: grid; gap: 10px; flex-grow: 1; }
+        .plan-list li { display: flex; gap: 9px; font-size: .88rem; color: var(--ink); }
         .plan-list svg { flex-shrink: 0; color: var(--accent); margin-top: 2px; }
+        .plan-card .btn { width: 100%; justify-content: center; }
+
+        /* ---------- Complementos y paquetes ---------- */
+        .addons-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 8px;
+        }
+        .addon-card {
+            background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+            box-shadow: var(--shadow); padding: 26px 24px;
+        }
+        .addon-card h4 {
+            font-family: 'Fraunces', serif; font-size: 1.1rem; font-weight: 600; margin: 0 0 14px;
+        }
+        .addon-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+        .addon-list li {
+            display: flex; justify-content: space-between; gap: 12px; font-size: .88rem;
+            color: var(--ink-soft); border-bottom: 1px dashed var(--line); padding-bottom: 10px;
+        }
+        .addon-list li:last-child { border-bottom: none; padding-bottom: 0; }
+        .addon-list .valor { font-family: 'IBM Plex Mono', monospace; color: var(--accent-strong); font-weight: 600; white-space: nowrap; }
 
         /* ---------- Manual teaser ---------- */
         .manual-band {
@@ -230,6 +285,10 @@
             .hero-shot .frame { transform: none; }
             .features { grid-template-columns: 1fr; }
             .nav-links { display: none; }
+            .why-chips { grid-template-columns: 1fr; }
+            .plans-grid { grid-template-columns: 1fr; }
+            .plan-card.is-featured { transform: none; }
+            .addons-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -331,23 +390,88 @@
     <section class="section" id="planes" style="padding-top:0;">
         <div class="wrap">
             <div class="section-head">
+                <span class="eyebrow">¿Por qué elegir Sistema POS?</span>
+                <h2>Todo lo que tu negocio necesita, en la nube</h2>
+            </div>
+            <ul class="why-chips">
+                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Punto de Venta (POS)</li>
+                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Control de Inventario</li>
+                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Compras y Ventas</li>
+                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Clientes y Proveedores</li>
+                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Reportes en tiempo real</li>
+                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Acceso desde cualquier dispositivo</li>
+                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Copias de seguridad automáticas</li>
+                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Actualizaciones constantes</li>
+                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Soporte por WhatsApp</li>
+            </ul>
+
+            <div class="section-head">
                 <span class="eyebrow">Planes y tarifas</span>
                 <h2>Un plan hecho a la medida de tu negocio</h2>
-                <p>Cada negocio es distinto: no todos necesitan las mismas cajas, sucursales o usuarios. Por eso cotizamos según lo que realmente necesitas.</p>
+                <p>Cada negocio es distinto: no todos necesitan las mismas cajas, sucursales o usuarios. Elige el plan que más se ajuste al tuyo.</p>
             </div>
-            <div class="plan-card">
-                <h3>Plan a la medida</h3>
-                <div class="price mono">Precio según tu negocio — sin letra pequeña</div>
-                <ul class="plan-list">
-                    <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Punto de venta, inventario y compras incluidos</li>
-                    <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Facturación electrónica DIAN</li>
-                    <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Usuarios y roles ilimitados dentro de tu empresa</li>
-                    <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Acompañamiento para poner a andar tu negocio</li>
-                </ul>
-                <a href="https://wa.me/573142627819?text=Hola%2C%20quiero%20cotizar%20el%20Sistema%20POS%20para%20mi%20negocio" class="btn btn-gold" target="_blank" rel="noopener">
-                    Cotizar por WhatsApp
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-                </a>
+
+            <p class="plans-included">Todos los planes incluyen: Punto de Venta, Compras, Ventas, Inventario, Clientes, Proveedores, Reportes, Copias de seguridad, Actualizaciones y Soporte por WhatsApp.</p>
+
+            <div class="plans-grid">
+                <div class="plan-card">
+                    <div class="duracion">Trimestral · 3 meses</div>
+                    <h3>Plan Emprende</h3>
+                    <div class="price">$165.000</div>
+                    <div class="plan-meta">1 usuario incluido</div>
+                    <ul class="plan-list">
+                        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Ideal para empezar y probar el sistema</li>
+                        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> POS, inventario, compras y reportes</li>
+                        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Soporte por WhatsApp incluido</li>
+                    </ul>
+                    <a href="https://wa.me/573142627819?text=Hola%2C%20quiero%20cotizar%20el%20Plan%20Emprende%20(trimestral)" class="btn btn-ghost" target="_blank" rel="noopener">Cotizar por WhatsApp</a>
+                </div>
+
+                <div class="plan-card">
+                    <div class="duracion">Semestral · 6 meses</div>
+                    <h3>Plan Crece</h3>
+                    <div class="price">$300.000</div>
+                    <div class="plan-meta">2 usuarios incluidos</div>
+                    <ul class="plan-list">
+                        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Para negocios que ya están vendiendo con regularidad</li>
+                        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Un usuario adicional para tu equipo</li>
+                        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Mismo soporte y actualizaciones constantes</li>
+                    </ul>
+                    <a href="https://wa.me/573142627819?text=Hola%2C%20quiero%20cotizar%20el%20Plan%20Crece%20(semestral)" class="btn btn-ghost" target="_blank" rel="noopener">Cotizar por WhatsApp</a>
+                </div>
+
+                <div class="plan-card is-featured">
+                    <div class="plan-badge">Recomendado</div>
+                    <div class="duracion">Anual · 12 meses</div>
+                    <h3>Plan Empresarial</h3>
+                    <div class="price">$500.000</div>
+                    <div class="plan-meta">3 usuarios incluidos</div>
+                    <ul class="plan-list">
+                        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> El mejor precio por mes de todos los planes</li>
+                        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> 3 usuarios para tu equipo completo</li>
+                        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Acompañamiento prioritario por WhatsApp</li>
+                    </ul>
+                    <a href="https://wa.me/573142627819?text=Hola%2C%20quiero%20cotizar%20el%20Plan%20Empresarial%20(anual)" class="btn btn-primary" target="_blank" rel="noopener">Cotizar por WhatsApp</a>
+                </div>
+            </div>
+
+            <div class="addons-grid">
+                <div class="addon-card">
+                    <h4>Complementos</h4>
+                    <ul class="addon-list">
+                        <li><span>Facturación Electrónica (Activación)</span><span class="valor">$400.000</span></li>
+                        <li><span>Renovación anual Facturación Electrónica</span><span class="valor">$400.000</span></li>
+                        <li><span>POS Híbrido (por equipo)</span><span class="valor">$300.000</span></li>
+                    </ul>
+                </div>
+                <div class="addon-card">
+                    <h4>Paquetes de usuarios adicionales</h4>
+                    <ul class="addon-list">
+                        <li><span>1 usuario adicional</span><span class="valor">$80.000/año</span></li>
+                        <li><span>Hasta 3 usuarios adicionales</span><span class="valor">$200.000/año</span></li>
+                        <li><span>Hasta 5 usuarios adicionales</span><span class="valor">$300.000/año</span></li>
+                    </ul>
+                </div>
             </div>
         </div>
     </section>

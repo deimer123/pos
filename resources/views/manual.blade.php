@@ -17,35 +17,35 @@
 
     <style>
         :root {
-            --bg: #F2F4EC;
-            --bg-alt: #E7EBDD;
+            --bg: #F5F8FE;
+            --bg-alt: #E9F0FE;
             --card: #FFFFFF;
-            --ink: #16241C;
-            --ink-soft: #55665A;
-            --ink-faint: #8A9A8C;
-            --accent: #0F7A4C;
-            --accent-strong: #0B5C39;
-            --accent-tint: #E3EEE3;
-            --gold: #B97A22;
-            --gold-tint: #F5E9D3;
-            --line: #D8DECB;
-            --shadow: 0 20px 44px rgba(20, 36, 26, 0.10);
+            --ink: #121C33;
+            --ink-soft: #4B5875;
+            --ink-faint: #8492AC;
+            --accent: #4F46E5;
+            --accent-strong: #3730A3;
+            --accent-tint: #E0E7FF;
+            --peach: #F59E0B;
+            --peach-tint: #FFEDD5;
+            --line: #DCE4F5;
+            --shadow: 0 20px 44px rgba(30, 41, 89, 0.10);
         }
 
         @media (prefers-color-scheme: dark) {
             :root {
-                --bg: #0C1712;
-                --bg-alt: #101E17;
-                --card: #12211A;
-                --ink: #E9EFE5;
-                --ink-soft: #A6B6A9;
-                --ink-faint: #6C7D70;
-                --accent: #34C77E;
-                --accent-strong: #22A866;
-                --accent-tint: #16281F;
-                --gold: #E3A44A;
-                --gold-tint: #2A2115;
-                --line: #22342A;
+                --bg: #0A1120;
+                --bg-alt: #101B32;
+                --card: #131F38;
+                --ink: #E7ECFB;
+                --ink-soft: #A6B3CE;
+                --ink-faint: #67759A;
+                --accent: #818CF8;
+                --accent-strong: #6366F1;
+                --accent-tint: #1E2A4A;
+                --peach: #FBBF61;
+                --peach-tint: #3B2A14;
+                --line: #223357;
                 --shadow: 0 20px 44px rgba(0, 0, 0, 0.45);
             }
         }
@@ -90,7 +90,7 @@
             transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
         }
         .btn:hover { transform: translateY(-1px); }
-        .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 10px 24px rgba(15,122,76,.28); }
+        .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 10px 24px rgba(79,70,229,.28); }
         .btn-primary:hover { background: var(--accent-strong); }
         .btn-ghost { background: transparent; border-color: var(--line); color: var(--ink); }
         .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
@@ -141,7 +141,7 @@
             text-transform: uppercase; padding: 3px 10px; border-radius: 999px; font-weight: 600;
             white-space: nowrap; color: var(--accent-strong); background: var(--accent-tint);
         }
-        .tag-gold { color: #7A4E1D; background: var(--gold-tint); }
+        .tag-gold { color: #92400E; background: var(--peach-tint); }
 
         .mod h2 { font-size: 1.7rem; margin: 6px 0 4px; }
         .mod .lede { color: var(--ink-soft); max-width: 68ch; margin: 0 0 18px; line-height: 1.6; }
@@ -182,10 +182,10 @@
         .mini-card p { margin: 0; color: var(--ink-soft); font-size: 13.6px; line-height: 1.55; }
 
         .note {
-            display: flex; gap: 10px; background: var(--gold-tint); border: 1px solid var(--line);
+            display: flex; gap: 10px; background: var(--peach-tint); border: 1px solid var(--line);
             border-radius: 12px; padding: 14px 16px; margin: 16px 0; font-size: 13.8px; color: var(--ink); line-height: 1.55;
         }
-        .note strong { color: var(--gold); }
+        .note strong { color: var(--peach); }
 
         figure.shot { margin: 20px 0; padding: 0; }
         /* Las capturas originales incluyen la barra de pestañas del navegador
