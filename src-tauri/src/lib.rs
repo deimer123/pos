@@ -32,7 +32,6 @@ struct LocalEnv {
     laravel_dir: PathBuf,
     router_script: PathBuf,
     vars: Vec<(String, String)>,
-    is_first_run: bool,
 }
 
 fn find_free_port() -> u16 {
@@ -66,6 +65,26 @@ fn nueva_llave_app(php_exe: &PathBuf) -> String {
     String::from_utf8_lossy(&output.stdout).trim().to_string()
 }
 
+/// Deja constancia de que version del bundle corrio por ultima vez en esta
+/// instalacion (app_data_dir, no el directorio de recursos reemplazable).
+/// Sin firma de codigo todavia no hay updater automatico de Tauri (lo
+/// exige) -- las actualizaciones son manuales (reinstalar el .exe nuevo),
+/// pero esto deja un rastro util para diagnosticar soporte y confirma que
+/// la base de datos/storage locales sobreviven a una reinstalacion, ya que
+/// viven fuera del directorio que el instalador reemplaza.
+fn registrar_version_bundle(app: &tauri::App, data_dir: &std::path::Path) {
+    let version_actual = app.package_info().version.to_string();
+    let version_path = data_dir.join("version.txt");
+
+    if let Ok(anterior) = fs::read_to_string(&version_path) {
+        if anterior.trim() != version_actual {
+            log::info!("Turion actualizado: {} -> {}", anterior.trim(), version_actual);
+        }
+    }
+
+    let _ = fs::write(&version_path, &version_actual);
+}
+
 fn preparar_entorno_local(app: &tauri::App) -> LocalEnv {
     let resource_dir = dunce::simplified(
         &app.path()
@@ -81,6 +100,7 @@ fn preparar_entorno_local(app: &tauri::App) -> LocalEnv {
     .to_path_buf();
 
     fs::create_dir_all(&data_dir).expect("no se pudo crear el directorio de datos local");
+    registrar_version_bundle(app, &data_dir);
 
     let php_dir = resource_dir.join("php");
     let php_exe = php_dir.join("php.exe");
@@ -151,7 +171,6 @@ fn preparar_entorno_local(app: &tauri::App) -> LocalEnv {
         laravel_dir,
         router_script,
         vars,
-        is_first_run,
     }
 }
 
@@ -217,9 +236,12 @@ pub fn run() {
             let port = find_free_port();
             let app_url = format!("http://127.0.0.1:{port}");
 
-            if env.is_first_run {
-                correr_artisan(&env, &["migrate", "--force"], &app_url);
-            }
+            // Siempre (no solo en el primer arranque): "migrate" es
+            // idempotente y rapido cuando no hay nada pendiente, y asi una
+            // actualizacion del bundle que trae migraciones nuevas las
+            // aplica sola en el siguiente arranque, sin depender de que el
+            // usuario reinstale sobre una base de datos vacia.
+            correr_artisan(&env, &["migrate", "--force"], &app_url);
 
             let child = lanzar_servidor_php(&env, port, &app_url);
 
