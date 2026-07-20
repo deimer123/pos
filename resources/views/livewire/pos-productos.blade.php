@@ -164,7 +164,7 @@
                     return el ? window.Livewire.find(el.getAttribute('wire:id')) : null;
                 }
 
-                function agregarAlCarrito(idProducto) {
+                function ejecutarAgregar(idProducto, varianteId) {
                     if (navigator.onLine === false) {
                         if (window.posMesaId || window.posTallerOrdenId || window.posHotelReservaId) {
                             window.Swal?.fire('Sin conexion', 'Mesas, taller y hotel necesitan internet.', 'warning');
@@ -181,7 +181,71 @@
                     }
 
                     const wire = wireComponent();
-                    if (wire) wire.call('agregarAlCarrito', idProducto);
+                    if (wire) wire.call('agregarAlCarrito', idProducto, varianteId || null);
+                }
+
+                function formatoStockVariante(stock) {
+                    return Number(stock) > 0 ? Number(stock).toLocaleString('es-CO') + ' und' : 'Sin stock';
+                }
+
+                // Producto con variantes (talla/color): antes de agregar al
+                // carrito hay que elegir cual, cada una con su propio stock
+                // (ver PosCatalogoController::index, campo "variantes").
+                function abrirSelectorVariante(producto) {
+                    if (!window.Swal) {
+                        ejecutarAgregar(producto.id_producto, null);
+                        return;
+                    }
+
+                    const contenedor = document.createElement('div');
+                    contenedor.style.cssText = 'display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto;text-align:left;';
+
+                    (producto.variantes || []).forEach((variante) => {
+                        const sinStock = Number(variante.stock) <= 0;
+
+                        const boton = document.createElement('button');
+                        boton.type = 'button';
+                        boton.disabled = sinStock;
+                        boton.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;border:1px solid #bfdbfe;background:' + (sinStock ? '#f1f5f9' : '#f8fbff') + ';cursor:' + (sinStock ? 'not-allowed' : 'pointer') + ';font-size:14px;color:' + (sinStock ? '#94a3b8' : '#1e293b') + ';';
+
+                        const nombre = document.createElement('span');
+                        nombre.style.fontWeight = '700';
+                        nombre.textContent = variante.nombre;
+
+                        const stock = document.createElement('span');
+                        stock.style.cssText = 'font-size:12px;font-weight:600;color:' + (sinStock ? '#94a3b8' : '#065f46') + ';';
+                        stock.textContent = formatoStockVariante(variante.stock);
+
+                        boton.appendChild(nombre);
+                        boton.appendChild(stock);
+
+                        boton.addEventListener('click', () => {
+                            window.Swal.close();
+                            ejecutarAgregar(producto.id_producto, variante.id);
+                        });
+
+                        contenedor.appendChild(boton);
+                    });
+
+                    window.Swal.fire({
+                        title: 'Elige talla / color',
+                        html: contenedor,
+                        showConfirmButton: false,
+                        showCancelButton: true,
+                        cancelButtonText: 'Cancelar',
+                        width: 420,
+                    });
+                }
+
+                function agregarAlCarrito(idProducto) {
+                    const producto = Catalogo.buscarCoincidenciaExacta(idProducto);
+
+                    if (producto && producto.tiene_variantes) {
+                        abrirSelectorVariante(producto);
+                        return;
+                    }
+
+                    ejecutarAgregar(idProducto, null);
                 }
 
                 function renderizar() {

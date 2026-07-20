@@ -10,7 +10,7 @@ class FacturaDetalle extends Model
     protected $table = 'factura_detalles';
 
     protected $fillable = [
-        'factura_id','producto_id','descripcion_larga',
+        'factura_id','producto_id','producto_variante_id','descripcion_larga',
         'cantidad','precio','subtotal','descuento','devuelto_cantidad','mecanico_id','tipo_servicio','porcentaje_empresa',
         'tipo_servicio','porcentaje_empresa',
     ];

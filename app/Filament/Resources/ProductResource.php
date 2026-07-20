@@ -552,6 +552,89 @@ return \App\Models\Familia::create($data)->id;
 ])
         ]),
 
+    Forms\Components\Tabs\Tab::make('Variantes')
+        ->visible(fn () => (bool) (\App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_variantes')))
+        ->schema([
+            Repeater::make('variantes')
+                ->relationship('variantes')
+                ->label('Variantes (talla / color)')
+                ->defaultItems(0)
+                ->createItemButtonLabel('Agregar variante')
+                ->grid(2)
+                ->extraAttributes(['class' => 'variantes-repeater'])
+                ->schema([
+                    Hidden::make('id'),
+
+                    Grid::make(2)->schema([
+                        TextInput::make('talla')
+                            ->label('Talla')
+                            ->placeholder('M, 38, Única...')
+                            ->live(onBlur: true)
+                            ->dehydrated(false)
+                            ->afterStateHydrated(function (TextInput $component, callable $get, $state) {
+                                $component->state($get('atributos.talla') ?? '');
+                            })
+                            ->afterStateUpdated(function (Set $set, Get $get) {
+                                $set('atributos', ['talla' => $get('talla'), 'color' => $get('color')]);
+                                $set('nombre', trim('Talla '.$get('talla').' - '.$get('color'), ' -'));
+                            }),
+
+                        TextInput::make('color')
+                            ->label('Color')
+                            ->placeholder('Azul, Rojo, Negro...')
+                            ->live(onBlur: true)
+                            ->dehydrated(false)
+                            ->afterStateHydrated(function (TextInput $component, callable $get, $state) {
+                                $component->state($get('atributos.color') ?? '');
+                            })
+                            ->afterStateUpdated(function (Set $set, Get $get) {
+                                $set('atributos', ['talla' => $get('talla'), 'color' => $get('color')]);
+                                $set('nombre', trim('Talla '.$get('talla').' - '.$get('color'), ' -'));
+                            }),
+                    ]),
+
+                    Hidden::make('atributos')->dehydrated(),
+
+                    TextInput::make('nombre')
+                        ->label('Nombre de la variante')
+                        ->required()
+                        ->maxLength(150)
+                        ->helperText('Se sugiere solo a partir de talla/color, puedes editarlo.'),
+
+                    Grid::make(3)->schema([
+                        TextInput::make('codigo')
+                            ->label('Código (opcional)')
+                            ->maxLength(50),
+
+                        TextInput::make('precio_extra')
+                            ->label('Precio extra')
+                            ->numeric()
+                            ->default(0)
+                            ->helperText('Se suma al precio base del producto.'),
+
+                        TextInput::make('stock')
+                            ->label('Stock')
+                            ->numeric()
+                            ->integer()
+                            ->default(0),
+                    ]),
+
+                    Forms\Components\Toggle::make('activo')
+                        ->label('Activa')
+                        ->default(true),
+                ])
+                ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
+                    $data['empresa_id'] = auth()->user()->getEmpresaActualId();
+
+                    return $data;
+                })
+                ->mutateRelationshipDataBeforeSaveUsing(function (array $data): array {
+                    $data['empresa_id'] = auth()->user()->getEmpresaActualId();
+
+                    return $data;
+                }),
+        ]),
+
     ]),
             ]);
 

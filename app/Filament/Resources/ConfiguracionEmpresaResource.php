@@ -199,6 +199,14 @@ class ConfiguracionEmpresaResource extends Resource
                                 ->label('Vende servicios')
                                 ->helperText('Para mano de obra, horas o servicios intangibles. El % de ganancia se configura en cada servicio, en el menú Servicios.'),
                         ]),
+
+                    Forms\Components\Grid::make(1)
+                        ->extraAttributes(['class' => 'producto-linea-3'])
+                        ->schema([
+                            Forms\Components\Toggle::make('usa_variantes')
+                                ->label('Vende por variantes (talla, color)')
+                                ->helperText('Ideal para ropa y zapatos: cada producto puede tener varias combinaciones de talla/color, cada una con su propio stock. Se configuran luego en cada producto.'),
+                        ]),
                 ]),
 
             Forms\Components\Wizard\Step::make('Reglas de venta')

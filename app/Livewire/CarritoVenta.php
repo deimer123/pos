@@ -927,7 +927,7 @@ public function guardarEdicionCliente()
 }
 
 
-  public function agregarProducto($idProducto)
+  public function agregarProducto($idProducto, $varianteId = null)
 {
     $empresaId = $this->getEmpresaId();
 
@@ -952,24 +952,40 @@ public function guardarEdicionCliente()
         return;
     }
 
+    $variante = null;
+    if ($varianteId) {
+        $variante = \App\Models\ProductoVariante::where('id', $varianteId)
+            ->where('product_id', $producto->id)
+            ->where('empresa_id', $empresaId)
+            ->where('activo', true)
+            ->first();
+
+        if (!$variante) {
+            $this->dispatch('error', 'Variante no encontrada o no autorizada.');
+            return;
+        }
+    }
+
     $esNoAcumulable = in_array((int)$producto->id_producto, $this->noAcumulables, true);
-    $key = $esNoAcumulable ? (string) Str::uuid() : (string) $producto->id_producto;
+    $key = $esNoAcumulable
+        ? (string) Str::uuid()
+        : ($variante ? $producto->id_producto.'-v'.$variante->id : (string) $producto->id_producto);
 
     if (!$esNoAcumulable && isset($this->carrito[$key])) {
         $this->carrito[$key]['cantidad'] += 1;
     } else {
         // âœ… CONVERTIR EXPLÃCITAMENTE A NÃšMEROS
-        $precioVenta = floatval($producto->precio_venta1);
+        $precioVenta = floatval($producto->precio_venta1) + ($variante ? floatval($variante->precio_extra) : 0);
         $precioCosto = floatval($producto->precio_costo ?? 0);
         $costoConIva = $this->costoConIvaProducto($producto);
         $ivaVenta    = floatval($producto->iva_venta ?? 0);
         $utilidad1   = $this->utilidadSobreVenta($precioVenta, $costoConIva);
-        $existencias = (float) ($producto->existencias ?? 0);
+        $existencias = $variante ? (float) $variante->stock : (float) ($producto->existencias ?? 0);
         
         $this->carrito[$key] = [
             'uuid'          => $key, // clave propia para diferenciar instancias
             'id_producto'   => $producto->id_producto,
-            'nombre'        => $this->textoUtf8($producto->descripcion_larga),
+            'nombre'        => $this->textoUtf8($producto->descripcion_larga).($variante ? ' ('.$this->textoUtf8($variante->nombre).')' : ''),
             'cantidad'      => 1,
             'precio'        => $precioVenta,
             'nuevo_precio'  => $precioVenta,
@@ -995,6 +1011,8 @@ public function guardarEdicionCliente()
             'permite_decimal' => $producto->permiteCantidadDecimal(),
             'combo_activo'  => null,
             'precio_editado_manual' => false,
+            'producto_variante_id' => $variante?->id,
+            'variante_nombre' => $variante ? $this->textoUtf8($variante->nombre) : null,
         ];
     }
     $this->actualizarTotales();

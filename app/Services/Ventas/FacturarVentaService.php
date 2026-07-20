@@ -9,6 +9,7 @@ use App\Models\HotelReserva;
 use App\Models\Mesa;
 use App\Models\OrdenMesa;
 use App\Models\Product;
+use App\Models\ProductoVariante;
 use App\Models\Receta;
 use App\Models\TallerOrden;
 use App\Services\Factus\FactusInvoiceService;
@@ -140,6 +141,12 @@ class FacturarVentaService
                     if (! $receta) {
                         $producto->existencias = $stockAnterior - $cant;
                         $producto->save();
+                    }
+
+                    if (! empty($item['producto_variante_id'])) {
+                        ProductoVariante::where('id', $item['producto_variante_id'])
+                            ->where('empresa_id', $empresaId)
+                            ->decrement('stock', $cant);
                     }
 
                     if ($receta && $receta->items->isNotEmpty()) {
@@ -336,6 +343,23 @@ class FacturarVentaService
                 throw new \Exception("Cantidad invalida en {$item['id_producto']}.");
             }
 
+            if (! empty($item['producto_variante_id'])) {
+                $variante = ProductoVariante::where('id', $item['producto_variante_id'])
+                    ->where('empresa_id', $empresaId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $variante) {
+                    throw new \Exception("La variante seleccionada para \"{$item['nombre']}\" ya no existe.");
+                }
+
+                if (! $permiteNegativo && $cant > (float) $variante->stock) {
+                    throw new \Exception("Stock insuficiente para \"{$variante->nombre}\": disponible {$variante->stock}, solicitado {$cant}.");
+                }
+
+                continue;
+            }
+
             if (! $permiteNegativo && $prod && $prod->tipo_producto !== 'servicio' && $cant > (float) $prod->existencias) {
                 throw new \Exception("Stock insuficiente para \"{$prod->descripcion_larga}\": disponible {$prod->existencias}, solicitado {$cant}.");
             }
@@ -430,6 +454,7 @@ class FacturarVentaService
 
         $factura->detalles()->create([
             'producto_id' => $idFacturable,
+            'producto_variante_id' => $item['producto_variante_id'] ?? null,
             'descripcion_larga' => $item['nombre'],
             'cantidad' => $cant,
             'subtotal' => $sub,

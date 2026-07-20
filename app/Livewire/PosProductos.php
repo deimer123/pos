@@ -5,6 +5,7 @@ namespace App\Livewire;
 
 use App\Models\ConfiguracionEmpresa;
 use App\Models\Product;
+use App\Models\ProductoVariante;
 use Livewire\Component;
 
 class PosProductos extends Component
@@ -79,7 +80,7 @@ class PosProductos extends Component
         $this->mostrarModalProductoManual = true;
     }
 
-    public function agregarAlCarrito($idProducto)
+    public function agregarAlCarrito($idProducto, $varianteId = null)
 {
     $user = auth()->user();
     $empresaId = $this->getEmpresaId($user);
@@ -93,7 +94,25 @@ class PosProductos extends Component
         return;
     }
 
-    $this->dispatch('productoAgregado', $producto->id_producto);
+    if ($varianteId) {
+        $variante = ProductoVariante::where('id', $varianteId)
+            ->where('product_id', $producto->id)
+            ->where('empresa_id', $empresaId)
+            ->where('activo', true)
+            ->first();
+
+        if (!$variante) {
+            $this->dispatch('error', 'Variante no encontrada o no autorizada.');
+            return;
+        }
+
+        if ($variante->stock <= 0) {
+            $this->dispatch('error', 'Esa variante no tiene stock disponible.');
+            return;
+        }
+    }
+
+    $this->dispatch('productoAgregado', $producto->id_producto, $varianteId);
 }
 
     public function agregarProductoTemporal()

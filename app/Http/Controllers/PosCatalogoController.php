@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ConfiguracionEmpresa;
 use App\Models\Product;
 use App\Models\ProductCombo;
+use App\Models\ProductoVariante;
 use App\Models\Receta;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
@@ -32,12 +33,17 @@ class PosCatalogoController extends Controller
             ->pluck('product_id')
             ->unique();
 
+        $variantesPorProducto = ProductoVariante::where('empresa_id', $empresaId)
+            ->where('activo', true)
+            ->get()
+            ->groupBy('product_id');
+
         $productos = Product::query()
             ->where('empresa_id', $empresaId)
             ->where('id_producto', '!=', '10001')
             ->with(['alternateCodes', 'mecanico'])
             ->get()
-            ->map(function (Product $producto) use ($recetasActivas, $productosConCombo) {
+            ->map(function (Product $producto) use ($recetasActivas, $productosConCombo, $variantesPorProducto) {
                 $vendePor = $producto->vende_por ?? 'unidad';
 
                 $sufijoVenta = match ($vendePor) {
@@ -80,6 +86,17 @@ class PosCatalogoController extends Controller
                     ? Storage::disk('public')->url($producto->foto)
                     : asset('images/sin-imagen.png');
 
+                $variantes = $variantesPorProducto->get($producto->id, collect())
+                    ->map(fn (ProductoVariante $variante) => [
+                        'id' => $variante->id,
+                        'codigo' => $variante->codigo,
+                        'nombre' => $variante->nombre,
+                        'atributos' => $variante->atributos,
+                        'precio_extra' => (float) $variante->precio_extra,
+                        'stock' => (float) $variante->stock,
+                    ])
+                    ->values();
+
                 return [
                     'id_producto' => $producto->id_producto,
                     'descripcion_larga' => $producto->descripcion_larga,
@@ -100,6 +117,8 @@ class PosCatalogoController extends Controller
                     'receta' => $receta_info,
                     'tiene_receta' => $receta_info !== null,
                     'tiene_combo' => $productosConCombo->contains($producto->id),
+                    'tiene_variantes' => $variantes->isNotEmpty(),
+                    'variantes' => $variantes,
                 ];
             })
             ->values();
