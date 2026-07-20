@@ -8,15 +8,18 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
 /**
- * Boton "Sincronizar": refresca el catalogo local (productos, precios,
- * stock, mesas, habitaciones, usuarios) desde el droplet, usando el token
- * ya guardado al emparejar (no hace falta un nuevo codigo). No toca
- * pending_sync_operations -- lo que este pendiente de subir se sube por
- * separado con el boton "Subir" ("php artisan pos:push").
+ * Boton "Sincronizar" (y el chequeo automatico periodico que hace Turion en
+ * segundo plano, ver src-tauri/src/lib.rs): refresca el catalogo local
+ * (productos, precios, stock, mesas, habitaciones, usuarios) desde el
+ * droplet, usando el token ya guardado al emparejar (no hace falta un
+ * nuevo codigo). No toca pending_sync_operations -- lo que este pendiente
+ * de subir se sube por separado, siempre de forma manual, con el boton
+ * "Subir" ("php artisan pos:push").
  */
 class PosSyncCatalog extends Command
 {
-    protected $signature = 'pos:sync-catalog';
+    protected $signature = 'pos:sync-catalog
+        {--if-due= : Solo sincroniza si pasaron al menos N horas desde la ultima vez (uso: chequeo automatico en segundo plano)}';
 
     protected $description = 'Refresca el catalogo local (productos, precios, mesas, habitaciones) desde el droplet.';
 
@@ -25,9 +28,22 @@ class PosSyncCatalog extends Command
         $syncState = DB::table('sync_state')->first();
 
         if (! $syncState || ! $syncState->terminal_token) {
-            $this->error('Esta terminal todavia no esta emparejada.');
+            if (! $this->option('if-due')) {
+                $this->error('Esta terminal todavia no esta emparejada.');
+            }
 
             return self::FAILURE;
+        }
+
+        if ($this->option('if-due') !== null && $syncState->ultima_sincronizacion_at) {
+            $horas = (float) $this->option('if-due');
+            $ultima = \Illuminate\Support\Carbon::parse($syncState->ultima_sincronizacion_at);
+
+            if ($ultima->diffInMinutes(now()) < $horas * 60) {
+                // Todavia no toca -- no-op silencioso, es un chequeo
+                // automatico periodico, no una accion que pidio el cajero.
+                return self::SUCCESS;
+            }
         }
 
         $respuesta = Http::withToken($syncState->terminal_token)

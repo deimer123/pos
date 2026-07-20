@@ -26,6 +26,7 @@ const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x0100_0000;
 /// para poder matarlo cuando Turion se cierra.
 struct PhpServerHandle(Mutex<Option<Child>>);
 
+#[derive(Clone)]
 struct LocalEnv {
     php_exe: PathBuf,
     php_ini: PathBuf,
@@ -33,6 +34,7 @@ struct LocalEnv {
     laravel_dir: PathBuf,
     router_script: PathBuf,
     vars: Vec<(String, String)>,
+    is_first_run: bool,
 }
 
 fn find_free_port() -> u16 {
@@ -174,6 +176,7 @@ fn preparar_entorno_local(app: &tauri::App) -> LocalEnv {
         laravel_dir,
         router_script,
         vars,
+        is_first_run,
     }
 }
 
@@ -206,6 +209,32 @@ fn correr_artisan(env: &LocalEnv, args: &[&str], app_url: &str) {
             args, salida.status, salida.status.code()
         );
     }
+}
+
+// Chequeo periodico en segundo plano: "Sincronizar" (bajar catalogo/precios/
+// stock/mesas) corre solo, sin que el cajero tenga que acordarse de pulsar
+// el boton -- pos:sync-catalog decide internamente si ya toca (--if-due) o
+// si es muy pronto desde la ultima vez, asi que llamarlo seguido es barato.
+// "Subir" (mandar ventas/mesas/ordenes al droplet) sigue siendo SOLO manual
+// a proposito: subir datos hacia afuera no deberia pasar sin que alguien lo
+// decida.
+fn iniciar_sincronizacion_automatica(env: LocalEnv, app_url: String) {
+    std::thread::spawn(move || loop {
+        let intento = std::panic::catch_unwind(|| {
+            correr_artisan(&env, &["pos:sync-catalog", "--if-due=12"], &app_url);
+        });
+
+        if let Err(e) = intento {
+            let mensaje = e
+                .downcast_ref::<String>()
+                .cloned()
+                .or_else(|| e.downcast_ref::<&str>().map(|s| s.to_string()))
+                .unwrap_or_else(|| "error desconocido".into());
+            log::warn!("Sincronizacion automatica en segundo plano fallo (se reintenta en la proxima revision): {mensaje}");
+        }
+
+        std::thread::sleep(Duration::from_secs(60 * 60));
+    });
 }
 
 fn lanzar_servidor_php(env: &LocalEnv, port: u16, app_url: &str) -> Child {
@@ -254,6 +283,19 @@ pub fn run() {
             // usuario reinstale sobre una base de datos vacia.
             correr_artisan(&env, &["migrate", "--force"], &app_url);
 
+            // Datos de referencia (tipos de documento, roles, ciudades,
+            // plan de cuentas) que hacen falta para operar -- ej. crear un
+            // cliente en modo taller necesita tipos_documento -- pero que no
+            // vienen en el catalogo de una empresa (ver CatalogoExporter).
+            // Solo una vez: correrlo de nuevo fallaria por llaves duplicadas.
+            if env.is_first_run {
+                correr_artisan(
+                    &env,
+                    &["db:seed", "--class=Database\\Seeders\\TurionLocalSeeder", "--force"],
+                    &app_url,
+                );
+            }
+
             let child = lanzar_servidor_php(&env, port, &app_url);
 
             if !wait_for_port(port, Duration::from_secs(20)) {
@@ -262,7 +304,14 @@ pub fn run() {
 
             app.manage(PhpServerHandle(Mutex::new(Some(child))));
 
-            WebviewWindowBuilder::new(app, "main", WebviewUrl::External(app_url.parse().unwrap()))
+            iniciar_sincronizacion_automatica(env.clone(), app_url.clone());
+
+            // "/" es la pagina de aterrizaje (marketing) del sitio -- en
+            // Turion no tiene sentido, se entra directo al login (que
+            // redirige solo al POS si ya hay sesion activa).
+            let ventana_url = format!("{app_url}/login");
+
+            WebviewWindowBuilder::new(app, "main", WebviewUrl::External(ventana_url.parse().unwrap()))
                 .title("Sistema POS")
                 .inner_size(1280.0, 800.0)
                 .min_inner_size(1024.0, 640.0)

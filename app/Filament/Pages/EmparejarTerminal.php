@@ -13,6 +13,13 @@ class EmparejarTerminal extends Page
 
     public ?PairingCode $codigoActivo = null;
 
+    // Se entra desde el boton "Emparejar Turion" dentro de Configuracion de
+    // Empresa (ver EditConfiguracionEmpresa), no como item propio del menu.
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
     public static function canAccess(): bool
     {
         return auth()->check() && auth()->user()->hasRole(['admin_empresa', 'super_admin']);

@@ -140,10 +140,12 @@
 
 <div class="pos-actions-list flex gap-2" :class="{ 'is-open': menuOpen }">
 
+    @unless(\Illuminate\Support\Facades\DB::getDriverName() === 'sqlite')
     <a href="/admin"
         class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-sm rounded shadow inline-block">
         Administracion
     </a>
+    @endunless
 
     <button type="button" id="pos-pendientes-badge"
         class="bg-indigo-700 hover:bg-indigo-800 text-white px-4 py-2 text-sm rounded shadow"

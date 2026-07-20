@@ -30,6 +30,17 @@ class TurionSyncBar extends Component
         }
     }
 
+    // Turion sincroniza el catalogo solo, en segundo plano (ver
+    // src-tauri/src/lib.rs) -- este poll es solo para que la hora de
+    // "ultima sincronizacion" que ve el cajero se actualice sola cuando
+    // eso pase, sin que tenga que refrescar la pagina a mano.
+    public function refrescarEstadoPeriodico(): void
+    {
+        if ($this->esTurion) {
+            $this->refrescarEstado();
+        }
+    }
+
     public function sincronizar(): void
     {
         $codigo = Artisan::call('pos:sync-catalog');
@@ -51,8 +62,13 @@ class TurionSyncBar extends Component
         $this->pendientes = (int) DB::table('pending_sync_operations')->where('estado', 'pendiente')->count();
 
         $estado = DB::table('sync_state')->first();
-        $this->ultimaSincronizacion = $estado?->ultima_sincronizacion_at;
-        $this->ultimaSubida = $estado?->ultima_subida_at;
+        $this->ultimaSincronizacion = $this->formatearFecha($estado?->ultima_sincronizacion_at);
+        $this->ultimaSubida = $this->formatearFecha($estado?->ultima_subida_at);
+    }
+
+    private function formatearFecha(?string $valor): ?string
+    {
+        return $valor ? \Illuminate\Support\Carbon::parse($valor)->format('d/m/Y h:i A') : null;
     }
 
     public function render()

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\ConfiguracionEmpresaResource\Pages;
 
 use App\Filament\Resources\ConfiguracionEmpresaResource;
+use Filament\Actions\Action;
 use Filament\Resources\Pages\EditRecord;
 
 class EditConfiguracionEmpresa extends EditRecord
@@ -11,7 +12,13 @@ class EditConfiguracionEmpresa extends EditRecord
 
     protected function getHeaderActions(): array
     {
-        return [];
+        return [
+            Action::make('emparejarTurion')
+                ->label('Emparejar Turión')
+                ->icon('heroicon-o-computer-desktop')
+                ->color('primary')
+                ->url(fn () => \App\Filament\Pages\EmparejarTerminal::getUrl()),
+        ];
     }
 
     protected function mutateFormDataBeforeSave(array $data): array

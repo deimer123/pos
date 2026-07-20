@@ -61,7 +61,14 @@ class MesaResource extends Resource
                                 ->label('Código')
                                 ->required()
                                 ->maxLength(20)
-                                ->placeholder('M1, B2, T3...'),
+                                ->placeholder('M1, B2, T3...')
+                                ->unique(
+                                    ignoreRecord: true,
+                                    modifyRuleUsing: fn ($rule) => $rule->where('empresa_id', $empresaId)
+                                )
+                                ->validationMessages([
+                                    'unique' => 'Ya existe una mesa con ese código.',
+                                ]),
 
                             Forms\Components\TextInput::make('nombre')
                                 ->label('Nombre')
