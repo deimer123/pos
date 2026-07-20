@@ -164,19 +164,19 @@
         }
         .feature h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 8px; }
         .feature p { color: var(--ink-soft); font-size: .92rem; line-height: 1.55; margin: 0; }
+        .feature .ico.ico-peach { background: var(--peach-tint); color: var(--peach); }
 
         /* ---------- Por qué elegirnos ---------- */
-        .why-chips {
-            list-style: none; margin: 0 auto 56px; padding: 0; max-width: 900px;
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 20px;
-        }
-        .why-chips li { display: flex; gap: 9px; align-items: flex-start; font-size: .92rem; color: var(--ink); }
-        .why-chips svg { flex-shrink: 0; color: var(--accent); margin-top: 3px; }
+        .benefits { margin-bottom: 56px; }
 
         /* ---------- Planes ---------- */
-        .plans-included {
-            text-align: center; color: var(--ink-soft); font-size: .92rem;
-            max-width: 720px; margin: 0 auto 32px; line-height: 1.6;
+        .chip-row {
+            display: flex; flex-wrap: wrap; justify-content: center; gap: 9px;
+            max-width: 780px; margin: 0 auto 40px;
+        }
+        .chip-row span {
+            font-size: .78rem; font-weight: 600; color: var(--accent-strong);
+            background: var(--accent-tint); border-radius: 999px; padding: 6px 15px;
         }
         .plans-grid {
             display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px;
@@ -285,7 +285,6 @@
             .hero-shot .frame { transform: none; }
             .features { grid-template-columns: 1fr; }
             .nav-links { display: none; }
-            .why-chips { grid-template-columns: 1fr; }
             .plans-grid { grid-template-columns: 1fr; }
             .plan-card.is-featured { transform: none; }
             .addons-grid { grid-template-columns: 1fr; }
@@ -320,9 +319,9 @@
     <section class="hero">
         <div class="wrap hero-grid">
             <div>
-                <span class="eyebrow">Software para negocios en Colombia</span>
-                <h1>El punto de venta que <em>lleva las cuentas</em> mientras tú atiendes el mostrador.</h1>
-                <p class="lede">Ventas, inventario, compras y facturación electrónica en un solo sistema, pensado para tiendas, talleres y negocios como el tuyo.</p>
+                <span class="eyebrow">Gestión de ventas y administración en la nube</span>
+                <h1>Tu negocio no para. <em>Tu sistema tampoco.</em></h1>
+                <p class="lede">Sistema de gestión de ventas y administrativo en la nube: ventas, inventario, compras y facturación electrónica, sincronizados en tiempo real y disponibles desde cualquier lugar.</p>
                 <div class="hero-ctas">
                     <a href="/admin/login" class="btn btn-primary">
                         Iniciar sesión
@@ -331,6 +330,7 @@
                     <a href="/manual" class="btn btn-ghost">Ver el manual</a>
                 </div>
                 <div class="hero-trust">
+                    <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> 100% en la nube, sin instalaciones</span>
                     <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Facturación electrónica DIAN</span>
                     <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Soporte en español</span>
                 </div>
@@ -391,19 +391,41 @@
         <div class="wrap">
             <div class="section-head">
                 <span class="eyebrow">¿Por qué elegir Sistema POS?</span>
-                <h2>Todo lo que tu negocio necesita, en la nube</h2>
+                <h2>Un sistema de gestión de ventas y administración, 100% en la nube</h2>
+                <p>Nada instalado, nada que mantener: tu negocio corre en la nube y tú lo controlas desde donde estés.</p>
             </div>
-            <ul class="why-chips">
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Punto de Venta (POS)</li>
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Control de Inventario</li>
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Compras y Ventas</li>
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Clientes y Proveedores</li>
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Reportes en tiempo real</li>
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Acceso desde cualquier dispositivo</li>
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Copias de seguridad automáticas</li>
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Actualizaciones constantes</li>
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Soporte por WhatsApp</li>
-            </ul>
+            <div class="features benefits">
+                <div class="feature">
+                    <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H6a4 4 0 01-.4-7.98A5.5 5.5 0 0116.9 8.28 4.5 4.5 0 0117.5 19z"/></svg></div>
+                    <h3>Tu negocio, siempre disponible</h3>
+                    <p>Vende y consulta tus reportes desde el computador de la tienda, una tablet o tu celular — sin instalar nada ni depender de un solo equipo.</p>
+                </div>
+                <div class="feature">
+                    <div class="ico ico-peach"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.13-3.36L23 10M1 14l5.36 5.36A9 9 0 0020.49 15"/></svg></div>
+                    <h3>Todo conectado en tiempo real</h3>
+                    <p>Cada venta, compra o ajuste de inventario se sincroniza al instante: sin duplicar información ni cuadrar cifras a mano.</p>
+                </div>
+                <div class="feature">
+                    <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+                    <h3>Clientes y proveedores en un solo lugar</h3>
+                    <p>Cartera, contactos y compras organizados, listos para consultar en el momento que los necesites.</p>
+                </div>
+                <div class="feature">
+                    <div class="ico ico-peach"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><rect x="7" y="13" width="3" height="5"/><rect x="12" y="9" width="3" height="9"/><rect x="17" y="5" width="3" height="13"/></svg></div>
+                    <h3>Decisiones con datos, no con corazonadas</h3>
+                    <p>Reportes en tiempo real para saber qué se vendió, qué falta y cuánto ganaste — sin esperar al cierre de mes.</p>
+                </div>
+                <div class="feature">
+                    <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg></div>
+                    <h3>Tu información, siempre a salvo</h3>
+                    <p>Copias de seguridad automáticas y actualizaciones constantes, sin que tengas que mover un dedo.</p>
+                </div>
+                <div class="feature">
+                    <div class="ico ico-peach"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg></div>
+                    <h3>Nunca estás solo</h3>
+                    <p>Soporte real por WhatsApp cuando algo no cuadra o simplemente tienes una duda.</p>
+                </div>
+            </div>
 
             <div class="section-head">
                 <span class="eyebrow">Planes y tarifas</span>
@@ -411,7 +433,11 @@
                 <p>Cada negocio es distinto: no todos necesitan las mismas cajas, sucursales o usuarios. Elige el plan que más se ajuste al tuyo.</p>
             </div>
 
-            <p class="plans-included">Todos los planes incluyen: Punto de Venta, Compras, Ventas, Inventario, Clientes, Proveedores, Reportes, Copias de seguridad, Actualizaciones y Soporte por WhatsApp.</p>
+            <div class="chip-row">
+                <span>Punto de Venta</span><span>Compras</span><span>Ventas</span><span>Inventario</span>
+                <span>Clientes</span><span>Proveedores</span><span>Reportes</span><span>Copias de seguridad</span>
+                <span>Actualizaciones</span><span>Soporte por WhatsApp</span>
+            </div>
 
             <div class="plans-grid">
                 <div class="plan-card">
