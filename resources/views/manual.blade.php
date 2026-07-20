@@ -223,6 +223,22 @@
         footer p { color: var(--ink-faint); font-size: .82rem; margin: 4px 0; }
         footer a { text-decoration: underline; }
 
+        /* ---------- WhatsApp flotante ---------- */
+        .whatsapp-float {
+            position: fixed; bottom: 22px; right: 22px; z-index: 50;
+            display: inline-flex; align-items: center; gap: 9px;
+            background: #25D366; color: #fff; text-decoration: none;
+            padding: 14px 20px; border-radius: 999px; font-weight: 700; font-size: .9rem;
+            box-shadow: 0 12px 28px rgba(37,211,102,.38);
+            transition: transform .15s ease, box-shadow .15s ease;
+        }
+        .whatsapp-float:hover { transform: translateY(-2px); box-shadow: 0 16px 32px rgba(37,211,102,.45); }
+        .whatsapp-float svg { flex-shrink: 0; }
+        @media (max-width: 480px) {
+            .whatsapp-float span { display: none; }
+            .whatsapp-float { padding: 14px; }
+        }
+
         @media (max-width: 860px) {
             .nav-links { display: none; }
             .manual-shell { grid-template-columns: 1fr; padding-top: 24px; }
@@ -833,6 +849,11 @@
             <p><a href="/">Volver al inicio</a> &middot; <a href="/admin/login">Iniciar sesión</a></p>
         </div>
     </footer>
+
+    <a href="https://wa.me/573142627819?text=Hola%2C%20quiero%20m%C3%A1s%20informaci%C3%B3n%20sobre%20el%20Sistema%20POS" class="whatsapp-float" target="_blank" rel="noopener" aria-label="Escribir por WhatsApp">
+        <svg width="22" height="22" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M16.001 3C9.373 3 4 8.373 4 15c0 2.354.687 4.548 1.872 6.393L4 29l7.828-2.05A11.94 11.94 0 0016.001 27C22.628 27 28 21.627 28 15S22.628 3 16.001 3zm0 21.75c-1.93 0-3.727-.55-5.253-1.5l-.377-.223-4.65 1.219 1.242-4.53-.246-.39A9.71 9.71 0 016.25 15c0-5.383 4.368-9.75 9.751-9.75S25.75 9.617 25.75 15 21.384 24.75 16.001 24.75zm5.36-7.31c-.294-.147-1.74-.858-2.01-.956-.27-.098-.467-.147-.663.147-.196.294-.76.956-.932 1.152-.171.196-.343.22-.637.073-.294-.147-1.243-.458-2.368-1.462-.875-.78-1.466-1.744-1.638-2.038-.171-.294-.018-.453.129-.6.133-.132.294-.343.441-.514.147-.171.196-.294.294-.49.098-.196.049-.368-.024-.514-.073-.147-.663-1.597-.909-2.187-.24-.577-.483-.5-.663-.51l-.564-.01c-.196 0-.514.073-.784.368-.27.294-1.03 1.007-1.03 2.455s1.055 2.845 1.202 3.04c.147.196 2.077 3.172 5.033 4.448.703.303 1.252.484 1.68.62.706.225 1.348.193 1.855.117.566-.084 1.74-.712 1.985-1.4.245-.688.245-1.278.171-1.4-.073-.123-.27-.196-.564-.343z"/></svg>
+        <span>Contáctame</span>
+    </a>
 
 </body>
 </html>
