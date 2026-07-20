@@ -23,6 +23,17 @@ class CatalogoImportador
         'mesas', 'hotel_habitaciones', 'mecanicos',
     ];
 
+    // Estos campos de "users" son estado de la sesion/dispositivo ACTUAL de
+    // esta terminal, no catalogo -- si se sobreescriben con lo que traiga el
+    // droplet (que tiene su propio session_token de sus propias sesiones
+    // web), la sesion activa local queda invalidada al instante y el
+    // middleware de "una sola sesion" cierra al usuario que esta usando
+    // Turion en ese momento.
+    private const CAMPOS_SESION_LOCAL = [
+        'session_token', 'active_tab_id', 'session_id',
+        'last_login_at', 'last_login_ip', 'last_user_agent',
+    ];
+
     public static function sembrar(array $catalogo): void
     {
         // Reemplazo completo de catalogo: no nos preocupa la integridad
@@ -39,6 +50,8 @@ class CatalogoImportador
 
         try {
             DB::transaction(function () use ($catalogo) {
+                $sesionesLocales = self::capturarSesionesLocales();
+
                 foreach (self::TABLAS as $tabla) {
                     if (! isset($catalogo[$tabla])) {
                         continue;
@@ -68,11 +81,45 @@ class CatalogoImportador
                         DB::table($tabla)->insert($filas);
                     }
                 }
+
+                self::restaurarSesionesLocales($sesionesLocales);
             });
         } finally {
             if (DB::getDriverName() === 'sqlite') {
                 DB::statement('PRAGMA foreign_keys = ON');
             }
+        }
+    }
+
+    private static function capturarSesionesLocales(): array
+    {
+        if (! Schema::hasTable('users')) {
+            return [];
+        }
+
+        $columnas = array_intersect(self::CAMPOS_SESION_LOCAL, Schema::getColumnListing('users'));
+
+        if (empty($columnas)) {
+            return [];
+        }
+
+        return DB::table('users')
+            ->get(array_merge(['id'], $columnas))
+            ->keyBy('id')
+            ->map(fn ($fila) => (array) $fila)
+            ->all();
+    }
+
+    private static function restaurarSesionesLocales(array $sesionesLocales): void
+    {
+        foreach ($sesionesLocales as $userId => $valores) {
+            unset($valores['id']);
+
+            if (empty($valores) || ! DB::table('users')->where('id', $userId)->exists()) {
+                continue;
+            }
+
+            DB::table('users')->where('id', $userId)->update($valores);
         }
     }
 }

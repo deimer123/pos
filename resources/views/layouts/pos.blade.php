@@ -13,6 +13,23 @@
         // dispositivo se usa el POS con otro negocio (ver pos-catalogo-
         // offline.js y pos-offline-queue.js).
         window.posEmpresaId = @json(auth()->check() ? auth()->user()->getEmpresaActualId() : null);
+
+        // Dentro de Turion, "navigator.onLine" refleja si HAY INTERNET REAL
+        // en la maquina -- no si el servidor local de Turion (127.0.0.1) esta
+        // disponible, que SIEMPRE lo esta. Todo el modo "sin conexion" del
+        // navegador (banner, carrito offline en JS puro, cola de sincronizacion
+        // del navegador) fue pensado para cuando el POS SOLO vivia en el
+        // droplet -- ahora Turion tiene su propia base de datos local real, asi
+        // que ese modo degradado ya no debe activarse nunca aqui: el carrito
+        // debe comportarse exactamente igual que en linea (ver
+        // App\Http\Middleware\EnsureTerminalEmparejada / DB::getDriverName()).
+        window.esTurion = @json(\Illuminate\Support\Facades\DB::getDriverName() === 'sqlite');
+        if (window.esTurion) {
+            Object.defineProperty(window.navigator, 'onLine', {
+                configurable: true,
+                get: () => true,
+            });
+        }
     </script>
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}">
