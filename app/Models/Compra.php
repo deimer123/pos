@@ -183,6 +183,12 @@ public function confirmar(): void
                 // 🔥 3. ACTUALIZAR INVENTARIO
                 $producto->existencias = $stockAnterior + $cantidad;
 
+                if (! empty($detalle->producto_variante_id)) {
+                    \App\Models\ProductoVariante::where('id', $detalle->producto_variante_id)
+                        ->where('empresa_id', $this->empresa_id)
+                        ->increment('stock', $cantidad);
+                }
+
                 // 🔥 4. ACTUALIZAR PRECIOS
                 $producto->precio_costo_anterior = $producto->precio_costo;
                 $producto->precio_venta_anterior = $producto->precio_venta1;

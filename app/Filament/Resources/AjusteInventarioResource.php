@@ -66,28 +66,116 @@ class AjusteInventarioResource extends Resource
                         TextInput::make('codigo_ingresado')
     ->label('Código')
     ->columnSpan(4)
+    ->live(onBlur: true)
     ->extraAttributes([
         'data-codigo' => 'true',
-    ]),       
+    ])
+    ->afterStateUpdated(function ($state, Get $get, Set $set) {
+        $codigo = trim((string) $state);
+
+        $empresaId = auth()->user()->getEmpresaActualId();
+        $producto = $codigo === '' ? null : Product::where('empresa_id', $empresaId)
+            ->where(function ($q) use ($codigo) {
+                $q->where('id_producto', $codigo)->orWhere('id', (int) $codigo);
+            })
+            ->first();
+
+        if (! $producto) {
+            $set('nombre_producto', null);
+            $set('producto_id', null);
+            $set('existencias_actuales', null);
+            $set('producto_variante_id', null);
+            return;
+        }
+
+        $set('codigo_ingresado', (string) $producto->id_producto);
+        $set('producto_id', (string) $producto->id_producto);
+        $set('nombre_producto', $producto->descripcion_larga);
+        $set('existencias_actuales', (float) $producto->existencias);
+        $set('producto_variante_id', null);
+    }),
 
                         // 📝 PRODUCTO
                         TextInput::make('nombre_producto')
                             ->label('Producto')
+                            ->disabled()
+                            ->dehydrated()
                             ->columnSpan(8),
+
+                        Hidden::make('producto_id'),
+                        Hidden::make('existencias_actuales'),
 
                         // 🔢 CANTIDAD
                         TextInput::make('cantidad_nueva')
                             ->label('Cantidad')
                             ->numeric()
+                            ->required()
+                            ->columnSpan(4),
+
+                        \Filament\Forms\Components\Placeholder::make('existencias_info')
+                            ->label('Existencias actuales')
+                            ->content(fn (Get $get) => (string) ($get('existencias_actuales') ?? '0'))
                             ->columnSpan(4),
 
                     ]),
+
+                    Grid::make(12)
+                        ->visible(fn (Get $get) => static::productoTieneVariantes($get))
+                        ->schema([
+                            Select::make('producto_variante_id')
+                                ->label('Variante (talla/color)')
+                                ->options(fn (Get $get) => static::opcionesVariantes($get))
+                                ->required(fn (Get $get) => static::productoTieneVariantes($get))
+                                ->validationMessages(['required' => 'Selecciona la variante (talla/color).'])
+                                ->columnSpan(12),
+                        ]),
 
                 ]),
 
         ])
         ->columns(1);
 }
+
+    /* ----------------- Variantes (talla/color) ----------------- */
+    protected static function productoTieneVariantes(Get $get): bool
+    {
+        $codigo = (string) ($get('producto_id') ?? '');
+        if ($codigo === '') {
+            return false;
+        }
+
+        $producto = Product::where('empresa_id', auth()->user()->getEmpresaActualId())
+            ->where('id_producto', $codigo)
+            ->first();
+
+        if (! $producto) {
+            return false;
+        }
+
+        return \App\Models\ProductoVariante::where('product_id', $producto->id)->where('activo', true)->exists();
+    }
+
+    protected static function opcionesVariantes(Get $get): array
+    {
+        $codigo = (string) ($get('producto_id') ?? '');
+        if ($codigo === '') {
+            return [];
+        }
+
+        $producto = Product::where('empresa_id', auth()->user()->getEmpresaActualId())
+            ->where('id_producto', $codigo)
+            ->first();
+
+        if (! $producto) {
+            return [];
+        }
+
+        return \App\Models\ProductoVariante::where('product_id', $producto->id)
+            ->where('activo', true)
+            ->orderBy('nombre')
+            ->pluck('nombre', 'id')
+            ->toArray();
+    }
 
     public static function table(Table $table): Table
 {

@@ -11,6 +11,7 @@ class AjusteInventarioDetalle extends Model
     protected $fillable = [
         'ajuste_inventario_id', // 👈 OBLIGATORIO
         'producto_id',
+        'producto_variante_id',
         'cantidad_anterior',
         'cantidad_nueva',
         'diferencia',

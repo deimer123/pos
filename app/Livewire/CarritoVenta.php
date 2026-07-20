@@ -2616,6 +2616,7 @@ public function seleccionarFactura(int $id)
         return [
             'id' => $d->id,
             'producto_id' => $d->producto_id,
+            'producto_variante_id' => $d->producto_variante_id,
             'descripcion_larga' => $d->descripcion_larga,
             'cantidad' => (float)$d->cantidad,
             'devuelto_cantidad' => (float)$d->devuelto_cantidad,
@@ -2650,6 +2651,12 @@ public function devolverFacturaCompleta()
                     ->where('id_producto', $d->producto_id)
                     ->lockForUpdate()
                     ->increment('existencias', $pend);
+
+                if (! empty($d->producto_variante_id)) {
+                    \App\Models\ProductoVariante::where('id', $d->producto_variante_id)
+                        ->where('empresa_id', $f->empresa_id)
+                        ->increment('stock', $pend);
+                }
 
                 $d->devuelto_cantidad = (float)$d->cantidad;
                 $d->save();
@@ -2686,6 +2693,12 @@ public function devolverItemFactura(int $detalleId, $cantidad)
         Product::where('empresa_id', $this->facturaSeleccionada->empresa_id)
             ->where('id_producto', $det->producto_id)
             ->increment('existencias', $cantidad);
+
+        if (! empty($det->producto_variante_id)) {
+            \App\Models\ProductoVariante::where('id', $det->producto_variante_id)
+                ->where('empresa_id', $this->facturaSeleccionada->empresa_id)
+                ->increment('stock', $cantidad);
+        }
 
         $det->devuelto_cantidad = (float)$det->devuelto_cantidad + $cantidad;
         $det->save();
@@ -2960,6 +2973,7 @@ public function prepararDevolucion(string $tipo = 'completa')
             'seleccion'         => $sel,
             'factura_detalle_id'=> (int)$d['id'],
             'producto_id'       => (int)$d['producto_id'],
+            'producto_variante_id' => $d['producto_variante_id'] ?? null,
             'descripcion'       => (string)$d['descripcion_larga'],
             'pendiente'         => $pend,
             'cantidad'          => $cant,
@@ -3086,6 +3100,12 @@ if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->
     // ðŸ”¥ ACTUALIZA STOCK
     $producto->existencias += $cant;
     $producto->save();
+
+    if (! empty($row['producto_variante_id'])) {
+        \App\Models\ProductoVariante::where('id', $row['producto_variante_id'])
+            ->where('empresa_id', $empresaId)
+            ->increment('stock', $cant);
+    }
 
     // ðŸ”¥ KARDEX (ENTRADA POR DEVOLUCIÃ“N)
     guardarKardex(

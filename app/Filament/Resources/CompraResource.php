@@ -456,6 +456,7 @@ class CompraResource extends Resource
         $set('unidad_medida_label', static::unidadMedidaLabel((int) ($p->id_unidad_de_medida ?? 1)));
         $set('modo_venta_label', static::modoVentaLabel((string) ($p->vende_por ?? 'unidad')));
         $set('permite_decimal_cantidad', $p->permiteCantidadDecimal());
+        $set('producto_variante_id', null);
         static::recalcLinea($get, $set);
     })
 
@@ -648,6 +649,7 @@ class CompraResource extends Resource
             $set('unidad_medida_label', static::unidadMedidaLabel((int) ($p->id_unidad_de_medida ?? 1)));
             $set('modo_venta_label', static::modoVentaLabel((string) ($p->vende_por ?? 'unidad')));
             $set('permite_decimal_cantidad', $p->permiteCantidadDecimal());
+            $set('producto_variante_id', null);
             static::recalcLinea($get, $set);
         })
 )
@@ -689,7 +691,21 @@ Placeholder::make('existencias_inline')
 
         ]),
 
-        
+        /* - Variante (solo si el producto vende por talla/color) - */
+        Forms\Components\Grid::make(6)->extraAttributes(['class' => 'compra-linea-variante'])
+            ->visible(fn (Get $get) => static::productoTieneVariantes($get))
+            ->schema([
+                Select::make('producto_variante_id')
+                    ->label('Variante (talla/color)')
+                    ->options(fn (Get $get) => static::opcionesVariantes($get))
+                    ->required(fn (Get $get) => static::productoTieneVariantes($get))
+                    ->validationMessages(['required' => 'Selecciona la variante (talla/color).'])
+                    ->live()
+                    ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLinea($get, $set))
+                    ->columnSpan(6),
+            ]),
+
+
 
         /* - Línea 2: Costo + D% + Costo c/desc + IVA + Costo+IVA - */
         Forms\Components\Grid::make(20)->extraAttributes(['class' => 'compra-linea-2'])->schema([
@@ -1006,6 +1022,31 @@ TextInput::make('precio_venta')
     ]),
                     ]),
             ]);
+    }
+
+    /* ----------------- Variantes (talla/color) ----------------- */
+    protected static function productoTieneVariantes(Get $get): bool
+    {
+        $pid = (int) ($get('product_id') ?? 0);
+        if (! $pid) {
+            return false;
+        }
+
+        return \App\Models\ProductoVariante::where('product_id', $pid)->where('activo', true)->exists();
+    }
+
+    protected static function opcionesVariantes(Get $get): array
+    {
+        $pid = (int) ($get('product_id') ?? 0);
+        if (! $pid) {
+            return [];
+        }
+
+        return \App\Models\ProductoVariante::where('product_id', $pid)
+            ->where('activo', true)
+            ->orderBy('nombre')
+            ->pluck('nombre', 'id')
+            ->toArray();
     }
 
     /* ================== Cálculo de una fila (cliente) ================== */

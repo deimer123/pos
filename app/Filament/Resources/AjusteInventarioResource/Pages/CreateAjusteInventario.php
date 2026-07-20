@@ -72,54 +72,7 @@ class CreateAjusteInventario extends CreateRecord
      ========================= */
  protected function afterCreate(): void
 {
-    DB::transaction(function () {
-
-        if ($this->record->tipo === 'inventario_nuevo') {
-            Product::where('empresa_id', $this->record->empresa_id)
-                ->update(['existencias' => 0]);
-        }
-
-        $detallesPorProducto = AjusteInventarioDetalle::where('ajuste_inventario_id', $this->record->id)
-            ->whereNotNull('producto_id')
-            ->get()
-            ->groupBy('producto_id');
-
-        foreach ($detallesPorProducto as $idProducto => $detalles) {
-
-            $producto = Product::where('empresa_id', $this->record->empresa_id)
-                ->where('id_producto', $idProducto)
-                ->lockForUpdate()
-                ->first();
-
-            if (! $producto) {
-                continue;
-            }
-
-            $existenciasAnteriores = (int) $producto->existencias;
-
-            // suma de diferencias del ajuste
-            $diferenciaTotal = $detalles->sum('diferencia');
-
-            $existenciasNuevas = $this->record->tipo === 'ajuste'
-                ? $existenciasAnteriores + $diferenciaTotal
-                : $detalles->last()->cantidad_nueva;
-
-            if ($existenciasNuevas < 0) {
-                throw new \Exception("Inventario negativo no permitido para el producto {$idProducto}");
-            }
-
-            $producto->update([
-                'existencias' => $existenciasNuevas,
-            ]);
-
-            foreach ($detalles as $detalle) {
-                $detalle->update([
-                    'cantidad_anterior' => $existenciasAnteriores,
-                    'diferencia'        => $detalle->cantidad_nueva - $existenciasAnteriores,
-                ]);
-            }
-        }
-    });
+    app(\App\Services\Inventario\AplicarAjusteInventarioService::class)->aplicar($this->record);
 
     $this->reset('data');
 
@@ -264,6 +217,7 @@ public function saveDraft(): void
             AjusteInventarioDetalle::create([
                 'ajuste_inventario_id' => $ajuste->id,
                 'producto_id'          => $item['producto_id'], // SIEMPRE ID REAL
+                'producto_variante_id' => $item['producto_variante_id'] ?? null,
                 'cantidad_anterior'    => $item['cantidad_anterior'] ?? 0,
                 'cantidad_nueva'       => $item['cantidad_nueva'],
                 'diferencia'           => $item['diferencia'] ?? 0,
@@ -340,6 +294,7 @@ public function mount(): void
 
                 // 🔑 CLAVE: ID REAL
                  'producto_id'           => $producto->id_producto,
+                 'producto_variante_id'  => $d->producto_variante_id,
 
                 // cantidades
                 'cantidad_nueva'        => $d->cantidad_nueva,

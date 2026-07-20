@@ -7,6 +7,7 @@ use App\Models\Compra;
 use App\Models\CompraDetalle;
 use App\Models\Familia;
 use App\Models\Product;
+use App\Models\ProductoVariante;
 use App\Models\Subfamilia;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -112,6 +113,33 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
             $productoExistente = $this->buscarProducto($nombre);
             $esNuevo = $productoExistente === null;
 
+            // Columna opcional "Variante" (codigo de producto_variantes):
+            // solo tiene sentido si el producto YA existe y ya tiene esa
+            // variante dada de alta desde /admin (las variantes no se crean
+            // por este importador masivo).
+            $varianteCodigo = trim((string) ($row['variante'] ?? ''));
+            $varianteId = null;
+
+            if ($varianteCodigo !== '') {
+                if ($esNuevo) {
+                    $this->errores[] = "Fila {$numeroFila} ({$nombre}): trae Variante \"{$varianteCodigo}\" pero el producto es nuevo (las variantes se crean desde el admin, no aqui).";
+                    continue;
+                }
+
+                $variante = ProductoVariante::where('empresa_id', $this->empresaId)
+                    ->where('product_id', $productoExistente->id)
+                    ->where('codigo', $varianteCodigo)
+                    ->where('activo', true)
+                    ->first();
+
+                if (! $variante) {
+                    $this->errores[] = "Fila {$numeroFila} ({$nombre}): la variante \"{$varianteCodigo}\" no existe para ese producto.";
+                    continue;
+                }
+
+                $varianteId = $variante->id;
+            }
+
             // Costo Unitario se autollena en Excel con una formula VLOOKUP
             // contra la hoja 'Productos existentes'. A veces esa formula no
             // se puede leer al importar (depende de otra hoja del mismo
@@ -154,6 +182,7 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
                 'numero_fila' => $numeroFila,
                 'nombre' => $nombre,
                 'es_nuevo' => $esNuevo,
+                'variante_id' => $varianteId,
                 'departamento' => trim((string) ($row['departamento'] ?? '')),
                 'subfamilia' => trim((string) ($row['subfamilia'] ?? '')),
                 'unidad_texto' => trim((string) ($row['unidad_de_medida'] ?? '')),
@@ -209,6 +238,13 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
                 $precioVentaAnterior = (float) ($producto->precio_venta1 ?? 0);
 
                 $producto->existencias = (float) ($producto->existencias ?? 0) + $p['cantidad'];
+
+                if (! empty($p['variante_id'])) {
+                    ProductoVariante::where('id', $p['variante_id'])
+                        ->where('empresa_id', $this->empresaId)
+                        ->increment('stock', $p['cantidad']);
+                }
+
                 $producto->precio_costo_anterior = $producto->precio_costo;
                 $producto->precio_venta_anterior = $producto->precio_venta1;
                 $producto->precio_costo = $p['costo'];
@@ -223,6 +259,7 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
 
                 $lineas[] = [
                     'product_id' => (string) $producto->id_producto,
+                    'producto_variante_id' => $p['variante_id'],
                     'codigo_ingresado' => (string) $producto->id_producto,
                     'nombre_producto' => $producto->descripcion_larga,
                     'cantidad' => $p['cantidad'],
