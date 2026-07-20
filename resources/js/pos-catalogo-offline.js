@@ -174,14 +174,48 @@ function coincideFiltroTipo(producto, filtroTipo) {
 }
 
 /**
+ * Un producto con variantes (talla/color) se muestra en la grilla como una
+ * tarjeta POR VARIANTE (no una sola tarjeta con selector) -- cada una con
+ * su propio nombre, stock y precio (precio base + precio_extra de la
+ * variante). Asi el cajero ve de una vez cuanto hay de cada talla/color sin
+ * tener que hacer clic en nada primero.
+ */
+function expandirVariantes(lista) {
+    const expandido = [];
+
+    lista.forEach((p) => {
+        if (p.tiene_variantes && Array.isArray(p.variantes) && p.variantes.length > 0) {
+            p.variantes.forEach((v) => {
+                expandido.push({
+                    ...p,
+                    tiene_variantes: false,
+                    variantes: undefined,
+                    variante_id: v.id,
+                    codigo_mostrado: v.codigo || p.id_producto,
+                    descripcion_larga: p.descripcion_larga + ' - ' + v.nombre,
+                    precio_venta1: (Number(p.precio_venta1) || 0) + (Number(v.precio_extra) || 0),
+                    existencias: Number(v.stock) || 0,
+                });
+            });
+            return;
+        }
+
+        expandido.push(p);
+    });
+
+    return expandido;
+}
+
+/**
  * Busqueda local: mismo orden y limite que usaba el servidor (primero con
  * stock, luego por existencias desc, maximo 40).
  */
 function buscarLocal(query, filtroTipo) {
     const palabras = quitarAcentos(query).split(/\s+/).filter(Boolean);
 
-    return catalogoEnMemoria
-        .filter((p) => coincideFiltroTipo(p, filtroTipo) && coincideProducto(p, palabras))
+    const base = catalogoEnMemoria.filter((p) => coincideFiltroTipo(p, filtroTipo) && coincideProducto(p, palabras));
+
+    return expandirVariantes(base)
         .sort((a, b) => {
             const aConStock = a.existencias > 0 ? 1 : 0;
             const bConStock = b.existencias > 0 ? 1 : 0;
@@ -286,6 +320,8 @@ function tarjetaHTML(producto, empresaContexto) {
     const foto = escapeHtml(producto.foto_url);
     const badgeEstilo = stockBadgeEstilo(stock.cantidad);
     const idAttr = escapeHtml(String(producto.id_producto));
+    const codigoMostrado = escapeHtml(String(producto.codigo_mostrado ?? producto.id_producto));
+    const varianteAttr = producto.variante_id ? ` data-variante="${escapeHtml(String(producto.variante_id))}"` : '';
 
     const stockBadgeDesktop = puedeVerStock
         ? '<div class="inline-flex items-center justify-center rounded-full border shadow-sm" style="width:120px; padding:4px 8px; font-size:10px; font-weight:700; text-align:center;' + badgeEstilo + '">Stock: ' + escapeHtml(stock.texto) + '</div>'
@@ -299,7 +335,7 @@ function tarjetaHTML(producto, empresaContexto) {
     <div>
         <div class="pos-product-card-desktop bg-white rounded-lg shadow border ${bordeColor}" style="height: 110px; display: flex; align-items: stretch;">
             <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:10px 8px 10px 14px; flex-shrink:0;">
-                <div class="inline-flex items-center justify-center rounded-full border px-2 text-[11px] font-bold leading-none shadow-sm" style="border-color:#312e81;background:#4338ca;color:#fefefe; min-width:54px; height:22px;">${idAttr}</div>
+                <div class="inline-flex items-center justify-center rounded-full border px-2 text-[11px] font-bold leading-none shadow-sm" style="border-color:#312e81;background:#4338ca;color:#fefefe; min-width:54px; height:22px;">${codigoMostrado}</div>
                 <img data-ver-imagen="${foto}" src="${foto}" style="width:56px; height:56px; object-fit:cover; border-radius:4px; border:1px solid #e2e8f0; cursor:pointer;" alt="Foto del producto" />
             </div>
             <div style="flex:1; min-width:0; display:flex; align-items:center; padding:10px 12px 10px 8px;">
@@ -316,13 +352,13 @@ function tarjetaHTML(producto, empresaContexto) {
                     </div>
                     ${stockBadgeDesktop}
                 </div>
-                <button type="button" data-agregar="${idAttr}" style="width:88px; flex-shrink:0; background:#4f46e5; color:white; border:none; border-radius:9999px; padding:8px 6px; font-size:12px; font-weight:600; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.2);">Agregar</button>
+                <button type="button" data-agregar="${idAttr}"${varianteAttr} style="width:88px; flex-shrink:0; background:#4f46e5; color:white; border:none; border-radius:9999px; padding:8px 6px; font-size:12px; font-weight:600; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.2);">Agregar</button>
             </div>
         </div>
 
         <div class="pos-product-card-mobile bg-white rounded-lg shadow border ${bordeColor}" style="height: 96px; display:flex; align-items:stretch;">
             <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; padding:8px 6px 8px 10px; flex-shrink:0;">
-                <div class="inline-flex items-center justify-center rounded-full border px-2 text-[10px] font-bold leading-none shadow-sm" style="border-color:#312e81;background:#4338ca;color:#fefefe; min-width:46px; height:20px;">${idAttr}</div>
+                <div class="inline-flex items-center justify-center rounded-full border px-2 text-[10px] font-bold leading-none shadow-sm" style="border-color:#312e81;background:#4338ca;color:#fefefe; min-width:46px; height:20px;">${codigoMostrado}</div>
                 <img data-ver-imagen="${foto}" src="${foto}" style="width:46px; height:46px; object-fit:cover; border-radius:4px; border:1px solid #e2e8f0;" alt="Foto del producto" />
             </div>
             <div style="flex:1; min-width:0; display:flex; align-items:center; padding:8px 8px 8px 6px;">
@@ -339,7 +375,7 @@ function tarjetaHTML(producto, empresaContexto) {
                     </div>
                     ${stockBadgeMobile}
                 </div>
-                <button type="button" data-agregar="${idAttr}" style="width:68px; flex-shrink:0; background:#4f46e5; color:white; border:none; border-radius:9999px; padding:6px 4px; font-size:10px; font-weight:600; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.2);">Agregar</button>
+                <button type="button" data-agregar="${idAttr}"${varianteAttr} style="width:68px; flex-shrink:0; background:#4f46e5; color:white; border:none; border-radius:9999px; padding:6px 4px; font-size:10px; font-weight:600; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.2);">Agregar</button>
             </div>
         </div>
     </div>`;
@@ -368,7 +404,8 @@ function inicializarEventosGrid(contenedorEl, onAgregar) {
     contenedorEl.addEventListener('click', (event) => {
         const botonAgregar = event.target.closest('[data-agregar]');
         if (botonAgregar) {
-            onAgregar(botonAgregar.getAttribute('data-agregar'));
+            const varianteId = botonAgregar.getAttribute('data-variante');
+            onAgregar(botonAgregar.getAttribute('data-agregar'), varianteId ? Number(varianteId) : null);
             return;
         }
 

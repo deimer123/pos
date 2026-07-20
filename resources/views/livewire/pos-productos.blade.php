@@ -237,7 +237,18 @@
                     });
                 }
 
-                function agregarAlCarrito(idProducto) {
+                function agregarAlCarrito(idProducto, varianteId) {
+                    // Viene de un clic directo en la grilla (una tarjeta por
+                    // variante, ver pos-catalogo-offline.js): ya se sabe cual
+                    // variante es, se agrega directo sin selector.
+                    if (varianteId) {
+                        ejecutarAgregar(idProducto, varianteId);
+                        return;
+                    }
+
+                    // Viene de escanear/escribir un codigo exacto: si el
+                    // producto tiene variantes no hay forma de saber cual
+                    // por el codigo solo, se pregunta con el selector.
                     const producto = Catalogo.buscarCoincidenciaExacta(idProducto);
 
                     if (producto && producto.tiene_variantes) {
