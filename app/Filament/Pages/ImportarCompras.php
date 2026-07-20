@@ -6,6 +6,7 @@ use App\Exports\CompraBulkTemplateExport;
 use App\Imports\CompraBulkImport;
 use App\Models\Actor;
 use App\Models\Compra;
+use App\Models\ConfiguracionEmpresa;
 use App\Models\Product;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -105,7 +106,9 @@ class ImportarCompras extends Page
             ->orderBy('descripcion_larga')
             ->get();
 
-        return Excel::download(new CompraBulkTemplateExport($empresaId, $productos), 'plantilla-compras.xlsx');
+        $conVariantes = ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('tipo_negocio') === 'ropa_calzado';
+
+        return Excel::download(new CompraBulkTemplateExport($empresaId, $productos, $conVariantes), 'plantilla-compras.xlsx');
     }
 
     private function facturaDuplicada(int $empresaId, int $proveedorId): bool

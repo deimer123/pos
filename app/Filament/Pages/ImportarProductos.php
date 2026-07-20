@@ -4,6 +4,8 @@ namespace App\Filament\Pages;
 
 use App\Exports\ProductBulkTemplateExport;
 use App\Imports\ProductBulkImport;
+use App\Imports\ProductoRopaBulkImport;
+use App\Models\ConfiguracionEmpresa;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Livewire\WithFileUploads;
@@ -36,11 +38,17 @@ class ImportarProductos extends Page
         return 'Carga masiva de productos';
     }
 
+    private function empresaVendePorVariantes(int $empresaId): bool
+    {
+        return ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('tipo_negocio') === 'ropa_calzado';
+    }
+
     public function descargarPlantilla()
     {
         $empresaId = auth()->user()->getEmpresaActualId();
+        $conVariantes = $this->empresaVendePorVariantes($empresaId);
 
-        return Excel::download(new ProductBulkTemplateExport($empresaId), 'plantilla-productos.xlsx');
+        return Excel::download(new ProductBulkTemplateExport($empresaId, $conVariantes), 'plantilla-productos.xlsx');
     }
 
     public function importar()
@@ -53,7 +61,9 @@ class ImportarProductos extends Page
         @ini_set('max_execution_time', '0');
 
         $empresaId = auth()->user()->getEmpresaActualId();
-        $import = new ProductBulkImport($empresaId);
+        $import = $this->empresaVendePorVariantes($empresaId)
+            ? new ProductoRopaBulkImport($empresaId)
+            : new ProductBulkImport($empresaId);
 
         try {
             Excel::import($import, $this->archivo);

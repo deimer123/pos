@@ -21,7 +21,7 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
 {
     private const ULTIMA_FILA_FORMULAS = 500;
 
-    public function __construct(protected array $productosExistentes = [])
+    public function __construct(protected array $productosExistentes = [], protected bool $conVariantes = false)
     {
     }
 
@@ -32,7 +32,7 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
 
     public function headings(): array
     {
-        return [
+        $columnas = [
             'Producto',
             'Cantidad',
             'Costo Unitario',
@@ -44,29 +44,39 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
             'Subfamilia',
             'Unidad de Medida',
         ];
+
+        if ($this->conVariantes) {
+            $columnas[] = 'Variante';
+        }
+
+        return $columnas;
     }
 
     public function array(): array
     {
-        return [
-            [
-                'Ejemplo: Aceite 20W50 x Galon',
-                10,
-                25000,
-                0,
-                19,
-                30,
-                '',
-                'Lubricantes',
-                'Aceites',
-                'Pieza',
-            ],
+        $fila = [
+            'Ejemplo: Aceite 20W50 x Galon',
+            10,
+            25000,
+            0,
+            19,
+            30,
+            '',
+            'Lubricantes',
+            'Aceites',
+            'Pieza',
         ];
+
+        if ($this->conVariantes) {
+            $fila[] = '';
+        }
+
+        return [$fila];
     }
 
     public function columnWidths(): array
     {
-        return [
+        $anchos = [
             'A' => 34,
             'B' => 12,
             'C' => 15,
@@ -78,13 +88,25 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
             'I' => 20,
             'J' => 16,
         ];
+
+        if ($this->conVariantes) {
+            $anchos['K'] = 20;
+        }
+
+        return $anchos;
     }
 
     public function styles(Worksheet $sheet)
     {
         $sheet->getRowDimension(1)->setRowHeight(30);
 
-        $sheet->getStyle('A1:J1')->applyFromArray([
+        // Columna K (Variante) es aparte a proposito: ninguna de las
+        // formulas de autollenado/validacion de abajo la toca, solo se
+        // extiende el estilo visual (encabezado/bordes) hasta ahi cuando
+        // aplica, para no arriesgar las formulas existentes en A:J.
+        $ultimaColumna = $this->conVariantes ? 'K' : 'J';
+
+        $sheet->getStyle("A1:{$ultimaColumna}1")->applyFromArray([
             'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => 'FFFFFF']],
             'fill' => [
                 'fillType' => Fill::FILL_SOLID,
@@ -97,12 +119,12 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
             ],
         ]);
 
-        $sheet->getStyle('A2:J2')->applyFromArray([
+        $sheet->getStyle("A2:{$ultimaColumna}2")->applyFromArray([
             'font' => ['italic' => true, 'color' => ['rgb' => '6B7280']],
             'alignment' => ['vertical' => Alignment::VERTICAL_CENTER],
         ]);
 
-        $sheet->getStyle('A1:J20')->applyFromArray([
+        $sheet->getStyle("A1:{$ultimaColumna}20")->applyFromArray([
             'borders' => [
                 'allBorders' => [
                     'borderStyle' => Border::BORDER_THIN,

@@ -99,6 +99,7 @@ class ConfiguracionEmpresaResource extends Resource
                                 ->label('Tipo de negocio')
                                 ->options([
                                     'tienda' => 'Tienda / Almacén',
+                                    'ropa_calzado' => 'Almacén de ropa y calzado',
                                     'restaurante' => 'Restaurante',
                                     'bar' => 'Bar',
                                     'carniceria' => 'Carnicería',
@@ -112,6 +113,11 @@ class ConfiguracionEmpresaResource extends Resource
                                 ->live()
                                 ->required()
                                 ->default('tienda')
+                                ->afterStateUpdated(function ($state, Forms\Set $set) {
+                                    if ($state === 'ropa_calzado') {
+                                        $set('usa_variantes', true);
+                                    }
+                                })
                                 ->helperText('Según lo que elijas, en los siguientes pasos solo verás los ajustes que aplican a tu negocio.'),
                         ]),
                 ]),
@@ -171,7 +177,7 @@ class ConfiguracionEmpresaResource extends Resource
                 ]),
 
             Forms\Components\Wizard\Step::make('Producto')
-                ->visible(fn (Forms\Get $get) => in_array($get('tipo_negocio'), ['tienda', 'bar', 'carniceria', 'panaderia', 'farmacia', 'servicios', 'otro']))
+                ->visible(fn (Forms\Get $get) => in_array($get('tipo_negocio'), ['tienda', 'ropa_calzado', 'bar', 'carniceria', 'panaderia', 'farmacia', 'servicios', 'otro']))
                 ->schema([
                     Forms\Components\Grid::make(2)
                         ->extraAttributes(['class' => 'producto-linea-1'])
@@ -179,7 +185,7 @@ class ConfiguracionEmpresaResource extends Resource
                             Forms\Components\Toggle::make('usa_peso')
                                 ->label('Vende por peso')
                                 ->helperText('Ideal para carnicería, fruver o productos a granel.')
-                                ->visible(fn (Forms\Get $get) => ! in_array($get('tipo_negocio'), ['panaderia', 'farmacia', 'servicios', 'bar'])),
+                                ->visible(fn (Forms\Get $get) => ! in_array($get('tipo_negocio'), ['panaderia', 'farmacia', 'servicios', 'bar', 'ropa_calzado'])),
 
                             Forms\Components\Toggle::make('usa_mesas')
                                 ->label('Usa mesas')
