@@ -615,7 +615,8 @@ return \App\Models\Familia::create($data)->id;
                         TextInput::make('stock')
                             ->label('Stock')
                             ->numeric()
-                            ->integer()
+                            ->minValue(0)
+                            ->stripCharacters(',')
                             ->default(0),
                     ]),
 
@@ -918,16 +919,21 @@ protected static function calcularValores(Get $get, Set $set, bool $forzarUtilid
     // 2️⃣ Si cambió la utilidad manualmente → recalcular PV
     if ($forzarUtilidad) {
         if ($util >= 100) {
-            $set('precio_venta1', $cIva);
+            $set('precio_venta1', round($cIva));
             return;
         }
 
         $pv = $cIva / (1 - ($util / 100));
-        $set('precio_venta1', round($pv, 2));
+        // Sin decimales: el precio de venta siempre se maneja en pesos
+        // enteros, un valor con centavos rompe el redondeo al facturar.
+        $set('precio_venta1', round($pv));
         return;
     }
 
     // 3️⃣ Si cambió costo/desc/iva o PV → recalcular utilidad
+    $venta = round($venta);
+    $set('precio_venta1', $venta);
+
     if ($venta > 0) {
         $utilReal = (($venta - $cIva) / $venta) * 100;
         $set('utilidad1', round($utilReal, 2));

@@ -4,7 +4,9 @@ namespace App\Providers;
 
 use App\Http\Responses\LoginResponse as CustomLoginResponse;
 use App\Models\ConfiguracionEmpresa;
+use App\Models\ProductoVariante;
 use App\Models\User;
+use App\Observers\ProductoVarianteObserver;
 use App\Observers\UserObserver;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -26,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         User::observe(UserObserver::class);
+        ProductoVariante::observe(ProductoVarianteObserver::class);
 
         View::composer('layouts.pos', function ($view) {
             if (! auth()->check()) {
