@@ -46,9 +46,14 @@ async function reemplazarEnIndexedDB(productos) {
  */
 async function sincronizarCatalogo() {
     try {
-        const response = await fetch('/pos/catalogo.json', {
+        // cache: 'no-store' + query de cache-busting: sin esto, el navegador
+        // (o un proxy intermedio) puede servir una respuesta HTTP vieja de
+        // este mismo endpoint en vez de ir de verdad al servidor, aunque el
+        // usuario le dé clic al boton de actualizar catalogo.
+        const response = await fetch('/pos/catalogo.json?_=' + Date.now(), {
             headers: { Accept: 'application/json' },
             credentials: 'same-origin',
+            cache: 'no-store',
         });
 
         if (!response.ok) return false;
