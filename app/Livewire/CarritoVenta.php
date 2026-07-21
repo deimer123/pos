@@ -975,10 +975,14 @@ public function guardarEdicionCliente()
         $this->carrito[$key]['cantidad'] += 1;
     } else {
         // âœ… CONVERTIR EXPLÃCITAMENTE A NÃšMEROS
-        $precioVenta = floatval($producto->precio_venta1) + ($variante ? floatval($variante->precio_extra) : 0);
-        $precioCosto = floatval($producto->precio_costo ?? 0);
-        $costoConIva = $this->costoConIvaProducto($producto);
         $ivaVenta    = floatval($producto->iva_venta ?? 0);
+        $costoExtra  = $variante ? floatval($variante->costo_extra) : 0;
+        $precioVenta = floatval($producto->precio_venta1) + ($variante ? floatval($variante->precio_extra) : 0);
+        $precioCosto = floatval($producto->precio_costo ?? 0) + $costoExtra;
+        // Costo extra con el mismo IVA del producto (misma logica que
+        // costoConIvaProducto), para que la utilidad de una variante con
+        // costo distinto (ej. talla mas grande) salga correcta.
+        $costoConIva = $this->costoConIvaProducto($producto) + round($costoExtra * (1 + $ivaVenta / 100), 2);
         $utilidad1   = $this->utilidadSobreVenta($precioVenta, $costoConIva);
         $existencias = $variante ? (float) $variante->stock : (float) ($producto->existencias ?? 0);
         

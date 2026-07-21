@@ -605,6 +605,8 @@ return \App\Models\Familia::create($data)->id;
                 ->schema([
                     Hidden::make('id'),
                     Hidden::make('atributos')->dehydrated(),
+                    Hidden::make('precio_extra')->default(0)->dehydrated(),
+                    Hidden::make('costo_extra')->default(0)->dehydrated(),
 
                     Grid::make(12)->schema([
                         TextInput::make('talla')
@@ -665,6 +667,76 @@ return \App\Models\Familia::create($data)->id;
                             ->label('Activa')
                             ->default(true)
                             ->columnSpan(['default' => 2, 'sm' => 1]),
+                    ]),
+
+                    Grid::make(12)->schema([
+                        TextInput::make('costo_variante')
+                            ->label('Costo')
+                            ->numeric()
+                            ->live(onBlur: true)
+                            ->dehydrated(false)
+                            ->hintIcon('heroicon-o-information-circle')
+                            ->hintIconTooltip('Se sugiere el costo del producto, edítalo solo si esta variante cuesta distinto (ej. una talla más grande).')
+                            ->afterStateHydrated(function (TextInput $component, callable $get) {
+                                $costoBase = (float) ($get('../../precio_costo') ?? 0);
+                                $extra = (float) ($get('costo_extra') ?? 0);
+                                $component->state($costoBase + $extra ?: null);
+                            })
+                            ->afterStateUpdated(function (Set $set, Get $get) {
+                                $costoBase = (float) ($get('../../precio_costo') ?? 0);
+                                $nuevo = (float) ($get('costo_variante') ?? 0);
+                                $set('costo_extra', round($nuevo - $costoBase, 2));
+                            })
+                            ->columnSpan(['default' => 12, 'sm' => 4]),
+
+                        TextInput::make('precio_venta_variante')
+                            ->label('Precio de Venta')
+                            ->numeric()
+                            ->live(onBlur: true)
+                            ->dehydrated(false)
+                            ->hintIcon('heroicon-o-information-circle')
+                            ->hintIconTooltip('Se sugiere el precio de venta del producto, edítalo solo si esta variante vale distinto.')
+                            ->afterStateHydrated(function (TextInput $component, callable $get) {
+                                $ventaBase = (float) ($get('../../precio_venta1') ?? 0);
+                                $extra = (float) ($get('precio_extra') ?? 0);
+                                $component->state($ventaBase + $extra ?: null);
+                            })
+                            ->afterStateUpdated(function (Set $set, Get $get) {
+                                $ventaBase = (float) ($get('../../precio_venta1') ?? 0);
+                                $nuevo = round((float) ($get('precio_venta_variante') ?? 0));
+                                $set('precio_venta_variante', $nuevo);
+                                $set('precio_extra', round($nuevo - $ventaBase, 2));
+                            })
+                            ->columnSpan(['default' => 12, 'sm' => 4]),
+
+                        Forms\Components\Placeholder::make('utilidad_variante_info')
+                            ->label('Utilidad')
+                            ->content(function (Get $get) {
+                                $costoIvaBase = (float) ($get('../../costo_iva') ?? 0);
+
+                                if ($costoIvaBase <= 0) {
+                                    $costoBase = (float) ($get('../../precio_costo') ?? 0);
+                                    $ivaVenta = (float) ($get('../../iva_venta') ?? 0);
+                                    $costoIvaBase = $costoBase + ($costoBase * $ivaVenta / 100);
+                                }
+
+                                $ivaVenta = (float) ($get('../../iva_venta') ?? 0);
+                                $costoExtra = (float) ($get('costo_extra') ?? 0);
+                                $costoConIva = $costoIvaBase + ($costoExtra * (1 + $ivaVenta / 100));
+
+                                $ventaBase = (float) ($get('../../precio_venta1') ?? 0);
+                                $precioExtra = (float) ($get('precio_extra') ?? 0);
+                                $venta = $ventaBase + $precioExtra;
+
+                                if ($venta <= 0) {
+                                    return '-';
+                                }
+
+                                $utilidad = (($venta - $costoConIva) / $venta) * 100;
+
+                                return number_format($utilidad, 2) . '%';
+                            })
+                            ->columnSpan(['default' => 12, 'sm' => 4]),
                     ]),
                 ])
                 ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
