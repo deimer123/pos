@@ -31,5 +31,10 @@ class AjusteInventarioDetalle extends Model
     );
 }
 
+public function variante()
+{
+    return $this->belongsTo(ProductoVariante::class, 'producto_variante_id');
+}
+
 }
 

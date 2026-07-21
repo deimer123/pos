@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Product;
+use App\Models\ProductoVariante;
 use App\Models\AjusteInventario;
 use App\Models\AjusteInventarioDetalle;
 use Illuminate\Support\Facades\DB;
@@ -14,12 +15,36 @@ class InventarioController extends Controller
 {
     public function buscar($codigo)
 {
-    $empresaId = auth()->check() 
-        ? auth()->user()->getEmpresaActualId() 
+    $empresaId = auth()->check()
+        ? auth()->user()->getEmpresaActualId()
         : 1;
 
     $codigo = trim($codigo);
     $codigo = str_replace(' ', '', $codigo);
+
+    // 🎨 0. CÓDIGO DE UNA VARIANTE PUNTUAL (talla/color): en empresas con
+    // variantes el stock vive en la variante, no en el producto padre.
+    $variante = ProductoVariante::where('empresa_id', $empresaId)
+        ->where('codigo', $codigo)
+        ->first();
+
+    if ($variante) {
+        $producto = Product::where('id', $variante->product_id)
+            ->where('empresa_id', $empresaId)
+            ->first();
+
+        if (!$producto) {
+            return response()->json(['error' => 'Producto no encontrado'], 404);
+        }
+
+        return response()->json([
+            'id' => $producto->id_producto,
+            'nombre' => $producto->descripcion_larga . ' — ' . $variante->nombre,
+            'stock' => $variante->stock ?? 0,
+            'producto_variante_id' => $variante->id,
+            'codigo_mostrado' => $variante->codigo ?: $producto->id_producto,
+        ]);
+    }
 
    // 🔥 1. BUSCAR POR CÓDIGO PRINCIPAL (EXACTO)
     $producto = Product::where('empresa_id', $empresaId)
@@ -46,6 +71,15 @@ class InventarioController extends Controller
         return response()->json(['error' => 'Producto no encontrado'], 404);
     }
 
+    // 🎨 El stock de un producto con variantes vive en cada variante, no
+    // en el producto padre -- se le pide al cajero el codigo de la
+    // talla/color especifica en vez de dejarlo ajustar el padre.
+    if ($producto->variantes()->where('activo', true)->exists()) {
+        return response()->json([
+            'error' => 'Este producto tiene variantes (talla/color). Ingresa o escanea el código de la variante específica, no el del producto.',
+        ], 422);
+    }
+
     return response()->json([
         'id' => $producto->id_producto,
         'nombre' => $producto->descripcion_larga,
@@ -56,10 +90,20 @@ class InventarioController extends Controller
 
 public function buscarLista(Request $request)
 {
+    $empresaId = auth()->user()->getEmpresaActualId();
     $q = trim($request->input('q', ''));
 
     $query = DB::table('products')
-        ->where('empresa_id', auth()->user()->getEmpresaActualId());
+        ->where('empresa_id', $empresaId)
+        // 🎨 Los productos con variantes no se pueden ajustar como un solo
+        // renglon desde este buscador rapido -- hay que escribir/escanear
+        // el codigo de la variante especifica (ver buscar()).
+        ->whereNotIn('id', function ($sub) use ($empresaId) {
+            $sub->select('product_id')
+                ->from('producto_variantes')
+                ->where('empresa_id', $empresaId)
+                ->where('activo', true);
+        });
 
     if ($q) {
         $palabras = explode(' ', $q);
@@ -114,19 +158,28 @@ public function guardar(Request $request)
     }
 
     // 🔥 insertar nuevos detalles
+    $empresaId = auth()->user()->getEmpresaActualId();
+
     foreach ($request->items as $item) {
 
-        $producto = Product::where('empresa_id', auth()->user()->getEmpresaActualId())
+        $producto = Product::where('empresa_id', $empresaId)
             ->where('id_producto', $item['codigo'])
             ->first();
 
         if (!$producto) continue;
 
-        $anterior = $producto->existencias ?? 0;
+        $varianteId = $item['producto_variante_id'] ?? null;
+
+        // 🎨 el "anterior" de una variante es su propio stock, no el del
+        // producto padre.
+        $anterior = $varianteId
+            ? (float) (ProductoVariante::where('id', $varianteId)->where('empresa_id', $empresaId)->value('stock') ?? 0)
+            : (float) ($producto->existencias ?? 0);
 
         AjusteInventarioDetalle::create([
             'ajuste_inventario_id' => $ajuste->id,
             'producto_id' => $producto->id_producto,
+            'producto_variante_id' => $varianteId,
             'cantidad_anterior' => $anterior,
             'cantidad_nueva' => $item['cantidad'],
             'diferencia' => $item['cantidad'] - $anterior
@@ -162,6 +215,14 @@ public function aplicar(Request $request)
 
         DB::beginTransaction();
 
+        // 🔥 Stock ANTERIOR real de cada producto, capturado antes de que
+        // el servicio lo toque -- para "inventario nuevo" el servicio pone
+        // todo en 0 antes de aplicar las cantidades nuevas, y el kardex
+        // necesita el valor de antes de ese reset.
+        $stocksAnteriores = DB::table('products')
+            ->where('empresa_id', $empresaId)
+            ->pluck('existencias', 'id_producto');
+
         // 🔥 1. CREAR ENCABEZADO
         $ajusteId = DB::table('ajustes_inventario')->insertGetId([
             'empresa_id' => $empresaId,
@@ -173,91 +234,51 @@ public function aplicar(Request $request)
             'updated_at' => now(),
         ]);
 
-        $stocksAnteriores = collect();
-
-        if ($tipo === 'inventario_nuevo') {
-            $stocksAnteriores = DB::table('products')
-                ->where('empresa_id', $empresaId)
-                ->pluck('existencias', 'id_producto');
-
-            DB::table('products')
-                ->where('empresa_id', $empresaId)
-                ->update(['existencias' => 0]);
-        }
-
-        // 🔥 2. RECORRER ITEMS
+        // 🔥 2. GUARDAR LOS DETALLES TAL CUAL VIENEN (con variante si
+        // aplica) -- cantidad_anterior/diferencia las recalcula el
+        // servicio de abajo, que sabe distinguir producto vs variante.
         foreach ($items as $item) {
-
-            $producto = DB::table('products')
-                ->where('id_producto', $item['codigo'])
-                ->where('empresa_id', $empresaId)
-                ->first();
-
-            if (!$producto) continue;
-
-            // Para inventario nuevo, el stock anterior debe ser el real antes de poner todo en cero.
-            $cantidadAnterior = $tipo === 'inventario_nuevo'
-                ? (float) ($stocksAnteriores[$item['codigo']] ?? 0)
-                : (float) $producto->existencias;
-
-            $cantidadNueva = (float) $item['cantidad'];
-            $diferencia = $cantidadNueva - $cantidadAnterior;
-
-            // 🔥 ACTUALIZAR STOCK
-            DB::table('products')
-                ->where('id_producto', $item['codigo'])
-                ->where('empresa_id', $empresaId)
-                ->update(['existencias' => $cantidadNueva]);
-
-            // 🔥 KARDEX CORRECTO
-            if ($tipo === 'inventario_nuevo') {
-
-                guardarKardex(
-                    $item['codigo'],
-                    'inventario_nuevo',
-                    $cantidadNueva,
-                    $empresaId,
-                    $ajusteId,
-                    $cantidadAnterior // 🔥 AQUÍ ESTÁ LA CLAVE
-                );
-
-            } else {
-
-             if ($diferencia > 0) {
-
-                guardarKardex(
-                    $item['codigo'],
-                    'ajuste_entrada',
-                    $diferencia,
-                    $empresaId,
-                    $ajusteId,
-                    $cantidadAnterior // 👈 CLAVE
-                );
-
-            } elseif ($diferencia < 0) {
-
-                guardarKardex(
-                    $item['codigo'],
-                    'ajuste_salida',
-                    abs($diferencia),
-                    $empresaId,
-                    $ajusteId,
-                    $cantidadAnterior // 👈 CLAVE
-                );
-            }
-
-            }
-
-            // 🔥 GUARDAR DETALLE
             DB::table('ajuste_inventario_detalles')->insert([
                 'ajuste_inventario_id' => $ajusteId,
                 'producto_id' => $item['codigo'],
-                'cantidad_anterior' => $cantidadAnterior,
-                'cantidad_nueva' => $cantidadNueva,
-                'diferencia' => $diferencia,
+                'producto_variante_id' => $item['producto_variante_id'] ?? null,
+                'cantidad_anterior' => 0,
+                'cantidad_nueva' => $item['cantidad'],
+                'diferencia' => 0,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+        }
+
+        // 🎨 3. APLICAR: mueve products.existencias y, en paralelo,
+        // producto_variantes.stock cuando la linea trae variante (mismo
+        // servicio que usa el recurso de Filament "Ajustes de Inventario").
+        $ajuste = AjusteInventario::findOrFail($ajusteId);
+        app(\App\Services\Inventario\AplicarAjusteInventarioService::class)->aplicar($ajuste);
+
+        // 🔥 4. KARDEX: un movimiento neto por PRODUCTO (si un producto
+        // tiene varias variantes tocadas en el mismo ajuste, se registra
+        // el movimiento neto de todas juntas, igual que el servicio hace
+        // el rollup sobre products.existencias).
+        $detallesPorProducto = $ajuste->detalles()->get()->groupBy('producto_id');
+
+        foreach ($detallesPorProducto as $idProducto => $detalles) {
+            $cantidadAnterior = (float) ($stocksAnteriores[$idProducto] ?? 0);
+
+            if ($tipo === 'inventario_nuevo') {
+                $cantidadNuevaProducto = $cantidadAnterior + $detalles->sum('diferencia');
+
+                guardarKardex($idProducto, 'inventario_nuevo', $cantidadNuevaProducto, $empresaId, $ajusteId, $cantidadAnterior);
+                continue;
+            }
+
+            $diferenciaProducto = $detalles->sum('diferencia');
+
+            if ($diferenciaProducto > 0) {
+                guardarKardex($idProducto, 'ajuste_entrada', $diferenciaProducto, $empresaId, $ajusteId, $cantidadAnterior);
+            } elseif ($diferenciaProducto < 0) {
+                guardarKardex($idProducto, 'ajuste_salida', abs($diferenciaProducto), $empresaId, $ajusteId, $cantidadAnterior);
+            }
         }
 
         DB::commit();
@@ -266,7 +287,7 @@ public function aplicar(Request $request)
             'ok' => true
         ]);
 
-    } catch (\Exception $e) {
+    } catch (\Throwable $e) {
 
         DB::rollBack();
 
@@ -284,7 +305,7 @@ public function borradores()
 
 public function verBorrador($id)
 {
-    $ajuste = AjusteInventario::with('detalles.producto')
+    $ajuste = AjusteInventario::with('detalles.producto', 'detalles.variante')
         ->where('id', $id)
         ->where('empresa_id', auth()->user()->getEmpresaActualId())
         ->where('estado', 'borrador')

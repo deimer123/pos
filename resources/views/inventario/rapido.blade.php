@@ -730,7 +730,7 @@ function renderTabla() {
     items.forEach((item, index) => {
         let row = `
         <tr>
-            <td>${escapeHtml(item.codigo)}</td>
+            <td>${escapeHtml(item.codigo_mostrado || item.codigo)}</td>
             <td>${escapeHtml(item.nombre)}</td>
             <td>${escapeHtml(item.stock)}</td>
             <td>
@@ -926,11 +926,17 @@ async function buscarProductoPorCodigo() {
         let res = await fetch(`/producto/${encodeURIComponent(valor)}`);
 
         if (!res.ok) {
+            let errorTexto = 'Producto no encontrado';
+            try {
+                let errorData = await res.json();
+                if (errorData?.error) errorTexto = errorData.error;
+            } catch (e) {}
+
             productoActual = null;
             nombre.value = '';
             stock.value = '';
             cantidad.value = '';
-            msg('Producto no encontrado', 'error');
+            msg(errorTexto, 'error');
             codigo.focus();
             codigo.select();
             return;
@@ -938,7 +944,12 @@ async function buscarProductoPorCodigo() {
 
         let p = await res.json();
 
-        let existente = items.findIndex(item => String(item.codigo) === String(p.id));
+        // Duplicado: mismo producto Y misma variante (dos variantes
+        // distintas del mismo producto SI pueden ir en filas separadas).
+        let existente = items.findIndex(item =>
+            String(item.codigo) === String(p.id)
+            && String(item.producto_variante_id || '') === String(p.producto_variante_id || '')
+        );
 
         if (existente >= 0) {
             productoActual = null;
@@ -946,7 +957,7 @@ async function buscarProductoPorCodigo() {
             nombre.value = '';
             stock.value = '';
             cantidad.value = '';
-            msg(`El producto ${p.id} ya esta en la lista`, 'error');
+            msg(`${p.nombre} ya esta en la lista`, 'error');
             resaltarFila(existente);
             codigo.focus();
             return;
@@ -955,7 +966,9 @@ async function buscarProductoPorCodigo() {
         productoActual = {
             id: p.id,
             nombre: p.nombre,
-            stock: p.stock
+            stock: p.stock,
+            producto_variante_id: p.producto_variante_id || null,
+            codigo_mostrado: p.codigo_mostrado || p.id
         };
 
         codigo.value = p.id;
@@ -986,6 +999,8 @@ function agregarProductoActual() {
 
     items.push({
         codigo: productoActual.id,
+        producto_variante_id: productoActual.producto_variante_id || null,
+        codigo_mostrado: productoActual.codigo_mostrado || productoActual.id,
         nombre: productoActual.nombre,
         stock: productoActual.stock,
         cantidad: cantidadNueva
@@ -1466,9 +1481,14 @@ async function cargarBorrador(id) {
     document.getElementById('observacion').value = data.observacion || '';
 
     data.detalles.forEach(d => {
+        let nombreCompleto = d.producto.descripcion_larga;
+        if (d.variante) nombreCompleto += ' — ' + d.variante.nombre;
+
         items.push({
             codigo: d.producto_id,
-            nombre: d.producto.descripcion_larga,
+            producto_variante_id: d.producto_variante_id || null,
+            codigo_mostrado: (d.variante && d.variante.codigo) ? d.variante.codigo : d.producto_id,
+            nombre: nombreCompleto,
             stock: d.cantidad_anterior,
             cantidad: d.cantidad_nueva
         });
