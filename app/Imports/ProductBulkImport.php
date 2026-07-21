@@ -45,11 +45,21 @@ class ProductBulkImport implements ToCollection, WithHeadingRow, WithMultipleShe
             $row = collect($rawRow)->mapWithKeys(fn ($value, $key) => [strtolower(trim((string) $key)) => $value]);
             $numeroFila = $index + 2; // +1 por el encabezado, +1 porque el indice empieza en 0
 
-            if ($row->filter(fn ($value) => trim((string) $value) !== '')->isEmpty()) {
+            // Fila sin tocar: se decide SOLO por las columnas que uno
+            // realmente escribe (Nombre/Precio Costo), no por todas. Precio
+            // de Venta trae formula en las 500 filas de la plantilla (ver
+            // ProductBulkTemplatePlantillaSheet), asi que esa celda nunca
+            // esta "vacia" de verdad -- si se revisaran todas las columnas,
+            // una fila vacia de verdad salia marcada como "con datos" por
+            // error (mismo bug que ya se corrigio en CompraBulkImport).
+            $nombreRaw = trim((string) ($row['nombre_del_producto'] ?? ''));
+            $costoRaw = trim((string) ($row['precio_costo'] ?? ''));
+
+            if ($nombreRaw === '' && $costoRaw === '') {
                 continue; // fila completamente vacia, se ignora sin avisar
             }
 
-            $nombre = $this->textoValido(trim((string) ($row['nombre_del_producto'] ?? '')));
+            $nombre = $this->textoValido($nombreRaw);
 
             if (str_starts_with(mb_strtolower($nombre), 'ejemplo')) {
                 continue; // fila de ejemplo de la plantilla, se ignora sin avisar

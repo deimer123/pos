@@ -63,11 +63,24 @@ class ProductoRopaBulkImport implements ToCollection, WithHeadingRow, WithMultip
             $numeroFila = $index + 2;
             $row = collect($rawRow)->mapWithKeys(fn ($value, $key) => [strtolower(trim((string) $key)) => $value]);
 
-            if ($row->filter(fn ($value) => trim((string) $value) !== '')->isEmpty()) {
+            // Fila sin tocar: se decide SOLO por las columnas que uno
+            // realmente escribe (Nombre/Talla/Color/Cantidad), no por todas.
+            // Precio de Venta trae formula en las 500 filas de la plantilla
+            // (ver ProductoRopaBulkTemplatePlantillaSheet), asi que esa
+            // celda nunca esta "vacia" de verdad -- si se revisaran todas
+            // las columnas, una fila vacia de verdad salia marcada como
+            // "con datos" por error (mismo bug que ya se corrigio en
+            // CompraBulkImport).
+            $nombreRaw = trim((string) ($row['nombre_del_producto'] ?? ''));
+            $tallaRaw = trim((string) ($row['talla'] ?? ''));
+            $colorRaw = trim((string) ($row['color'] ?? ''));
+            $cantidadRaw = trim((string) ($row['cantidad'] ?? ''));
+
+            if ($nombreRaw === '' && $tallaRaw === '' && $colorRaw === '' && $cantidadRaw === '') {
                 continue;
             }
 
-            $nombre = $this->textoValido(trim((string) ($row['nombre_del_producto'] ?? '')));
+            $nombre = $this->textoValido($nombreRaw);
 
             if (str_starts_with(mb_strtolower($nombre), 'ejemplo')) {
                 continue;
