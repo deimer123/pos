@@ -194,8 +194,10 @@
                     const contenedor = document.createElement('div');
                     contenedor.style.cssText = 'display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto;text-align:left;';
 
+                    const permiteStockNegativo = !!(window.posEmpresaContexto && window.posEmpresaContexto.permite_stock_negativo);
+
                     opciones.forEach((opcion) => {
-                        const sinStock = Number(opcion.stock) <= 0;
+                        const sinStock = !permiteStockNegativo && Number(opcion.stock) <= 0;
 
                         const boton = document.createElement('button');
                         boton.type = 'button';
