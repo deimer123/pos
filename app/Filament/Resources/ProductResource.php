@@ -495,9 +495,13 @@ return \App\Models\Familia::create($data)->id;
                         : '-'
                 ),
         ])
-        ->columnSpan(1), // ⚠️ clave para que se ajuste a la mitad
+        ->columnSpan(fn () => static::empresaUsaVariantes() ? 2 : 1), // ⚠️ clave para que se ajuste a la mitad
 
+  // Para empresas con variantes (talla/color), cada variante ya tiene su
+  // propio código (ver pestaña Variantes) que cumple el mismo rol que un
+  // código alterno -- se oculta esta seccion para no duplicar el concepto.
   Section::make('Códigos Alternos')
+    ->visible(fn () => ! static::empresaUsaVariantes())
     ->extraAttributes(['class' => 'producto-linea-2'])
     ->schema([
  Repeater::make('alternateCodes')
@@ -553,7 +557,7 @@ return \App\Models\Familia::create($data)->id;
         ]),
 
     Forms\Components\Tabs\Tab::make('Variantes')
-        ->visible(fn () => (bool) (\App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_variantes')))
+        ->visible(fn () => static::empresaUsaVariantes())
         ->schema([
             Forms\Components\Section::make('Generar variantes rápido')
                 ->description('Marca los colores y las tallas que maneja este producto y genera todas las combinaciones de una vez, en vez de agregarlas una por una.')
@@ -987,6 +991,11 @@ protected static function calcularValores(Get $get, Set $set, bool $forzarUtilid
 // preserva la clave de cada item existente en vez de reconstruir el array
 // desde cero (eso perdería el id interno que Livewire usa para no perder el
 // estado de las filas que ya estaban en pantalla).
+protected static function empresaUsaVariantes(): bool
+{
+    return (bool) (\App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_variantes'));
+}
+
 protected static function generarCombinacionesVariantes(Get $get, Set $set): void
 {
     $colores = array_values(array_filter(array_map('trim', $get('generador_colores') ?? [])));

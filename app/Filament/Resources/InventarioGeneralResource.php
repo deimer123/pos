@@ -75,6 +75,7 @@ class InventarioGeneralResource extends Resource
             ->query(
                 Product::query()
                     ->where('empresa_id', $empresaId)
+                    ->with('variantes')
             )
             ->striped()
             ->recordClasses(fn () => 'inventario-general-row')
@@ -165,6 +166,14 @@ class InventarioGeneralResource extends Resource
                     ->label('Stock')
                     ->badge()
                     ->sortable()
+                    // Para productos con variantes (talla/color), el stock
+                    // real vive en cada variante, no en "existencias" del
+                    // producto (que puede quedar desactualizado) -- se
+                    // muestra la suma de todas las variantes activas, igual
+                    // que en la tarjeta del POS.
+                    ->getStateUsing(fn (Product $record) => $record->variantes->isNotEmpty()
+                        ? $record->variantes->where('activo', true)->sum('stock')
+                        : $record->existencias)
                     ->color(fn ($state) => match (true) {
                         $state < 0 => 'danger',
                         $state == 0 => 'warning',
@@ -172,6 +181,18 @@ class InventarioGeneralResource extends Resource
                     })
                     ->size('xs')
                     ->extraCellAttributes(['class' => $nowrapCellClass . ' text-center']),
+
+                Tables\Columns\TextColumn::make('variantes_detalle')
+                    ->label('Variantes')
+                    ->getStateUsing(fn (Product $record) => $record->variantes->isEmpty()
+                        ? null
+                        : $record->variantes
+                            ->map(fn ($v) => trim(($v->atributos['talla'] ?? '') . ' ' . ($v->atributos['color'] ?? '')) . ': ' . (float) $v->stock)
+                            ->implode(' · '))
+                    ->placeholder('—')
+                    ->wrap()
+                    ->size('xs')
+                    ->extraCellAttributes(['class' => $cellClass . ' leading-tight']),
 
                 Tables\Columns\TextColumn::make('precio_costo')
                     ->label('Costo')
