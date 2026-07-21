@@ -179,36 +179,23 @@ function coincideFiltroTipo(producto, filtroTipo) {
 }
 
 /**
- * Un producto con variantes (talla/color) se muestra en la grilla como una
- * tarjeta POR VARIANTE (no una sola tarjeta con selector) -- cada una con
- * su propio nombre, stock y precio (precio base + precio_extra de la
- * variante). Asi el cajero ve de una vez cuanto hay de cada talla/color sin
- * tener que hacer clic en nada primero.
+ * Un producto con variantes (talla/color) se muestra en la grilla como UNA
+ * sola tarjeta agrupada (no una tarjeta por variante): el cajero le da clic
+ * a "Elegir" y ahi se le pregunta color y despues talla (ver
+ * abrirSelectorVariante en pos-productos.blade.php). El stock que se
+ * muestra en la tarjeta agrupada es la suma de todas las variantes activas
+ * -- se calcula aqui en vivo, sin depender de que products.existencias este
+ * sincronizado, porque las compras/ajustes mueven el stock de la variante
+ * por su cuenta y ese campo puede quedar desactualizado.
  */
-function expandirVariantes(lista) {
-    const expandido = [];
+function totalVariantes(producto) {
+    if (!producto.tiene_variantes || !Array.isArray(producto.variantes)) {
+        return producto;
+    }
 
-    lista.forEach((p) => {
-        if (p.tiene_variantes && Array.isArray(p.variantes) && p.variantes.length > 0) {
-            p.variantes.forEach((v) => {
-                expandido.push({
-                    ...p,
-                    tiene_variantes: false,
-                    variantes: undefined,
-                    variante_id: v.id,
-                    codigo_mostrado: v.codigo || p.id_producto,
-                    descripcion_larga: p.descripcion_larga + ' - ' + v.nombre,
-                    precio_venta1: (Number(p.precio_venta1) || 0) + (Number(v.precio_extra) || 0),
-                    existencias: Number(v.stock) || 0,
-                });
-            });
-            return;
-        }
+    const stockTotal = producto.variantes.reduce((acc, v) => acc + (Number(v.stock) || 0), 0);
 
-        expandido.push(p);
-    });
-
-    return expandido;
+    return { ...producto, existencias: stockTotal };
 }
 
 /**
@@ -220,7 +207,7 @@ function buscarLocal(query, filtroTipo) {
 
     const base = catalogoEnMemoria.filter((p) => coincideFiltroTipo(p, filtroTipo) && coincideProducto(p, palabras));
 
-    return expandirVariantes(base)
+    return base.map(totalVariantes)
         .sort((a, b) => {
             const aConStock = a.existencias > 0 ? 1 : 0;
             const bConStock = b.existencias > 0 ? 1 : 0;
@@ -317,6 +304,12 @@ function etiquetaServicio(producto) {
     return '';
 }
 
+function etiquetaVariantes(producto) {
+    if (!producto.tiene_variantes || !Array.isArray(producto.variantes)) return '';
+    const n = producto.variantes.length;
+    return '<div style="font-size:10px; color:#4338ca; font-weight:700; margin-top:3px;">🎨 ' + n + ' variante' + (n === 1 ? '' : 's') + '</div>';
+}
+
 function tarjetaHTML(producto, empresaContexto) {
     const stock = calcularStock(producto);
     const puedeVerStock = empresaContexto?.puede_ver_stock ?? true;
@@ -326,14 +319,15 @@ function tarjetaHTML(producto, empresaContexto) {
     const badgeEstilo = stockBadgeEstilo(stock.cantidad);
     const idAttr = escapeHtml(String(producto.id_producto));
     const codigoMostrado = escapeHtml(String(producto.codigo_mostrado ?? producto.id_producto));
-    const varianteAttr = producto.variante_id ? ` data-variante="${escapeHtml(String(producto.variante_id))}"` : '';
+    const etiquetaStock = producto.tiene_variantes ? 'Stock total: ' : 'Stock: ';
+    const textoBoton = producto.tiene_variantes ? 'Elegir' : 'Agregar';
 
     const stockBadgeDesktop = puedeVerStock
-        ? '<div class="inline-flex items-center justify-center rounded-full border shadow-sm" style="width:120px; padding:4px 8px; font-size:10px; font-weight:700; text-align:center;' + badgeEstilo + '">Stock: ' + escapeHtml(stock.texto) + '</div>'
+        ? '<div class="inline-flex items-center justify-center rounded-full border shadow-sm" style="width:120px; padding:4px 8px; font-size:10px; font-weight:700; text-align:center;' + badgeEstilo + '">' + etiquetaStock + escapeHtml(stock.texto) + '</div>'
         : '';
 
     const stockBadgeMobile = puedeVerStock
-        ? '<div class="inline-flex items-center justify-center rounded-full border shadow-sm" style="width:86px; padding:3px 6px; font-size:8px; font-weight:700; text-align:center;' + badgeEstilo + '">Stock: ' + escapeHtml(stock.texto) + '</div>'
+        ? '<div class="inline-flex items-center justify-center rounded-full border shadow-sm" style="width:86px; padding:3px 6px; font-size:8px; font-weight:700; text-align:center;' + badgeEstilo + '">' + etiquetaStock + escapeHtml(stock.texto) + '</div>'
         : '';
 
     return `
@@ -347,6 +341,7 @@ function tarjetaHTML(producto, empresaContexto) {
                 <div>
                     <div title="${nombre}" style="font-size:11px; font-weight:600; line-height:1.3; color:#334155; word-break:break-word; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${nombre}</div>
                     ${etiquetaServicio(producto)}
+                    ${etiquetaVariantes(producto)}
                 </div>
             </div>
             <div style="display:flex; flex-direction:row; align-items:flex-end; gap:8px; padding:0 14px 10px 0; flex-shrink:0;">
@@ -357,7 +352,7 @@ function tarjetaHTML(producto, empresaContexto) {
                     </div>
                     ${stockBadgeDesktop}
                 </div>
-                <button type="button" data-agregar="${idAttr}"${varianteAttr} style="width:88px; flex-shrink:0; background:#4f46e5; color:white; border:none; border-radius:9999px; padding:8px 6px; font-size:12px; font-weight:600; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.2);">Agregar</button>
+                <button type="button" data-agregar="${idAttr}" style="width:88px; flex-shrink:0; background:#4f46e5; color:white; border:none; border-radius:9999px; padding:8px 6px; font-size:12px; font-weight:600; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.2);">${textoBoton}</button>
             </div>
         </div>
 
@@ -370,6 +365,7 @@ function tarjetaHTML(producto, empresaContexto) {
                 <div style="width:100%;">
                     <button type="button" data-ver-nombre-mobile="${nombre}" data-stock-mobile="${puedeVerStock ? escapeHtml(stock.texto) : ''}" title="${nombre}" style="width:100%; text-align:left; font-size:9px; font-weight:600; line-height:1.2; color:#334155; word-break:break-word; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; background:none; border:none; padding:0; cursor:pointer;">${nombre}</button>
                     ${etiquetaServicio(producto)}
+                    ${etiquetaVariantes(producto)}
                 </div>
             </div>
             <div style="display:flex; flex-direction:row; align-items:flex-end; gap:6px; padding:0 10px 8px 0; flex-shrink:0;">
@@ -380,7 +376,7 @@ function tarjetaHTML(producto, empresaContexto) {
                     </div>
                     ${stockBadgeMobile}
                 </div>
-                <button type="button" data-agregar="${idAttr}"${varianteAttr} style="width:68px; flex-shrink:0; background:#4f46e5; color:white; border:none; border-radius:9999px; padding:6px 4px; font-size:10px; font-weight:600; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.2);">Agregar</button>
+                <button type="button" data-agregar="${idAttr}" style="width:68px; flex-shrink:0; background:#4f46e5; color:white; border:none; border-radius:9999px; padding:6px 4px; font-size:10px; font-weight:600; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.2);">${textoBoton}</button>
             </div>
         </div>
     </div>`;

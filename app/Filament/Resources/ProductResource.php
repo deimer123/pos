@@ -555,6 +555,31 @@ return \App\Models\Familia::create($data)->id;
     Forms\Components\Tabs\Tab::make('Variantes')
         ->visible(fn () => (bool) (\App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_variantes')))
         ->schema([
+            Forms\Components\Section::make('Generar variantes rápido')
+                ->description('Marca los colores y las tallas que maneja este producto y genera todas las combinaciones de una vez, en vez de agregarlas una por una.')
+                ->collapsible()
+                ->collapsed(fn (Get $get) => ! empty($get('variantes')))
+                ->schema([
+                    Grid::make(2)->schema([
+                        Forms\Components\TagsInput::make('generador_colores')
+                            ->label('Colores')
+                            ->placeholder('Escribe un color y Enter')
+                            ->dehydrated(false),
+
+                        Forms\Components\TagsInput::make('generador_tallas')
+                            ->label('Tallas')
+                            ->placeholder('Escribe una talla y Enter')
+                            ->dehydrated(false),
+                    ]),
+
+                    Forms\Components\Actions::make([
+                        Action::make('generarVariantes')
+                            ->label('Generar variantes')
+                            ->icon('heroicon-o-sparkles')
+                            ->action(fn (Get $get, Set $set) => static::generarCombinacionesVariantes($get, $set)),
+                    ]),
+                ]),
+
             Repeater::make('variantes')
                 ->relationship('variantes')
                 ->label('Variantes (talla / color)')
@@ -934,5 +959,54 @@ protected static function calcularValores(Get $get, Set $set, bool $forzarUtilid
     }
 }
 
-    
+// Arma el producto cartesiano de los colores x tallas escritos en el
+// generador y agrega una fila nueva al Repeater "variantes" por cada
+// combinacion que TODAVIA no exista (comparando por talla+color, sin
+// distinguir mayusculas). Las filas que ya estaban se dejan intactas -- no
+// se les toca el stock/codigo que el usuario ya haya llenado -- por eso se
+// preserva la clave de cada item existente en vez de reconstruir el array
+// desde cero (eso perdería el id interno que Livewire usa para no perder el
+// estado de las filas que ya estaban en pantalla).
+protected static function generarCombinacionesVariantes(Get $get, Set $set): void
+{
+    $colores = array_values(array_filter(array_map('trim', $get('generador_colores') ?? [])));
+    $tallas = array_values(array_filter(array_map('trim', $get('generador_tallas') ?? [])));
+
+    if (empty($colores) && empty($tallas)) {
+        return;
+    }
+
+    $actuales = $get('variantes') ?? [];
+
+    $clavesExistentes = collect($actuales)
+        ->map(fn ($item) => mb_strtolower(trim(($item['talla'] ?? '').'|'.($item['color'] ?? ''))))
+        ->all();
+
+    $listaColores = ! empty($colores) ? $colores : [''];
+    $listaTallas = ! empty($tallas) ? $tallas : [''];
+
+    foreach ($listaTallas as $talla) {
+        foreach ($listaColores as $color) {
+            $clave = mb_strtolower(trim($talla.'|'.$color));
+
+            if (in_array($clave, $clavesExistentes, true)) {
+                continue;
+            }
+
+            $clavesExistentes[] = $clave;
+
+            $actuales[(string) Str::uuid()] = [
+                'talla' => $talla,
+                'color' => $color,
+                'atributos' => ['talla' => $talla, 'color' => $color],
+                'nombre' => trim(($talla !== '' ? 'Talla '.$talla : '').($talla !== '' && $color !== '' ? ' - ' : '').$color, ' -'),
+                'codigo' => null,
+                'stock' => 0,
+                'activo' => true,
+            ];
+        }
+    }
+
+    $set('variantes', $actuales);
+}
 }

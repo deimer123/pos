@@ -188,20 +188,14 @@
                     return Number(stock) > 0 ? Number(stock).toLocaleString('es-CO') + ' und' : 'Sin stock';
                 }
 
-                // Producto con variantes (talla/color): antes de agregar al
-                // carrito hay que elegir cual, cada una con su propio stock
-                // (ver PosCatalogoController::index, campo "variantes").
-                function abrirSelectorVariante(producto) {
-                    if (!window.Swal) {
-                        ejecutarAgregar(producto.id_producto, null);
-                        return;
-                    }
-
+                // Lista generica de opciones en un modal SweetAlert2 (usada
+                // tanto para el nivel de color como el de talla, ver abajo).
+                function mostrarListaVariantes(titulo, opciones) {
                     const contenedor = document.createElement('div');
                     contenedor.style.cssText = 'display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto;text-align:left;';
 
-                    (producto.variantes || []).forEach((variante) => {
-                        const sinStock = Number(variante.stock) <= 0;
+                    opciones.forEach((opcion) => {
+                        const sinStock = Number(opcion.stock) <= 0;
 
                         const boton = document.createElement('button');
                         boton.type = 'button';
@@ -210,31 +204,87 @@
 
                         const nombre = document.createElement('span');
                         nombre.style.fontWeight = '700';
-                        nombre.textContent = variante.nombre;
+                        nombre.textContent = opcion.etiqueta;
 
                         const stock = document.createElement('span');
                         stock.style.cssText = 'font-size:12px;font-weight:600;color:' + (sinStock ? '#94a3b8' : '#065f46') + ';';
-                        stock.textContent = formatoStockVariante(variante.stock);
+                        stock.textContent = formatoStockVariante(opcion.stock);
 
                         boton.appendChild(nombre);
                         boton.appendChild(stock);
 
                         boton.addEventListener('click', () => {
                             window.Swal.close();
-                            ejecutarAgregar(producto.id_producto, variante.id);
+                            opcion.onElegir();
                         });
 
                         contenedor.appendChild(boton);
                     });
 
                     window.Swal.fire({
-                        title: 'Elige talla / color',
+                        title: titulo,
                         html: contenedor,
                         showConfirmButton: false,
                         showCancelButton: true,
                         cancelButtonText: 'Cancelar',
                         width: 420,
                     });
+                }
+
+                // Nivel 2: talla dentro de un color ya elegido (o de todas
+                // las variantes, si el producto no diferencia por color).
+                function mostrarNivelTalla(producto, variantes, colorElegido) {
+                    const opciones = variantes.map((variante) => ({
+                        etiqueta: (variante.atributos && variante.atributos.talla) || variante.nombre,
+                        stock: variante.stock,
+                        onElegir: () => ejecutarAgregar(producto.id_producto, variante.id),
+                    }));
+
+                    mostrarListaVariantes(colorElegido ? `Talla — ${colorElegido}` : 'Elige la talla', opciones);
+                }
+
+                // Producto con variantes (talla/color): antes de agregar al
+                // carrito hay que elegir cual. Se pregunta primero el color
+                // (con el stock sumado de todas las tallas de ese color) y
+                // despues la talla dentro de ese color -- si el producto no
+                // tiene color como diferenciador real (todas las variantes
+                // comparten color o no lo usan), se salta directo a talla.
+                function abrirSelectorVariante(producto) {
+                    if (!window.Swal) {
+                        ejecutarAgregar(producto.id_producto, null);
+                        return;
+                    }
+
+                    const variantes = producto.variantes || [];
+                    const colores = [...new Set(
+                        variantes
+                            .map((v) => (v.atributos && v.atributos.color) || '')
+                            .filter((color) => color !== '')
+                    )];
+
+                    if (colores.length <= 1) {
+                        mostrarNivelTalla(producto, variantes);
+                        return;
+                    }
+
+                    const opciones = colores.map((color) => {
+                        const variantesColor = variantes.filter((v) => (v.atributos && v.atributos.color) === color);
+                        const stockTotal = variantesColor.reduce((acc, v) => acc + (Number(v.stock) || 0), 0);
+
+                        return {
+                            etiqueta: color,
+                            stock: stockTotal,
+                            onElegir: () => {
+                                if (variantesColor.length === 1) {
+                                    ejecutarAgregar(producto.id_producto, variantesColor[0].id);
+                                } else {
+                                    mostrarNivelTalla(producto, variantesColor, color);
+                                }
+                            },
+                        };
+                    });
+
+                    mostrarListaVariantes('Elige el color', opciones);
                 }
 
                 function agregarAlCarrito(idProducto, varianteId) {
