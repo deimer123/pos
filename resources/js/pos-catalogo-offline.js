@@ -333,27 +333,6 @@ function etiquetaServicio(producto) {
     return '';
 }
 
-/**
- * Nombres de color mas comunes (sin tildes, mayusculas) a un hex
- * aproximado, solo para pintar un punto de referencia visual en la
- * tarjeta. Si el color no esta en el mapa se muestra sin punto de color,
- * solo el texto.
- */
-const MAPA_COLORES = {
-    AZUL: '#2563eb', 'AZUL REY': '#1d4ed8', 'AZUL CLARO': '#60a5fa', CELESTE: '#38bdf8',
-    ROJO: '#dc2626', VINOTINTO: '#7f1d1d', NEGRO: '#111827', BLANCO: '#f8fafc',
-    VERDE: '#16a34a', 'VERDE CLARO': '#4ade80', 'VERDE OSCURO': '#166534',
-    AMARILLO: '#eab308', GRIS: '#6b7280', NARANJA: '#f97316', MORADO: '#7c3aed',
-    VIOLETA: '#8b5cf6', ROSADO: '#ec4899', ROSA: '#ec4899', FUCSIA: '#db2777',
-    CAFE: '#78350f', MARRON: '#78350f', BEIGE: '#d6cbb3', CREMA: '#fef3c7',
-    DORADO: '#ca8a04', PLATEADO: '#94a3b8', TURQUESA: '#06b6d4', KAKI: '#a3a380',
-};
-
-function colorAHex(nombre) {
-    const clave = quitarAcentos(String(nombre || '')).toUpperCase().trim();
-    return MAPA_COLORES[clave] || null;
-}
-
 function valoresUnicosAtributo(producto, campo) {
     if (!Array.isArray(producto.variantes)) return [];
 
@@ -371,43 +350,26 @@ function valoresUnicosAtributo(producto, campo) {
 }
 
 /**
- * Muestra colores (con un punto de color) y tallas de las variantes en
- * una sola linea compacta, en vez de solo el conteo "N variantes" -- el
- * texto completo queda disponible en el title (tooltip) por si se corta.
+ * Muestra solo las tallas disponibles (no los colores: los nombres de
+ * color que escribe cada tienda no se pueden mapear de forma confiable a
+ * un color real, asi que un punto de color terminaba sin corresponder).
  */
 function etiquetaVariantes(producto) {
     if (!producto.tiene_variantes || !Array.isArray(producto.variantes)) return '';
 
-    const colores = valoresUnicosAtributo(producto, 'color');
     const tallas = valoresUnicosAtributo(producto, 'talla');
 
-    if (colores.length === 0 && tallas.length === 0) {
+    if (tallas.length === 0) {
         const n = producto.variantes.length;
         return '<div style="font-size:10px; color:#4338ca; font-weight:700; margin-top:3px;">🎨 ' + n + ' variante' + (n === 1 ? '' : 's') + '</div>';
     }
 
-    const MAX_MOSTRADOS = 3;
-    const partes = [];
+    const MAX_MOSTRADOS = 6;
+    const texto = tallas.slice(0, MAX_MOSTRADOS).join('/') + (tallas.length > MAX_MOSTRADOS ? '+' + (tallas.length - MAX_MOSTRADOS) : '');
+    const titulo = escapeHtml(tallas.join(' / '));
 
-    if (colores.length > 0) {
-        const chips = colores.slice(0, MAX_MOSTRADOS).map((color) => {
-            const hex = colorAHex(color);
-            const estiloPunto = hex
-                ? 'background:' + hex + ';border:1px solid rgba(0,0,0,.15);'
-                : 'background:#e5e7eb;border:1px solid #cbd5e1;';
-            return '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:3px;' + estiloPunto + '"></span>' + escapeHtml(color);
-        }).join(', ');
-        partes.push(chips + (colores.length > MAX_MOSTRADOS ? ' +' + (colores.length - MAX_MOSTRADOS) : ''));
-    }
-
-    if (tallas.length > 0) {
-        partes.push('📏 ' + escapeHtml(tallas.slice(0, MAX_MOSTRADOS).join('/')) + (tallas.length > MAX_MOSTRADOS ? '+' + (tallas.length - MAX_MOSTRADOS) : ''));
-    }
-
-    const titulo = escapeHtml(colores.concat(tallas).join(' / '));
-
-    return '<div style="font-size:10px; color:#4338ca; font-weight:700; margin-top:3px; display:flex; align-items:center; gap:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="' + titulo + '">'
-        + partes.join(' · ')
+    return '<div style="font-size:10px; color:#4338ca; font-weight:700; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="' + titulo + '">'
+        + '📏 ' + escapeHtml(texto)
         + '</div>';
 }
 
