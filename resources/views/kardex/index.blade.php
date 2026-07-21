@@ -362,10 +362,15 @@ async function verDocumento(tipo, referencia) {
                 total += (d.cantidad * precio);
             }
 
+            let nombreCelda = escapeHtml(d.nombre);
+            if (d.variante_nombre) {
+                nombreCelda += `<br><span style="font-size:11px; color:#4338ca; font-weight:600;">🎨 ${escapeHtml(d.variante_nombre)}</span>`;
+            }
+
             html += `
                 <tr>
                     <td>${escapeHtml(d.producto_id)}</td>
-                    <td style="text-align:left;">${escapeHtml(d.nombre)}</td>
+                    <td style="text-align:left;">${nombreCelda}</td>
                     <td>${escapeHtml(d.cantidad)}</td>
 
                     <td style="white-space:nowrap;">

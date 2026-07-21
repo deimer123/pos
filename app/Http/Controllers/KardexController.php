@@ -141,12 +141,16 @@ public function documento(Request $request)
                  ->on('p.empresa_id', '=', 'f.empresa_id');
         })
 
+        // 🎨 UNIR VARIANTE (talla/color), si la venta fue de una puntual
+        ->leftJoin('producto_variantes as pv', 'pv.id', '=', 'd.producto_variante_id')
+
         ->where('d.factura_id', $ref)
         ->where('f.empresa_id', $empresaId)
 
         ->select(
             'd.producto_id',
             'p.descripcion_larga as nombre',
+            'pv.nombre as variante_nombre',
             'd.cantidad',
             'p.precio_costo as costo',
             'd.precio',
@@ -180,12 +184,16 @@ if ($tipo == 'compra') {
                  ->on('p.empresa_id', '=', 'c.empresa_id'); // 👈 CLAVE
         })
 
+        // 🎨 unir variante (talla/color), si la compra fue de una puntual
+        ->leftJoin('producto_variantes as pv', 'pv.id', '=', 'd.producto_variante_id')
+
         ->where('d.compra_id', $ref)
         ->where('c.empresa_id', $empresaId)
 
         ->select(
             'd.product_id as producto_id',
             'p.descripcion_larga as nombre',
+            'pv.nombre as variante_nombre',
             'd.cantidad',
 
             'd.costo_unitario as costo',
@@ -298,12 +306,16 @@ if ($tipo == 'inventario_nuevo') {
                  ->on('p.empresa_id', '=', 'a.empresa_id');
         })
 
+        // 🎨 unir variante (talla/color), si el ajuste fue de una puntual
+        ->leftJoin('producto_variantes as pv', 'pv.id', '=', 'd.producto_variante_id')
+
         ->where('d.ajuste_inventario_id', $ref)
         ->where('a.empresa_id', $empresaId)
 
         ->select(
             'd.producto_id',
             'p.descripcion_larga as nombre',
+            'pv.nombre as variante_nombre',
 
             DB::raw('d.cantidad_nueva as cantidad'),
 
@@ -334,12 +346,16 @@ if ($tipo == 'ajuste_entrada' || $tipo == 'ajuste_salida') {
                  ->on('p.empresa_id', '=', 'a.empresa_id');
         })
 
+        // 🎨 unir variante (talla/color), si el ajuste fue de una puntual
+        ->leftJoin('producto_variantes as pv', 'pv.id', '=', 'd.producto_variante_id')
+
         ->where('d.ajuste_inventario_id', $ref)
         ->where('a.empresa_id', $empresaId)
 
         ->select(
             'd.producto_id',
             'p.descripcion_larga as nombre',
+            'pv.nombre as variante_nombre',
 
             // 🔥 diferencia real
             DB::raw('d.diferencia as cantidad'),
