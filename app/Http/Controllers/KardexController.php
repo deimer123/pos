@@ -86,10 +86,18 @@ public function index(Request $request)
             ->exists();
 
         if (! $existeProducto) {
+            // "codigo" puede traer varios codigos separados por coma (el
+            // propio + alternos, ver ProductoVariante::scopeConCodigo) --
+            // se busca por cualquiera de ellos, exacto.
             $codigoProductoPadre = DB::table('producto_variantes as pv')
                 ->join('products as p', 'p.id', '=', 'pv.product_id')
                 ->where('pv.empresa_id', $empresaId)
-                ->where('pv.codigo', $codigo)
+                ->where(function ($q) use ($codigo) {
+                    $q->where('pv.codigo', $codigo)
+                        ->orWhere('pv.codigo', 'like', $codigo . ',%')
+                        ->orWhere('pv.codigo', 'like', '%,' . $codigo)
+                        ->orWhere('pv.codigo', 'like', '%,' . $codigo . ',%');
+                })
                 ->value('p.id_producto');
 
             if ($codigoProductoPadre) {

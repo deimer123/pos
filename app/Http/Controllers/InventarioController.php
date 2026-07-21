@@ -25,7 +25,7 @@ class InventarioController extends Controller
     // 🎨 0. CÓDIGO DE UNA VARIANTE PUNTUAL (talla/color): en empresas con
     // variantes el stock vive en la variante, no en el producto padre.
     $variante = ProductoVariante::where('empresa_id', $empresaId)
-        ->where('codigo', $codigo)
+        ->conCodigo($codigo)
         ->first();
 
     if ($variante) {
@@ -42,7 +42,7 @@ class InventarioController extends Controller
             'nombre' => $producto->descripcion_larga . ' - ' . $variante->nombre,
             'stock' => $variante->stock ?? 0,
             'producto_variante_id' => $variante->id,
-            'codigo_mostrado' => $variante->codigo ?: $producto->id_producto,
+            'codigo_mostrado' => $variante->codigoPrincipal() ?: $producto->id_producto,
         ]);
     }
 
@@ -112,19 +112,23 @@ public function buscarLista(Request $request)
     // 🎨 Se trae de una vez la lista de variantes (talla/color) de cada
     // producto encontrado, para que el buscador pueda preguntar cual
     // variante sin ida y vuelta extra al servidor.
-    $variantesPorProducto = DB::table('producto_variantes')
-        ->where('empresa_id', $empresaId)
+    $variantesPorProducto = ProductoVariante::where('empresa_id', $empresaId)
         ->where('activo', true)
         ->whereIn('product_id', $productos->pluck('id'))
         ->orderBy('nombre')
-        ->get(['id', 'product_id', 'nombre', 'stock', 'codigo'])
+        ->get()
         ->groupBy('product_id');
 
     $resultado = $productos->map(fn ($p) => [
         'id_producto' => $p->id_producto,
         'descripcion_larga' => $p->descripcion_larga,
         'existencias' => $p->existencias,
-        'variantes' => ($variantesPorProducto[$p->id] ?? collect())->values(),
+        'variantes' => ($variantesPorProducto[$p->id] ?? collect())->map(fn ($v) => [
+            'id' => $v->id,
+            'nombre' => $v->nombre,
+            'stock' => $v->stock,
+            'codigo' => $v->codigoPrincipal(),
+        ])->values(),
     ]);
 
     return response()->json($resultado);

@@ -1307,7 +1307,7 @@ public static function table(Tables\Table $table): Tables\Table
                                 : null;
 
                             return [
-                                'product_id'      => $variante?->codigo ?: $detalle->product_id,
+                                'product_id'      => $variante?->codigoPrincipal() ?: $detalle->product_id,
                                 'nombre_producto' => $variante ? $detalle->nombre_producto . ' - ' . $variante->nombre : $detalle->nombre_producto,
                                 'cantidad'        => $detalle->cantidad,
                                 'precio_venta'    => $detalle->precio_venta,

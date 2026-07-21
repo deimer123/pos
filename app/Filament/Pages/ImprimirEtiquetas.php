@@ -190,7 +190,7 @@ class ImprimirEtiquetas extends Page implements HasForms
                 : null;
 
             $lineas[] = [
-                'product_id'      => $variante?->codigo ?: $producto->id_producto,
+                'product_id'      => $variante?->codigoPrincipal() ?: $producto->id_producto,
                 'nombre_producto' => $variante ? $producto->descripcion_larga . ' - ' . $variante->nombre : $producto->descripcion_larga,
                 'cantidad'        => $linea['cantidad'] ?? 1,
                 'precio_venta'    => $producto->precio_venta1,

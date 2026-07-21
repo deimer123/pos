@@ -1546,7 +1546,7 @@ async function cargarBorrador(id) {
         items.push({
             codigo: d.producto_id,
             producto_variante_id: d.producto_variante_id || null,
-            codigo_mostrado: (d.variante && d.variante.codigo) ? d.variante.codigo : d.producto_id,
+            codigo_mostrado: (d.variante && d.variante.codigo_principal) ? d.variante.codigo_principal : d.producto_id,
             nombre: nombreCompleto,
             stock: d.cantidad_anterior,
             cantidad: d.cantidad_nueva

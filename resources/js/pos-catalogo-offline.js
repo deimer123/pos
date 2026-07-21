@@ -239,8 +239,13 @@ function buscarCoincidenciaExacta(codigo) {
     ));
     if (porProductoOAlterno) return porProductoOAlterno;
 
+    // "codigo" puede traer varios codigos separados por coma (el propio +
+    // alternos, ver ProductoVariante::setCodigoAttribute en el backend) --
+    // se acepta cualquiera de ellos, exacto.
     for (const producto of catalogoEnMemoria) {
-        const variante = (producto.variantes || []).find((v) => v.codigo && String(v.codigo) === valor);
+        const variante = (producto.variantes || []).find((v) => (
+            v.codigo && String(v.codigo).split(',').map((c) => c.trim()).includes(valor)
+        ));
         if (variante) {
             return { ...producto, _varianteId: variante.id };
         }
