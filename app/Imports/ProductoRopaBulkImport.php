@@ -216,6 +216,8 @@ class ProductoRopaBulkImport implements ToCollection, WithHeadingRow, WithMultip
                     'code' => (string) $producto->id_producto,
                 ]);
 
+                $codigosEnUso = [];
+
                 foreach ($grupo['variantes'] as $v) {
                     $nombreVariante = trim(
                         ($v['talla'] !== '' ? 'Talla '.$v['talla'] : '').
@@ -223,6 +225,17 @@ class ProductoRopaBulkImport implements ToCollection, WithHeadingRow, WithMultip
                         $v['color'],
                         ' -'
                     );
+
+                    // Codigo propio para cada variante (producto + talla +
+                    // color), asi todas quedan con codigo sin obligar a
+                    // cargarlo aparte despues.
+                    $codigo = \App\Support\VariantCodeGenerator::sugerir(
+                        (string) $producto->id_producto,
+                        $v['talla'],
+                        $v['color'],
+                        $codigosEnUso
+                    );
+                    $codigosEnUso[] = $codigo;
 
                     // Stock siempre en 0: el cargue de productos no ingresa
                     // existencias, eso se hace despues por la plantilla de
@@ -232,6 +245,7 @@ class ProductoRopaBulkImport implements ToCollection, WithHeadingRow, WithMultip
                         'product_id' => $producto->id,
                         'nombre' => $nombreVariante,
                         'atributos' => ['talla' => $v['talla'], 'color' => $v['color']],
+                        'codigo' => $codigo,
                         'precio_extra' => 0,
                         'stock' => 0,
                         'activo' => true,

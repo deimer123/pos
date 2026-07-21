@@ -622,6 +622,7 @@ return \App\Models\Familia::create($data)->id;
                             ->afterStateUpdated(function (Set $set, Get $get) {
                                 $set('atributos', ['talla' => $get('talla'), 'color' => $get('color')]);
                                 $set('nombre', trim('Talla '.$get('talla').' - '.$get('color'), ' -'));
+                                static::sugerirCodigoVarianteSiFalta($get, $set);
                             })
                             ->columnSpan(['default' => 12, 'sm' => 2]),
 
@@ -636,6 +637,7 @@ return \App\Models\Familia::create($data)->id;
                             ->afterStateUpdated(function (Set $set, Get $get) {
                                 $set('atributos', ['talla' => $get('talla'), 'color' => $get('color')]);
                                 $set('nombre', trim('Talla '.$get('talla').' - '.$get('color'), ' -'));
+                                static::sugerirCodigoVarianteSiFalta($get, $set);
                             })
                             ->columnSpan(['default' => 12, 'sm' => 2]),
 
@@ -649,7 +651,9 @@ return \App\Models\Familia::create($data)->id;
 
                         TextInput::make('codigo')
                             ->label('Código')
-                            ->maxLength(50)
+                            ->maxLength(150)
+                            ->hintIcon('heroicon-o-information-circle')
+                            ->hintIconTooltip('Se sugiere solo. Para agregar un codigo alterno (otro codigo de barras que tambien deba reconocer esta variante), sepáralo con una coma: 10004MAZ, 10004-VIEJO')
                             ->columnSpan(['default' => 12, 'sm' => 2]),
 
                         TextInput::make('stock')
@@ -996,6 +1000,39 @@ protected static function empresaUsaVariantes(): bool
     return (bool) (\App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_variantes'));
 }
 
+// Autocompleta el codigo de la variante (producto + talla + color) en
+// cuanto se escribe talla/color, solo si el usuario todavia no escribio
+// uno el mismo -- para que TODAS las variantes queden con codigo propio
+// sin obligar a escribirlo a mano. Si hay choque con otra variante del
+// mismo producto (ej. dos tallas que abrevian igual), se le agrega un
+// sufijo numerico.
+protected static function sugerirCodigoVarianteSiFalta(Get $get, Set $set): void
+{
+    if (filled($get('codigo'))) {
+        return;
+    }
+
+    $talla = trim((string) $get('talla'));
+    $color = trim((string) $get('color'));
+
+    if ($talla === '' && $color === '') {
+        return;
+    }
+
+    $idProducto = trim((string) ($get('../../id_producto') ?? ''));
+
+    if ($idProducto === '') {
+        return;
+    }
+
+    $codigosEnUso = collect($get('../../variantes') ?? [])
+        ->pluck('codigo')
+        ->filter()
+        ->all();
+
+    $set('codigo', \App\Support\VariantCodeGenerator::sugerir($idProducto, $talla, $color, $codigosEnUso));
+}
+
 protected static function generarCombinacionesVariantes(Get $get, Set $set): void
 {
     $colores = array_values(array_filter(array_map('trim', $get('generador_colores') ?? [])));
@@ -1006,10 +1043,13 @@ protected static function generarCombinacionesVariantes(Get $get, Set $set): voi
     }
 
     $actuales = $get('variantes') ?? [];
+    $idProducto = trim((string) ($get('id_producto') ?? ''));
 
     $clavesExistentes = collect($actuales)
         ->map(fn ($item) => mb_strtolower(trim(($item['talla'] ?? '').'|'.($item['color'] ?? ''))))
         ->all();
+
+    $codigosEnUso = collect($actuales)->pluck('codigo')->filter()->all();
 
     $listaColores = ! empty($colores) ? $colores : [''];
     $listaTallas = ! empty($tallas) ? $tallas : [''];
@@ -1024,12 +1064,22 @@ protected static function generarCombinacionesVariantes(Get $get, Set $set): voi
 
             $clavesExistentes[] = $clave;
 
+            // Todas las variantes generadas quedan con su propio codigo
+            // (producto + talla + color), sin obligar a escribirlo a mano.
+            $codigo = $idProducto !== ''
+                ? \App\Support\VariantCodeGenerator::sugerir($idProducto, $talla, $color, $codigosEnUso)
+                : null;
+
+            if ($codigo) {
+                $codigosEnUso[] = $codigo;
+            }
+
             $actuales[(string) Str::uuid()] = [
                 'talla' => $talla,
                 'color' => $color,
                 'atributos' => ['talla' => $talla, 'color' => $color],
                 'nombre' => trim(($talla !== '' ? 'Talla '.$talla : '').($talla !== '' && $color !== '' ? ' - ' : '').$color, ' -'),
-                'codigo' => null,
+                'codigo' => $codigo,
                 'stock' => 0,
                 'activo' => true,
             ];
