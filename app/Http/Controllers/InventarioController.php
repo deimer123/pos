@@ -39,7 +39,7 @@ class InventarioController extends Controller
 
         return response()->json([
             'id' => $producto->id_producto,
-            'nombre' => $producto->descripcion_larga . ' — ' . $variante->nombre,
+            'nombre' => $producto->descripcion_larga . ' - ' . $variante->nombre,
             'stock' => $variante->stock ?? 0,
             'producto_variante_id' => $variante->id,
             'codigo_mostrado' => $variante->codigo ?: $producto->id_producto,
@@ -94,16 +94,7 @@ public function buscarLista(Request $request)
     $q = trim($request->input('q', ''));
 
     $query = DB::table('products')
-        ->where('empresa_id', $empresaId)
-        // 🎨 Los productos con variantes no se pueden ajustar como un solo
-        // renglon desde este buscador rapido -- hay que escribir/escanear
-        // el codigo de la variante especifica (ver buscar()).
-        ->whereNotIn('id', function ($sub) use ($empresaId) {
-            $sub->select('product_id')
-                ->from('producto_variantes')
-                ->where('empresa_id', $empresaId)
-                ->where('activo', true);
-        });
+        ->where('empresa_id', $empresaId);
 
     if ($q) {
         $palabras = explode(' ', $q);
@@ -116,7 +107,27 @@ public function buscarLista(Request $request)
         }
     }
 
-    return response()->json($query->limit(50)->get(['id_producto', 'descripcion_larga', 'existencias']));
+    $productos = $query->limit(50)->get(['id', 'id_producto', 'descripcion_larga', 'existencias']);
+
+    // 🎨 Se trae de una vez la lista de variantes (talla/color) de cada
+    // producto encontrado, para que el buscador pueda preguntar cual
+    // variante sin ida y vuelta extra al servidor.
+    $variantesPorProducto = DB::table('producto_variantes')
+        ->where('empresa_id', $empresaId)
+        ->where('activo', true)
+        ->whereIn('product_id', $productos->pluck('id'))
+        ->orderBy('nombre')
+        ->get(['id', 'product_id', 'nombre', 'stock', 'codigo'])
+        ->groupBy('product_id');
+
+    $resultado = $productos->map(fn ($p) => [
+        'id_producto' => $p->id_producto,
+        'descripcion_larga' => $p->descripcion_larga,
+        'existencias' => $p->existencias,
+        'variantes' => ($variantesPorProducto[$p->id] ?? collect())->values(),
+    ]);
+
+    return response()->json($resultado);
 }
 
 

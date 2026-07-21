@@ -808,13 +808,39 @@ function pintar(data) {
         let tr = document.createElement('tr');
         if(i===index) tr.classList.add('selected');
 
+        let etiquetaVariantes = (p.variantes && p.variantes.length > 0)
+            ? ` <span style="color:#4338ca; font-weight:bold;">(${p.variantes.length} variante${p.variantes.length === 1 ? '' : 's'})</span>`
+            : '';
+
         tr.innerHTML = `
             <td>${escapeHtml(p.id_producto)}</td>
-            <td>${escapeHtml(p.descripcion_larga)}</td>
+            <td>${escapeHtml(p.descripcion_larga)}${etiquetaVariantes}</td>
         `;
 
         tr.onclick = ()=> seleccionar(p);
 
+        resultados.appendChild(tr);
+    });
+}
+
+// ðŸŽ¨ Producto con variantes (talla/color): en vez de agregarlo directo,
+// se pregunta cual variante -- el stock que se ajusta es el de esa
+// variante puntual, no el del producto padre.
+function pintarVariantes(p) {
+    resultados.innerHTML = '';
+
+    let trVolver = document.createElement('tr');
+    trVolver.innerHTML = `<td colspan="2" style="text-align:left; font-weight:bold; cursor:pointer; color:#2563eb;">&larr; Volver a productos</td>`;
+    trVolver.onclick = () => pintar(listaFiltrada);
+    resultados.appendChild(trVolver);
+
+    (p.variantes || []).forEach((v) => {
+        let tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${escapeHtml(v.codigo || p.id_producto)}</td>
+            <td>${escapeHtml(v.nombre)} <span style="color:#64748b;">- stock: ${escapeHtml(v.stock ?? 0)}</span></td>
+        `;
+        tr.onclick = () => seleccionarVariante(p, v);
         resultados.appendChild(tr);
     });
 }
@@ -884,13 +910,44 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // âœ… SELECCIONAR
 function seleccionar(p) {
+    // ðŸŽ¨ Con variantes: no se agrega directo, se pregunta cual primero.
+    if (p.variantes && p.variantes.length > 0) {
+        pintarVariantes(p);
+        return;
+    }
+
+    seleccionarFinal({
+        id_producto: p.id_producto,
+        descripcion_larga: p.descripcion_larga,
+        existencias: p.existencias,
+        producto_variante_id: null,
+        codigo_mostrado: p.id_producto,
+    });
+}
+
+function seleccionarVariante(p, v) {
+    seleccionarFinal({
+        id_producto: p.id_producto,
+        descripcion_larga: p.descripcion_larga + ' - ' + v.nombre,
+        existencias: v.stock,
+        producto_variante_id: v.id,
+        codigo_mostrado: v.codigo || p.id_producto,
+    });
+}
+
+function seleccionarFinal(sel) {
 
     cerrarModalBuscador(); // âœ… CORRECTO
 
-    let existente = items.findIndex(item => String(item.codigo) === String(p.id_producto));
+    // Duplicado: mismo producto Y misma variante (dos variantes distintas
+    // del mismo producto SI pueden ir en filas separadas).
+    let existente = items.findIndex(item =>
+        String(item.codigo) === String(sel.id_producto)
+        && String(item.producto_variante_id || '') === String(sel.producto_variante_id || '')
+    );
 
     if (existente >= 0) {
-        msg(`El producto ${p.id_producto} ya esta en la lista`, 'error');
+        msg(`${sel.descripcion_larga} ya esta en la lista`, 'error');
         resaltarFila(existente);
         codigo.value = '';
         nombre.value = '';
@@ -901,16 +958,18 @@ function seleccionar(p) {
         return;
     }
 
-    codigo.value = p.id_producto;
+    codigo.value = sel.codigo_mostrado;
 
     productoActual = {
-        id: p.id_producto,
-        nombre: p.descripcion_larga,
-        stock: p.existencias
+        id: sel.id_producto,
+        nombre: sel.descripcion_larga,
+        stock: sel.existencias,
+        producto_variante_id: sel.producto_variante_id,
+        codigo_mostrado: sel.codigo_mostrado
     };
 
-    nombre.value = p.descripcion_larga;
-    stock.value = p.existencias;
+    nombre.value = sel.descripcion_larga;
+    stock.value = sel.existencias;
 
     cantidad.focus();
 }
@@ -1482,7 +1541,7 @@ async function cargarBorrador(id) {
 
     data.detalles.forEach(d => {
         let nombreCompleto = d.producto.descripcion_larga;
-        if (d.variante) nombreCompleto += ' — ' + d.variante.nombre;
+        if (d.variante) nombreCompleto += ' - ' + d.variante.nombre;
 
         items.push({
             codigo: d.producto_id,
