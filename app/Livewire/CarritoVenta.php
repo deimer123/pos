@@ -2486,6 +2486,18 @@ public function facturarConfirmada(array $data = [])
         $eraOrdenTaller = (bool) $this->tallerOrdenId;
         $eraReservaHotel = (bool) $this->hotelReservaId;
 
+        // Se captura antes de limpiar el carrito: el catalogo cacheado en
+        // el navegador (ver pos-catalogo-offline.js) no se entera solo de
+        // que esto se vendio, hay que avisarle explicitamente con evento.
+        $itemsVendidos = collect($this->carrito)
+            ->map(fn ($item) => [
+                'id_producto' => $item['id_producto'],
+                'cantidad' => (float) ($item['cantidad'] ?? 1),
+                'producto_variante_id' => $item['producto_variante_id'] ?? null,
+            ])
+            ->values()
+            ->all();
+
         $this->eliminarPrefacturaCargada();
         $this->tallerOrdenId = null;
         $this->hotelReservaId = null;
@@ -2505,6 +2517,7 @@ public function facturarConfirmada(array $data = [])
         $this->olvidarCarritoPersistente();
 
         $this->dispatch('success', $factura->numero_visual . ' creada.');
+        $this->dispatch('venta-facturada', items: $itemsVendidos);
         if ($this->mesaId || $eraOrdenTaller) {
             $this->redirect(route('pos'));
         } elseif ($eraReservaHotel) {
@@ -2827,6 +2840,18 @@ public function facturarEImprimir(array $data = [])
         $eraOrdenTaller = (bool) $this->tallerOrdenId;
         $eraReservaHotel = (bool) $this->hotelReservaId;
 
+        // Se captura antes de limpiar el carrito: el catalogo cacheado en
+        // el navegador (ver pos-catalogo-offline.js) no se entera solo de
+        // que esto se vendio, hay que avisarle explicitamente con evento.
+        $itemsVendidos = collect($this->carrito)
+            ->map(fn ($item) => [
+                'id_producto' => $item['id_producto'],
+                'cantidad' => (float) ($item['cantidad'] ?? 1),
+                'producto_variante_id' => $item['producto_variante_id'] ?? null,
+            ])
+            ->values()
+            ->all();
+
         $this->eliminarPrefacturaCargada();
         $this->tallerOrdenId = null;
         $this->hotelReservaId = null;
@@ -2852,6 +2877,7 @@ public function facturarEImprimir(array $data = [])
         // carrito ya vacio hasta refrescar manualmente.
         $url = route('factura.imprimir', $factura->id);
         $this->dispatch('success', $factura->numero_visual . ' creada.');
+        $this->dispatch('venta-facturada', items: $itemsVendidos);
         $redirectUrl = $this->mesaId ? route('pos') : ($eraOrdenTaller ? route('pos') : ($eraReservaHotel ? route('hotel') : null));
         return ['ok' => true, 'factura_id' => $factura->id, 'print_url' => $url, 'redirect_url' => $redirectUrl];
 

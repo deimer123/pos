@@ -2777,6 +2777,21 @@
                 showConfirmButton: false
             });
         });
+
+        // Tras facturar (con o sin internet), descuenta el stock vendido
+        // en el catalogo cacheado del navegador para que las tarjetas del
+        // POS no sigan ofreciendo stock ya vendido hasta la proxima
+        // resincronizacion automatica (cada 30 min) o manual.
+        Livewire.on('venta-facturada', (event) => {
+            const items = event?.items ?? event?.[0]?.items ?? [];
+            items.forEach((item) => {
+                window.PosCatalogoOffline?.descontarStockVisual(
+                    item.id_producto,
+                    Number(item.cantidad) || 1,
+                    item.producto_variante_id || null
+                );
+            });
+        });
         Livewire.on('confirmar-facturar', (payload = {}) => {
             const dataEvento = Array.isArray(payload) ? (payload[0] || {}) : (payload || {});
             const domObservacionesOrden = dataEvento.dom_observaciones || '';

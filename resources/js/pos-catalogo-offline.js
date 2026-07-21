@@ -236,16 +236,27 @@ function getCatalogo() {
 }
 
 /**
- * Descuenta visualmente (solo en memoria, no en IndexedDB ni en el
- * servidor) el stock de un producto al agregarlo a cualquier carrito
- * offline, para que el mismo dispositivo no siga ofreciendo stock que el
- * ya vendio tentativamente. El numero real se corrige solo al sincronizar.
+ * Descuenta visualmente (solo en memoria, no en IndexedDB) el stock de un
+ * producto cargado localmente. Se usa en dos casos:
+ *  - Al agregarlo a un carrito offline, como "reserva visual" tentativa
+ *    (el numero real se corrige solo al sincronizar el catalogo).
+ *  - Al confirmarse una venta online (ver pos-venta-facturada en
+ *    carrito-venta.blade.php), para que la tarjeta ya refleje el nuevo
+ *    stock sin esperar la resincronizacion cada 30 min.
+ * Si la venta fue de una variante puntual (talla/color), se descuenta el
+ * stock de esa variante -- el total que se ve en la tarjeta se recalcula
+ * solo, sumando variantes, en cada render (ver totalVariantes()).
  */
-function descontarStockVisual(idProducto, cantidad) {
+function descontarStockVisual(idProducto, cantidad, varianteId) {
     const producto = catalogoEnMemoria.find((p) => String(p.id_producto) === String(idProducto));
     if (!producto) return;
 
-    if (producto.receta) {
+    if (varianteId && Array.isArray(producto.variantes)) {
+        const variante = producto.variantes.find((v) => String(v.id) === String(varianteId));
+        if (variante) {
+            variante.stock = Math.max(0, Number(variante.stock || 0) - cantidad);
+        }
+    } else if (producto.receta) {
         producto.receta.porciones_disponibles = Math.max(0, Number(producto.receta.porciones_disponibles || 0) - cantidad);
     } else {
         producto.existencias = Math.max(0, Number(producto.existencias || 0) - cantidad);
@@ -304,10 +315,82 @@ function etiquetaServicio(producto) {
     return '';
 }
 
+/**
+ * Nombres de color mas comunes (sin tildes, mayusculas) a un hex
+ * aproximado, solo para pintar un punto de referencia visual en la
+ * tarjeta. Si el color no esta en el mapa se muestra sin punto de color,
+ * solo el texto.
+ */
+const MAPA_COLORES = {
+    AZUL: '#2563eb', 'AZUL REY': '#1d4ed8', 'AZUL CLARO': '#60a5fa', CELESTE: '#38bdf8',
+    ROJO: '#dc2626', VINOTINTO: '#7f1d1d', NEGRO: '#111827', BLANCO: '#f8fafc',
+    VERDE: '#16a34a', 'VERDE CLARO': '#4ade80', 'VERDE OSCURO': '#166534',
+    AMARILLO: '#eab308', GRIS: '#6b7280', NARANJA: '#f97316', MORADO: '#7c3aed',
+    VIOLETA: '#8b5cf6', ROSADO: '#ec4899', ROSA: '#ec4899', FUCSIA: '#db2777',
+    CAFE: '#78350f', MARRON: '#78350f', BEIGE: '#d6cbb3', CREMA: '#fef3c7',
+    DORADO: '#ca8a04', PLATEADO: '#94a3b8', TURQUESA: '#06b6d4', KAKI: '#a3a380',
+};
+
+function colorAHex(nombre) {
+    const clave = quitarAcentos(String(nombre || '')).toUpperCase().trim();
+    return MAPA_COLORES[clave] || null;
+}
+
+function valoresUnicosAtributo(producto, campo) {
+    if (!Array.isArray(producto.variantes)) return [];
+
+    const vistos = new Set();
+    const valores = [];
+
+    producto.variantes.forEach((v) => {
+        const valor = (v.atributos && v.atributos[campo]) ? String(v.atributos[campo]).trim() : '';
+        if (!valor || vistos.has(valor.toUpperCase())) return;
+        vistos.add(valor.toUpperCase());
+        valores.push(valor);
+    });
+
+    return valores;
+}
+
+/**
+ * Muestra colores (con un punto de color) y tallas de las variantes en
+ * una sola linea compacta, en vez de solo el conteo "N variantes" -- el
+ * texto completo queda disponible en el title (tooltip) por si se corta.
+ */
 function etiquetaVariantes(producto) {
     if (!producto.tiene_variantes || !Array.isArray(producto.variantes)) return '';
-    const n = producto.variantes.length;
-    return '<div style="font-size:10px; color:#4338ca; font-weight:700; margin-top:3px;">🎨 ' + n + ' variante' + (n === 1 ? '' : 's') + '</div>';
+
+    const colores = valoresUnicosAtributo(producto, 'color');
+    const tallas = valoresUnicosAtributo(producto, 'talla');
+
+    if (colores.length === 0 && tallas.length === 0) {
+        const n = producto.variantes.length;
+        return '<div style="font-size:10px; color:#4338ca; font-weight:700; margin-top:3px;">🎨 ' + n + ' variante' + (n === 1 ? '' : 's') + '</div>';
+    }
+
+    const MAX_MOSTRADOS = 3;
+    const partes = [];
+
+    if (colores.length > 0) {
+        const chips = colores.slice(0, MAX_MOSTRADOS).map((color) => {
+            const hex = colorAHex(color);
+            const estiloPunto = hex
+                ? 'background:' + hex + ';border:1px solid rgba(0,0,0,.15);'
+                : 'background:#e5e7eb;border:1px solid #cbd5e1;';
+            return '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:3px;' + estiloPunto + '"></span>' + escapeHtml(color);
+        }).join(', ');
+        partes.push(chips + (colores.length > MAX_MOSTRADOS ? ' +' + (colores.length - MAX_MOSTRADOS) : ''));
+    }
+
+    if (tallas.length > 0) {
+        partes.push('📏 ' + escapeHtml(tallas.slice(0, MAX_MOSTRADOS).join('/')) + (tallas.length > MAX_MOSTRADOS ? '+' + (tallas.length - MAX_MOSTRADOS) : ''));
+    }
+
+    const titulo = escapeHtml(colores.concat(tallas).join(' / '));
+
+    return '<div style="font-size:10px; color:#4338ca; font-weight:700; margin-top:3px; display:flex; align-items:center; gap:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="' + titulo + '">'
+        + partes.join(' · ')
+        + '</div>';
 }
 
 function tarjetaHTML(producto, empresaContexto) {
