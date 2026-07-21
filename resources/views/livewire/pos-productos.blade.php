@@ -274,13 +274,11 @@
                         return {
                             etiqueta: color,
                             stock: stockTotal,
-                            onElegir: () => {
-                                if (variantesColor.length === 1) {
-                                    ejecutarAgregar(producto.id_producto, variantesColor[0].id);
-                                } else {
-                                    mostrarNivelTalla(producto, variantesColor, color);
-                                }
-                            },
+                            // Siempre se muestra el nivel de talla despues de
+                            // elegir color, aunque ese color solo tenga una
+                            // talla -- asi el cajero ve/confirma la talla
+                            // antes de agregar, en vez de que se agregue sola.
+                            onElegir: () => mostrarNivelTalla(producto, variantesColor, color),
                         };
                     });
 

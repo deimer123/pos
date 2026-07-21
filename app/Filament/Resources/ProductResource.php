@@ -559,6 +559,7 @@ return \App\Models\Familia::create($data)->id;
                 ->description('Marca los colores y las tallas que maneja este producto y genera todas las combinaciones de una vez, en vez de agregarlas una por una.')
                 ->collapsible()
                 ->collapsed(fn (Get $get) => ! empty($get('variantes')))
+                ->extraAttributes(['class' => 'generador-variantes-card'])
                 ->schema([
                     Grid::make(2)->schema([
                         Forms\Components\TagsInput::make('generador_colores')
@@ -579,6 +580,21 @@ return \App\Models\Familia::create($data)->id;
                             ->action(fn (Get $get, Set $set) => static::generarCombinacionesVariantes($get, $set)),
                     ]),
                 ]),
+
+            Forms\Components\Placeholder::make('resumen_variantes')
+                ->label('')
+                ->content(function (Get $get) {
+                    $variantes = collect($get('variantes') ?? []);
+                    $total = $variantes->count();
+
+                    if ($total === 0) {
+                        return 'Todavía no hay variantes creadas.';
+                    }
+
+                    $stockTotal = $variantes->sum(fn ($v) => (float) ($v['stock'] ?? 0));
+
+                    return "{$total} variante(s) · {$stockTotal} en stock (suma de todas)";
+                }),
 
             Repeater::make('variantes')
                 ->relationship('variantes')
@@ -634,9 +650,9 @@ return \App\Models\Familia::create($data)->id;
                         TextInput::make('stock')
                             ->label('Stock')
                             ->numeric()
-                            ->minValue(0)
-                            ->stripCharacters(',')
-                            ->default(0),
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->helperText('Se ingresa por Compras o Ajuste de Inventario, no aquí.'),
                     ]),
 
                     Forms\Components\Toggle::make('activo')

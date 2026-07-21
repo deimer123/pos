@@ -2266,4 +2266,46 @@ body:has(.reporte-descuentos-stat) .fi-ta-header-toolbar {
     color: #ffffff !important;
 }
 
+/* Tarjeta "Generar variantes" en Productos: mismo lenguaje visual del
+   modal "Movimiento de caja" del POS (encabezado en degrade azul, campos
+   con fondo celeste clarito, boton en pastilla). */
+.generador-variantes-card {
+    border: 1px solid #93c5fd !important;
+    border-radius: 16px !important;
+    overflow: hidden !important;
+}
+
+.generador-variantes-card > .fi-section-header {
+    margin: 0 !important;
+    padding: 14px 18px !important;
+    background: linear-gradient(180deg, #2563eb 0%, #4f46e5 100%) !important;
+    border-radius: 0 !important;
+}
+
+.generador-variantes-card > .fi-section-header * {
+    color: #ffffff !important;
+}
+
+.generador-variantes-card .fi-section-content-ctn {
+    background: #ffffff !important;
+}
+
+.generador-variantes-card .fi-section-content {
+    padding: 18px !important;
+}
+
+.generador-variantes-card input {
+    border-color: #93c5fd !important;
+    border-radius: 10px !important;
+    background: #eef6ff !important;
+    color: #111827 !important;
+}
+
+.generador-variantes-card .fi-ac-action {
+    border-radius: 999px !important;
+    font-weight: 800 !important;
+    background: #4f46e5 !important;
+    box-shadow: 0 8px 16px rgba(15, 23, 42, .16) !important;
+}
+
 
