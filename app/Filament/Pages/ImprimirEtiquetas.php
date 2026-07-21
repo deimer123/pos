@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Models\Product;
+use App\Models\ProductoVariante;
 use App\Support\BarTenderExport;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -10,6 +11,8 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 
@@ -89,7 +92,17 @@ class ImprimirEtiquetas extends Page implements HasForms
 
                                 return $producto ? "{$producto->id_producto} - {$producto->descripcion_larga}" : $value;
                             })
+                            ->live()
+                            ->afterStateUpdated(fn (Set $set) => $set('producto_variante_id', null))
                             ->required(),
+
+                        Select::make('producto_variante_id')
+                            ->label('Variante (talla/color)')
+                            ->visible(fn (Get $get) => static::productoTieneVariantes($get))
+                            ->options(fn (Get $get) => static::opcionesVariantes($get))
+                            ->required(fn (Get $get) => static::productoTieneVariantes($get))
+                            ->validationMessages(['required' => 'Selecciona la variante (talla/color).'])
+                            ->columnSpanFull(),
 
                         TextInput::make('cantidad')
                             ->label('Cantidad')
@@ -105,6 +118,47 @@ class ImprimirEtiquetas extends Page implements HasForms
                     ->required(),
             ])
             ->statePath('data');
+    }
+
+    /* ----------------- Variantes (talla/color) ----------------- */
+    protected static function productoTieneVariantes(Get $get): bool
+    {
+        $codigo = (string) ($get('product_id') ?? '');
+        if ($codigo === '') {
+            return false;
+        }
+
+        $producto = Product::where('empresa_id', auth()->user()->getEmpresaActualId())
+            ->where('id_producto', $codigo)
+            ->first();
+
+        if (! $producto) {
+            return false;
+        }
+
+        return ProductoVariante::where('product_id', $producto->id)->where('activo', true)->exists();
+    }
+
+    protected static function opcionesVariantes(Get $get): array
+    {
+        $codigo = (string) ($get('product_id') ?? '');
+        if ($codigo === '') {
+            return [];
+        }
+
+        $producto = Product::where('empresa_id', auth()->user()->getEmpresaActualId())
+            ->where('id_producto', $codigo)
+            ->first();
+
+        if (! $producto) {
+            return [];
+        }
+
+        return ProductoVariante::where('product_id', $producto->id)
+            ->where('activo', true)
+            ->orderBy('nombre')
+            ->pluck('nombre', 'id')
+            ->toArray();
     }
 
     public function generar()
@@ -125,9 +179,19 @@ class ImprimirEtiquetas extends Page implements HasForms
                 continue;
             }
 
+            // 🎨 Si se eligio una variante puntual, el codigo de barras es
+            // el de la variante (el que va impreso/escaneado), no el del
+            // producto padre -- si esa variante no tiene codigo propio, se
+            // cae al del producto para no imprimir un codigo vacio.
+            $variante = ! empty($linea['producto_variante_id'])
+                ? ProductoVariante::where('id', $linea['producto_variante_id'])
+                    ->where('product_id', $producto->id)
+                    ->first()
+                : null;
+
             $lineas[] = [
-                'product_id'      => $producto->id_producto,
-                'nombre_producto' => $producto->descripcion_larga,
+                'product_id'      => $variante?->codigo ?: $producto->id_producto,
+                'nombre_producto' => $variante ? $producto->descripcion_larga . ' - ' . $variante->nombre : $producto->descripcion_larga,
                 'cantidad'        => $linea['cantidad'] ?? 1,
                 'precio_venta'    => $producto->precio_venta1,
             ];

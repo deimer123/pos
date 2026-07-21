@@ -1290,14 +1290,29 @@ public static function table(Tables\Table $table): Tables\Table
                         $detalles = $record->detalles()
                             ->whereHas('compra', fn ($query) => $query->where('empresa_id', $empresaId))
                             ->orderBy('nombre_producto')
-                            ->get(['product_id', 'nombre_producto', 'cantidad', 'precio_venta']);
+                            ->get(['product_id', 'producto_variante_id', 'nombre_producto', 'cantidad', 'precio_venta']);
 
-                        $lineas = $detalles->map(fn ($detalle) => [
-                            'product_id'      => $detalle->product_id,
-                            'nombre_producto' => $detalle->nombre_producto,
-                            'cantidad'        => $detalle->cantidad,
-                            'precio_venta'    => $detalle->precio_venta,
-                        ])->all();
+                        // 🎨 Si la linea de compra fue de una variante puntual
+                        // (talla/color), el codigo de barras a imprimir es el
+                        // de esa variante -- si no tiene codigo propio, se cae
+                        // al del producto para no imprimir un codigo vacio.
+                        $variantesPorId = \App\Models\ProductoVariante::whereIn(
+                            'id',
+                            $detalles->pluck('producto_variante_id')->filter()
+                        )->get()->keyBy('id');
+
+                        $lineas = $detalles->map(function ($detalle) use ($variantesPorId) {
+                            $variante = $detalle->producto_variante_id
+                                ? $variantesPorId->get($detalle->producto_variante_id)
+                                : null;
+
+                            return [
+                                'product_id'      => $variante?->codigo ?: $detalle->product_id,
+                                'nombre_producto' => $variante ? $detalle->nombre_producto . ' - ' . $variante->nombre : $detalle->nombre_producto,
+                                'cantidad'        => $detalle->cantidad,
+                                'precio_venta'    => $detalle->precio_venta,
+                            ];
+                        })->all();
 
                         return \App\Support\BarTenderExport::generarBat(
                             $lineas,
