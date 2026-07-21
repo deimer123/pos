@@ -15,7 +15,7 @@ class CompraBulkTemplateExport implements WithMultipleSheets
     {
         return [
             'Items' => new CompraBulkTemplateItemsSheet($this->productosExistentes->pluck('descripcion_larga')->toArray(), $this->conVariantes),
-            'Productos existentes' => new CompraBulkTemplateProductosExistentesSheet($this->productosExistentes),
+            'Productos existentes' => new CompraBulkTemplateProductosExistentesSheet($this->productosExistentes, $this->conVariantes),
             'Referencia' => new CompraBulkTemplateReferenciaSheet($this->empresaId),
         ];
     }

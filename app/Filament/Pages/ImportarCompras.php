@@ -102,7 +102,7 @@ class ImportarCompras extends Page
         $productos = Product::query()
             ->where('empresa_id', $empresaId)
             ->where('id_proveedor', (int) $proveedor->id_clip_pro)
-            ->with(['familia1', 'subfamilia'])
+            ->with(['familia1', 'subfamilia', 'variantes'])
             ->orderBy('descripcion_larga')
             ->get();
 

@@ -27,7 +27,7 @@ class CompraBulkTemplateProductosExistentesSheet implements FromArray, WithHeadi
         5 => 'Horas',
     ];
 
-    public function __construct(protected Collection $productos)
+    public function __construct(protected Collection $productos, protected bool $conVariantes = false)
     {
     }
 
@@ -38,7 +38,7 @@ class CompraBulkTemplateProductosExistentesSheet implements FromArray, WithHeadi
 
     public function headings(): array
     {
-        return [
+        $columnas = [
             'Producto',
             'Costo Unitario',
             'Descuento Comercial',
@@ -49,6 +49,12 @@ class CompraBulkTemplateProductosExistentesSheet implements FromArray, WithHeadi
             'Subfamilia',
             'Unidad de Medida',
         ];
+
+        if ($this->conVariantes) {
+            $columnas[] = 'Variantes (talla/color: stock)';
+        }
+
+        return $columnas;
     }
 
     public function array(): array
@@ -65,22 +71,39 @@ class CompraBulkTemplateProductosExistentesSheet implements FromArray, WithHeadi
             return $valor;
         };
 
-        return $this->productos->map(fn ($p) => [
-            $textoSeguro($p->descripcion_larga),
-            (float) $p->precio_costo,
-            (float) $p->descuento_comercial,
-            (float) $p->iva_compra,
-            (float) $p->utilidad1,
-            (float) $p->precio_venta1,
-            $textoSeguro(optional($p->familia1)->nombre),
-            $textoSeguro(optional($p->subfamilia)->nombre),
-            self::UNIDADES[(int) $p->id_unidad_de_medida] ?? '-',
-        ])->toArray();
+        return $this->productos->map(function ($p) use ($textoSeguro) {
+            $fila = [
+                $textoSeguro($p->descripcion_larga),
+                (float) $p->precio_costo,
+                (float) $p->descuento_comercial,
+                (float) $p->iva_compra,
+                (float) $p->utilidad1,
+                (float) $p->precio_venta1,
+                $textoSeguro(optional($p->familia1)->nombre),
+                $textoSeguro(optional($p->subfamilia)->nombre),
+                self::UNIDADES[(int) $p->id_unidad_de_medida] ?? '-',
+            ];
+
+            if ($this->conVariantes) {
+                $fila[] = $p->variantes->isEmpty()
+                    ? ''
+                    : $p->variantes
+                        ->map(fn ($v) => trim(($v->atributos['talla'] ?? '') . ' ' . ($v->atributos['color'] ?? '')) . ': ' . (float) $v->stock)
+                        ->implode(' · ');
+            }
+
+            return $fila;
+        })->toArray();
+    }
+
+    private function ultimaColumna(): string
+    {
+        return $this->conVariantes ? 'J' : 'I';
     }
 
     public function columnWidths(): array
     {
-        return [
+        $anchos = [
             'A' => 34,
             'B' => 15,
             'C' => 18,
@@ -91,13 +114,21 @@ class CompraBulkTemplateProductosExistentesSheet implements FromArray, WithHeadi
             'H' => 20,
             'I' => 16,
         ];
+
+        if ($this->conVariantes) {
+            $anchos['J'] = 40;
+        }
+
+        return $anchos;
     }
 
     public function styles(Worksheet $sheet)
     {
         $sheet->getRowDimension(1)->setRowHeight(30);
 
-        $sheet->getStyle('A1:I1')->applyFromArray([
+        $ultimaColumna = $this->ultimaColumna();
+
+        $sheet->getStyle("A1:{$ultimaColumna}1")->applyFromArray([
             'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => 'FFFFFF']],
             'fill' => [
                 'fillType' => Fill::FILL_SOLID,
@@ -112,7 +143,7 @@ class CompraBulkTemplateProductosExistentesSheet implements FromArray, WithHeadi
 
         $highestRow = max($sheet->getHighestRow(), 2);
 
-        $sheet->getStyle('A1:I' . $highestRow)->applyFromArray([
+        $sheet->getStyle("A1:{$ultimaColumna}{$highestRow}")->applyFromArray([
             'borders' => [
                 'allBorders' => [
                     'borderStyle' => Border::BORDER_THIN,
@@ -130,7 +161,7 @@ class CompraBulkTemplateProductosExistentesSheet implements FromArray, WithHeadi
         // verde de arriba). Con esto solo, el desplegable de cada columna
         // ya trae la cajita de busqueda nativa de Excel que filtra al
         // escribir -- funciona igual, sin necesidad de una Tabla completa.
-        $sheet->setAutoFilter('A1:I' . $highestRow);
+        $sheet->setAutoFilter("A1:{$ultimaColumna}{$highestRow}");
 
         return [];
     }
