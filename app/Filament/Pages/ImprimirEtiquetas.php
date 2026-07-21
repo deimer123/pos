@@ -7,6 +7,7 @@ use App\Models\ProductoVariante;
 use App\Support\BarTenderExport;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
+use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -71,47 +72,50 @@ class ImprimirEtiquetas extends Page implements HasForms
                 Repeater::make('lineas')
                     ->label('Productos')
                     ->schema([
-                        Select::make('product_id')
-                            ->label('Producto (codigo o nombre)')
-                            ->searchable()
-                            ->getSearchResultsUsing(function (string $search) use ($empresaId) {
-                                return Product::query()
-                                    ->where('empresa_id', $empresaId)
-                                    ->where(function ($query) use ($search) {
-                                        $query->where('id_producto', 'like', "%{$search}%")
-                                            ->orWhere('descripcion_larga', 'like', "%{$search}%");
-                                    })
-                                    ->limit(30)
-                                    ->get()
-                                    ->mapWithKeys(fn ($p) => [$p->id_producto => "{$p->id_producto} - {$p->descripcion_larga}"]);
-                            })
-                            ->getOptionLabelUsing(function ($value) use ($empresaId) {
-                                $producto = Product::where('empresa_id', $empresaId)
-                                    ->where('id_producto', $value)
-                                    ->first();
+                        Grid::make(12)->schema([
+                            Select::make('product_id')
+                                ->label('Producto (codigo o nombre)')
+                                ->searchable()
+                                ->getSearchResultsUsing(function (string $search) use ($empresaId) {
+                                    return Product::query()
+                                        ->where('empresa_id', $empresaId)
+                                        ->where(function ($query) use ($search) {
+                                            $query->where('id_producto', 'like', "%{$search}%")
+                                                ->orWhere('descripcion_larga', 'like', "%{$search}%");
+                                        })
+                                        ->limit(30)
+                                        ->get()
+                                        ->mapWithKeys(fn ($p) => [$p->id_producto => "{$p->id_producto} - {$p->descripcion_larga}"]);
+                                })
+                                ->getOptionLabelUsing(function ($value) use ($empresaId) {
+                                    $producto = Product::where('empresa_id', $empresaId)
+                                        ->where('id_producto', $value)
+                                        ->first();
 
-                                return $producto ? "{$producto->id_producto} - {$producto->descripcion_larga}" : $value;
-                            })
-                            ->live()
-                            ->afterStateUpdated(fn (Set $set) => $set('producto_variante_id', null))
-                            ->required(),
+                                    return $producto ? "{$producto->id_producto} - {$producto->descripcion_larga}" : $value;
+                                })
+                                ->live()
+                                ->afterStateUpdated(fn (Set $set) => $set('producto_variante_id', null))
+                                ->required()
+                                ->columnSpan(8),
 
-                        Select::make('producto_variante_id')
-                            ->label('Variante (talla/color)')
-                            ->visible(fn (Get $get) => static::productoTieneVariantes($get))
-                            ->options(fn (Get $get) => static::opcionesVariantes($get))
-                            ->required(fn (Get $get) => static::productoTieneVariantes($get))
-                            ->validationMessages(['required' => 'Selecciona la variante (talla/color).'])
-                            ->columnSpanFull(),
+                            TextInput::make('cantidad')
+                                ->label('Cantidad')
+                                ->numeric()
+                                ->minValue(1)
+                                ->default(1)
+                                ->required()
+                                ->columnSpan(4),
 
-                        TextInput::make('cantidad')
-                            ->label('Cantidad')
-                            ->numeric()
-                            ->minValue(1)
-                            ->default(1)
-                            ->required(),
+                            Select::make('producto_variante_id')
+                                ->label('Variante (talla/color)')
+                                ->visible(fn (Get $get) => static::productoTieneVariantes($get))
+                                ->options(fn (Get $get) => static::opcionesVariantes($get))
+                                ->required(fn (Get $get) => static::productoTieneVariantes($get))
+                                ->validationMessages(['required' => 'Selecciona la variante (talla/color).'])
+                                ->columnSpan(12),
+                        ]),
                     ])
-                    ->columns(2)
                     ->addActionLabel('Agregar producto')
                     ->defaultItems(1)
                     ->reorderable(false)
