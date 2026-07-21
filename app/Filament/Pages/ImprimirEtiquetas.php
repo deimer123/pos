@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Models\ConfiguracionEmpresa;
 use App\Models\Product;
 use App\Models\ProductoVariante;
 use App\Support\BarTenderExport;
@@ -97,15 +98,7 @@ class ImprimirEtiquetas extends Page implements HasForms
                                 ->live()
                                 ->afterStateUpdated(fn (Set $set) => $set('producto_variante_id', null))
                                 ->required()
-                                ->columnSpan(8),
-
-                            TextInput::make('cantidad')
-                                ->label('Cantidad')
-                                ->numeric()
-                                ->minValue(1)
-                                ->default(1)
-                                ->required()
-                                ->columnSpan(4),
+                                ->columnSpan(fn (Get $get) => static::productoTieneVariantes($get) ? 6 : 10),
 
                             Select::make('producto_variante_id')
                                 ->label('Variante (talla/color)')
@@ -113,7 +106,15 @@ class ImprimirEtiquetas extends Page implements HasForms
                                 ->options(fn (Get $get) => static::opcionesVariantes($get))
                                 ->required(fn (Get $get) => static::productoTieneVariantes($get))
                                 ->validationMessages(['required' => 'Selecciona la variante (talla/color).'])
-                                ->columnSpan(12),
+                                ->columnSpan(4),
+
+                            TextInput::make('cantidad')
+                                ->label('Cantidad')
+                                ->numeric()
+                                ->minValue(1)
+                                ->default(1)
+                                ->required()
+                                ->columnSpan(2),
                         ]),
                     ])
                     ->addActionLabel('Agregar producto')
@@ -127,12 +128,19 @@ class ImprimirEtiquetas extends Page implements HasForms
     /* ----------------- Variantes (talla/color) ----------------- */
     protected static function productoTieneVariantes(Get $get): bool
     {
+        $empresaId = auth()->user()->getEmpresaActualId();
+
+        $usaVariantes = ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_variantes');
+        if (! $usaVariantes) {
+            return false;
+        }
+
         $codigo = (string) ($get('product_id') ?? '');
         if ($codigo === '') {
             return false;
         }
 
-        $producto = Product::where('empresa_id', auth()->user()->getEmpresaActualId())
+        $producto = Product::where('empresa_id', $empresaId)
             ->where('id_producto', $codigo)
             ->first();
 

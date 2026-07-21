@@ -65,9 +65,19 @@ class CatalogoPublico extends Component
         return $this->catalogo ? (bool) $this->catalogo->mostrar_stock_negativo : (bool) $this->config->catalogo_mostrar_stock_negativo;
     }
 
+    public function getMostrarVariantesProperty(): bool
+    {
+        return (bool) $this->config->usa_variantes;
+    }
+
     public function getProductosProperty()
     {
         $palabras = array_filter(preg_split('/\s+/', trim($this->busqueda)));
+
+        $relaciones = ['familia1', 'subfamilia'];
+        if ($this->mostrarVariantes) {
+            $relaciones['variantes'] = fn ($q) => $q->where('activo', true)->orderBy('nombre');
+        }
 
         return Product::where('empresa_id', $this->config->empresa_id)
             ->where('mostrar_en_catalogo', true)
@@ -87,7 +97,7 @@ class CatalogoPublico extends Component
                     $q->where('descripcion_larga', 'like', '%' . $palabra . '%');
                 }
             })
-            ->with(['familia1', 'subfamilia'])
+            ->with($relaciones)
             ->orderBy('descripcion_larga')
             ->get()
             ->groupBy('id_familia1');

@@ -125,6 +125,20 @@
                                         <div style="font-size:11px; color:#6b7280; margin-top:4px; line-height:1.3;">{{ $producto->descripcion_catalogo }}</div>
                                     @endif
 
+                                    @if($this->mostrarVariantes && $producto->variantes->isNotEmpty())
+                                        <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:6px;">
+                                            @foreach($producto->variantes as $variante)
+                                                @php $varianteDisponible = (float) $variante->stock > 0; @endphp
+                                                <span style="font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px;
+                                                    {{ ! $this->mostrarDisponibilidad || $varianteDisponible
+                                                        ? 'background:#eef2ff; color:#4338ca;'
+                                                        : 'background:#f3f4f6; color:#9ca3af; text-decoration:line-through;' }}">
+                                                    {{ $variante->nombre }}
+                                                </span>
+                                            @endforeach
+                                        </div>
+                                    @endif
+
                                     <div style="margin-top:auto; padding-top:6px;">
                                         @if($this->mostrarDisponibilidad)
                                             <div style="font-size:10px; font-weight:700; margin-bottom:2px; color:{{ $disponible ? '#16a34a' : '#dc2626' }};">
