@@ -495,13 +495,9 @@ return \App\Models\Familia::create($data)->id;
                         : '-'
                 ),
         ])
-        ->columnSpan(fn () => static::empresaUsaVariantes() ? 2 : 1), // ⚠️ clave para que se ajuste a la mitad
+        ->columnSpan(1), // ⚠️ clave para que se ajuste a la mitad
 
-  // Para empresas con variantes (talla/color), cada variante ya tiene su
-  // propio código (ver pestaña Variantes) que cumple el mismo rol que un
-  // código alterno -- se oculta esta seccion para no duplicar el concepto.
   Section::make('Códigos Alternos')
-    ->visible(fn () => ! static::empresaUsaVariantes())
     ->extraAttributes(['class' => 'producto-linea-2'])
     ->schema([
  Repeater::make('alternateCodes')
