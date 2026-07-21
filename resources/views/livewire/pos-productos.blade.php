@@ -202,7 +202,7 @@
                         const boton = document.createElement('button');
                         boton.type = 'button';
                         boton.disabled = sinStock;
-                        boton.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;border:1px solid #bfdbfe;background:' + (sinStock ? '#f1f5f9' : '#f8fbff') + ';cursor:' + (sinStock ? 'not-allowed' : 'pointer') + ';font-size:14px;color:' + (sinStock ? '#94a3b8' : '#1e293b') + ';';
+                        boton.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;border:1px solid #93c5fd;background:' + (sinStock ? '#f1f5f9' : '#ffffff') + ';cursor:' + (sinStock ? 'not-allowed' : 'pointer') + ';font-size:14px;color:' + (sinStock ? '#94a3b8' : '#1e293b') + ';';
 
                         const nombre = document.createElement('span');
                         nombre.style.fontWeight = '700';
@@ -223,6 +223,10 @@
                         contenedor.appendChild(boton);
                     });
 
+                    // Mismo lenguaje visual del modal "Movimiento de caja"
+                    // del POS (encabezado en degrade azul, fondo celeste
+                    // clarito, boton en pastilla) -- clases definidas en
+                    // admin.css (.pos-selector-variante-*).
                     window.Swal.fire({
                         title: titulo,
                         html: contenedor,
@@ -230,6 +234,13 @@
                         showCancelButton: true,
                         cancelButtonText: 'Cancelar',
                         width: 420,
+                        customClass: {
+                            popup: 'pos-selector-variante-popup',
+                            title: 'pos-selector-variante-titulo',
+                            htmlContainer: 'pos-selector-variante-html',
+                            actions: 'pos-selector-variante-actions',
+                            cancelButton: 'pos-selector-variante-cancelar',
+                        },
                     });
                 }
 

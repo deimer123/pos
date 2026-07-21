@@ -2308,4 +2308,44 @@ body:has(.reporte-descuentos-stat) .fi-ta-header-toolbar {
     box-shadow: 0 8px 16px rgba(15, 23, 42, .16) !important;
 }
 
+/* Selector de color/talla del POS (SweetAlert2, ver mostrarListaVariantes
+   en pos-productos.blade.php): mismo lenguaje visual que el modal
+   "Movimiento de caja" (encabezado en degrade azul, fondo celeste
+   clarito, boton Cancelar en pastilla). */
+.pos-selector-variante-popup {
+    border-radius: 16px !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+}
+
+.pos-selector-variante-titulo {
+    margin: 0 !important;
+    padding: 16px 20px !important;
+    background: linear-gradient(180deg, #2563eb 0%, #4f46e5 100%) !important;
+    color: #ffffff !important;
+    font-size: 18px !important;
+    font-weight: 800 !important;
+}
+
+.pos-selector-variante-html {
+    margin: 0 !important;
+    padding: 18px !important;
+    background: #eef6ff !important;
+}
+
+.pos-selector-variante-actions {
+    margin: 0 !important;
+    padding: 0 18px 18px !important;
+    background: #eef6ff !important;
+}
+
+.pos-selector-variante-cancelar {
+    border-radius: 999px !important;
+    background: #ef4444 !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    padding: 8px 20px !important;
+    box-shadow: 0 8px 16px rgba(15, 23, 42, .16) !important;
+}
+
 
