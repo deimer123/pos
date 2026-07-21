@@ -46,7 +46,8 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
         ];
 
         if ($this->conVariantes) {
-            $columnas[] = 'Variante';
+            $columnas[] = 'Talla';
+            $columnas[] = 'Color';
         }
 
         return $columnas;
@@ -69,6 +70,7 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
 
         if ($this->conVariantes) {
             $fila[] = '';
+            $fila[] = '';
         }
 
         return [$fila];
@@ -90,7 +92,8 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
         ];
 
         if ($this->conVariantes) {
-            $anchos['K'] = 20;
+            $anchos['K'] = 10;
+            $anchos['L'] = 14;
         }
 
         return $anchos;
@@ -100,11 +103,11 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
     {
         $sheet->getRowDimension(1)->setRowHeight(30);
 
-        // Columna K (Variante) es aparte a proposito: ninguna de las
-        // formulas de autollenado/validacion de abajo la toca, solo se
+        // Columnas K/L (Talla/Color) son aparte a proposito: ninguna de las
+        // formulas de autollenado/validacion de abajo las toca, solo se
         // extiende el estilo visual (encabezado/bordes) hasta ahi cuando
         // aplica, para no arriesgar las formulas existentes en A:J.
-        $ultimaColumna = $this->conVariantes ? 'K' : 'J';
+        $ultimaColumna = $this->conVariantes ? 'L' : 'J';
 
         $sheet->getStyle("A1:{$ultimaColumna}1")->applyFromArray([
             'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => 'FFFFFF']],

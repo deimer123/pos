@@ -30,7 +30,6 @@ class ProductoRopaBulkTemplatePlantillaSheet implements FromArray, WithHeadings,
             'Talla',
             'Color',
             'Cantidad',
-            'Precio Extra',
             'Proveedor',
             'Departamento',
             'Subfamilia',
@@ -50,7 +49,6 @@ class ProductoRopaBulkTemplatePlantillaSheet implements FromArray, WithHeadings,
                 'M',
                 'Azul',
                 5,
-                0,
                 'Distribuidora ABC',
                 'Ropa',
                 'Camisas',
@@ -65,7 +63,6 @@ class ProductoRopaBulkTemplatePlantillaSheet implements FromArray, WithHeadings,
                 'L',
                 'Azul',
                 3,
-                0,
                 '',
                 '',
                 '',
@@ -85,15 +82,14 @@ class ProductoRopaBulkTemplatePlantillaSheet implements FromArray, WithHeadings,
             'B' => 10,
             'C' => 14,
             'D' => 12,
-            'E' => 13,
-            'F' => 22,
+            'E' => 22,
+            'F' => 18,
             'G' => 18,
-            'H' => 18,
-            'I' => 13,
-            'J' => 16,
+            'H' => 13,
+            'I' => 16,
+            'J' => 12,
             'K' => 12,
-            'L' => 12,
-            'M' => 14,
+            'L' => 14,
         ];
     }
 
@@ -101,7 +97,7 @@ class ProductoRopaBulkTemplatePlantillaSheet implements FromArray, WithHeadings,
     {
         $sheet->getRowDimension(1)->setRowHeight(30);
 
-        $sheet->getStyle('A1:M1')->applyFromArray([
+        $sheet->getStyle('A1:L1')->applyFromArray([
             'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => 'FFFFFF']],
             'fill' => [
                 'fillType' => Fill::FILL_SOLID,
@@ -114,12 +110,12 @@ class ProductoRopaBulkTemplatePlantillaSheet implements FromArray, WithHeadings,
             ],
         ]);
 
-        $sheet->getStyle('A2:M3')->applyFromArray([
+        $sheet->getStyle('A2:L3')->applyFromArray([
             'font' => ['italic' => true, 'color' => ['rgb' => '6B7280']],
             'alignment' => ['vertical' => Alignment::VERTICAL_CENTER],
         ]);
 
-        $sheet->getStyle('A1:M20')->applyFromArray([
+        $sheet->getStyle('A1:L20')->applyFromArray([
             'borders' => [
                 'allBorders' => [
                     'borderStyle' => Border::BORDER_THIN,
@@ -128,8 +124,8 @@ class ProductoRopaBulkTemplatePlantillaSheet implements FromArray, WithHeadings,
             ],
         ]);
 
-        $sheet->getStyle('D2:E20')->getNumberFormat()->setFormatCode('#,##0');
-        $sheet->getStyle('I2:M20')->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle('D2:D20')->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle('H2:L20')->getNumberFormat()->setFormatCode('#,##0');
 
         $sheet->freezePane('A2');
 

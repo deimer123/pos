@@ -113,31 +113,19 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
             $productoExistente = $this->buscarProducto($nombre);
             $esNuevo = $productoExistente === null;
 
-            // Columna opcional "Variante" (codigo de producto_variantes):
-            // solo tiene sentido si el producto YA existe y ya tiene esa
-            // variante dada de alta desde /admin (las variantes no se crean
-            // por este importador masivo).
-            $varianteCodigo = trim((string) ($row['variante'] ?? ''));
-            $varianteId = null;
+            // Columnas opcionales "Talla"/"Color" (solo en la plantilla de
+            // empresas ropa_calzado): solo tienen sentido si el producto YA
+            // existe. Si esa talla/color todavia no tiene variante creada,
+            // se crea sola en confirmar() -- no hace falta darla de alta
+            // antes desde Productos. No se busca/crea aqui todavia (esto es
+            // el pase de solo lectura): se guarda talla/color en $pendientes
+            // y resolveVariante() la resuelve en el pase 2.
+            $varianteTalla = trim((string) ($row['talla'] ?? ''));
+            $varianteColor = trim((string) ($row['color'] ?? ''));
 
-            if ($varianteCodigo !== '') {
-                if ($esNuevo) {
-                    $this->errores[] = "Fila {$numeroFila} ({$nombre}): trae Variante \"{$varianteCodigo}\" pero el producto es nuevo (las variantes se crean desde el admin, no aqui).";
-                    continue;
-                }
-
-                $variante = ProductoVariante::where('empresa_id', $this->empresaId)
-                    ->where('product_id', $productoExistente->id)
-                    ->where('codigo', $varianteCodigo)
-                    ->where('activo', true)
-                    ->first();
-
-                if (! $variante) {
-                    $this->errores[] = "Fila {$numeroFila} ({$nombre}): la variante \"{$varianteCodigo}\" no existe para ese producto.";
-                    continue;
-                }
-
-                $varianteId = $variante->id;
+            if (($varianteTalla !== '' || $varianteColor !== '') && $esNuevo) {
+                $this->errores[] = "Fila {$numeroFila} ({$nombre}): trae Talla/Color pero el producto es nuevo (los productos nuevos con variantes se cargan desde Productos, no aqui).";
+                continue;
             }
 
             // Costo Unitario se autollena en Excel con una formula VLOOKUP
@@ -182,7 +170,8 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
                 'numero_fila' => $numeroFila,
                 'nombre' => $nombre,
                 'es_nuevo' => $esNuevo,
-                'variante_id' => $varianteId,
+                'variante_talla' => $varianteTalla,
+                'variante_color' => $varianteColor,
                 'departamento' => trim((string) ($row['departamento'] ?? '')),
                 'subfamilia' => trim((string) ($row['subfamilia'] ?? '')),
                 'unidad_texto' => trim((string) ($row['unidad_de_medida'] ?? '')),
@@ -239,8 +228,11 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
 
                 $producto->existencias = (float) ($producto->existencias ?? 0) + $p['cantidad'];
 
-                if (! empty($p['variante_id'])) {
-                    ProductoVariante::where('id', $p['variante_id'])
+                $varianteId = null;
+                if ($p['variante_talla'] !== '' || $p['variante_color'] !== '') {
+                    $varianteId = $this->resolveVariante($producto, $p['variante_talla'], $p['variante_color']);
+
+                    ProductoVariante::where('id', $varianteId)
                         ->where('empresa_id', $this->empresaId)
                         ->increment('stock', $p['cantidad']);
                 }
@@ -259,7 +251,7 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
 
                 $lineas[] = [
                     'product_id' => (string) $producto->id_producto,
-                    'producto_variante_id' => $p['variante_id'],
+                    'producto_variante_id' => $varianteId,
                     'codigo_ingresado' => (string) $producto->id_producto,
                     'nombre_producto' => $producto->descripcion_larga,
                     'cantidad' => $p['cantidad'],
@@ -397,6 +389,48 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
         ]);
 
         return [$producto, $siguienteCodigo + 1];
+    }
+
+    // Busca la variante de este producto por Talla/Color (comparacion sin
+    // distinguir mayusculas/espacios); si no existe todavia, la crea con
+    // stock 0 -- el stock real se suma justo despues en confirmar(), igual
+    // que a una variante que ya existia. Asi una talla/color nueva para un
+    // producto ya existente no obliga a ir antes a darla de alta a mano
+    // desde Productos.
+    private function resolveVariante(Product $producto, string $talla, string $color): int
+    {
+        $variante = ProductoVariante::where('empresa_id', $this->empresaId)
+            ->where('product_id', $producto->id)
+            ->where('activo', true)
+            ->get()
+            ->first(function (ProductoVariante $v) use ($talla, $color) {
+                $vTalla = trim((string) ($v->atributos['talla'] ?? ''));
+                $vColor = trim((string) ($v->atributos['color'] ?? ''));
+
+                return mb_strtolower($vTalla) === mb_strtolower($talla)
+                    && mb_strtolower($vColor) === mb_strtolower($color);
+            });
+
+        if ($variante) {
+            return $variante->id;
+        }
+
+        $nombreVariante = trim(
+            ($talla !== '' ? 'Talla '.$talla : '').
+            ($talla !== '' && $color !== '' ? ' - ' : '').
+            $color,
+            ' -'
+        );
+
+        return ProductoVariante::create([
+            'empresa_id' => $this->empresaId,
+            'product_id' => $producto->id,
+            'nombre' => $nombreVariante,
+            'atributos' => ['talla' => $talla, 'color' => $color],
+            'precio_extra' => 0,
+            'stock' => 0,
+            'activo' => true,
+        ])->id;
     }
 
     // Si el nombre viene con pinta de formula (empieza con =, +, - o @),

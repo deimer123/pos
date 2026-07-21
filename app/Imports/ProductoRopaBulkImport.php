@@ -141,7 +141,6 @@ class ProductoRopaBulkImport implements ToCollection, WithHeadingRow, WithMultip
                 'talla' => $talla,
                 'color' => $color,
                 'cantidad' => $cantidad,
-                'precio_extra' => $this->numero($row['precio_extra'] ?? null) ?? 0,
             ];
         }
 
@@ -207,7 +206,7 @@ class ProductoRopaBulkImport implements ToCollection, WithHeadingRow, WithMultip
                         'product_id' => $producto->id,
                         'nombre' => $nombreVariante,
                         'atributos' => ['talla' => $v['talla'], 'color' => $v['color']],
-                        'precio_extra' => $v['precio_extra'],
+                        'precio_extra' => 0,
                         'stock' => $v['cantidad'],
                         'activo' => true,
                     ]);

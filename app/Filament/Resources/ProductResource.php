@@ -601,16 +601,10 @@ return \App\Models\Familia::create($data)->id;
                         ->maxLength(150)
                         ->helperText('Se sugiere solo a partir de talla/color, puedes editarlo.'),
 
-                    Grid::make(3)->schema([
+                    Grid::make(2)->schema([
                         TextInput::make('codigo')
                             ->label('Código (opcional)')
                             ->maxLength(50),
-
-                        TextInput::make('precio_extra')
-                            ->label('Precio extra')
-                            ->numeric()
-                            ->default(0)
-                            ->helperText('Se suma al precio base del producto.'),
 
                         TextInput::make('stock')
                             ->label('Stock')
