@@ -56,7 +56,8 @@ class ProductBulkImport implements ToCollection, WithHeadingRow, WithMultipleShe
             }
 
             $precioCosto = $this->numero($row['precio_costo'] ?? null);
-            $precioVenta = $this->numero($row['precio_de_venta'] ?? null);
+            $precioVentaExcel = $this->numero($row['precio_de_venta'] ?? null);
+            $utilidadExcel = $this->numero($row['utilidad'] ?? null);
 
             if ($nombre === '') {
                 $this->errores[] = "Fila {$numeroFila}: falta el nombre del producto.";
@@ -68,8 +69,8 @@ class ProductBulkImport implements ToCollection, WithHeadingRow, WithMultipleShe
                 continue;
             }
 
-            if ($precioVenta === null) {
-                $this->errores[] = "Fila {$numeroFila} ({$nombre}): falta el Precio de Venta.";
+            if ($precioVentaExcel === null && $utilidadExcel === null) {
+                $this->errores[] = "Fila {$numeroFila} ({$nombre}): falta la Utilidad (o el Precio de Venta).";
                 continue;
             }
 
@@ -88,11 +89,23 @@ class ProductBulkImport implements ToCollection, WithHeadingRow, WithMultipleShe
             $ivaVenta = $this->numero($row['iva_venta'] ?? null) ?? 19;
 
             // Misma formula que ProductResource::calcularValores(), para que
-            // la utilidad/costo con IVA salgan iguales a como quedarian si
-            // el producto se hubiera creado a mano en el formulario.
+            // el costo con IVA salga igual a como quedaria si el producto se
+            // hubiera creado a mano en el formulario. El precio de venta se
+            // calcula a partir de la Utilidad (igual que en la plantilla de
+            // Compras); si en vez de Utilidad viene el Precio de Venta ya
+            // escrito, se usa ese y se calcula la utilidad de respaldo.
             $costoConDescuento = round($precioCosto * (1 - $descuento / 100), 2);
             $costoIva = round($costoConDescuento * (1 + $ivaVenta / 100), 2);
-            $utilidad1 = $precioVenta > 0 ? round((($precioVenta - $costoIva) / $precioVenta) * 100, 2) : 0;
+
+            if ($precioVentaExcel !== null && $precioVentaExcel > 0) {
+                $precioVenta = $precioVentaExcel;
+                $utilidad1 = $utilidadExcel ?? round((($precioVenta - $costoIva) / max($precioVenta, 0.01)) * 100, 2);
+            } else {
+                $utilidad1 = $utilidadExcel;
+                $precioVenta = $utilidad1 >= 100
+                    ? $costoIva
+                    : round($costoIva / (1 - $utilidad1 / 100) / 100) * 100;
+            }
 
             $producto = Product::create([
                 'empresa_id' => $this->empresaId,

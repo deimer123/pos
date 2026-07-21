@@ -96,15 +96,16 @@ class ProductoRopaBulkImport implements ToCollection, WithHeadingRow, WithMultip
 
             if (! isset($grupos[$clave])) {
                 $precioCosto = $this->numero($row['precio_costo'] ?? null);
-                $precioVenta = $this->numero($row['precio_de_venta'] ?? null);
+                $precioVentaExcel = $this->numero($row['precio_de_venta'] ?? null);
+                $utilidadExcel = $this->numero($row['utilidad'] ?? null);
 
                 if ($precioCosto === null) {
                     $this->errores[] = "Producto \"{$nombre}\" (fila {$numeroFila}): falta el Precio Costo.";
                     continue;
                 }
 
-                if ($precioVenta === null) {
-                    $this->errores[] = "Producto \"{$nombre}\" (fila {$numeroFila}): falta el Precio de Venta.";
+                if ($precioVentaExcel === null && $utilidadExcel === null) {
+                    $this->errores[] = "Producto \"{$nombre}\" (fila {$numeroFila}): falta la Utilidad (o el Precio de Venta).";
                     continue;
                 }
 
@@ -117,6 +118,23 @@ class ProductoRopaBulkImport implements ToCollection, WithHeadingRow, WithMultip
                 $ivaCompra = $this->numero($row['iva_compra'] ?? null) ?? 19;
                 $ivaVenta = $this->numero($row['iva_venta'] ?? null) ?? 19;
 
+                // Precio de venta a partir de la Utilidad (igual que en la
+                // plantilla de Compras); si en vez de Utilidad viene el
+                // Precio de Venta ya escrito, se usa ese y se calcula la
+                // utilidad de respaldo.
+                $costoConDescuento = round($precioCosto * (1 - $descuento / 100), 2);
+                $costoIva = round($costoConDescuento * (1 + $ivaVenta / 100), 2);
+
+                if ($precioVentaExcel !== null && $precioVentaExcel > 0) {
+                    $precioVenta = $precioVentaExcel;
+                    $utilidad1 = $utilidadExcel ?? round((($precioVenta - $costoIva) / max($precioVenta, 0.01)) * 100, 2);
+                } else {
+                    $utilidad1 = $utilidadExcel;
+                    $precioVenta = $utilidad1 >= 100
+                        ? $costoIva
+                        : round($costoIva / (1 - $utilidad1 / 100) / 100) * 100;
+                }
+
                 $grupos[$clave] = [
                     'nombre' => $nombre,
                     'proveedor' => trim((string) ($row['proveedor'] ?? '')),
@@ -127,6 +145,7 @@ class ProductoRopaBulkImport implements ToCollection, WithHeadingRow, WithMultip
                     'iva_compra' => $ivaCompra,
                     'iva_venta' => $ivaVenta,
                     'precio_venta' => $precioVenta,
+                    'utilidad1' => $utilidad1,
                     'variantes' => [],
                 ];
             }
@@ -163,7 +182,6 @@ class ProductoRopaBulkImport implements ToCollection, WithHeadingRow, WithMultip
 
                 $costoConDescuento = round($grupo['precio_costo'] * (1 - $grupo['descuento'] / 100), 2);
                 $costoIva = round($costoConDescuento * (1 + $grupo['iva_venta'] / 100), 2);
-                $utilidad1 = $grupo['precio_venta'] > 0 ? round((($grupo['precio_venta'] - $costoIva) / $grupo['precio_venta']) * 100, 2) : 0;
 
                 $producto = Product::create([
                     'empresa_id' => $this->empresaId,
@@ -179,7 +197,7 @@ class ProductoRopaBulkImport implements ToCollection, WithHeadingRow, WithMultip
                     'iva_compra' => $grupo['iva_compra'],
                     'iva_venta' => $grupo['iva_venta'],
                     'costo_iva' => $costoIva,
-                    'utilidad1' => $utilidad1,
+                    'utilidad1' => $grupo['utilidad1'],
                     'precio_venta1' => $grupo['precio_venta'],
                     'tipo_producto' => 'producto',
                     'vende_por' => 'unidad',
