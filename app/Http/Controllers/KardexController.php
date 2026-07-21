@@ -75,6 +75,29 @@ public function index(Request $request)
     $desde = $desdeInput ? Carbon::parse($desdeInput)->startOfDay() : null;
     $hasta = $hastaInput ? Carbon::parse($hastaInput)->endOfDay() : null;
 
+    // 🎨 El kardex se guarda por PRODUCTO, no por variante -- si lo que se
+    // escribio/escaneo fue el codigo de una variante puntual (talla/color),
+    // se resuelve al codigo del producto padre para poder buscar. El
+    // detalle de "ver documento" ya distingue la variante especifica.
+    if ($codigo) {
+        $existeProducto = DB::table('products')
+            ->where('empresa_id', $empresaId)
+            ->where('id_producto', $codigo)
+            ->exists();
+
+        if (! $existeProducto) {
+            $codigoProductoPadre = DB::table('producto_variantes as pv')
+                ->join('products as p', 'p.id', '=', 'pv.product_id')
+                ->where('pv.empresa_id', $empresaId)
+                ->where('pv.codigo', $codigo)
+                ->value('p.id_producto');
+
+            if ($codigoProductoPadre) {
+                $codigo = $codigoProductoPadre;
+            }
+        }
+    }
+
     // 🚫 NO BUSCAR SI NO HAY FILTROS
     if (!$codigo || !$desdeInput || !$hastaInput) {
         return view('kardex.index', [
