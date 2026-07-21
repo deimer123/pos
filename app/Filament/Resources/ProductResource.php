@@ -601,15 +601,15 @@ return \App\Models\Familia::create($data)->id;
                 ->label('Variantes (talla / color)')
                 ->defaultItems(0)
                 ->createItemButtonLabel('Agregar variante')
-                ->grid(2)
                 ->extraAttributes(['class' => 'variantes-repeater'])
                 ->schema([
                     Hidden::make('id'),
+                    Hidden::make('atributos')->dehydrated(),
 
-                    Grid::make(2)->schema([
+                    Grid::make(12)->schema([
                         TextInput::make('talla')
                             ->label('Talla')
-                            ->placeholder('M, 38, Única...')
+                            ->placeholder('M, 38...')
                             ->live(onBlur: true)
                             ->dehydrated(false)
                             ->afterStateHydrated(function (TextInput $component, callable $get, $state) {
@@ -618,11 +618,12 @@ return \App\Models\Familia::create($data)->id;
                             ->afterStateUpdated(function (Set $set, Get $get) {
                                 $set('atributos', ['talla' => $get('talla'), 'color' => $get('color')]);
                                 $set('nombre', trim('Talla '.$get('talla').' - '.$get('color'), ' -'));
-                            }),
+                            })
+                            ->columnSpan(['default' => 12, 'sm' => 2]),
 
                         TextInput::make('color')
                             ->label('Color')
-                            ->placeholder('Azul, Rojo, Negro...')
+                            ->placeholder('Azul, Rojo...')
                             ->live(onBlur: true)
                             ->dehydrated(false)
                             ->afterStateHydrated(function (TextInput $component, callable $get, $state) {
@@ -631,33 +632,36 @@ return \App\Models\Familia::create($data)->id;
                             ->afterStateUpdated(function (Set $set, Get $get) {
                                 $set('atributos', ['talla' => $get('talla'), 'color' => $get('color')]);
                                 $set('nombre', trim('Talla '.$get('talla').' - '.$get('color'), ' -'));
-                            }),
-                    ]),
+                            })
+                            ->columnSpan(['default' => 12, 'sm' => 2]),
 
-                    Hidden::make('atributos')->dehydrated(),
+                        TextInput::make('nombre')
+                            ->label('Nombre')
+                            ->required()
+                            ->maxLength(150)
+                            ->hintIcon('heroicon-o-information-circle')
+                            ->hintIconTooltip('Se sugiere solo a partir de talla/color, puedes editarlo.')
+                            ->columnSpan(['default' => 12, 'sm' => 4]),
 
-                    TextInput::make('nombre')
-                        ->label('Nombre de la variante')
-                        ->required()
-                        ->maxLength(150)
-                        ->helperText('Se sugiere solo a partir de talla/color, puedes editarlo.'),
-
-                    Grid::make(2)->schema([
                         TextInput::make('codigo')
-                            ->label('Código (opcional)')
-                            ->maxLength(50),
+                            ->label('Código')
+                            ->maxLength(50)
+                            ->columnSpan(['default' => 12, 'sm' => 2]),
 
                         TextInput::make('stock')
                             ->label('Stock')
                             ->numeric()
                             ->disabled()
                             ->dehydrated(false)
-                            ->helperText('Se ingresa por Compras o Ajuste de Inventario, no aquí.'),
-                    ]),
+                            ->hintIcon('heroicon-o-information-circle')
+                            ->hintIconTooltip('Se ingresa por Compras o Ajuste de Inventario, no aquí.')
+                            ->columnSpan(['default' => 10, 'sm' => 1]),
 
-                    Forms\Components\Toggle::make('activo')
-                        ->label('Activa')
-                        ->default(true),
+                        Forms\Components\Toggle::make('activo')
+                            ->label('Activa')
+                            ->default(true)
+                            ->columnSpan(['default' => 2, 'sm' => 1]),
+                    ]),
                 ])
                 ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
                     $data['empresa_id'] = auth()->user()->getEmpresaActualId();
