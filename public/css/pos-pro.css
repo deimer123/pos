@@ -2346,6 +2346,58 @@ button:hover {
 }
 /* END POS movimiento de caja modal */
 
+/* Selector de color/talla del POS (SweetAlert2, ver mostrarListaVariantes
+   en pos-productos.blade.php): mismo lenguaje visual del modal de arriba
+   (encabezado en degrade azul, fondo celeste clarito, boton Cancelar en
+   pastilla). Las clases pos-selector-variante-* se asignan via el
+   customClass del Swal.fire, no van en admin.css porque esa hoja solo
+   carga dentro del panel de Filament (/admin), no en /pos. */
+.pos-selector-variante-popup {
+    border-radius: 16px !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    border: 1px solid #93c5fd !important;
+}
+
+.pos-selector-variante-titulo {
+    margin: 0 !important;
+    padding: 16px 20px !important;
+    background: linear-gradient(180deg, #2563eb 0%, #4f46e5 100%) !important;
+    color: #ffffff !important;
+    font-size: 20px !important;
+    font-weight: 800 !important;
+}
+
+.pos-selector-variante-html {
+    margin: 0 !important;
+    padding: 18px !important;
+    background: #eef6ff !important;
+}
+
+.pos-selector-variante-actions {
+    margin: 0 !important;
+    padding: 14px 18px !important;
+    background: #ffffff !important;
+    border-top: 1px solid #dbeafe !important;
+}
+
+.pos-selector-variante-cancelar {
+    border-radius: 999px !important;
+    background: #ef4444 !important;
+    color: #ffffff !important;
+    font-weight: 800 !important;
+    min-width: 118px !important;
+    min-height: 42px !important;
+    box-shadow: 0 8px 16px rgba(15, 23, 42, .16) !important;
+}
+
+@media (max-width: 768px) {
+    .pos-selector-variante-titulo {
+        font-size: 17px !important;
+        padding: 12px 14px !important;
+    }
+}
+
 /* POS cartera modal above POS */
 .pos-cartera-overlay {
     z-index: 2147482600 !important;
