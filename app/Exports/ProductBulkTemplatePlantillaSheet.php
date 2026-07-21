@@ -107,7 +107,9 @@ class ProductBulkTemplatePlantillaSheet implements FromArray, WithHeadings, With
             ],
         ]);
 
-        $sheet->getStyle('F2:K20')->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle('F2:I20')->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle('K2:K20')->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle('J2:J' . self::ULTIMA_FILA_FORMULAS)->getNumberFormat()->setFormatCode('#,##0.00');
 
         $sheet->freezePane('A2');
 

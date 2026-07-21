@@ -135,7 +135,9 @@ class ProductoRopaBulkTemplatePlantillaSheet implements FromArray, WithHeadings,
         ]);
 
         $sheet->getStyle('D2:D20')->getNumberFormat()->setFormatCode('#,##0');
-        $sheet->getStyle('H2:M20')->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle('H2:K20')->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle('M2:M20')->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle('L2:L' . self::ULTIMA_FILA_FORMULAS)->getNumberFormat()->setFormatCode('#,##0.00');
 
         $sheet->freezePane('A2');
 
