@@ -155,7 +155,7 @@ function quitarAcentos(texto) {
 /**
  * Replica el LIKE '%palabra1%palabra2%' que hacia el servidor: todas las
  * palabras de la busqueda deben aparecer en el nombre (o coincidir con el
- * codigo / un codigo alterno).
+ * codigo / un codigo alterno / el codigo de alguna variante).
  */
 function coincideProducto(producto, palabras) {
     if (palabras.length === 0) return true;
@@ -163,11 +163,16 @@ function coincideProducto(producto, palabras) {
     const nombre = quitarAcentos(producto.descripcion_larga);
     const codigo = quitarAcentos(String(producto.id_producto));
     const alternos = (producto.alternate_codes || []).map(quitarAcentos);
+    const codigosVariante = (producto.variantes || [])
+        .map((v) => v.codigo)
+        .filter(Boolean)
+        .map((c) => quitarAcentos(String(c)));
 
     return palabras.every((palabra) => (
         nombre.includes(palabra)
         || codigo.includes(palabra)
         || alternos.some((c) => c.includes(palabra))
+        || codigosVariante.some((c) => c.includes(palabra))
     ));
 }
 
@@ -219,16 +224,29 @@ function buscarLocal(query, filtroTipo) {
 
 /**
  * Soporte de lector de codigo de barras: coincidencia exacta de
- * id_producto o de un codigo alterno.
+ * id_producto, de un codigo alterno, o del codigo de una variante puntual
+ * (talla/color) -- en ese caso se marca "_varianteId" en el resultado para
+ * que quien llame agregue esa variante directo, sin volver a preguntar
+ * color/talla (ver abrirSelectorVariante en pos-productos.blade.php).
  */
 function buscarCoincidenciaExacta(codigo) {
     const valor = String(codigo).trim();
     if (!valor) return null;
 
-    return catalogoEnMemoria.find((p) => (
+    const porProductoOAlterno = catalogoEnMemoria.find((p) => (
         String(p.id_producto) === valor
         || (p.alternate_codes || []).some((c) => String(c) === valor)
-    )) || null;
+    ));
+    if (porProductoOAlterno) return porProductoOAlterno;
+
+    for (const producto of catalogoEnMemoria) {
+        const variante = (producto.variantes || []).find((v) => v.codigo && String(v.codigo) === valor);
+        if (variante) {
+            return { ...producto, _varianteId: variante.id };
+        }
+    }
+
+    return null;
 }
 
 function getCatalogo() {

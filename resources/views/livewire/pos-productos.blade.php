@@ -294,10 +294,18 @@
                         return;
                     }
 
-                    // Viene de escanear/escribir un codigo exacto: si el
-                    // producto tiene variantes no hay forma de saber cual
-                    // por el codigo solo, se pregunta con el selector.
+                    // Viene de escanear/escribir un codigo exacto. Si ese
+                    // codigo era el de UNA variante puntual (ver
+                    // buscarCoincidenciaExacta), ya se sabe cual es, se
+                    // agrega directo. Si es el codigo del producto y tiene
+                    // variantes, no hay forma de saber cual por el codigo
+                    // solo, se pregunta con el selector.
                     const producto = Catalogo.buscarCoincidenciaExacta(idProducto);
+
+                    if (producto && producto._varianteId) {
+                        ejecutarAgregar(producto.id_producto, producto._varianteId);
+                        return;
+                    }
 
                     if (producto && producto.tiene_variantes) {
                         abrirSelectorVariante(producto);
@@ -334,7 +342,7 @@
 
                         const exacto = Catalogo.buscarCoincidenciaExacta(valor);
                         if (exacto) {
-                            agregarAlCarrito(exacto.id_producto);
+                            agregarAlCarrito(exacto.id_producto, exacto._varianteId || null);
                             inputBusqueda.value = '';
                             renderizar();
                             return;
