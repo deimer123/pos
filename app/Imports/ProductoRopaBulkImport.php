@@ -64,7 +64,7 @@ class ProductoRopaBulkImport implements ToCollection, WithHeadingRow, WithMultip
             $row = collect($rawRow)->mapWithKeys(fn ($value, $key) => [strtolower(trim((string) $key)) => $value]);
 
             // Fila sin tocar: se decide SOLO por las columnas que uno
-            // realmente escribe (Nombre/Talla/Color/Cantidad), no por todas.
+            // realmente escribe (Nombre/Talla/Color), no por todas.
             // Precio de Venta trae formula en las 500 filas de la plantilla
             // (ver ProductoRopaBulkTemplatePlantillaSheet), asi que esa
             // celda nunca esta "vacia" de verdad -- si se revisaran todas
@@ -74,9 +74,8 @@ class ProductoRopaBulkImport implements ToCollection, WithHeadingRow, WithMultip
             $nombreRaw = trim((string) ($row['nombre_del_producto'] ?? ''));
             $tallaRaw = trim((string) ($row['talla'] ?? ''));
             $colorRaw = trim((string) ($row['color'] ?? ''));
-            $cantidadRaw = trim((string) ($row['cantidad'] ?? ''));
 
-            if ($nombreRaw === '' && $tallaRaw === '' && $colorRaw === '' && $cantidadRaw === '') {
+            if ($nombreRaw === '' && $tallaRaw === '' && $colorRaw === '') {
                 continue;
             }
 
@@ -96,12 +95,6 @@ class ProductoRopaBulkImport implements ToCollection, WithHeadingRow, WithMultip
 
             if ($talla === '' && $color === '') {
                 $this->errores[] = "Fila {$numeroFila} ({$nombre}): falta Talla o Color (al menos uno de los dos).";
-                continue;
-            }
-
-            $cantidad = $this->numero($row['cantidad'] ?? null) ?? 0;
-            if ($cantidad < 0) {
-                $this->errores[] = "Fila {$numeroFila} ({$nombre}): la Cantidad no puede ser negativa.";
                 continue;
             }
 
@@ -172,7 +165,6 @@ class ProductoRopaBulkImport implements ToCollection, WithHeadingRow, WithMultip
             $grupos[$clave]['variantes'][] = [
                 'talla' => $talla,
                 'color' => $color,
-                'cantidad' => $cantidad,
             ];
         }
 
@@ -232,13 +224,16 @@ class ProductoRopaBulkImport implements ToCollection, WithHeadingRow, WithMultip
                         ' -'
                     );
 
+                    // Stock siempre en 0: el cargue de productos no ingresa
+                    // existencias, eso se hace despues por la plantilla de
+                    // Compras (que reconoce Talla/Color de la variante).
                     ProductoVariante::create([
                         'empresa_id' => $this->empresaId,
                         'product_id' => $producto->id,
                         'nombre' => $nombreVariante,
                         'atributos' => ['talla' => $v['talla'], 'color' => $v['color']],
                         'precio_extra' => 0,
-                        'stock' => $v['cantidad'],
+                        'stock' => 0,
                         'activo' => true,
                     ]);
 

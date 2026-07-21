@@ -20,6 +20,11 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 // App\Imports\ProductoRopaBulkImport). Costo/Descuento/IVA/Utilidad solo se
 // llenan en la PRIMERA fila de cada producto -- las filas siguientes (otra
 // talla/color del mismo producto) los dejan en blanco a proposito.
+//
+// Esta plantilla NO trae cantidad/stock: las variantes se crean siempre en
+// 0 y el stock inicial se ingresa despues por la plantilla de Compras (que
+// ya reconoce Talla/Color para sumarle a la variante existente, ver
+// App\Imports\CompraBulkImport).
 class ProductoRopaBulkTemplatePlantillaSheet implements FromArray, WithHeadings, WithTitle, WithColumnWidths, WithStyles, WithEvents
 {
     private const ULTIMA_FILA_FORMULAS = 500;
@@ -35,7 +40,6 @@ class ProductoRopaBulkTemplatePlantillaSheet implements FromArray, WithHeadings,
             'Nombre del producto',
             'Talla',
             'Color',
-            'Cantidad',
             'Proveedor',
             'Departamento',
             'Subfamilia',
@@ -55,7 +59,6 @@ class ProductoRopaBulkTemplatePlantillaSheet implements FromArray, WithHeadings,
                 'Ejemplo: Camisa Polo',
                 'M',
                 'Azul',
-                5,
                 'Distribuidora ABC',
                 'Ropa',
                 'Camisas',
@@ -70,7 +73,6 @@ class ProductoRopaBulkTemplatePlantillaSheet implements FromArray, WithHeadings,
                 'Ejemplo: Camisa Polo',
                 'L',
                 'Azul',
-                3,
                 '',
                 '',
                 '',
@@ -90,16 +92,15 @@ class ProductoRopaBulkTemplatePlantillaSheet implements FromArray, WithHeadings,
             'A' => 32,
             'B' => 10,
             'C' => 14,
-            'D' => 12,
-            'E' => 22,
+            'D' => 22,
+            'E' => 18,
             'F' => 18,
-            'G' => 18,
-            'H' => 13,
-            'I' => 16,
+            'G' => 13,
+            'H' => 16,
+            'I' => 12,
             'J' => 12,
             'K' => 12,
-            'L' => 12,
-            'M' => 14,
+            'L' => 14,
         ];
     }
 
@@ -107,7 +108,7 @@ class ProductoRopaBulkTemplatePlantillaSheet implements FromArray, WithHeadings,
     {
         $sheet->getRowDimension(1)->setRowHeight(30);
 
-        $sheet->getStyle('A1:M1')->applyFromArray([
+        $sheet->getStyle('A1:L1')->applyFromArray([
             'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => 'FFFFFF']],
             'fill' => [
                 'fillType' => Fill::FILL_SOLID,
@@ -120,12 +121,12 @@ class ProductoRopaBulkTemplatePlantillaSheet implements FromArray, WithHeadings,
             ],
         ]);
 
-        $sheet->getStyle('A2:M3')->applyFromArray([
+        $sheet->getStyle('A2:L3')->applyFromArray([
             'font' => ['italic' => true, 'color' => ['rgb' => '6B7280']],
             'alignment' => ['vertical' => Alignment::VERTICAL_CENTER],
         ]);
 
-        $sheet->getStyle('A1:M20')->applyFromArray([
+        $sheet->getStyle('A1:L20')->applyFromArray([
             'borders' => [
                 'allBorders' => [
                     'borderStyle' => Border::BORDER_THIN,
@@ -134,10 +135,9 @@ class ProductoRopaBulkTemplatePlantillaSheet implements FromArray, WithHeadings,
             ],
         ]);
 
-        $sheet->getStyle('D2:D20')->getNumberFormat()->setFormatCode('#,##0');
-        $sheet->getStyle('H2:K20')->getNumberFormat()->setFormatCode('#,##0');
-        $sheet->getStyle('M2:M20')->getNumberFormat()->setFormatCode('#,##0');
-        $sheet->getStyle('L2:L' . self::ULTIMA_FILA_FORMULAS)->getNumberFormat()->setFormatCode('#,##0.00');
+        $sheet->getStyle('G2:J20')->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle('L2:L20')->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle('K2:K' . self::ULTIMA_FILA_FORMULAS)->getNumberFormat()->setFormatCode('#,##0.00');
 
         $sheet->freezePane('A2');
 
@@ -161,17 +161,17 @@ class ProductoRopaBulkTemplatePlantillaSheet implements FromArray, WithHeadings,
 
                 $ultimaFila = self::ULTIMA_FILA_FORMULAS;
 
-                // Precio de Venta (M) se calcula solo a partir de Precio
-                // Costo (H), Descuento Comercial (I), IVA Venta (K) y
-                // Utilidad (L) -- misma formula que usa
+                // Precio de Venta (L) se calcula solo a partir de Precio
+                // Costo (G), Descuento Comercial (H), IVA Venta (J) y
+                // Utilidad (K) -- misma formula que usa
                 // ProductoRopaBulkImport::confirmar() como respaldo. Se deja
                 // en blanco si falta el nombre del producto, el costo o la
                 // utilidad (las filas de continuacion de un mismo producto,
                 // con otra talla/color, dejan esas celdas vacias a proposito).
                 for ($fila = 3; $fila <= $ultimaFila; $fila++) {
                     $sheet->setCellValue(
-                        'M' . $fila,
-                        "=IF(\$A{$fila}=\"\",\"\",IF(OR(H{$fila}=\"\",L{$fila}=\"\"),\"\",MROUND(H{$fila}*(1-I{$fila}/100)*(1+K{$fila}/100)/(1-L{$fila}/100),100)))"
+                        'L' . $fila,
+                        "=IF(\$A{$fila}=\"\",\"\",IF(OR(G{$fila}=\"\",K{$fila}=\"\"),\"\",MROUND(G{$fila}*(1-H{$fila}/100)*(1+J{$fila}/100)/(1-K{$fila}/100),100)))"
                     );
                 }
             },
