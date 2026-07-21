@@ -114,19 +114,16 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
             $esNuevo = $productoExistente === null;
 
             // Columnas opcionales "Talla"/"Color" (solo en la plantilla de
-            // empresas ropa_calzado): solo tienen sentido si el producto YA
-            // existe. Si esa talla/color todavia no tiene variante creada,
-            // se crea sola en confirmar() -- no hace falta darla de alta
-            // antes desde Productos. No se busca/crea aqui todavia (esto es
-            // el pase de solo lectura): se guarda talla/color en $pendientes
-            // y resolveVariante() la resuelve en el pase 2.
+            // empresas ropa_calzado): tanto si el producto ya existe como si
+            // es nuevo, si esa talla/color todavia no tiene variante creada,
+            // se crea sola en confirmar() -- el producto nuevo tambien se
+            // crea ahi (resolveProducto), asi que la variante siempre tiene
+            // un producto ya guardado al resolverse. No se busca/crea aqui
+            // todavia (esto es el pase de solo lectura): se guarda
+            // talla/color en $pendientes y resolveVariante() la resuelve en
+            // el pase 2.
             $varianteTalla = trim((string) ($row['talla'] ?? ''));
             $varianteColor = trim((string) ($row['color'] ?? ''));
-
-            if (($varianteTalla !== '' || $varianteColor !== '') && $esNuevo) {
-                $this->errores[] = "Fila {$numeroFila} ({$nombre}): trae Talla/Color pero el producto es nuevo (los productos nuevos con variantes se cargan desde Productos, no aqui).";
-                continue;
-            }
 
             // Costo Unitario se autollena en Excel con una formula VLOOKUP
             // contra la hoja 'Productos existentes'. A veces esa formula no
