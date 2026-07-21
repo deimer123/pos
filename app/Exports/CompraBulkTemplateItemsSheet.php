@@ -9,6 +9,7 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Cell\DataValidation;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
@@ -30,10 +31,23 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
         return 'Items';
     }
 
-    public function headings(): array
+    /**
+     * Orden logico de columnas. Talla/Color van entre Producto y Cantidad
+     * (para empresas con variantes) porque hay que saber la variante ANTES
+     * de la cantidad, no al final -- el importador (CompraBulkImport) lee
+     * por nombre de encabezado, no por posicion, asi que el orden aqui es
+     * libre.
+     */
+    private function columnas(): array
     {
-        $columnas = [
-            'Producto',
+        $columnas = ['Producto'];
+
+        if ($this->conVariantes) {
+            $columnas[] = 'Talla';
+            $columnas[] = 'Color';
+        }
+
+        return array_merge($columnas, [
             'Cantidad',
             'Costo Unitario',
             'Descuento Comercial',
@@ -43,71 +57,72 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
             'Departamento',
             'Subfamilia',
             'Unidad de Medida',
-        ];
+        ]);
+    }
 
-        if ($this->conVariantes) {
-            $columnas[] = 'Talla';
-            $columnas[] = 'Color';
-        }
+    private function letra(string $nombreColumna): string
+    {
+        $indice = array_search($nombreColumna, $this->columnas(), true);
 
-        return $columnas;
+        return Coordinate::stringFromColumnIndex($indice + 1);
+    }
+
+    public function headings(): array
+    {
+        return $this->columnas();
     }
 
     public function array(): array
     {
-        $fila = [
-            'Ejemplo: Aceite 20W50 x Galon',
-            10,
-            25000,
-            0,
-            19,
-            30,
-            '',
-            'Lubricantes',
-            'Aceites',
-            'Pieza',
+        $valores = [
+            'Producto' => 'Ejemplo: Aceite 20W50 x Galon',
+            'Talla' => '',
+            'Color' => '',
+            'Cantidad' => 10,
+            'Costo Unitario' => 25000,
+            'Descuento Comercial' => 0,
+            'IVA' => 19,
+            'Utilidad' => 30,
+            'Precio de Venta' => '',
+            'Departamento' => 'Lubricantes',
+            'Subfamilia' => 'Aceites',
+            'Unidad de Medida' => 'Pieza',
         ];
 
-        if ($this->conVariantes) {
-            $fila[] = '';
-            $fila[] = '';
-        }
-
-        return [$fila];
+        return [array_map(fn ($columna) => $valores[$columna], $this->columnas())];
     }
 
     public function columnWidths(): array
     {
         $anchos = [
-            'A' => 34,
-            'B' => 12,
-            'C' => 15,
-            'D' => 18,
-            'E' => 10,
-            'F' => 12,
-            'G' => 15,
-            'H' => 20,
-            'I' => 20,
-            'J' => 16,
+            'Producto' => 34,
+            'Talla' => 10,
+            'Color' => 14,
+            'Cantidad' => 12,
+            'Costo Unitario' => 15,
+            'Descuento Comercial' => 18,
+            'IVA' => 10,
+            'Utilidad' => 12,
+            'Precio de Venta' => 15,
+            'Departamento' => 20,
+            'Subfamilia' => 20,
+            'Unidad de Medida' => 16,
         ];
 
-        if ($this->conVariantes) {
-            $anchos['K'] = 10;
-            $anchos['L'] = 14;
+        $resultado = [];
+
+        foreach ($this->columnas() as $nombre) {
+            $resultado[$this->letra($nombre)] = $anchos[$nombre];
         }
 
-        return $anchos;
+        return $resultado;
     }
 
     public function styles(Worksheet $sheet)
     {
         $sheet->getRowDimension(1)->setRowHeight(30);
 
-        // Columnas K/L (Talla/Color) son aparte a proposito: ninguna de las
-        // formulas de autollenado/validacion de abajo las toca, solo se
-        // extiende el estilo visual (encabezado/bordes) hasta ahi cuando
-        // aplica, para no arriesgar las formulas existentes en A:J.
-        $ultimaColumna = $this->conVariantes ? 'L' : 'J';
+        $ultimaColumna = $this->letra('Unidad de Medida');
 
         $sheet->getStyle("A1:{$ultimaColumna}1")->applyFromArray([
             'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => 'FFFFFF']],
@@ -136,9 +151,9 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
             ],
         ]);
 
-        $sheet->getStyle('B2:E20')->getNumberFormat()->setFormatCode('#,##0');
-        $sheet->getStyle('F2:F500')->getNumberFormat()->setFormatCode('#,##0.00');
-        $sheet->getStyle('G2:G20')->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle($this->letra('Cantidad') . '2:' . $this->letra('IVA') . '20')->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle($this->letra('Utilidad') . '2:' . $this->letra('Utilidad') . '500')->getNumberFormat()->setFormatCode('#,##0.00');
+        $sheet->getStyle($this->letra('Precio de Venta') . '2:' . $this->letra('Precio de Venta') . '20')->getNumberFormat()->setFormatCode('#,##0');
 
         $sheet->freezePane('A2');
 
@@ -164,6 +179,12 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
                 }
 
                 $ultimaFila = self::ULTIMA_FILA_FORMULAS;
+
+                $colCosto = $this->letra('Costo Unitario');
+                $colDescuento = $this->letra('Descuento Comercial');
+                $colIva = $this->letra('IVA');
+                $colUtilidad = $this->letra('Utilidad');
+                $colPrecioVenta = $this->letra('Precio de Venta');
 
                 // Rango real de 'Productos existentes' (encabezado + una
                 // fila por producto), en vez de columnas enteras ($A:$I).
@@ -217,21 +238,21 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
                 // no aportaba nada -- solo daba pie a que Excel se comportara
                 // raro al escribir encima y cambiar de celda.
                 //
-                // Utilidad (F) sigue SIN formula a proposito: es una
-                // decision de precio de esta compra, no algo que deba
-                // copiarse ciego del historico. Precio de Venta (G) se
-                // calcula a partir de Costo con Descuento Comercial (D)
-                // aplicado primero, despues IVA, despues Utilidad (no se
-                // copia el precio de venta anterior del producto), redondeado
-                // a la centena, para que siempre quede consistente con lo que
-                // el usuario haya puesto en C/D/E/F. Misma formula que usa
+                // Utilidad sigue SIN formula a proposito: es una decision de
+                // precio de esta compra, no algo que deba copiarse ciego del
+                // historico. Precio de Venta se calcula a partir de Costo con
+                // Descuento Comercial aplicado primero, despues IVA, despues
+                // Utilidad (no se copia el precio de venta anterior del
+                // producto), redondeado a la centena, para que siempre quede
+                // consistente con lo que el usuario haya puesto en
+                // Costo/Descuento/IVA/Utilidad. Misma formula que usa
                 // CompraBulkImport::validar() como respaldo (costoConDesc =
                 // costo*(1-desc/100), costoConIva = costoConDesc*(1+iva/100),
                 // pv = costoConIva/(1-utilidad/100)).
                 for ($fila = 3; $fila <= $ultimaFila; $fila++) {
                     foreach ([
-                        'C' => 2, // Costo Unitario
-                        'E' => 4, // IVA
+                        $colCosto => 2, // Costo Unitario
+                        $colIva => 4, // IVA
                     ] as $columna => $indiceProductosExistentes) {
                         // Coincidencia EXACTA (sin comodines "*"): la
                         // libreria que calcula formulas al importar
@@ -249,8 +270,8 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
                     }
 
                     $sheet->setCellValue(
-                        'G' . $fila,
-                        "=IF(\$A{$fila}=\"\",\"\",IF(F{$fila}=\"\",\"\",MROUND(C{$fila}*(1-D{$fila}/100)*(1+E{$fila}/100)/(1-F{$fila}/100),100)))"
+                        $colPrecioVenta . $fila,
+                        "=IF(\$A{$fila}=\"\",\"\",IF({$colUtilidad}{$fila}=\"\",\"\",MROUND({$colCosto}{$fila}*(1-{$colDescuento}{$fila}/100)*(1+{$colIva}{$fila}/100)/(1-{$colUtilidad}{$fila}/100),100)))"
                     );
                 }
             },
