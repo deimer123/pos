@@ -188,77 +188,45 @@
                     return '$' + Math.round(Number(valor) || 0).toLocaleString('es-CO');
                 }
 
-                // Selector unico de variante: agrupa las tallas por color
-                // (chips en fila, como en las tarjetas del catalogo publico)
-                // en vez de dos pasos separados (primero color, despues
-                // talla). Cada chip muestra el PRECIO de esa talla (puede
-                // variar por variante, ver Costo/Precio de Venta en el
-                // formulario de Productos), no el stock -- el stock solo
-                // decide si el chip queda deshabilitado.
-                function abrirSelectorVariante(producto) {
-                    if (!window.Swal) {
-                        ejecutarAgregar(producto.id_producto, null);
-                        return;
-                    }
+                function formatoStockVariante(stock) {
+                    return Number(stock) > 0 ? Number(stock).toLocaleString('es-CO') + ' und' : 'Sin stock';
+                }
 
-                    const variantes = producto.variantes || [];
-                    const permiteStockNegativo = !!(window.posEmpresaContexto && window.posEmpresaContexto.permite_stock_negativo);
-                    const hayColor = variantes.some((v) => (v.atributos && v.atributos.color));
-
-                    const grupos = new Map();
-                    variantes.forEach((variante) => {
-                        const color = (variante.atributos && variante.atributos.color) || '';
-                        if (! grupos.has(color)) grupos.set(color, []);
-                        grupos.get(color).push(variante);
-                    });
-
+                // Lista generica de opciones en un modal SweetAlert2 (usada
+                // tanto para el nivel de talla como el de color, ver abajo).
+                // Cada opcion trae su propio "valorTexto" ya formateado
+                // (stock a nivel talla, precio a nivel color).
+                function mostrarListaVariantes(titulo, opciones) {
                     const contenedor = document.createElement('div');
-                    contenedor.style.cssText = 'display:flex;flex-direction:column;gap:14px;max-height:55vh;overflow-y:auto;text-align:left;';
+                    contenedor.style.cssText = 'display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto;text-align:left;';
 
-                    grupos.forEach((variantesColor, color) => {
-                        const bloque = document.createElement('div');
+                    const permiteStockNegativo = !!(window.posEmpresaContexto && window.posEmpresaContexto.permite_stock_negativo);
 
-                        if (color) {
-                            const etiquetaColor = document.createElement('div');
-                            etiquetaColor.style.cssText = 'font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px;';
-                            etiquetaColor.textContent = color;
-                            bloque.appendChild(etiquetaColor);
-                        }
+                    opciones.forEach((opcion) => {
+                        const sinStock = !permiteStockNegativo && Number(opcion.stock) <= 0;
 
-                        const fila = document.createElement('div');
-                        fila.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;';
+                        const boton = document.createElement('button');
+                        boton.type = 'button';
+                        boton.disabled = sinStock;
+                        boton.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;border:1px solid #93c5fd;background:' + (sinStock ? '#f1f5f9' : '#ffffff') + ';cursor:' + (sinStock ? 'not-allowed' : 'pointer') + ';font-size:14px;color:' + (sinStock ? '#94a3b8' : '#1e293b') + ';';
 
-                        variantesColor.forEach((variante) => {
-                            const sinStock = !permiteStockNegativo && Number(variante.stock) <= 0;
-                            const precio = Number(producto.precio_venta1 || 0) + Number(variante.precio_extra || 0);
-                            const talla = (variante.atributos && variante.atributos.talla) || variante.nombre;
+                        const nombre = document.createElement('span');
+                        nombre.style.fontWeight = '700';
+                        nombre.textContent = opcion.etiqueta;
 
-                            const chip = document.createElement('button');
-                            chip.type = 'button';
-                            chip.disabled = sinStock;
-                            chip.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:2px;min-width:66px;padding:8px 12px;border-radius:14px;border:1px solid #93c5fd;background:' + (sinStock ? '#f1f5f9' : '#eef2ff') + ';cursor:' + (sinStock ? 'not-allowed' : 'pointer') + ';';
+                        const valor = document.createElement('span');
+                        valor.style.cssText = 'font-size:13px;font-weight:700;color:' + (sinStock ? '#94a3b8' : '#4338ca') + ';';
+                        valor.textContent = opcion.valorTexto;
 
-                            const tallaSpan = document.createElement('span');
-                            tallaSpan.style.cssText = 'font-size:14px;font-weight:800;color:' + (sinStock ? '#94a3b8' : '#3730a3') + ';';
-                            tallaSpan.textContent = String(talla).toUpperCase();
+                        boton.appendChild(nombre);
+                        boton.appendChild(valor);
 
-                            const precioSpan = document.createElement('span');
-                            precioSpan.style.cssText = 'font-size:11px;font-weight:700;color:' + (sinStock ? '#94a3b8' : '#4338ca') + ';';
-                            precioSpan.textContent = formatoPrecioVariante(precio);
-
-                            chip.appendChild(tallaSpan);
-                            chip.appendChild(precioSpan);
-
-                            chip.addEventListener('click', () => {
-                                window.Swal.close();
-                                ejecutarAgregar(producto.id_producto, variante.id);
-                            });
-
-                            fila.appendChild(chip);
+                        boton.addEventListener('click', () => {
+                            window.Swal.close();
+                            opcion.onElegir();
                         });
 
-                        bloque.appendChild(fila);
-                        contenedor.appendChild(bloque);
+                        contenedor.appendChild(boton);
                     });
 
                     // Mismo lenguaje visual del modal "Movimiento de caja"
@@ -266,12 +234,12 @@
                     // clarito, boton en pastilla) -- clases definidas en
                     // pos-pro.css (.pos-selector-variante-*).
                     window.Swal.fire({
-                        title: hayColor ? 'Elige talla y color' : 'Elige la talla',
+                        title: titulo,
                         html: contenedor,
                         showConfirmButton: false,
                         showCancelButton: true,
                         cancelButtonText: 'Cancelar',
-                        width: 460,
+                        width: 420,
                         customClass: {
                             popup: 'pos-selector-variante-popup',
                             title: 'pos-selector-variante-titulo',
@@ -280,6 +248,67 @@
                             cancelButton: 'pos-selector-variante-cancelar',
                         },
                     });
+                }
+
+                // Nivel 2: color dentro de una talla ya elegida (o de todas
+                // las variantes, si el producto no diferencia por talla).
+                // Se muestra el PRECIO de esa talla/color (puede variar por
+                // variante, ver Costo/Precio de Venta en Productos), no el
+                // stock -- el stock solo decide si la opcion esta
+                // deshabilitada.
+                function mostrarNivelColor(producto, variantes, tallaElegida) {
+                    const opciones = variantes.map((variante) => ({
+                        etiqueta: (variante.atributos && variante.atributos.color) || variante.nombre,
+                        stock: variante.stock,
+                        valorTexto: formatoPrecioVariante(Number(producto.precio_venta1 || 0) + Number(variante.precio_extra || 0)),
+                        onElegir: () => ejecutarAgregar(producto.id_producto, variante.id),
+                    }));
+
+                    mostrarListaVariantes(tallaElegida ? `Color — Talla ${tallaElegida}` : 'Elige el color', opciones);
+                }
+
+                // Producto con variantes (talla/color): primero se pregunta
+                // la talla (con el stock sumado de todos los colores de esa
+                // talla) y despues el color dentro de esa talla, mostrando
+                // el precio -- si el producto no tiene talla como
+                // diferenciador real (todas las variantes comparten talla o
+                // no la usan), se salta directo a color.
+                function abrirSelectorVariante(producto) {
+                    if (!window.Swal) {
+                        ejecutarAgregar(producto.id_producto, null);
+                        return;
+                    }
+
+                    const variantes = producto.variantes || [];
+                    const tallas = [...new Set(
+                        variantes
+                            .map((v) => (v.atributos && v.atributos.talla) || '')
+                            .filter((talla) => talla !== '')
+                    )];
+
+                    if (tallas.length <= 1) {
+                        mostrarNivelColor(producto, variantes);
+                        return;
+                    }
+
+                    const opciones = tallas.map((talla) => {
+                        const variantesTalla = variantes.filter((v) => (v.atributos && v.atributos.talla) === talla);
+                        const stockTotal = variantesTalla.reduce((acc, v) => acc + (Number(v.stock) || 0), 0);
+
+                        return {
+                            etiqueta: talla,
+                            stock: stockTotal,
+                            valorTexto: formatoStockVariante(stockTotal),
+                            // Siempre se muestra el nivel de color despues
+                            // de elegir talla, aunque esa talla solo tenga
+                            // un color -- asi el cajero ve/confirma el
+                            // color antes de agregar, en vez de que se
+                            // agregue solo.
+                            onElegir: () => mostrarNivelColor(producto, variantesTalla, talla),
+                        };
+                    });
+
+                    mostrarListaVariantes('Elige la talla', opciones);
                 }
 
                 function agregarAlCarrito(idProducto, varianteId) {
