@@ -31,6 +31,15 @@ class CarritoVenta extends Component
     public bool $usaDomicilios = false;
     public bool $esMesero = false;
     public bool $esMesaDomicilio = false;
+
+    // Comision de vendedor: algunos vendedores no tienen acceso al POS,
+    // asi que el cajero les asigna la venta manualmente al facturar (ver
+    // FacturarVentaService::datosServicioFactura, que usa este id para
+    // calcular la comision en vez del cajero logueado).
+    public bool $usaComisionVendedor = false;
+    public ?int $vendedorAsignadoId = null;
+    public ?string $vendedorAsignadoNombre = null;
+    public bool $mostrarModalVendedor = false;
     public string $ordenEstadoActual = 'abierta'; // 'abierta' | 'en_preparacion'
     public string $ordenTipoPedido   = 'mesa';    // 'mesa' | 'domicilio' | 'para_llevar'
     public float  $ordenCostoEmpaque = 0;
@@ -454,6 +463,7 @@ private function limpiarUtf8Array(array $datos): array
     $this->usaDomicilios = (bool)($config?->usa_domicilios ?? false);
     $user = auth()->user();
     $this->esMesero = $user->hasRole('mesero') && !$user->hasAnyRole(['cajero', 'admin_empresa']);
+    $this->usaComisionVendedor = ConfiguracionEmpresa::rolColaboradorParaTipo((string) ($config?->tipo_negocio ?? '')) === \App\Models\Mecanico::ROL_VENDEDOR;
 
     // Detectar si la mesa actual es una mesa virtual de domicilios (código DOMV)
     if ($this->mesaId) {
@@ -1247,6 +1257,8 @@ public function limpiarCarrito()
     $this->carrito = [];
     $this->totalGeneral = 0;
     $this->vendedorPrefacturaId = null;
+    $this->vendedorAsignadoId = null;
+    $this->vendedorAsignadoNombre = null;
     $this->prefacturaCargadaId = null;
 
     $this->reset([
@@ -1549,6 +1561,8 @@ public function guardarPrefacturaConfirmada()
             $this->totalGeneral = 0;
             $this->prefacturaCargadaId = null;
             $this->vendedorPrefacturaId = null;
+            $this->vendedorAsignadoId = null;
+            $this->vendedorAsignadoNombre = null;
             $this->observacionKey++;
             session()->forget('carrito_guardado');
             session()->forget('observaciones_guardadas');
@@ -2315,6 +2329,8 @@ $this->dispatch('guardar-carrito-en-cache', $this->carrito); // âœ… GUARDAR 
         $this->observacionesPrefactura = '';
         $this->prefacturaCargadaId     = null;
         $this->vendedorPrefacturaId    = null;
+        $this->vendedorAsignadoId      = null;
+        $this->vendedorAsignadoNombre  = null;
     }
 
     private function eliminarPrefacturaCargada(): void
@@ -2451,7 +2467,11 @@ public function facturarConfirmada(array $data = [])
 
         $tipoPago = $data['tipo_pago'] ?? 'contado';
 
-        $vendedorId = auth()->id();
+        // El cajero que factura puede no ser el vendedor que se lleva la
+        // comision (algunos vendedores no tienen acceso al POS) -- si
+        // asigno uno manualmente, ese manda; si no, se usa el vendedor de
+        // la prefactura cargada; si tampoco, el propio cajero logueado.
+        $vendedorId = $this->vendedorAsignadoId ?? auth()->id();
         if ($this->prefacturaCargadaId) {
             $prefactura = Prefactura::find($this->prefacturaCargadaId);
             $vendedorId = $prefactura?->vendedor_id ?? $vendedorId;
@@ -2516,6 +2536,8 @@ public function facturarConfirmada(array $data = [])
         $this->dispatch('limpiar-observaciones');
         $this->forzarConsumidorFinal();
         $this->vendedorPrefacturaId = null;
+        $this->vendedorAsignadoId = null;
+        $this->vendedorAsignadoNombre = null;
         session()->forget('carrito_guardado');
         session()->forget('observaciones_guardadas');
         $this->olvidarCarritoPersistente();
@@ -2805,7 +2827,11 @@ public function facturarEImprimir(array $data = [])
     try {
         $tipoPago = $data['tipo_pago'] ?? 'contado';
 
-        $vendedorId = auth()->id();
+        // El cajero que factura puede no ser el vendedor que se lleva la
+        // comision (algunos vendedores no tienen acceso al POS) -- si
+        // asigno uno manualmente, ese manda; si no, se usa el vendedor de
+        // la prefactura cargada; si tampoco, el propio cajero logueado.
+        $vendedorId = $this->vendedorAsignadoId ?? auth()->id();
         if ($this->prefacturaCargadaId) {
             $prefactura = Prefactura::find($this->prefacturaCargadaId);
             $vendedorId = $prefactura?->vendedor_id ?? $vendedorId;
@@ -2870,6 +2896,8 @@ public function facturarEImprimir(array $data = [])
         $this->dispatch('limpiar-observaciones');
         $this->forzarConsumidorFinal();
         $this->vendedorPrefacturaId = null;
+        $this->vendedorAsignadoId = null;
+        $this->vendedorAsignadoNombre = null;
         session()->forget('carrito_guardado');
         session()->forget('observaciones_guardadas');
         $this->olvidarCarritoPersistente();
@@ -4113,6 +4141,56 @@ public function registrarMovimientoCaja(): void
     $this->mostrarModalMovimientoCaja = false;
     $this->resumenCaja = $this->calcularResumenCaja();
     $this->dispatch('success', 'Movimiento de caja registrado.');
+}
+
+// ── Asignar vendedor (comision) ──────────────────────────────────────────
+// Para negocios que usan comision de vendedor (tienda/ropa/carniceria):
+// algunos vendedores no tienen acceso al POS, asi que el cajero que SI
+// factura le asigna la venta manualmente. Sin esto, la comision se le
+// atribuiria por defecto al cajero logueado (ver
+// FacturarVentaService::facturar(), que usa vendedor_id de la factura).
+public function abrirSelectorVendedor(): void
+{
+    if (! $this->usaComisionVendedor) {
+        return;
+    }
+
+    $this->mostrarModalVendedor = true;
+}
+
+public function getVendedoresDisponiblesProperty()
+{
+    if (! $this->usaComisionVendedor) {
+        return collect();
+    }
+
+    return \App\Models\Mecanico::where('empresa_id', $this->getEmpresaId())
+        ->porRol(\App\Models\Mecanico::ROL_VENDEDOR)
+        ->where('activo', true)
+        ->orderBy('nombre')
+        ->get();
+}
+
+public function elegirVendedor(int $mecanicoId): void
+{
+    $mecanico = \App\Models\Mecanico::where('empresa_id', $this->getEmpresaId())
+        ->porRol(\App\Models\Mecanico::ROL_VENDEDOR)
+        ->where('activo', true)
+        ->find($mecanicoId);
+
+    if ($mecanico && $mecanico->user_id) {
+        $this->vendedorAsignadoId = $mecanico->user_id;
+        $this->vendedorAsignadoNombre = $mecanico->nombre;
+    }
+
+    $this->mostrarModalVendedor = false;
+}
+
+public function quitarVendedorAsignado(): void
+{
+    $this->vendedorAsignadoId = null;
+    $this->vendedorAsignadoNombre = null;
+    $this->mostrarModalVendedor = false;
 }
 
 public function cargarCajaActual()
