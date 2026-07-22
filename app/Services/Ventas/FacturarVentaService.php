@@ -111,6 +111,27 @@ class FacturarVentaService
             $hotelReservaId = $opciones['hotel_reserva_id'] ?? null;
             $hotelAbonoMonto = (float) ($opciones['hotel_abono_monto'] ?? 0);
 
+            // Comision de vendedor (tienda/ropa/carniceria): se resuelve UNA
+            // sola vez antes del bucle, no por cada linea del carrito. Solo
+            // aplica si el tipo de negocio usa el rol "vendedor" y el
+            // vendedor de esta venta esta registrado como colaborador con
+            // % propio (ver Mecanico::ROL_VENDEDOR).
+            $colaboradorVendedor = null;
+            $vendedorId = $opciones['vendedor_id'] ?? null;
+
+            if ($vendedorId) {
+                $tipoNegocio = (string) (ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('tipo_negocio') ?? '');
+
+                if (ConfiguracionEmpresa::rolColaboradorParaTipo($tipoNegocio) === \App\Models\Mecanico::ROL_VENDEDOR) {
+                    $colaboradorVendedor = \App\Models\Mecanico::where('empresa_id', $empresaId)
+                        ->porRol(\App\Models\Mecanico::ROL_VENDEDOR)
+                        ->where('user_id', $vendedorId)
+                        ->where('activo', true)
+                        ->whereNotNull('porcentaje_comision')
+                        ->first();
+                }
+            }
+
             foreach ($carrito as $item) {
                 $precio = (float) ($item['nuevo_precio'] ?? $item['precio'] ?? 0);
                 $cant = $this->normalizarCantidad($item['cantidad'] ?? 1, $this->permiteCantidadDecimal($item));
@@ -123,7 +144,7 @@ class FacturarVentaService
                     ->lockForUpdate()
                     ->first();
 
-                $datosServicio = $this->datosServicioFactura($producto);
+                $datosServicio = $this->datosServicioFactura($producto, $colaboradorVendedor);
 
                 $this->crearDetalleFactura($factura, $item, (string) $idFacturable, $datosServicio, $precio, $cant, $sub, $hotelReservaId, $hotelAbonoMonto);
 
@@ -466,17 +487,30 @@ class FacturarVentaService
         ]);
     }
 
-    private function datosServicioFactura(?Product $producto): array
+    private function datosServicioFactura(?Product $producto, ?\App\Models\Mecanico $colaboradorVendedor = null): array
     {
-        if (! $producto || $producto->tipo_producto !== 'servicio' || ! $producto->tipo_servicio) {
-            return ['tipo_servicio' => null, 'porcentaje_empresa' => null, 'mecanico_id' => null];
+        if ($producto && $producto->tipo_producto === 'servicio' && $producto->tipo_servicio) {
+            return [
+                'tipo_servicio' => $producto->tipo_servicio,
+                'porcentaje_empresa' => (float) ($producto->porcentaje_empresa ?? 0),
+                'mecanico_id' => $producto->tipo_servicio === 'propio' ? $producto->mecanico_id : null,
+            ];
         }
 
-        return [
-            'tipo_servicio' => $producto->tipo_servicio,
-            'porcentaje_empresa' => (float) ($producto->porcentaje_empresa ?? 0),
-            'mecanico_id' => $producto->tipo_servicio === 'propio' ? $producto->mecanico_id : null,
-        ];
+        // Comision de vendedor sobre un producto normal (no-servicio): se
+        // reutiliza el mismo par tipo_servicio/porcentaje_empresa/
+        // mecanico_id que ya usan los servicios de taller, para que todo
+        // el motor de liquidacion (TallerPanel, ReporteServicios) funcione
+        // igual sin cambios.
+        if ($colaboradorVendedor && $producto && $producto->tipo_producto !== 'servicio') {
+            return [
+                'tipo_servicio' => 'propio',
+                'porcentaje_empresa' => round(100 - (float) $colaboradorVendedor->porcentaje_comision, 2),
+                'mecanico_id' => $colaboradorVendedor->id,
+            ];
+        }
+
+        return ['tipo_servicio' => null, 'porcentaje_empresa' => null, 'mecanico_id' => null];
     }
 
     private function finalizarPagoFactura(

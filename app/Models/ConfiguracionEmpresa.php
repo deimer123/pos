@@ -138,6 +138,30 @@ class ConfiguracionEmpresa extends Model
     return $this->logo ? Storage::disk('public')->url($this->logo) : null;
 }
 
+// Que "rol" de colaborador (ver Mecanico::ROL_*) le corresponde a cada
+// tipo de negocio, para el modulo generalizado de comisiones/propinas
+// (mismo motor de "mecanicos" reutilizado con otro nombre). null = ese
+// tipo de negocio todavia no tiene este modulo (ej. hotel).
+public static function rolColaboradorParaTipo(string $tipo): ?string
+{
+    return match ($tipo) {
+        'taller' => Mecanico::ROL_MECANICO,
+        'tienda', 'ropa_calzado', 'carniceria' => Mecanico::ROL_VENDEDOR,
+        'bar_restaurante' => Mecanico::ROL_MESERO,
+        default => null,
+    };
+}
+
+public static function etiquetaColaboradorParaTipo(string $tipo, bool $plural = false): string
+{
+    return match (static::rolColaboradorParaTipo($tipo)) {
+        Mecanico::ROL_MECANICO => $plural ? 'Mecánicos' : 'Mecánico',
+        Mecanico::ROL_VENDEDOR => $plural ? 'Vendedores' : 'Vendedor',
+        Mecanico::ROL_MESERO => $plural ? 'Meseros' : 'Mesero',
+        default => $plural ? 'Colaboradores' : 'Colaborador',
+    };
+}
+
 public function configuracionEmpresa()
 {
     return $this->hasOne(\App\Models\ConfiguracionEmpresa::class, 'empresa_id', 'empresa_id');
