@@ -107,11 +107,11 @@
                                 $precioBase = (float) $producto->precio_venta1;
                                 $precioTexto = '$' . number_format($precioBase, 0, ',', '.');
 
-                                $variantesPorColor = collect();
+                                $variantesPorTalla = collect();
                                 $hayPrecioVariable = false;
                                 if ($this->mostrarVariantes && $producto->variantes->isNotEmpty()) {
-                                    $variantesPorColor = $producto->variantes->groupBy(
-                                        fn ($v) => mb_strtoupper(trim((string) ($v->atributos['color'] ?? '')))
+                                    $variantesPorTalla = $producto->variantes->groupBy(
+                                        fn ($v) => mb_strtoupper(trim((string) ($v->atributos['talla'] ?? '')))
                                     );
                                     $hayPrecioVariable = $producto->variantes
                                         ->map(fn ($v) => round($precioBase + (float) $v->precio_extra, 2))
@@ -143,27 +143,27 @@
                                         <div style="font-size:11px; color:#6b7280; margin-top:4px; line-height:1.3;">{{ $producto->descripcion_catalogo }}</div>
                                     @endif
 
-                                    @if($variantesPorColor->isNotEmpty())
+                                    @if($variantesPorTalla->isNotEmpty())
                                         <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
-                                            @foreach($variantesPorColor as $color => $variantesColor)
+                                            @foreach($variantesPorTalla as $talla => $variantesTalla)
                                                 <div>
-                                                    @if($color !== '')
+                                                    @if($talla !== '')
                                                         <div style="font-size:9px; font-weight:800; color:#9ca3af; text-transform:uppercase; letter-spacing:.03em; margin-bottom:3px;">
-                                                            {{ $color }}
+                                                            {{ $talla }}
                                                         </div>
                                                     @endif
                                                     <div style="display:flex; flex-wrap:wrap; gap:4px;">
-                                                        @foreach($variantesColor as $variante)
+                                                        @foreach($variantesTalla as $variante)
                                                             @php
                                                                 $varianteDisponible = (float) $variante->stock > 0;
-                                                                $etiquetaTalla = trim((string) ($variante->atributos['talla'] ?? '')) ?: $variante->nombre;
+                                                                $etiquetaColor = trim((string) ($variante->atributos['color'] ?? '')) ?: $variante->nombre;
                                                                 $precioVariante = $precioBase + (float) $variante->precio_extra;
                                                             @endphp
                                                             <span style="font-size:10px; font-weight:700; padding:3px 8px; border-radius:999px; white-space:nowrap;
                                                                 {{ ! $this->mostrarDisponibilidad || $varianteDisponible
                                                                     ? 'background:#eef2ff; color:#4338ca;'
                                                                     : 'background:#f3f4f6; color:#9ca3af; text-decoration:line-through;' }}">
-                                                                {{ $etiquetaTalla }}
+                                                                {{ $etiquetaColor }}
                                                                 @if($hayPrecioVariable && $this->mostrarPrecio)
                                                                     · ${{ number_format($precioVariante, 0, ',', '.') }}
                                                                 @endif
