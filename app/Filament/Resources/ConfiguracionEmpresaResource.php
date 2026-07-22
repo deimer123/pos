@@ -100,30 +100,35 @@ class ConfiguracionEmpresaResource extends Resource
                                 ->options([
                                     'tienda' => 'Tienda / Almacén',
                                     'ropa_calzado' => 'Almacén de ropa y calzado',
-                                    'restaurante' => 'Restaurante',
-                                    'bar' => 'Bar',
+                                    'bar_restaurante' => 'Bar y Restaurante',
                                     'carniceria' => 'Carnicería',
-                                    'panaderia' => 'Panadería',
-                                    'farmacia' => 'Farmacia',
-                                    'servicios' => 'Servicios',
                                     'taller' => 'Taller / Mecánica',
                                     'hotel' => 'Hotel',
-                                    'otro' => 'Otro',
                                 ])
                                 ->live()
                                 ->required()
                                 ->default('tienda')
+                                // Una vez la empresa ya quedo configurada, el tipo de
+                                // negocio no se puede cambiar desde aqui -- cambia
+                                // demasiadas reglas del sistema (variantes, mesas,
+                                // recetas, etc.) como para permitir un cambio en
+                                // caliente. La unica forma de cambiarlo es borrando
+                                // esta configuracion y volviendo a crearla.
+                                ->disabled(fn (?ConfiguracionEmpresa $record) => $record !== null && filled($record->tipo_negocio))
+                                ->dehydrated()
                                 ->afterStateUpdated(function ($state, Forms\Set $set) {
                                     if ($state === 'ropa_calzado') {
                                         $set('usa_variantes', true);
                                     }
                                 })
-                                ->helperText('Según lo que elijas, en los siguientes pasos solo verás los ajustes que aplican a tu negocio.'),
+                                ->helperText(fn (?ConfiguracionEmpresa $record) => $record !== null && filled($record->tipo_negocio)
+                                    ? 'El tipo de negocio ya quedó definido y no se puede cambiar. Si necesitas otro tipo, debes eliminar esta configuración y crearla de nuevo.'
+                                    : 'Según lo que elijas, en los siguientes pasos solo verás los ajustes que aplican a tu negocio. Una vez guardado, no podrás cambiarlo.'),
                         ]),
                 ]),
 
-            Forms\Components\Wizard\Step::make('Restaurante')
-                ->visible(fn (Forms\Get $get) => $get('tipo_negocio') === 'restaurante')
+            Forms\Components\Wizard\Step::make('Bar y Restaurante')
+                ->visible(fn (Forms\Get $get) => $get('tipo_negocio') === 'bar_restaurante')
                 ->schema([
                     Forms\Components\Grid::make(2)
                         ->extraAttributes(['class' => 'producto-linea-1'])
@@ -177,7 +182,7 @@ class ConfiguracionEmpresaResource extends Resource
                 ]),
 
             Forms\Components\Wizard\Step::make('Producto')
-                ->visible(fn (Forms\Get $get) => in_array($get('tipo_negocio'), ['tienda', 'ropa_calzado', 'bar', 'carniceria', 'panaderia', 'farmacia', 'servicios', 'otro']))
+                ->visible(fn (Forms\Get $get) => in_array($get('tipo_negocio'), ['tienda', 'ropa_calzado', 'carniceria']))
                 ->schema([
                     Forms\Components\Grid::make(2)
                         ->extraAttributes(['class' => 'producto-linea-1'])
@@ -185,21 +190,7 @@ class ConfiguracionEmpresaResource extends Resource
                             Forms\Components\Toggle::make('usa_peso')
                                 ->label('Vende por peso')
                                 ->helperText('Ideal para carnicería, fruver o productos a granel.')
-                                ->visible(fn (Forms\Get $get) => ! in_array($get('tipo_negocio'), ['panaderia', 'farmacia', 'servicios', 'bar', 'ropa_calzado'])),
-
-                            Forms\Components\Toggle::make('usa_mesas')
-                                ->label('Usa mesas')
-                                ->helperText('Actívalo solo si el negocio atiende por mesa.')
-                                ->visible(fn (Forms\Get $get) => in_array($get('tipo_negocio'), ['panaderia', 'bar'])),
-                        ]),
-
-                    Forms\Components\Grid::make(2)
-                        ->extraAttributes(['class' => 'producto-linea-2'])
-                        ->schema([
-                            Forms\Components\Toggle::make('usa_recetas')
-                                ->label('Usa recetas')
-                                ->helperText('Útil cuando un producto descuenta ingredientes.')
-                                ->visible(fn (Forms\Get $get) => in_array($get('tipo_negocio'), ['panaderia', 'bar'])),
+                                ->visible(fn (Forms\Get $get) => $get('tipo_negocio') !== 'ropa_calzado'),
 
                             Forms\Components\Toggle::make('usa_servicios')
                                 ->label('Vende servicios')

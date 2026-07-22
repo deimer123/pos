@@ -118,24 +118,13 @@ class ConfiguracionEmpresa extends Model
                 'usa_taller' => true, 'usa_servicios' => true, 'usa_hotel' => false,
                 'usa_mesas' => false, 'usa_cocina' => false, 'usa_domicilios' => false, 'usa_recetas' => false,
             ],
-            'restaurante' => [
+            // Bar y Restaurante quedaron unificados en un solo tipo (ver
+            // ConfiguracionEmpresaResource): usa_mesas/usa_cocina/
+            // usa_domicilios/usa_recetas no se fuerzan aqui porque el
+            // wizard ya trae su propio paso "Bar y Restaurante" con esos
+            // 4 toggles editables.
+            'bar_restaurante' => [
                 'usa_hotel' => false, 'usa_taller' => false,
-            ],
-            'panaderia' => [
-                'usa_hotel' => false, 'usa_taller' => false, 'usa_cocina' => false,
-                'usa_domicilios' => false, 'usa_peso' => false,
-            ],
-            'farmacia' => [
-                'usa_hotel' => false, 'usa_taller' => false, 'usa_mesas' => false,
-                'usa_cocina' => false, 'usa_domicilios' => false, 'usa_recetas' => false, 'usa_peso' => false,
-            ],
-            'bar' => [
-                'usa_hotel' => false, 'usa_taller' => false, 'usa_cocina' => false,
-                'usa_domicilios' => false, 'usa_peso' => false,
-            ],
-            'servicios' => [
-                'usa_hotel' => false, 'usa_taller' => false, 'usa_mesas' => false,
-                'usa_cocina' => false, 'usa_domicilios' => false, 'usa_recetas' => false, 'usa_peso' => false,
             ],
             default => [
                 'usa_hotel' => false, 'usa_taller' => false, 'usa_mesas' => false,

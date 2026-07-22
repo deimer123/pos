@@ -23,6 +23,13 @@ class EditConfiguracionEmpresa extends EditRecord
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
+        // El campo ya viene deshabilitado en el formulario si el tipo de
+        // negocio ya estaba definido, pero se refuerza aqui tambien: una
+        // vez configurado no se puede cambiar por ningun medio.
+        if (filled($this->record->tipo_negocio)) {
+            $data['tipo_negocio'] = $this->record->tipo_negocio;
+        }
+
         $data = array_merge($data, \App\Models\ConfiguracionEmpresa::flagsModuloParaTipo($data['tipo_negocio'] ?? 'tienda'));
 
         if (empty($data['slug']) && ! empty($data['nombre_empresa'])) {
