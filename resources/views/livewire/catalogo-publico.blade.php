@@ -98,13 +98,31 @@
                         </div>
                     @endif
 
-                    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px;">
+                    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(210px, 1fr)); gap:12px;">
                         @foreach($productosSub as $producto)
                             @php
                                 $tieneImagen = !empty($producto->foto) && $producto->foto !== 'NULL';
                                 $urlImagen = $tieneImagen ? asset('storage/' . $producto->foto) : asset('images/sin-imagen.png');
                                 $disponible = (float) $producto->existencias > 0;
-                                $precioTexto = '$' . number_format((float) $producto->precio_venta1, 0, ',', '.');
+                                $precioBase = (float) $producto->precio_venta1;
+                                $precioTexto = '$' . number_format($precioBase, 0, ',', '.');
+
+                                $variantesPorColor = collect();
+                                $hayPrecioVariable = false;
+                                if ($this->mostrarVariantes && $producto->variantes->isNotEmpty()) {
+                                    $variantesPorColor = $producto->variantes->groupBy(
+                                        fn ($v) => mb_strtoupper(trim((string) ($v->atributos['color'] ?? '')))
+                                    );
+                                    $hayPrecioVariable = $producto->variantes
+                                        ->map(fn ($v) => round($precioBase + (float) $v->precio_extra, 2))
+                                        ->unique()
+                                        ->count() > 1;
+
+                                    if ($hayPrecioVariable) {
+                                        $precioMin = $producto->variantes->min(fn ($v) => $precioBase + (float) $v->precio_extra);
+                                        $precioTexto = 'Desde $' . number_format($precioMin, 0, ',', '.');
+                                    }
+                                }
                             @endphp
                             <div style="background:white; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.08); display:flex; flex-direction:column;">
                                 @if($this->mostrarFoto)
@@ -125,16 +143,34 @@
                                         <div style="font-size:11px; color:#6b7280; margin-top:4px; line-height:1.3;">{{ $producto->descripcion_catalogo }}</div>
                                     @endif
 
-                                    @if($this->mostrarVariantes && $producto->variantes->isNotEmpty())
-                                        <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:6px;">
-                                            @foreach($producto->variantes as $variante)
-                                                @php $varianteDisponible = (float) $variante->stock > 0; @endphp
-                                                <span style="font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px;
-                                                    {{ ! $this->mostrarDisponibilidad || $varianteDisponible
-                                                        ? 'background:#eef2ff; color:#4338ca;'
-                                                        : 'background:#f3f4f6; color:#9ca3af; text-decoration:line-through;' }}">
-                                                    {{ $variante->nombre }}
-                                                </span>
+                                    @if($variantesPorColor->isNotEmpty())
+                                        <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
+                                            @foreach($variantesPorColor as $color => $variantesColor)
+                                                <div>
+                                                    @if($color !== '')
+                                                        <div style="font-size:9px; font-weight:800; color:#9ca3af; text-transform:uppercase; letter-spacing:.03em; margin-bottom:3px;">
+                                                            {{ $color }}
+                                                        </div>
+                                                    @endif
+                                                    <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                                                        @foreach($variantesColor as $variante)
+                                                            @php
+                                                                $varianteDisponible = (float) $variante->stock > 0;
+                                                                $etiquetaTalla = trim((string) ($variante->atributos['talla'] ?? '')) ?: $variante->nombre;
+                                                                $precioVariante = $precioBase + (float) $variante->precio_extra;
+                                                            @endphp
+                                                            <span style="font-size:10px; font-weight:700; padding:3px 8px; border-radius:999px; white-space:nowrap;
+                                                                {{ ! $this->mostrarDisponibilidad || $varianteDisponible
+                                                                    ? 'background:#eef2ff; color:#4338ca;'
+                                                                    : 'background:#f3f4f6; color:#9ca3af; text-decoration:line-through;' }}">
+                                                                {{ $etiquetaTalla }}
+                                                                @if($hayPrecioVariable && $this->mostrarPrecio)
+                                                                    · ${{ number_format($precioVariante, 0, ',', '.') }}
+                                                                @endif
+                                                            </span>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
                                             @endforeach
                                         </div>
                                     @endif
