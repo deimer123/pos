@@ -107,12 +107,10 @@
                                 $precioBase = (float) $producto->precio_venta1;
                                 $precioTexto = '$' . number_format($precioBase, 0, ',', '.');
 
-                                $variantesPorTalla = collect();
-                                $hayPrecioVariable = false;
-                                if ($this->mostrarVariantes && $producto->variantes->isNotEmpty()) {
-                                    $variantesPorTalla = $producto->variantes->groupBy(
-                                        fn ($v) => mb_strtoupper(trim((string) ($v->atributos['talla'] ?? '')))
-                                    );
+                                $tieneVariantes = $this->mostrarVariantes && $producto->variantes->isNotEmpty();
+                                $variantesModal = [];
+
+                                if ($tieneVariantes) {
                                     $hayPrecioVariable = $producto->variantes
                                         ->map(fn ($v) => round($precioBase + (float) $v->precio_extra, 2))
                                         ->unique()
@@ -122,13 +120,40 @@
                                         $precioMin = $producto->variantes->min(fn ($v) => $precioBase + (float) $v->precio_extra);
                                         $precioTexto = 'Desde $' . number_format($precioMin, 0, ',', '.');
                                     }
+
+                                    // Estructura para el modal (talla -> colores con precio), armada
+                                    // en PHP y pasada tal cual al Alpine que dibuja el modal -- ver
+                                    // <template x-for> al final del archivo.
+                                    $variantesModal = $producto->variantes
+                                        ->groupBy(fn ($v) => mb_strtoupper(trim((string) ($v->atributos['talla'] ?? ''))))
+                                        ->map(fn ($variantesTalla, $talla) => [
+                                            'talla' => $talla,
+                                            'colores' => $variantesTalla->map(fn ($v) => [
+                                                'nombre' => trim((string) ($v->atributos['color'] ?? '')) ?: $v->nombre,
+                                                'precio' => $precioBase + (float) $v->precio_extra,
+                                                'disponible' => ! $this->mostrarDisponibilidad || (float) $v->stock > 0,
+                                            ])->values(),
+                                        ])
+                                        ->values()
+                                        ->toArray();
                                 }
                             @endphp
-                            <div style="background:white; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.08); display:flex; flex-direction:column;">
+                            <div
+                                @if($tieneVariantes)
+                                    x-data
+                                    @click="$dispatch('abrir-variantes-catalogo', {
+                                        nombre: @js($producto->descripcion_larga),
+                                        tallas: @js($variantesModal),
+                                    })"
+                                    style="background:white; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.08); display:flex; flex-direction:column; cursor:pointer;"
+                                @else
+                                    style="background:white; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.08); display:flex; flex-direction:column;"
+                                @endif
+                            >
                                 @if($this->mostrarFoto)
                                 <img src="{{ $urlImagen }}" alt="{{ $producto->descripcion_larga }}"
                                     x-data
-                                    @click="$dispatch('ver-imagen-catalogo', {
+                                    @click.stop="$dispatch('ver-imagen-catalogo', {
                                         url: @js($urlImagen),
                                         nombre: @js($producto->descripcion_larga),
                                         descripcion: @js($producto->descripcion_catalogo),
@@ -143,35 +168,9 @@
                                         <div style="font-size:11px; color:#6b7280; margin-top:4px; line-height:1.3;">{{ $producto->descripcion_catalogo }}</div>
                                     @endif
 
-                                    @if($variantesPorTalla->isNotEmpty())
-                                        <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
-                                            @foreach($variantesPorTalla as $talla => $variantesTalla)
-                                                <div>
-                                                    @if($talla !== '')
-                                                        <div style="font-size:9px; font-weight:800; color:#9ca3af; text-transform:uppercase; letter-spacing:.03em; margin-bottom:3px;">
-                                                            {{ $talla }}
-                                                        </div>
-                                                    @endif
-                                                    <div style="display:flex; flex-wrap:wrap; gap:4px;">
-                                                        @foreach($variantesTalla as $variante)
-                                                            @php
-                                                                $varianteDisponible = (float) $variante->stock > 0;
-                                                                $etiquetaColor = trim((string) ($variante->atributos['color'] ?? '')) ?: $variante->nombre;
-                                                                $precioVariante = $precioBase + (float) $variante->precio_extra;
-                                                            @endphp
-                                                            <span style="font-size:10px; font-weight:700; padding:3px 8px; border-radius:999px; white-space:nowrap;
-                                                                {{ ! $this->mostrarDisponibilidad || $varianteDisponible
-                                                                    ? 'background:#eef2ff; color:#4338ca;'
-                                                                    : 'background:#f3f4f6; color:#9ca3af; text-decoration:line-through;' }}">
-                                                                {{ $etiquetaColor }}
-                                                                @if($hayPrecioVariable && $this->mostrarPrecio)
-                                                                    · ${{ number_format($precioVariante, 0, ',', '.') }}
-                                                                @endif
-                                                            </span>
-                                                        @endforeach
-                                                    </div>
-                                                </div>
-                                            @endforeach
+                                    @if($tieneVariantes)
+                                        <div style="font-size:11px; font-weight:700; color:#4f46e5; margin-top:8px;">
+                                            🎨 Ver tallas y colores
                                         </div>
                                     @endif
 
@@ -223,6 +222,84 @@
                     style="margin-top:14px; border:none; border-radius:999px; padding:8px 20px; font-size:13px; font-weight:700; cursor:pointer; background:white; color:#1f2937;">
                     Cerrar
                 </button>
+            </div>
+        </div>
+    </div>
+
+    {{-- Modal de tallas/colores: primero se elige la talla, y dentro del
+         mismo modal se muestra el color con el precio al frente -- mismo
+         flujo del selector de variantes del POS. --}}
+    <div x-data="{
+            abierto: false,
+            nombreProducto: null,
+            tallas: [],
+            tallaElegida: null,
+            coloresTalla: [],
+            formatoPrecio(valor) {
+                return '$' + Math.round(Number(valor) || 0).toLocaleString('es-CO');
+            },
+            elegirTalla(t) {
+                this.tallaElegida = t.talla;
+                this.coloresTalla = t.colores;
+            },
+            volver() {
+                this.tallaElegida = null;
+                this.coloresTalla = [];
+            },
+            cerrar() {
+                this.abierto = false;
+            },
+        }"
+        @abrir-variantes-catalogo.window="
+            nombreProducto = $event.detail.nombre;
+            tallas = $event.detail.tallas;
+            tallaElegida = null;
+            coloresTalla = [];
+            abierto = true;
+        ">
+        <div x-show="abierto" x-transition x-cloak
+            style="position:fixed; inset:0; background:rgba(15,23,42,.6); z-index:55; display:flex; align-items:center; justify-content:center; padding:16px;"
+            @click="cerrar()">
+            <div style="background:white; border-radius:16px; max-width:380px; width:100%; max-height:80vh; overflow:hidden; display:flex; flex-direction:column;" @click.stop>
+                <div style="padding:16px 20px; background:linear-gradient(180deg,#4f46e5 0%,#4338ca 100%); color:white;">
+                    <div style="font-size:15px; font-weight:800;" x-text="nombreProducto"></div>
+                    <div style="font-size:12px; opacity:.85; margin-top:2px;" x-text="tallaElegida ? ('Color — Talla ' + tallaElegida) : 'Elige la talla'"></div>
+                </div>
+
+                <div style="padding:16px; overflow-y:auto; background:#eef6ff;">
+                    <div x-show="!tallaElegida" style="display:flex; flex-direction:column; gap:8px;">
+                        <template x-for="t in tallas" :key="t.talla">
+                            <button type="button" @click="elegirTalla(t)"
+                                style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-radius:10px; border:1px solid #93c5fd; background:#ffffff; font-size:14px; font-weight:700; color:#1f2937; cursor:pointer;">
+                                <span x-text="t.talla"></span>
+                            </button>
+                        </template>
+                    </div>
+
+                    <div x-show="tallaElegida" style="display:flex; flex-direction:column; gap:8px;">
+                        <template x-for="c in coloresTalla" :key="c.nombre">
+                            <button type="button" :disabled="!c.disponible"
+                                :style="c.disponible
+                                    ? 'background:#ffffff;color:#1f2937;cursor:pointer;'
+                                    : 'background:#f1f5f9;color:#94a3b8;cursor:not-allowed;'"
+                                style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-radius:10px; border:1px solid #93c5fd; font-size:14px; font-weight:700;">
+                                <span x-text="c.nombre"></span>
+                                <span style="font-size:13px; font-weight:700; color:#4338ca;" x-text="formatoPrecio(c.precio)"></span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+
+                <div style="padding:12px 16px; border-top:1px solid #dbeafe; background:#ffffff; display:flex; justify-content:center; gap:10px;">
+                    <button x-show="tallaElegida" type="button" @click="volver()"
+                        style="border:none; border-radius:999px; padding:8px 18px; font-size:13px; font-weight:700; background:#e5e7eb; color:#374151; cursor:pointer;">
+                        ← Volver
+                    </button>
+                    <button type="button" @click="cerrar()"
+                        style="border:none; border-radius:999px; padding:8px 18px; font-size:13px; font-weight:700; background:#ef4444; color:white; cursor:pointer;">
+                        Cerrar
+                    </button>
+                </div>
             </div>
         </div>
     </div>
