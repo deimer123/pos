@@ -40,6 +40,89 @@
         .catalogo-nav a { display:block; font-size:12px; color:#4f46e5; text-decoration:none; padding:4px 0; border-bottom:1px solid #f3f4f6; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .catalogo-content { flex:1; min-width:0; }
 
+        /* display NO lleva !important a proposito: x-show de Alpine oculta
+           el modal poniendo "display:none" en el style inline del propio
+           elemento, y un !important en la clase pisaria eso dejandolo
+           siempre visible. El resto de propiedades si van !important para
+           que ningun otro estilo de la pagina desplace el overlay. */
+        .catalogo-variante-overlay {
+            position: fixed !important;
+            inset: 0 !important;
+            background: rgba(15, 23, 42, .6) !important;
+            z-index: 2147483000 !important;
+            display: flex;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 16px !important;
+        }
+
+        .catalogo-variante-box {
+            background: #ffffff;
+            border-radius: 16px;
+            max-width: 380px;
+            width: 100%;
+            max-height: 80vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .catalogo-variante-header {
+            padding: 16px 20px;
+            background: linear-gradient(180deg, #4f46e5 0%, #4338ca 100%);
+            color: #ffffff;
+        }
+
+        .catalogo-variante-lista {
+            padding: 16px;
+            overflow-y: auto;
+            background: #eef6ff;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .catalogo-variante-opcion {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid #93c5fd;
+            font-size: 14px;
+            font-weight: 700;
+            background: #ffffff;
+            color: #1f2937;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+        }
+
+        .catalogo-variante-opcion:disabled {
+            background: #f1f5f9;
+            color: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .catalogo-variante-footer {
+            padding: 12px 16px;
+            border-top: 1px solid #dbeafe;
+            background: #ffffff;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .catalogo-variante-btn {
+            border: none;
+            border-radius: 999px;
+            padding: 8px 18px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
         @media (max-width: 768px) {
             .catalogo-layout { flex-direction: column; padding:12px; }
             .catalogo-nav {
@@ -257,46 +340,38 @@
             coloresTalla = [];
             abierto = true;
         ">
-        <div x-show="abierto" x-transition x-cloak
-            style="position:fixed; inset:0; background:rgba(15,23,42,.6); z-index:55; display:flex; align-items:center; justify-content:center; padding:16px;"
-            @click="cerrar()">
-            <div style="background:white; border-radius:16px; max-width:380px; width:100%; max-height:80vh; overflow:hidden; display:flex; flex-direction:column;" @click.stop>
-                <div style="padding:16px 20px; background:linear-gradient(180deg,#4f46e5 0%,#4338ca 100%); color:white;">
+        <div x-show="abierto" x-cloak class="catalogo-variante-overlay" @click="cerrar()">
+            <div class="catalogo-variante-box" @click.stop>
+                <div class="catalogo-variante-header">
                     <div style="font-size:15px; font-weight:800;" x-text="nombreProducto"></div>
                     <div style="font-size:12px; opacity:.85; margin-top:2px;" x-text="tallaElegida ? ('Color — Talla ' + tallaElegida) : 'Elige la talla'"></div>
                 </div>
 
-                <div style="padding:16px; overflow-y:auto; background:#eef6ff;">
+                <div class="catalogo-variante-lista">
                     <div x-show="!tallaElegida" style="display:flex; flex-direction:column; gap:8px;">
                         <template x-for="t in tallas" :key="t.talla">
-                            <button type="button" @click="elegirTalla(t)"
-                                style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-radius:10px; border:1px solid #93c5fd; background:#ffffff; font-size:14px; font-weight:700; color:#1f2937; cursor:pointer;">
+                            <button type="button" class="catalogo-variante-opcion" @click="elegirTalla(t)">
                                 <span x-text="t.talla"></span>
+                                <span style="color:#4338ca;">›</span>
                             </button>
                         </template>
                     </div>
 
                     <div x-show="tallaElegida" style="display:flex; flex-direction:column; gap:8px;">
                         <template x-for="c in coloresTalla" :key="c.nombre">
-                            <button type="button" :disabled="!c.disponible"
-                                :style="c.disponible
-                                    ? 'background:#ffffff;color:#1f2937;cursor:pointer;'
-                                    : 'background:#f1f5f9;color:#94a3b8;cursor:not-allowed;'"
-                                style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-radius:10px; border:1px solid #93c5fd; font-size:14px; font-weight:700;">
+                            <button type="button" class="catalogo-variante-opcion" :disabled="!c.disponible">
                                 <span x-text="c.nombre"></span>
-                                <span style="font-size:13px; font-weight:700; color:#4338ca;" x-text="formatoPrecio(c.precio)"></span>
+                                <span style="color:#4338ca;" x-text="formatoPrecio(c.precio)"></span>
                             </button>
                         </template>
                     </div>
                 </div>
 
-                <div style="padding:12px 16px; border-top:1px solid #dbeafe; background:#ffffff; display:flex; justify-content:center; gap:10px;">
-                    <button x-show="tallaElegida" type="button" @click="volver()"
-                        style="border:none; border-radius:999px; padding:8px 18px; font-size:13px; font-weight:700; background:#e5e7eb; color:#374151; cursor:pointer;">
+                <div class="catalogo-variante-footer">
+                    <button x-show="tallaElegida" type="button" class="catalogo-variante-btn" style="background:#e5e7eb; color:#374151;" @click="volver()">
                         ← Volver
                     </button>
-                    <button type="button" @click="cerrar()"
-                        style="border:none; border-radius:999px; padding:8px 18px; font-size:13px; font-weight:700; background:#ef4444; color:white; cursor:pointer;">
+                    <button type="button" class="catalogo-variante-btn" style="background:#ef4444; color:#ffffff;" @click="cerrar()">
                         Cerrar
                     </button>
                 </div>
