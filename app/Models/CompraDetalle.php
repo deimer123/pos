@@ -41,6 +41,11 @@ class CompraDetalle extends Model
         return $this->belongsTo(Product::class, 'product_id');
     }
 
+    public function variante()
+    {
+        return $this->belongsTo(ProductoVariante::class, 'producto_variante_id');
+    }
+
     public function getCostoConDescuentoAttribute(): float
 {
     // Si existe desc_comercial, aplica el descuento al costo unitario

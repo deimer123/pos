@@ -175,7 +175,7 @@ Actions\Action::make('registrarDevolucion')
     ->visible(fn() => !$this->record->devuelta_total && $this->record->estado !== 'anulada')
     ->form(function () {
     $compra = $this->record;
-    $detalles = $compra->detalles()->with('producto')->get();
+    $detalles = $compra->detalles()->with(['producto', 'variante'])->get();
 
     return [
 
@@ -266,11 +266,14 @@ $total = $compra->detalles->sum(function ($d) {
                     $devueltoAntes = \App\Models\DevolucionCompraDetalle::where('compra_detalle_id', $d->id)->sum('cantidad');
                     $restante = max(0, $d->cantidad - $devueltoAntes);
 
+                    $nombreBase = $d->nombre_producto ?? $d->producto->descripcion_larga;
+
                     return [
                         'compra_detalle_id' => $d->id,
                         'product_id' => $d->product_id,
+                        'producto_variante_id' => $d->producto_variante_id,
                         'codigo_ingresado' => $d->codigo_ingresado,
-                        'nombre_producto' => $d->nombre_producto ?? $d->producto->descripcion_larga,
+                        'nombre_producto' => $d->variante ? $nombreBase . ' — ' . $d->variante->nombre : $nombreBase,
                         'cantidad_original' => $restante,
                         'cantidad' => 0,
                         'costo_unitario' => $d->costo_unitario,
@@ -373,6 +376,7 @@ foreach ($compra->detalles as $detalle) {
         'devolucion_compra_id' => $devolucion->id,
         'compra_detalle_id' => $detalle->id,
         'product_id' => (string) $detalle->product_id,
+        'producto_variante_id' => $detalle->producto_variante_id,
         'cantidad' => $cantidadRestante,
         'costo_unitario' => $totales['costo_unitario'],
         'porcentaje_impuesto' => $totales['iva'],
@@ -406,6 +410,14 @@ foreach ($compra->detalles as $detalle) {
     // 🔻 ACTUALIZAR INVENTARIO
     $producto->existencias = $stockAnterior - $cantidadRestante;
     $producto->save();
+
+    // 🎨 si la linea era de una variante puntual (talla/color), tambien
+    // se descuenta el stock de ESA variante, no solo el del producto
+    if (! empty($detalle->producto_variante_id)) {
+        \App\Models\ProductoVariante::where('id', $detalle->producto_variante_id)
+            ->where('empresa_id', $compra->empresa_id)
+            ->decrement('stock', $cantidadRestante);
+    }
 }
     }
 }
@@ -437,6 +449,7 @@ foreach ($compra->detalles as $detalle) {
                     'devolucion_compra_id' => $devolucion->id,
                     'compra_detalle_id' => $detalle->id,
                     'product_id' => (string) $detalle->product_id,
+                    'producto_variante_id' => $detalle->producto_variante_id,
                     'cantidad' => $cantidad,
                     'costo_unitario' => $totales['costo_unitario'],
                     'porcentaje_impuesto' => $totales['iva'],
@@ -469,6 +482,14 @@ foreach ($compra->detalles as $detalle) {
     // 🔻 ACTUALIZAR INVENTARIO
     $producto->existencias = $stockAnterior - $cantidad;
     $producto->save();
+
+    // 🎨 si la linea era de una variante puntual (talla/color), tambien
+    // se descuenta el stock de ESA variante, no solo el del producto
+    if (! empty($detalle->producto_variante_id)) {
+        \App\Models\ProductoVariante::where('id', $detalle->producto_variante_id)
+            ->where('empresa_id', $compra->empresa_id)
+            ->decrement('stock', $cantidad);
+    }
 }
                 }
             }

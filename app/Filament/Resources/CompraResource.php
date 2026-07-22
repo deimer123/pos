@@ -1957,237 +1957,33 @@ public static function tableActions(): array
             ->color('danger')
             ->visible(fn (\App\Models\Compra $r) => $r->estado === 'confirmada')
             ->requiresConfirmation()
-            ->action(function (\App\Models\Compra $r) {
-                \Illuminate\Support\Facades\DB::transaction(fn () => $r->anular());
-                \Filament\Notifications\Notification::make()->title('Compra anulada')->success()->send();
-            }),
-
-        \Filament\Tables\Actions\ActionGroup::make([
-            \Filament\Tables\Actions\Action::make('confirmar')
-                ->label('Confirmar')
-                ->icon('heroicon-o-check')
-                ->color('success')
-                ->visible(fn (\App\Models\Compra $r) => $r->estado === 'borrador')
-                ->requiresConfirmation()
-                ->action(function (\App\Models\Compra $r) {
-                    \Illuminate\Support\Facades\DB::transaction(fn () => $r->confirmar());
-                    \Filament\Notifications\Notification::make()->title('Compra confirmada')->success()->send();
-                }),
-            \Filament\Tables\Actions\Action::make('devolver_parcial')
-    ->label('Devolución parcial')
-    ->icon('heroicon-o-arrow-uturn-left')
-    ->color('warning')
-    ->visible(fn (Compra $r) => $r->estado === 'confirmada')
-    ->form([
-        Forms\Components\Textarea::make('motivo')->label('Motivo')->required()->maxLength(255),
-
-        // ocultos con mapas de disponibilidad (llenados en mountUsing)
-        Forms\Components\Hidden::make('allowed_ids')->dehydrated(false),
-        Forms\Components\Hidden::make('remaining_by_detail')->dehydrated(false),
-        Forms\Components\Hidden::make('remaining_by_product')->dehydrated(false),
-
-        // Select buscable que muestra sólo productos con remanente en la compra (excluye ya añadidos y totalmente devueltos)
-        Forms\Components\Select::make('producto_buscar')
-            ->label('Buscar producto comprado')
-            ->placeholder('Escribe código o nombre...')
-            ->searchable()
-            ->reactive()
-            ->dehydrated(false)
-            ->options(function (Get $get): array {
-                $allowed = (array) ($get('allowed_ids') ?? []);
-                if (empty($allowed)) return [];
-
-                $added = collect($get('lineas') ?? [])->pluck('product_id')->filter()->map(fn($v) => (int)$v)->unique()->values()->all();
-
-                $q = \App\Models\Product::query()
-                    ->select(['id','id_producto','descripcion_larga'])
-                    ->whereIn('id', $allowed);
-
-                if (!empty($added)) {
-                    $q->whereNotIn('id', $added);
-                }
-
-                return $q->orderBy('descripcion_larga')
-                    ->limit(30)
-                    ->get()
-                    ->mapWithKeys(fn($p) => [$p->id => ($p->id_producto ?? '') . ' · ' . $p->descripcion_larga])
-                    ->toArray();
-            })
-            ->getSearchResultsUsing(function (?string $search, Get $get): array {
-                $allowed = (array) ($get('allowed_ids') ?? []);
-                if (empty($allowed)) return [];
-
-                $added = collect($get('lineas') ?? [])->pluck('product_id')->filter()->map(fn($v) => (int)$v)->unique()->values()->all();
-
-                $q = \App\Models\Product::query()
-                    ->select(['id','id_producto','descripcion_larga'])
-                    ->whereIn('id', $allowed);
-
-                if (!empty($added)) {
-                    $q->whereNotIn('id', $added);
-                }
-
-                $search = trim((string) ($search ?? ''));
-                if ($search !== '') {
-                    $tokens = collect(preg_split('/\s+/', $search))->filter()->values();
-                    $q->where(function ($qb) use ($tokens) {
-                        foreach ($tokens as $t) {
-                            $t = str_replace(['%','_'], ['\\%','\\_'], $t);
-                            $like = "%{$t}%";
-                            $qb->where(function ($or) use ($like) {
-                                $or->where('id_producto', 'like', $like)
-                                   ->orWhere('descripcion_larga', 'like', $like)
-                                   ->orWhereExists(function ($sub) use ($like) {
-                                       $sub->from('alternate_codes as ac')
-                                           ->whereColumn('ac.product_id', 'products.id')
-                                           ->where('ac.code', 'like', $like);
-                                   });
-                            });
-                        }
-                    });
-                } else {
-                    $q->orderBy('descripcion_larga')->limit(30);
-                }
-
-                return $q->orderBy('descripcion_larga')->limit(200)->get()
-                    ->mapWithKeys(fn ($p) => [$p->id => ($p->id_producto ?? '') . ' · ' . $p->descripcion_larga])
-                    ->toArray();
-            })
-            ->getOptionLabelUsing(function ($value) {
-                if (!$value) return null;
-                $p = \App\Models\Product::select(['id','id_producto','descripcion_larga'])->find($value);
-                return $p ? (($p->id_producto ?? '') . ' · ' . ($p->descripcion_larga ?? '')) : null;
-            })
-            ->afterStateUpdated(function ($state, Get $get, Set $set) {
-                $prodId = (int) ($state ?? 0);
-                if (! $prodId) return;
-
-                $rows = (array) ($get('lineas') ?? []);
-                foreach ($rows as $r) {
-                    if ((int) ($r['product_id'] ?? 0) === $prodId) {
-                        \Filament\Notifications\Notification::make()->title('El producto ya está en la lista')->warning()->send();
-                        $set('producto_buscar', null);
-                        return;
-                    }
-                }
-
-                $p = \App\Models\Product::select(['id','id_producto','descripcion_larga'])->find($prodId);
-                if (! $p) {
-                    \Filament\Notifications\Notification::make()->title('Producto no encontrado')->danger()->send();
-                    $set('producto_buscar', null);
+            ->form([
+                Forms\Components\Textarea::make('motivo')
+                    ->label('Motivo de la anulación')
+                    ->required()
+                    ->rows(2),
+            ])
+            ->action(function (\App\Models\Compra $r, array $data) {
+                try {
+                    \Illuminate\Support\Facades\DB::transaction(fn () => $r->anular($data['motivo']));
+                } catch (\RuntimeException $e) {
+                    \Filament\Notifications\Notification::make()->title($e->getMessage())->danger()->send();
                     return;
                 }
 
-                $rows[] = [
-                    'id' => null,
-                    'product_id' => $p->id,
-                    'codigo_ingresado' => (string) ($p->id_producto ?? ''),
-                    'nombre_producto' => $p->descripcion_larga ?? '',
-                    'cantidad' => 1,
-                    'cantidad_devolver' => 0,
-                    'existencias_actuales' => \App\Filament\Resources\CompraResource::stockActual($p->id),
-                ];
-
-                $set('lineas', array_values($rows));
-                $set('producto_buscar', null);
-                \Filament\Notifications\Notification::make()->title('Producto agregado')->success()->send();
+                \Filament\Notifications\Notification::make()->title('Compra anulada')->success()->send();
             }),
 
-        // Repeater con validación: cantidad_devolver <= disponible (por detalle o por producto)
-        Forms\Components\Repeater::make('lineas')
-            ->schema([
-                Forms\Components\Hidden::make('id')->dehydrated(true),
-                Forms\Components\Hidden::make('product_id')->dehydrated(true),
-                Forms\Components\TextInput::make('codigo_ingresado')->label('Código')->disabled()->dehydrated(true),
-                Forms\Components\TextInput::make('nombre_producto')->label('Producto')->disabled()->dehydrated(true),
-                Forms\Components\TextInput::make('existencias_actuales')->label('Existencias')->disabled()->dehydrated(false),
-                Forms\Components\TextInput::make('cantidad')->label('Cantidad original')->numeric()->disabled()->dehydrated(true),
-                Forms\Components\TextInput::make('cantidad_devolver')
-                    ->label('Cantidad a devolver')
-                    ->numeric()
-                    ->minValue(0)
-                    ->default(0)
-                    ->dehydrated(true)
-                    ->rule(function (Get $get) {
-                        return function (string $attribute, $value, $fail) use ($get) {
-                            $val = (float) $value;
-                            if ($val <= 0) return;
-
-                            // Extraer índice de la fila: 'lineas.{i}.cantidad_devolver'
-                            $idx = null;
-                            if (preg_match('/lineas\.(\d+)\.cantidad_devolver$/', $attribute, $m)) {
-                                $idx = (int) $m[1];
-                            }
-
-                            $rows = (array) ($get('lineas') ?? []);
-                            $row = $rows[$idx] ?? null;
-                            if (! $row) return;
-
-                            // mapas precargados en mountUsing
-                            $remByDetail  = (array) ($get('remaining_by_detail') ?? []);
-                            $remByProduct = (array) ($get('remaining_by_product') ?? []);
-
-                            // si viene id de detalle, validar contra remaining_by_detail
-                            $detailId = (int) ($row['id'] ?? 0);
-                            if ($detailId > 0) {
-                                $avail = (float) ($remByDetail[$detailId] ?? 0);
-                                if ($val > $avail) {
-                                    $fail("Máx. disponible para devolver en esta línea: {$avail}.");
-                                }
-                                return;
-                            }
-
-                            // si no hay id (fila agregada desde buscador), validar contra el total disponible por product
-                            $pid = (int) ($row['product_id'] ?? 0);
-                            if ($pid > 0) {
-                                $avail = (float) ($remByProduct[$pid] ?? 0);
-                                if ($val > $avail) {
-                                    $fail("Máx. disponible para devolver para este producto: {$avail}.");
-                                }
-                            }
-                        };
-                    }),
-            ])
-            ->createItemButtonLabel('Añadir a líneas')
-            ->columnSpanFull(),
-    ])
-    ->mountUsing(function ($action, Compra $record, $form) {
-        // calculamos remanentes por detalle y por producto (solo >0)
-        $remainingByDetail = [];
-        $remainingByProduct = [];
-        foreach ($record->detalles as $d) {
-            $rem = max(0.0, (float)$d->cantidad - (float)($d->devuelto_cantidad ?? 0));
-            if ($rem > 0) {
-                $remainingByDetail[(int)$d->id] = $rem;
-                $remainingByProduct[(int)$d->product_id] = ($remainingByProduct[(int)$d->product_id] ?? 0) + $rem;
-            }
-        }
-
-        $allowed = array_keys($remainingByProduct);
-
-        $form->fill([
-            'allowed_ids' => $allowed,
-            'remaining_by_detail' => $remainingByDetail,
-            'remaining_by_product' => $remainingByProduct,
-            'lineas' => [], // empezar vacío: el usuario añade desde el buscador
-            'producto_buscar' => null,
-        ]);
-    })
-    ->requiresConfirmation()
-    ->action(function (Compra $record, array $data) {
-    \Illuminate\Support\Facades\DB::transaction(function () use ($record, $data) {
-        $record->devolverParcial($data['lineas'] ?? [], $data['motivo'] ?? null);
-    });
-
-    // recargar registro para que Filament actualice la vista / botones
-    $record->refresh();
-
-    \Filament\Notifications\Notification::make()
-        ->title('Devolución aplicada')
-        ->success()
-        ->send();
-    }),
-        ])->label('Más')->icon('heroicon-m-ellipsis-vertical'),
+        \Filament\Tables\Actions\Action::make('confirmar')
+            ->label('Confirmar')
+            ->icon('heroicon-o-check')
+            ->color('success')
+            ->visible(fn (\App\Models\Compra $r) => $r->estado === 'borrador')
+            ->requiresConfirmation()
+            ->action(function (\App\Models\Compra $r) {
+                \Illuminate\Support\Facades\DB::transaction(fn () => $r->confirmar());
+                \Filament\Notifications\Notification::make()->title('Compra confirmada')->success()->send();
+            }),
     ];
 }
 protected static function calcularLineaCompra(Get $get, Set $set, bool $forzarUtilidad = false): void

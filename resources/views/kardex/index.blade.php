@@ -348,7 +348,7 @@ async function verDocumento(tipo, referencia) {
             });
 
             // 🔥 CALCULAR TOTAL SEGÚN TIPO
-            if (tipo === 'compra' || tipo === 'devolucion_compra') {
+            if (tipo === 'compra' || tipo === 'devolucion_compra' || tipo === 'anulacion_compra') {
 
                 let costoConIva = costo * (1 + iva / 100);
                 total += (d.cantidad * costoConIva);
@@ -393,6 +393,7 @@ async function verDocumento(tipo, referencia) {
         if (tipo === 'compra') labelTotal = 'TOTAL COMPRA';
         if (tipo === 'venta') labelTotal = 'TOTAL VENTA';
         if (tipo === 'devolucion_compra') labelTotal = 'TOTAL DEVOLUCIÓN';
+        if (tipo === 'anulacion_compra') labelTotal = 'TOTAL ANULACIÓN';
         if (tipo === 'devolucion_venta') labelTotal = 'TOTAL DEVOLUCIÓN VENTA';
 
         // 🔥 MOSTRAR TOTAL

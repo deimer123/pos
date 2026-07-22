@@ -36,6 +36,7 @@ function guardarKardex($productoId, $tipo, $cantidad, $empresaId, $referencia = 
     case 'venta':
     case 'ajuste_salida':
     case 'devolucion_compra': // 🔥 AQUÍ VA
+    case 'anulacion_compra':
     $salida = $cantidad;
     $stockNuevo = $stockAnterior - $cantidad;
     break;

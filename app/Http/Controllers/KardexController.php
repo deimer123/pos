@@ -254,12 +254,16 @@ if ($tipo == 'devolucion_compra') {
                  ->on('p.empresa_id', '=', 'dc.empresa_id');
         })
 
+        // 🎨 unir variante (talla/color), si la devolucion fue de una puntual
+        ->leftJoin('producto_variantes as pv', 'pv.id', '=', 'd.producto_variante_id')
+
         ->where('d.devolucion_compra_id', $ref)
         ->where('dc.empresa_id', $empresaId)
 
         ->select(
             'd.product_id as producto_id',
             'p.descripcion_larga as nombre',
+            'pv.nombre as variante_nombre',
             'd.cantidad',
 
             // 🔥 COSTO REAL DEVUELTO
@@ -272,6 +276,41 @@ if ($tipo == 'devolucion_compra') {
             'd.porcentaje_impuesto as iva',
 
             // ❌ NO aplica utilidad en devolucion compra
+            DB::raw('0 as utilidad')
+        )
+
+        ->get();
+
+    return response()->json($data);
+}
+
+if ($tipo == 'anulacion_compra') {
+
+    // La anulacion revierte exactamente lo que trajo la compra original,
+    // asi que el documento a mostrar es el mismo detalle de esa compra
+    // (ver Compra::anular(), que guarda el kardex con referencia = compra_id).
+    $data = DB::table('compra_detalles as d')
+
+        ->join('compras as c', 'c.id', '=', 'd.compra_id')
+
+        ->join('products as p', function($join){
+            $join->on('p.id_producto', '=', 'd.product_id')
+                 ->on('p.empresa_id', '=', 'c.empresa_id');
+        })
+
+        ->leftJoin('producto_variantes as pv', 'pv.id', '=', 'd.producto_variante_id')
+
+        ->where('d.compra_id', $ref)
+        ->where('c.empresa_id', $empresaId)
+
+        ->select(
+            'd.product_id as producto_id',
+            'p.descripcion_larga as nombre',
+            'pv.nombre as variante_nombre',
+            'd.cantidad',
+            'd.costo_unitario as costo',
+            DB::raw('0 as precio'),
+            'd.iva_pct as iva',
             DB::raw('0 as utilidad')
         )
 

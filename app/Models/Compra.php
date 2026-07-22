@@ -13,6 +13,7 @@ use App\Models\DevolucionCompraDetalle;
 use App\Models\Pago;
 use App\Models\Actor;
 use App\Models\User;
+use App\Models\ProductoVariante;
 
 class Compra extends Model
 {
@@ -33,6 +34,12 @@ class Compra extends Model
         'total',
         'saldo',
         'nota',
+        'confirmada_at',
+        'anulada_at',
+        'motivo_anulacion',
+        'devuelta_total',
+        'devuelta_at',
+        'motivo_devol',
     ];
 
     protected $casts = [
@@ -43,6 +50,10 @@ class Compra extends Model
         'impuesto_total'    => 'decimal:2',
         'total'             => 'decimal:2',
         'saldo'             => 'decimal:2',
+        'confirmada_at'     => 'datetime',
+        'anulada_at'        => 'datetime',
+        'devuelta_total'    => 'boolean',
+        'devuelta_at'       => 'datetime',
     ];
 
     /* ─────────────── Relaciones ─────────────── */
@@ -220,6 +231,76 @@ public function confirmar(): void
 }
 
 
+
+    /* ─────────────── Anular Compra (revierte inventario) ─────────────── */
+
+    /**
+     * Deshace una compra confirmada por error (nada se envio de vuelta al
+     * proveedor -- para eso existe la Devolucion, ver
+     * ViewCompra::registrarDevolucion). Revierte exactamente lo que
+     * confirmar() aplico: existencias del producto, stock de la variante
+     * puntual (si la linea era de una) y el Kardex. Los precios NO se
+     * revierten a proposito: si hubo otra compra despues de esta para el
+     * mismo producto, "precio_costo_anterior" ya no refleja el precio
+     * correcto y revertirlo desharia ese cambio mas reciente.
+     */
+    public function anular(?string $motivo = null): void
+    {
+        if ($this->estado !== 'confirmada') {
+            throw new \RuntimeException('Solo se puede anular una compra confirmada.');
+        }
+
+        if ($this->pagos()->exists()) {
+            throw new \RuntimeException('Esta compra tiene pagos registrados. Elimina o reversa los pagos antes de anularla.');
+        }
+
+        if ($this->devoluciones()->exists()) {
+            throw new \RuntimeException('Esta compra tiene devoluciones registradas. No se puede anular; ya se corrigio el inventario por esa via.');
+        }
+
+        DB::transaction(function () use ($motivo) {
+            $this->load('detalles');
+
+            foreach ($this->detalles as $detalle) {
+                $codigo = (string) $detalle->product_id;
+
+                $producto = Product::where('empresa_id', $this->empresa_id)
+                    ->where('id_producto', $codigo)
+                    ->first();
+
+                if (! $producto) {
+                    continue;
+                }
+
+                $stockAnterior = (float) $producto->existencias;
+                $cantidad = (float) $detalle->cantidad;
+
+                guardarKardex(
+                    $codigo,
+                    'anulacion_compra',
+                    $cantidad,
+                    $this->empresa_id,
+                    $this->id,
+                    $stockAnterior
+                );
+
+                $producto->existencias = $stockAnterior - $cantidad;
+                $producto->save();
+
+                if (! empty($detalle->producto_variante_id)) {
+                    ProductoVariante::where('id', $detalle->producto_variante_id)
+                        ->where('empresa_id', $this->empresa_id)
+                        ->decrement('stock', $cantidad);
+                }
+            }
+
+            $this->update([
+                'estado' => 'anulada',
+                'anulada_at' => now(),
+                'motivo_anulacion' => $motivo,
+            ]);
+        });
+    }
 
 public function notasCredito()
 {

@@ -595,23 +595,16 @@ foreach ($data['detalles'] ?? [] as $detalle) {
             return;
         }
 
-        DB::transaction(function () {
-            $compra = $this->record;
+        try {
+            DB::transaction(fn () => $this->record->anular());
+        } catch (\RuntimeException $e) {
+            Notification::make()
+                ->title($e->getMessage())
+                ->danger()
+                ->send();
 
-            // Devolver existencias
-            foreach ($compra->detalles as $detalle) {
-                $producto = Product::find($detalle->product_id);
-                if ($producto) {
-                    $producto->existencias -= $detalle->cantidad;
-                    $producto->save();
-                }
-            }
-
-            $compra->update([
-                'estado' => 'anulada',
-                'anulada_at' => now(),
-            ]);
-        });
+            return;
+        }
 
         Notification::make()
             ->title('Compra anulada y existencias actualizadas.')
