@@ -107,7 +107,7 @@ class PosProductos extends Component
             return;
         }
 
-        if ($variante->stock <= 0) {
+        if ($variante->stock <= 0 && ! $this->empresaContexto['permite_stock_negativo']) {
             $this->dispatch('error', 'Esa variante no tiene stock disponible.');
             return;
         }
