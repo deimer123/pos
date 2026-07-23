@@ -215,7 +215,7 @@ class FacturarVentaService
             // Va 100% para el mesero asignado a la venta (porcentaje_empresa
             // = 0), reusando el mismo colaborador ya resuelto arriba para
             // comision de vendedor/mesero.
-            $propinaMonto = round((float) ($opciones['propina_monto'] ?? 0), 2);
+            $propinaMonto = round((float) ($opciones['propina_monto'] ?? 0));
             if ($propinaMonto > 0) {
                 $factura->detalles()->create([
                     'producto_id' => 0,

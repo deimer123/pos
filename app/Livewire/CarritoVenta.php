@@ -2430,8 +2430,12 @@ public function confirmarFacturar()
         // incluirla -- antes solo se sumaba dentro de FacturarVentaService
         // (ya facturada), y el modal de confirmar mostraba/cobraba un total
         // mas bajo que el real.
+        // Redondeado a pesos enteros (el COP no maneja centavos): un valor
+        // con decimales (ej. $423,2) rompe el campo "Valor recibido" del
+        // modal, porque al formatear/parsear de nuevo el separador decimal
+        // se confunde con el de miles y el monto queda multiplicado x10.
         $propinaMonto = ($this->rolComision === 'mesero' && $this->agregarPropina)
-            ? round($totalActual * $this->porcentajePropina / 100, 2)
+            ? round($totalActual * $this->porcentajePropina / 100)
             : 0;
         // El total que ve el cajero debe incluir los extras
         $totalConExtras = $totalActual + $costoEmpaque + $propinaMonto;
@@ -2523,7 +2527,7 @@ public function facturarConfirmada(array $data = [])
             'taller_orden_id' => $this->tallerOrdenId,
             'hotel_reserva_id' => $this->hotelReservaId,
             'hotel_abono_monto' => $this->hotelAbonoMonto,
-            'propina_monto' => $this->agregarPropina ? round($this->totalGeneral * $this->porcentajePropina / 100, 2) : 0,
+            'propina_monto' => $this->agregarPropina ? round($this->totalGeneral * $this->porcentajePropina / 100) : 0,
         ]);
 
         $eraOrdenTaller = (bool) $this->tallerOrdenId;
@@ -2886,7 +2890,7 @@ public function facturarEImprimir(array $data = [])
             'taller_orden_id' => $this->tallerOrdenId,
             'hotel_reserva_id' => $this->hotelReservaId,
             'hotel_abono_monto' => $this->hotelAbonoMonto,
-            'propina_monto' => $this->agregarPropina ? round($this->totalGeneral * $this->porcentajePropina / 100, 2) : 0,
+            'propina_monto' => $this->agregarPropina ? round($this->totalGeneral * $this->porcentajePropina / 100) : 0,
         ]);
 
         $eraOrdenTaller = (bool) $this->tallerOrdenId;

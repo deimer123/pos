@@ -2822,7 +2822,14 @@
             if (diasCredito > 0) fechaCredito.setDate(fechaCredito.getDate() + diasCredito);
             const fechaVence = fechaCredito.toISOString().slice(0, 10);
             const formatMoney = (value) => '$' + Number(value || 0).toLocaleString('es-CO');
-            const parseMoney = (value) => Number(String(value || '').replace(/\D/g, '') || 0);
+            // El peso colombiano no maneja centavos: cualquier monto que
+            // llegue con decimales (ej. "21.583,2", separador de miles "."
+            // y decimal ",") se redondea a entero. Antes esto se parseaba
+            // quitando todo lo que no fuera digito (\D), lo que borraba el
+            // separador decimal Y dejaba su digito pegado al entero (el
+            // monto quedaba multiplicado x10) -- por eso "Valor recibido"
+            // se autollenaba mal cuando la propina daba un valor no entero.
+            const parseMoney = (value) => Math.round(Number(String(value || '').replace(/\./g, '').replace(',', '.')) || 0);
 
             // Datos ya capturados al enviar a cocina (solo en flujo de mesa)
             const tipoPedidoOrden = dataEvento.tipo_pedido || 'local';
