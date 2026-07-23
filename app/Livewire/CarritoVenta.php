@@ -2425,20 +2425,16 @@ public function confirmarFacturar()
         $tipoPedidoFactura = $tipoPedidoOrden === 'mesa' ? 'local' : $tipoPedidoOrden;
         $esDomicilio  = $tipoPedidoOrden === 'domicilio';
         $costoEmpaque = $mesaId ? $this->ordenCostoEmpaque : 0;
-        // Si el mesero ofreció propina y el cliente aceptó (checkbox), el
-        // total que ve el cajero (vuelto, cupo de credito, etc.) tiene que
-        // incluirla -- antes solo se sumaba dentro de FacturarVentaService
-        // (ya facturada), y el modal de confirmar mostraba/cobraba un total
-        // mas bajo que el real.
-        // Redondeado a pesos enteros (el COP no maneja centavos): un valor
-        // con decimales (ej. $423,2) rompe el campo "Valor recibido" del
-        // modal, porque al formatear/parsear de nuevo el separador decimal
-        // se confunde con el de miles y el monto queda multiplicado x10.
-        $propinaMonto = ($this->rolComision === 'mesero' && $this->agregarPropina)
+        // La propina es solo una SUGERENCIA para el cliente (se imprime
+        // aparte en el ticket): no se cobra, no se suma al total ni al
+        // vuelto/cupo de credito, y no entra a comisiones ni contabilidad
+        // de la empresa. Redondeada a pesos enteros (el COP no maneja
+        // centavos) solo para que se vea bien en el ticket.
+        $propinaSugerida = ($this->rolComision === 'mesero' && $this->agregarPropina)
             ? round($totalActual * $this->porcentajePropina / 100)
             : 0;
-        // El total que ve el cajero debe incluir los extras
-        $totalConExtras = $totalActual + $costoEmpaque + $propinaMonto;
+        // El total que ve el cajero debe incluir los extras (propina NO es un extra: no se cobra)
+        $totalConExtras = $totalActual + $costoEmpaque;
 
         $this->dispatch(
             'confirmar-facturar',
@@ -2446,7 +2442,7 @@ public function confirmarFacturar()
             creditoInfo: $this->clienteCreditoInfo,
             totalVenta: $totalConExtras,
             totalProductos: $totalActual,
-            propinaMonto: $propinaMonto,
+            propinaSugerida: $propinaSugerida,
             factusHabilitado: $this->facturacionElectronicaDisponible($this->getEmpresaId()),
             mesa_id: $mesaId,
             tipo_pedido: $tipoPedidoFactura,

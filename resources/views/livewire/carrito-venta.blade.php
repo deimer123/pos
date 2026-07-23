@@ -24,9 +24,9 @@
                  factura" (ver mas abajo), no aqui. --}}
 
             @if ($rolComision === 'mesero' && $porcentajePropina > 0)
-            <label class="inline-flex items-center gap-2 bg-amber-50 border border-amber-300 text-amber-800 text-sm font-semibold px-3 py-2 rounded-full whitespace-nowrap">
+            <label class="inline-flex items-center gap-2 bg-amber-50 border border-amber-300 text-amber-800 text-sm font-semibold px-3 py-2 rounded-full whitespace-nowrap" title="Sugiere la propina en el ticket, no se cobra ni se suma al total">
                 <input type="checkbox" wire:model.live="agregarPropina">
-                Propina {{ number_format($porcentajePropina, 0) }}%
+                Sugerir propina {{ number_format($porcentajePropina, 0) }}%
             </label>
             @endif
 
@@ -2844,7 +2844,9 @@
             // Si hay extras, el total real incluye costoEmpaqueOrden (ya viene sumado en totalNumero desde PHP)
             // Pero necesitamos el total de productos solo para mostrar desglose
             const totalProductos = Number(dataEvento.totalProductos || totalNumero);
-            const propinaMonto = Number(dataEvento.propinaMonto || 0);
+            // Solo informativa: no se suma al total ni se cobra, se le
+            // sugiere al cliente aparte y se imprime en el ticket.
+            const propinaSugerida = Number(dataEvento.propinaSugerida || 0);
 
             const collectFacturaData = () => {
                 const tipoFactura = document.getElementById('swal_tipo_factura').value;
@@ -2996,7 +2998,7 @@
                                 <div style="font-size:10px;color:#64748b;font-weight:700;">Cliente</div>
                                 <div style="font-weight:900;color:#111827;font-size:12px;line-height:1.2;">${clienteVenta}</div>
                                 ${costoEmpaqueOrden > 0 ? `<div style="font-size:10px;color:#92400e;margin-top:1px;">${tipoPedidoOrden === 'domicilio' ? '🛵' : '🥡'} Productos ${formatMoney(totalProductos)} + extra ${formatMoney(costoEmpaqueOrden)}</div>` : ''}
-                                ${propinaMonto > 0 ? `<div style="font-size:10px;color:#92400e;margin-top:1px;">💰 Incluye propina ${formatMoney(propinaMonto)}</div>` : ''}
+                                ${propinaSugerida > 0 ? `<div style="font-size:10px;color:#92400e;margin-top:1px;">💰 Propina sugerida (no incluida): ${formatMoney(propinaSugerida)}</div>` : ''}
                                 ${hotelAbonoMonto > 0 ? `<div style="font-size:10px;color:#92400e;margin-top:1px;">🏨 Total ${formatMoney(totalNumero)} · Abono ya pagado ${formatMoney(hotelAbonoMonto)}</div>` : ''}
                             </div>
                             <div style="text-align:right;">

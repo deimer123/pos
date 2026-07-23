@@ -152,6 +152,13 @@
   </div>
 </div>
 
+@if($factura->propina_sugerida > 0)
+  {{-- Solo sugerencia para el cliente: no esta incluida en el Total ni se cobra --}}
+  <div style="text-align:right; font-size:11px; margin-top:2px;">
+    Propina sugerida (voluntaria): ${{ number_format($factura->propina_sugerida, 0, ',', '.') }}
+  </div>
+@endif
+
 @if($factura->observaciones)
   <div style="margin-top:8px;">
     <strong>Obs:</strong> {{ $factura->observaciones }}

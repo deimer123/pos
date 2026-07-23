@@ -47,6 +47,7 @@ class Factura extends Model
         'dom_razon_social',
         'dom_observaciones',
         'cobro_domicilio',
+        'propina_sugerida',
     ];
 
     protected $casts = [

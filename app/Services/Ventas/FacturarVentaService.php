@@ -114,9 +114,9 @@ class FacturarVentaService
             // Colaborador asignado a esta venta (vendedor o mesero, segun el
             // tipo de negocio), resuelto UNA sola vez antes del bucle. Solo
             // el rol "vendedor" reparte comision sobre cada producto (ver
-            // datosServicioFactura); el "mesero" solo se lleva la propina
-            // (linea aparte, mas abajo) -- por eso $colaboradorVendedor
-            // queda null para mesero.
+            // datosServicioFactura) -- el "mesero" no genera comision ni
+            // detalle de factura, solo se usa para saber a quien sugerirle
+            // la propina en el ticket (ver mas abajo, fuera de este bucle).
             $colaboradorAsignado = null;
             $rolComisionEmpresa = null;
             $vendedorId = $opciones['vendedor_id'] ?? null;
@@ -211,26 +211,18 @@ class FacturarVentaService
                 ]);
             }
 
-            // Propina (bar y restaurante): el cliente la acepto al facturar.
-            // Va 100% para el mesero asignado a la venta (porcentaje_empresa
-            // = 0), reusando el mismo colaborador ya resuelto arriba para
-            // comision de vendedor/mesero.
-            $propinaMonto = round((float) ($opciones['propina_monto'] ?? 0));
-            if ($propinaMonto > 0) {
-                $factura->detalles()->create([
-                    'producto_id' => 0,
-                    'descripcion_larga' => 'Propina',
-                    'cantidad' => 1,
-                    'precio' => $propinaMonto,
-                    'subtotal' => $propinaMonto,
-                    'descuento' => 0,
-                    'tipo_servicio' => 'propio',
-                    'porcentaje_empresa' => 0,
-                    'mecanico_id' => $colaboradorAsignado?->id,
-                ]);
-            }
-
             $factura->recalcularTotales();
+
+            // Propina (bar y restaurante): es solo una SUGERENCIA para el
+            // cliente, no se cobra ni se suma al total de la factura, y no
+            // entra a comisiones ni contabilidad de la empresa -- es plata
+            // que el cliente le da directo al mesero si quiere. Se guarda
+            // aparte unicamente para poder imprimirla en el ticket.
+            $propinaSugerida = round((float) ($opciones['propina_monto'] ?? 0));
+            if ($propinaSugerida > 0) {
+                $factura->propina_sugerida = $propinaSugerida;
+                $factura->save();
+            }
 
             $this->finalizarPagoFactura(
                 $factura,
