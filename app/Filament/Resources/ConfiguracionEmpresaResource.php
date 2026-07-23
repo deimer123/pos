@@ -153,6 +153,18 @@ class ConfiguracionEmpresaResource extends Resource
                                 ->label('Usa recetas')
                                 ->helperText('Útil cuando un producto descuenta ingredientes.'),
                         ]),
+
+                    Forms\Components\Grid::make(1)
+                        ->extraAttributes(['class' => 'producto-linea-3'])
+                        ->schema([
+                            Forms\Components\TextInput::make('porcentaje_propina')
+                                ->label('% de propina sugerida')
+                                ->numeric()
+                                ->minValue(0)
+                                ->maxValue(100)
+                                ->suffix('%')
+                                ->helperText('Al facturar, se le preguntará al cajero si el cliente acepta agregar esta propina. Deja vacío para no ofrecerla.'),
+                        ]),
                 ]),
 
             Forms\Components\Wizard\Step::make('Hotel')

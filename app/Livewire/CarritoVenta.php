@@ -37,9 +37,12 @@ class CarritoVenta extends Component
     // FacturarVentaService::datosServicioFactura, que usa este id para
     // calcular la comision en vez del cajero logueado).
     public bool $usaComisionVendedor = false;
+    public ?string $rolComision = null; // 'vendedor' | 'mesero' | null
     public ?int $vendedorAsignadoId = null;
     public ?string $vendedorAsignadoNombre = null;
     public bool $mostrarModalVendedor = false;
+    public float $porcentajePropina = 0;
+    public bool $agregarPropina = false;
     public string $ordenEstadoActual = 'abierta'; // 'abierta' | 'en_preparacion'
     public string $ordenTipoPedido   = 'mesa';    // 'mesa' | 'domicilio' | 'para_llevar'
     public float  $ordenCostoEmpaque = 0;
@@ -463,7 +466,9 @@ private function limpiarUtf8Array(array $datos): array
     $this->usaDomicilios = (bool)($config?->usa_domicilios ?? false);
     $user = auth()->user();
     $this->esMesero = $user->hasRole('mesero') && !$user->hasAnyRole(['cajero', 'admin_empresa']);
-    $this->usaComisionVendedor = ConfiguracionEmpresa::rolColaboradorParaTipo((string) ($config?->tipo_negocio ?? '')) === \App\Models\Mecanico::ROL_VENDEDOR;
+    $this->rolComision = ConfiguracionEmpresa::rolColaboradorParaTipo((string) ($config?->tipo_negocio ?? ''));
+    $this->usaComisionVendedor = in_array($this->rolComision, [\App\Models\Mecanico::ROL_VENDEDOR, \App\Models\Mecanico::ROL_MESERO], true);
+    $this->porcentajePropina = (float) ($config?->porcentaje_propina ?? 0);
 
     // Detectar si la mesa actual es una mesa virtual de domicilios (código DOMV)
     if ($this->mesaId) {
@@ -1259,6 +1264,7 @@ public function limpiarCarrito()
     $this->vendedorPrefacturaId = null;
     $this->vendedorAsignadoId = null;
     $this->vendedorAsignadoNombre = null;
+    $this->agregarPropina = false;
     $this->prefacturaCargadaId = null;
 
     $this->reset([
@@ -1563,6 +1569,7 @@ public function guardarPrefacturaConfirmada()
             $this->vendedorPrefacturaId = null;
             $this->vendedorAsignadoId = null;
             $this->vendedorAsignadoNombre = null;
+            $this->agregarPropina = false;
             $this->observacionKey++;
             session()->forget('carrito_guardado');
             session()->forget('observaciones_guardadas');
@@ -2505,6 +2512,7 @@ public function facturarConfirmada(array $data = [])
             'taller_orden_id' => $this->tallerOrdenId,
             'hotel_reserva_id' => $this->hotelReservaId,
             'hotel_abono_monto' => $this->hotelAbonoMonto,
+            'propina_monto' => $this->agregarPropina ? round($this->totalGeneral * $this->porcentajePropina / 100, 2) : 0,
         ]);
 
         $eraOrdenTaller = (bool) $this->tallerOrdenId;
@@ -2538,6 +2546,7 @@ public function facturarConfirmada(array $data = [])
         $this->vendedorPrefacturaId = null;
         $this->vendedorAsignadoId = null;
         $this->vendedorAsignadoNombre = null;
+        $this->agregarPropina = false;
         session()->forget('carrito_guardado');
         session()->forget('observaciones_guardadas');
         $this->olvidarCarritoPersistente();
@@ -2865,6 +2874,7 @@ public function facturarEImprimir(array $data = [])
             'taller_orden_id' => $this->tallerOrdenId,
             'hotel_reserva_id' => $this->hotelReservaId,
             'hotel_abono_monto' => $this->hotelAbonoMonto,
+            'propina_monto' => $this->agregarPropina ? round($this->totalGeneral * $this->porcentajePropina / 100, 2) : 0,
         ]);
 
         $eraOrdenTaller = (bool) $this->tallerOrdenId;
@@ -2898,6 +2908,7 @@ public function facturarEImprimir(array $data = [])
         $this->vendedorPrefacturaId = null;
         $this->vendedorAsignadoId = null;
         $this->vendedorAsignadoNombre = null;
+        $this->agregarPropina = false;
         session()->forget('carrito_guardado');
         session()->forget('observaciones_guardadas');
         $this->olvidarCarritoPersistente();
@@ -4160,12 +4171,12 @@ public function abrirSelectorVendedor(): void
 
 public function getVendedoresDisponiblesProperty()
 {
-    if (! $this->usaComisionVendedor) {
+    if (! $this->usaComisionVendedor || ! $this->rolComision) {
         return collect();
     }
 
     return \App\Models\Mecanico::where('empresa_id', $this->getEmpresaId())
-        ->porRol(\App\Models\Mecanico::ROL_VENDEDOR)
+        ->porRol($this->rolComision)
         ->where('activo', true)
         ->orderBy('nombre')
         ->get();
@@ -4174,7 +4185,7 @@ public function getVendedoresDisponiblesProperty()
 public function elegirVendedor(int $mecanicoId): void
 {
     $mecanico = \App\Models\Mecanico::where('empresa_id', $this->getEmpresaId())
-        ->porRol(\App\Models\Mecanico::ROL_VENDEDOR)
+        ->porRol($this->rolComision)
         ->where('activo', true)
         ->find($mecanicoId);
 

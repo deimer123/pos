@@ -161,6 +161,13 @@ class ColaboradorResource extends Resource
                 Tables\Columns\IconColumn::make('activo')
                     ->label('Activo')
                     ->boolean(),
+
+                Tables\Columns\TextColumn::make('pendiente')
+                    ->label('Pendiente por liquidar')
+                    ->state(fn (Mecanico $record) => static::pendiente($record))
+                    ->formatStateUsing(fn ($state) => '$ ' . number_format($state['monto'], 0, ',', '.'))
+                    ->badge()
+                    ->color(fn ($state) => $state['monto'] > 0 ? 'warning' : 'gray'),
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('activo')->label('Estado'),
@@ -168,7 +175,102 @@ class ColaboradorResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
+
+                Tables\Actions\Action::make('liquidar')
+                    ->label('Liquidar')
+                    ->icon('heroicon-o-banknotes')
+                    ->color('success')
+                    ->form([
+                        Forms\Components\DatePicker::make('fecha_desde')->label('Desde')->required(),
+                        Forms\Components\DatePicker::make('fecha_hasta')->label('Hasta')->required()->default(now()),
+                    ])
+                    ->action(function (Mecanico $record, array $data) {
+                        static::liquidar($record, $data['fecha_desde'], $data['fecha_hasta']);
+                    })
+                    ->modalDescription(fn (Mecanico $record) => 'Pendiente actual: $' . number_format(static::pendiente($record)['monto'], 0, ',', '.'))
+                    ->requiresConfirmation(),
             ]);
+    }
+
+    // Mismo criterio que TallerPanel: pendiente = factura_detalles propios
+    // de este colaborador que aun no tienen un LiquidacionMecanicoDetalle.
+    protected static function pendiente(Mecanico $record): array
+    {
+        $rows = \Illuminate\Support\Facades\DB::table('factura_detalles as fd')
+            ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
+            ->leftJoin('liquidacion_mecanico_detalles as lmd', 'lmd.factura_detalle_id', '=', 'fd.id')
+            ->where('f.empresa_id', $record->empresa_id)
+            ->where('fd.mecanico_id', $record->id)
+            ->where('fd.tipo_servicio', 'propio')
+            ->whereNull('lmd.id')
+            ->select(\Illuminate\Support\Facades\DB::raw('COALESCE(SUM(fd.subtotal), 0) as total, COALESCE(SUM(fd.subtotal * (100 - COALESCE(fd.porcentaje_empresa, 0)) / 100), 0) as monto'))
+            ->first();
+
+        return ['total' => (float) $rows->total, 'monto' => (float) $rows->monto];
+    }
+
+    protected static function liquidar(Mecanico $record, string $desde, string $hasta): void
+    {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($record, $desde, $hasta) {
+            $detalles = \Illuminate\Support\Facades\DB::table('factura_detalles as fd')
+                ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
+                ->leftJoin('liquidacion_mecanico_detalles as lmd', 'lmd.factura_detalle_id', '=', 'fd.id')
+                ->where('f.empresa_id', $record->empresa_id)
+                ->where('fd.mecanico_id', $record->id)
+                ->where('fd.tipo_servicio', 'propio')
+                ->whereNull('lmd.id')
+                ->whereDate('f.fecha', '>=', $desde)
+                ->whereDate('f.fecha', '<=', $hasta)
+                ->select('fd.id', 'fd.subtotal', 'fd.porcentaje_empresa')
+                ->get();
+
+            if ($detalles->isEmpty()) {
+                \Filament\Notifications\Notification::make()->title('No hay nada pendiente en ese rango')->warning()->send();
+                return;
+            }
+
+            $totalServicios = (float) $detalles->sum('subtotal');
+            $montoColaborador = round($detalles->sum(fn ($d) => (float) $d->subtotal * (100 - (float) ($d->porcentaje_empresa ?? 0)) / 100), 2);
+
+            $prestamosPendientes = \App\Models\MecanicoPrestamo::where('mecanico_id', $record->id)
+                ->where('estado', 'pendiente')
+                ->get();
+            $prestamosMonto = (float) $prestamosPendientes->sum('monto');
+            $montoNeto = max(0, $montoColaborador - $prestamosMonto);
+
+            $liquidacion = \App\Models\LiquidacionMecanico::create([
+                'empresa_id' => $record->empresa_id,
+                'mecanico_id' => $record->id,
+                'fecha_desde' => $desde,
+                'fecha_hasta' => $hasta,
+                'total_servicios' => $totalServicios,
+                'porcentaje_mecanico' => $totalServicios > 0 ? round($montoColaborador / $totalServicios * 100, 2) : 0,
+                'monto_mecanico' => $montoColaborador,
+                'prestamos_descontados' => $prestamosMonto,
+                'monto_neto' => $montoNeto,
+                'estado' => 'pagado',
+                'fecha_pago' => now()->toDateString(),
+                'user_id' => auth()->id(),
+            ]);
+
+            foreach ($detalles as $d) {
+                \App\Models\LiquidacionMecanicoDetalle::create([
+                    'liquidacion_id' => $liquidacion->id,
+                    'factura_detalle_id' => $d->id,
+                    'subtotal_servicio' => $d->subtotal,
+                    'monto_mecanico' => round((float) $d->subtotal * (100 - (float) ($d->porcentaje_empresa ?? 0)) / 100, 2),
+                ]);
+            }
+
+            foreach ($prestamosPendientes as $p) {
+                $p->update(['estado' => 'descontado', 'liquidacion_id' => $liquidacion->id]);
+            }
+
+            \Filament\Notifications\Notification::make()
+                ->title('Liquidación registrada: $' . number_format($montoNeto, 0, ',', '.'))
+                ->success()
+                ->send();
+        });
     }
 
     public static function getPages(): array

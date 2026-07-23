@@ -26,8 +26,15 @@
             @if ($usaComisionVendedor)
             <button type="button" wire:click="abrirSelectorVendedor"
                 class="inline-flex items-center bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-full shadow-sm transition whitespace-nowrap">
-                {{ $vendedorAsignadoNombre ? '🧑‍💼 ' . $vendedorAsignadoNombre : 'Asignar vendedor' }}
+                {{ $vendedorAsignadoNombre ? '🧑‍💼 ' . $vendedorAsignadoNombre : ($rolComision === 'mesero' ? 'Asignar mesero' : 'Asignar vendedor') }}
             </button>
+            @endif
+
+            @if ($rolComision === 'mesero' && $porcentajePropina > 0)
+            <label class="inline-flex items-center gap-2 bg-amber-50 border border-amber-300 text-amber-800 text-sm font-semibold px-3 py-2 rounded-full whitespace-nowrap">
+                <input type="checkbox" wire:model.live="agregarPropina">
+                Propina {{ number_format($porcentajePropina, 0) }}%
+            </label>
             @endif
 
 
@@ -2309,7 +2316,7 @@
             class="pos-cierre-caja-overlay fixed inset-0 bg-black/50 flex items-center justify-center z-[200020]">
             <div class="bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 p-6 w-full"
                 style="max-width:420px; max-height:90vh; overflow-y:auto; background:#eef6ff;">
-                <h2 class="text-xl font-bold mb-4">Asignar vendedor</h2>
+                <h2 class="text-xl font-bold mb-4">{{ $rolComision === 'mesero' ? 'Asignar mesero' : 'Asignar vendedor' }}</h2>
 
                 @if ($vendedorAsignadoNombre)
                     <div class="mb-3 p-3 rounded-lg text-sm" style="background:#eef2ff; border:1px solid #93c5fd;">
@@ -2326,7 +2333,7 @@
                             {{ $v->nombre }}
                         </button>
                     @empty
-                        <p class="text-sm text-gray-500">No hay vendedores activos registrados. Ve al menú "Comisiones" para crear uno.</p>
+                        <p class="text-sm text-gray-500">No hay {{ $rolComision === 'mesero' ? 'meseros' : 'vendedores' }} activos registrados. Ve al menú "Comisiones" para crear uno.</p>
                     @endforelse
                 </div>
 

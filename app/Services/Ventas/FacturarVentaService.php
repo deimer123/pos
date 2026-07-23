@@ -111,26 +111,32 @@ class FacturarVentaService
             $hotelReservaId = $opciones['hotel_reserva_id'] ?? null;
             $hotelAbonoMonto = (float) ($opciones['hotel_abono_monto'] ?? 0);
 
-            // Comision de vendedor (tienda/ropa/carniceria): se resuelve UNA
-            // sola vez antes del bucle, no por cada linea del carrito. Solo
-            // aplica si el tipo de negocio usa el rol "vendedor" y el
-            // vendedor de esta venta esta registrado como colaborador con
-            // % propio (ver Mecanico::ROL_VENDEDOR).
-            $colaboradorVendedor = null;
+            // Colaborador asignado a esta venta (vendedor o mesero, segun el
+            // tipo de negocio), resuelto UNA sola vez antes del bucle. Solo
+            // el rol "vendedor" reparte comision sobre cada producto (ver
+            // datosServicioFactura); el "mesero" solo se lleva la propina
+            // (linea aparte, mas abajo) -- por eso $colaboradorVendedor
+            // queda null para mesero.
+            $colaboradorAsignado = null;
+            $rolComisionEmpresa = null;
             $vendedorId = $opciones['vendedor_id'] ?? null;
 
             if ($vendedorId) {
                 $tipoNegocio = (string) (ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('tipo_negocio') ?? '');
+                $rolComisionEmpresa = ConfiguracionEmpresa::rolColaboradorParaTipo($tipoNegocio);
 
-                if (ConfiguracionEmpresa::rolColaboradorParaTipo($tipoNegocio) === \App\Models\Mecanico::ROL_VENDEDOR) {
-                    $colaboradorVendedor = \App\Models\Mecanico::where('empresa_id', $empresaId)
-                        ->porRol(\App\Models\Mecanico::ROL_VENDEDOR)
+                if (in_array($rolComisionEmpresa, [\App\Models\Mecanico::ROL_VENDEDOR, \App\Models\Mecanico::ROL_MESERO], true)) {
+                    $colaboradorAsignado = \App\Models\Mecanico::where('empresa_id', $empresaId)
+                        ->porRol($rolComisionEmpresa)
                         ->where('user_id', $vendedorId)
                         ->where('activo', true)
-                        ->whereNotNull('porcentaje_comision')
                         ->first();
                 }
             }
+
+            $colaboradorVendedor = ($rolComisionEmpresa === \App\Models\Mecanico::ROL_VENDEDOR && $colaboradorAsignado?->porcentaje_comision !== null)
+                ? $colaboradorAsignado
+                : null;
 
             foreach ($carrito as $item) {
                 $precio = (float) ($item['nuevo_precio'] ?? $item['precio'] ?? 0);
@@ -202,6 +208,25 @@ class FacturarVentaService
                     'precio' => $costoEmpaque,
                     'subtotal' => $costoEmpaque,
                     'descuento' => 0,
+                ]);
+            }
+
+            // Propina (bar y restaurante): el cliente la acepto al facturar.
+            // Va 100% para el mesero asignado a la venta (porcentaje_empresa
+            // = 0), reusando el mismo colaborador ya resuelto arriba para
+            // comision de vendedor/mesero.
+            $propinaMonto = round((float) ($opciones['propina_monto'] ?? 0), 2);
+            if ($propinaMonto > 0) {
+                $factura->detalles()->create([
+                    'producto_id' => 0,
+                    'descripcion_larga' => 'Propina',
+                    'cantidad' => 1,
+                    'precio' => $propinaMonto,
+                    'subtotal' => $propinaMonto,
+                    'descuento' => 0,
+                    'tipo_servicio' => 'propio',
+                    'porcentaje_empresa' => 0,
+                    'mecanico_id' => $colaboradorAsignado?->id,
                 ]);
             }
 

@@ -28,6 +28,7 @@ class ConfiguracionEmpresa extends Model
         'usa_mesas',
         'usa_cocina',
         'usa_recetas',
+        'porcentaje_propina',
         'usa_variantes',
         'usa_peso',
         'usa_servicios',
