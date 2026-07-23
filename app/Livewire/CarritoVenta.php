@@ -466,14 +466,7 @@ private function limpiarUtf8Array(array $datos): array
     $this->usaDomicilios = (bool)($config?->usa_domicilios ?? false);
     $user = auth()->user();
     $this->esMesero = $user->hasRole('mesero') && !$user->hasAnyRole(['cajero', 'admin_empresa']);
-    $rol = ConfiguracionEmpresa::rolColaboradorParaTipo((string) ($config?->tipo_negocio ?? ''));
-    // "Comisión a vendedores" es un toggle aparte en Configuración de
-    // Empresa (no basta con el tipo de negocio) -- si esta apagado, se
-    // desactiva el rol vendedor por completo. El mesero (propina) no
-    // depende de este toggle, solo de tener % de propina configurado.
-    if ($rol === \App\Models\Mecanico::ROL_VENDEDOR && ! ($config?->usa_comision_vendedores ?? false)) {
-        $rol = null;
-    }
+    $rol = ConfiguracionEmpresa::rolComisionActual($config);
     $this->rolComision = $rol;
     $this->usaComisionVendedor = $rol !== null;
     $this->porcentajePropina = (float) ($config?->porcentaje_propina ?? 0);

@@ -140,24 +140,29 @@ class ConfiguracionEmpresa extends Model
     return $this->logo ? Storage::disk('public')->url($this->logo) : null;
 }
 
-// Que "rol" de colaborador (ver Mecanico::ROL_*) le corresponde a cada
-// tipo de negocio, para el modulo generalizado de comisiones/propinas
-// (mismo motor de "mecanicos" reutilizado con otro nombre). null = ese
-// tipo de negocio todavia no tiene este modulo (ej. hotel).
-public static function rolColaboradorParaTipo(string $tipo): ?string
+// Que "rol" de colaborador (ver Mecanico::ROL_*) esta activo para el
+// modulo generalizado de comisiones/propinas (mismo motor de
+// "mecanicos" reutilizado con otro nombre). "Comisión a vendedores"
+// (usa_comision_vendedores) es un toggle UNIVERSAL, independiente del
+// tipo de negocio -- asi el taller (que ya tiene su propio sistema de
+// mecanicos) tambien puede activarlo, igual que tienda/ropa/carniceria
+// u hotel. Bar y restaurante siempre usa mesero/propina en su lugar.
+public static function rolComisionActual(?self $config): ?string
 {
-    return match ($tipo) {
-        'taller' => Mecanico::ROL_MECANICO,
-        'tienda', 'ropa_calzado', 'carniceria' => Mecanico::ROL_VENDEDOR,
-        'bar_restaurante' => Mecanico::ROL_MESERO,
-        default => null,
-    };
+    if (! $config) {
+        return null;
+    }
+
+    if ($config->tipo_negocio === 'bar_restaurante') {
+        return Mecanico::ROL_MESERO;
+    }
+
+    return (bool) $config->usa_comision_vendedores ? Mecanico::ROL_VENDEDOR : null;
 }
 
-public static function etiquetaColaboradorParaTipo(string $tipo, bool $plural = false): string
+public static function etiquetaRolComision(?string $rol, bool $plural = false): string
 {
-    return match (static::rolColaboradorParaTipo($tipo)) {
-        Mecanico::ROL_MECANICO => $plural ? 'Mecánicos' : 'Mecánico',
+    return match ($rol) {
         Mecanico::ROL_VENDEDOR => $plural ? 'Vendedores' : 'Vendedor',
         Mecanico::ROL_MESERO => $plural ? 'Meseros' : 'Mesero',
         default => $plural ? 'Colaboradores' : 'Colaborador',

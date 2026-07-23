@@ -15,9 +15,10 @@ use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Reusa el modelo/tabla de "Mecanico" (y todo su motor de liquidacion,
- * ver App\Livewire\TallerPanel) para Vendedores (tienda/ropa/carniceria)
- * y Meseros (bar y restaurante) -- ver Mecanico::ROL_* y
- * ConfiguracionEmpresa::rolColaboradorParaTipo(). A diferencia del
+ * ver App\Livewire\TallerPanel) para Vendedores (comision universal,
+ * activada con el toggle usa_comision_vendedores) y Meseros (bar y
+ * restaurante, propina) -- ver Mecanico::ROL_* y
+ * ConfiguracionEmpresa::rolComisionActual(). A diferencia del
  * mecanico de taller (registro puramente administrativo, sin login), un
  * vendedor/mesero SI se vincula a un usuario real ya existente (creado
  * en el menu Empleados con su rol), para poder resolver automaticamente
@@ -46,11 +47,9 @@ class ColaboradorResource extends Resource
             return null;
         }
 
-        $tipo = (string) (ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('tipo_negocio') ?? '');
-        $rol = ConfiguracionEmpresa::rolColaboradorParaTipo($tipo);
+        $config = ConfiguracionEmpresa::where('empresa_id', $empresaId)->first(['tipo_negocio', 'usa_comision_vendedores']);
 
-        // El taller ya tiene su propio recurso "Mecánicos" (MecanicoResource).
-        return $rol === Mecanico::ROL_MECANICO ? null : $rol;
+        return ConfiguracionEmpresa::rolComisionActual($config);
     }
 
     public static function getNavigationLabel(): string
@@ -70,10 +69,7 @@ class ColaboradorResource extends Resource
 
     protected static function etiqueta(bool $plural): string
     {
-        $empresaId = static::empresaId();
-        $tipo = (string) (ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('tipo_negocio') ?? '');
-
-        return ConfiguracionEmpresa::etiquetaColaboradorParaTipo($tipo, $plural);
+        return ConfiguracionEmpresa::etiquetaRolComision(static::rolActual(), $plural);
     }
 
     public static function canViewAny(): bool

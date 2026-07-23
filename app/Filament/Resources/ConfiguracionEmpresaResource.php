@@ -215,10 +215,6 @@ class ConfiguracionEmpresaResource extends Resource
                             Forms\Components\Toggle::make('usa_variantes')
                                 ->label('Vende por variantes (talla, color)')
                                 ->helperText('Ideal para ropa y zapatos: cada producto puede tener varias combinaciones de talla/color, cada una con su propio stock. Se configuran luego en cada producto.'),
-
-                            Forms\Components\Toggle::make('usa_comision_vendedores')
-                                ->label('Comisión a vendedores')
-                                ->helperText('Actívalo para poder asignar cada venta a un vendedor y liquidarle su % de comisión (menú "Comisiones").'),
                         ]),
                 ]),
 
@@ -260,6 +256,21 @@ class ConfiguracionEmpresaResource extends Resource
                                 ->label('Vendedores/meseros/cajeros/taller pueden ver el stock')
                                 ->default(true)
                                 ->helperText('Si lo desactivas, esos roles no verán las existencias en el punto de venta.'),
+                        ]),
+
+                    // Toggle universal, independiente del tipo de negocio: asi
+                    // el taller (que ya tiene su propio sistema de mecanicos)
+                    // tambien puede activar comision a vendedores, ademas de
+                    // tienda/ropa/carniceria/hotel. Bar y restaurante usa su
+                    // propio sistema de mesero/propina (ver paso "Bar y
+                    // Restaurante") y no necesita este toggle.
+                    Forms\Components\Grid::make(1)
+                        ->extraAttributes(['class' => 'producto-linea-2'])
+                        ->visible(fn (Forms\Get $get) => $get('tipo_negocio') !== 'bar_restaurante')
+                        ->schema([
+                            Forms\Components\Toggle::make('usa_comision_vendedores')
+                                ->label('Comisión a vendedores')
+                                ->helperText('Actívalo para poder asignar cada venta a un vendedor y liquidarle su % de comisión (menú "Comisiones").'),
                         ]),
 
                 ]),
