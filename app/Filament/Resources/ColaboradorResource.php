@@ -183,9 +183,14 @@ class ColaboradorResource extends Resource
                     ->form([
                         Forms\Components\DatePicker::make('fecha_desde')->label('Desde')->required(),
                         Forms\Components\DatePicker::make('fecha_hasta')->label('Hasta')->required()->default(now()),
+                        Forms\Components\Select::make('medio_pago')
+                            ->label('Medio de pago')
+                            ->options(['Efectivo' => 'Efectivo', 'Transferencia' => 'Transferencia'])
+                            ->default('Efectivo')
+                            ->required(),
                     ])
                     ->action(function (Mecanico $record, array $data) {
-                        static::liquidar($record, $data['fecha_desde'], $data['fecha_hasta']);
+                        static::liquidar($record, $data['fecha_desde'], $data['fecha_hasta'], $data['medio_pago']);
                     })
                     ->modalDescription(fn (Mecanico $record) => 'Pendiente actual: $' . number_format(static::pendiente($record)['monto'], 0, ',', '.'))
                     ->requiresConfirmation(),
@@ -209,9 +214,9 @@ class ColaboradorResource extends Resource
         return ['total' => (float) $rows->total, 'monto' => (float) $rows->monto];
     }
 
-    protected static function liquidar(Mecanico $record, string $desde, string $hasta): void
+    protected static function liquidar(Mecanico $record, string $desde, string $hasta, string $medioPago = 'Efectivo'): void
     {
-        \Illuminate\Support\Facades\DB::transaction(function () use ($record, $desde, $hasta) {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($record, $desde, $hasta, $medioPago) {
             $detalles = \Illuminate\Support\Facades\DB::table('factura_detalles as fd')
                 ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
                 ->leftJoin('liquidacion_mecanico_detalles as lmd', 'lmd.factura_detalle_id', '=', 'fd.id')
@@ -264,6 +269,31 @@ class ColaboradorResource extends Resource
 
             foreach ($prestamosPendientes as $p) {
                 $p->update(['estado' => 'descontado', 'liquidacion_id' => $liquidacion->id]);
+            }
+
+            // Registro contable: mismo criterio que TallerPanel al liquidar
+            // un mecanico -- queda como gasto de salida, ligado a la caja
+            // abierta si hay una (no es obligatorio tenerla abierta aqui,
+            // porque esta liquidacion se hace desde el panel de admin).
+            if ($montoNeto > 0) {
+                $cajaActiva = \App\Models\Caja::where('empresa_id', $record->empresa_id)
+                    ->where('estado', 'abierta')
+                    ->latest('opened_at')
+                    ->first();
+
+                \App\Models\Gasto::create([
+                    'id_gasto' => \App\Models\Gasto::where('empresa_id', $record->empresa_id)->max('id_gasto') + 1,
+                    'empresa_id' => $record->empresa_id,
+                    'tipo' => 'salida',
+                    'categoria' => 'liquidacion_' . $record->rol,
+                    'descripcion' => 'Liquidación ' . ($record->rol === 'mesero' ? 'mesero' : 'vendedor') . ': ' . $record->nombre
+                        . ($prestamosMonto > 0 ? ' (descontado préstamo de $' . number_format($prestamosMonto, 0, ',', '.') . ')' : ''),
+                    'monto' => $montoNeto,
+                    'fecha' => today()->toDateString(),
+                    'metodo_pago' => $medioPago,
+                    'created_by' => auth()->id(),
+                    'caja_id' => $cajaActiva?->id,
+                ]);
             }
 
             \Filament\Notifications\Notification::make()
