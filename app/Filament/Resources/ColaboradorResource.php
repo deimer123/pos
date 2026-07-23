@@ -110,9 +110,15 @@ class ColaboradorResource extends Resource
                         ->schema([
                             Forms\Components\Select::make('user_id')
                                 ->label('Usuario')
+                                // El cajero tambien puede comisionar (ademas
+                                // del rol especifico de este tipo de
+                                // negocio): si el mismo cajero atiende la
+                                // venta sin que haya un vendedor/mesero de
+                                // por medio, igual se le puede reconocer su
+                                // parte.
                                 ->options(fn () => User::where('empresa_id', $empresaId)
                                     ->where('tipo_usuario', 'empleado')
-                                    ->role($rol)
+                                    ->role([$rol, 'cajero'])
                                     ->pluck('name', 'id'))
                                 ->searchable()
                                 ->required()
@@ -120,7 +126,7 @@ class ColaboradorResource extends Resource
                                 ->afterStateUpdated(function ($state, Forms\Set $set) {
                                     $set('nombre', $state ? User::find($state)?->name : null);
                                 })
-                                ->helperText('Solo aparecen usuarios ya creados con este rol (menú Empleados).'),
+                                ->helperText('Aparecen los empleados con el rol de este negocio y los cajeros (el cajero también puede comisionar).'),
 
                             Forms\Components\TextInput::make('porcentaje_comision')
                                 ->label('% de comisión')

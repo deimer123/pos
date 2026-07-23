@@ -16,6 +16,14 @@ class CreateEmpleado extends CreateRecord
         return $this->getResource()::getUrl('index');
     }
 
+    // Se desactiva la notificacion automatica de Filament: ya se manda una
+    // propia en afterCreate(), y mostraba las dos ("Creado" +
+    // "Empleado creado exitosamente").
+    protected function getCreatedNotificationTitle(): ?string
+    {
+        return null;
+    }
+
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $data['tipo_usuario'] = 'empleado';
