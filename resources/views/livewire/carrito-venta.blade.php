@@ -2925,6 +2925,7 @@
                 }
                 return {
                     tipo_factura: tipoFactura,
+                    vendedor_id: document.getElementById('swal_vendedor_id')?.value || null,
                     tipo_pago: tipoPago,
                     medio_pago: tipoPago === 'contado' ? medioPago : null,
                     monto_recibido: tipoPago === 'contado' && medioPago === 'efectivo' ? recibido : null,
@@ -3062,6 +3063,18 @@
                                 </select>
                             </div>
                         </div>
+
+                        @if ($usaComisionVendedor)
+                        <div style="margin-bottom:6px;">
+                            <label style="display:block;font-size:10px;font-weight:700;color:#4b5563;margin-bottom:2px;">{{ $rolComision === 'mesero' ? 'Mesero' : 'Vendedor' }}</label>
+                            <select id="swal_vendedor_id" style="width:100%;height:30px;border:1px solid #cbd5e1;border-radius:7px;padding:2px 6px;font-size:11px;background:white;">
+                                <option value="">-- Sin asignar --</option>
+                                @foreach ($this->vendedoresDisponibles as $v)
+                                    <option value="{{ $v->user_id }}" {{ (string) $vendedorAsignadoId === (string) $v->user_id ? 'selected' : '' }}>{{ $v->nombre }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        @endif
 
                         <div id="swal_contado_wrap">
                             <div id="swal_efectivo_wrap">

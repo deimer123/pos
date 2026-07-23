@@ -122,8 +122,14 @@ class FacturarVentaService
             $vendedorId = $opciones['vendedor_id'] ?? null;
 
             if ($vendedorId) {
-                $tipoNegocio = (string) (ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('tipo_negocio') ?? '');
-                $rolComisionEmpresa = ConfiguracionEmpresa::rolColaboradorParaTipo($tipoNegocio);
+                $configEmpresa = ConfiguracionEmpresa::where('empresa_id', $empresaId)->first(['tipo_negocio', 'usa_comision_vendedores']);
+                $rolComisionEmpresa = ConfiguracionEmpresa::rolColaboradorParaTipo((string) ($configEmpresa?->tipo_negocio ?? ''));
+
+                // "Comisión a vendedores" es un toggle aparte (no basta con
+                // el tipo de negocio); el mesero/propina no depende de el.
+                if ($rolComisionEmpresa === \App\Models\Mecanico::ROL_VENDEDOR && ! ($configEmpresa?->usa_comision_vendedores ?? false)) {
+                    $rolComisionEmpresa = null;
+                }
 
                 if (in_array($rolComisionEmpresa, [\App\Models\Mecanico::ROL_VENDEDOR, \App\Models\Mecanico::ROL_MESERO], true)) {
                     $colaboradorAsignado = \App\Models\Mecanico::where('empresa_id', $empresaId)

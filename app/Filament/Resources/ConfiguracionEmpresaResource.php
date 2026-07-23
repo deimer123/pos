@@ -215,6 +215,10 @@ class ConfiguracionEmpresaResource extends Resource
                             Forms\Components\Toggle::make('usa_variantes')
                                 ->label('Vende por variantes (talla, color)')
                                 ->helperText('Ideal para ropa y zapatos: cada producto puede tener varias combinaciones de talla/color, cada una con su propio stock. Se configuran luego en cada producto.'),
+
+                            Forms\Components\Toggle::make('usa_comision_vendedores')
+                                ->label('Comisión a vendedores')
+                                ->helperText('Actívalo para poder asignar cada venta a un vendedor y liquidarle su % de comisión (menú "Comisiones").'),
                         ]),
                 ]),
 

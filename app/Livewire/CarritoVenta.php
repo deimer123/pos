@@ -466,8 +466,16 @@ private function limpiarUtf8Array(array $datos): array
     $this->usaDomicilios = (bool)($config?->usa_domicilios ?? false);
     $user = auth()->user();
     $this->esMesero = $user->hasRole('mesero') && !$user->hasAnyRole(['cajero', 'admin_empresa']);
-    $this->rolComision = ConfiguracionEmpresa::rolColaboradorParaTipo((string) ($config?->tipo_negocio ?? ''));
-    $this->usaComisionVendedor = in_array($this->rolComision, [\App\Models\Mecanico::ROL_VENDEDOR, \App\Models\Mecanico::ROL_MESERO], true);
+    $rol = ConfiguracionEmpresa::rolColaboradorParaTipo((string) ($config?->tipo_negocio ?? ''));
+    // "Comisión a vendedores" es un toggle aparte en Configuración de
+    // Empresa (no basta con el tipo de negocio) -- si esta apagado, se
+    // desactiva el rol vendedor por completo. El mesero (propina) no
+    // depende de este toggle, solo de tener % de propina configurado.
+    if ($rol === \App\Models\Mecanico::ROL_VENDEDOR && ! ($config?->usa_comision_vendedores ?? false)) {
+        $rol = null;
+    }
+    $this->rolComision = $rol;
+    $this->usaComisionVendedor = $rol !== null;
     $this->porcentajePropina = (float) ($config?->porcentaje_propina ?? 0);
 
     // Detectar si la mesa actual es una mesa virtual de domicilios (código DOMV)
@@ -2475,10 +2483,11 @@ public function facturarConfirmada(array $data = [])
         $tipoPago = $data['tipo_pago'] ?? 'contado';
 
         // El cajero que factura puede no ser el vendedor que se lleva la
-        // comision (algunos vendedores no tienen acceso al POS) -- si
-        // asigno uno manualmente, ese manda; si no, se usa el vendedor de
-        // la prefactura cargada; si tampoco, el propio cajero logueado.
-        $vendedorId = $this->vendedorAsignadoId ?? auth()->id();
+        // comision (algunos vendedores no tienen acceso al POS) -- si se
+        // eligio en el select del modal "Confirmar factura", ese manda; si
+        // no, el asignado antes con el boton; si no, el de la prefactura
+        // cargada; si tampoco, el propio cajero logueado.
+        $vendedorId = ! empty($data['vendedor_id']) ? (int) $data['vendedor_id'] : ($this->vendedorAsignadoId ?? auth()->id());
         if ($this->prefacturaCargadaId) {
             $prefactura = Prefactura::find($this->prefacturaCargadaId);
             $vendedorId = $prefactura?->vendedor_id ?? $vendedorId;
@@ -2837,10 +2846,11 @@ public function facturarEImprimir(array $data = [])
         $tipoPago = $data['tipo_pago'] ?? 'contado';
 
         // El cajero que factura puede no ser el vendedor que se lleva la
-        // comision (algunos vendedores no tienen acceso al POS) -- si
-        // asigno uno manualmente, ese manda; si no, se usa el vendedor de
-        // la prefactura cargada; si tampoco, el propio cajero logueado.
-        $vendedorId = $this->vendedorAsignadoId ?? auth()->id();
+        // comision (algunos vendedores no tienen acceso al POS) -- si se
+        // eligio en el select del modal "Confirmar factura", ese manda; si
+        // no, el asignado antes con el boton; si no, el de la prefactura
+        // cargada; si tampoco, el propio cajero logueado.
+        $vendedorId = ! empty($data['vendedor_id']) ? (int) $data['vendedor_id'] : ($this->vendedorAsignadoId ?? auth()->id());
         if ($this->prefacturaCargadaId) {
             $prefactura = Prefactura::find($this->prefacturaCargadaId);
             $vendedorId = $prefactura?->vendedor_id ?? $vendedorId;

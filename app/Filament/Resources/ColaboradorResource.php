@@ -164,10 +164,10 @@ class ColaboradorResource extends Resource
 
                 Tables\Columns\TextColumn::make('pendiente')
                     ->label('Pendiente por liquidar')
-                    ->state(fn (Mecanico $record) => static::pendiente($record))
-                    ->formatStateUsing(fn ($state) => '$ ' . number_format($state['monto'], 0, ',', '.'))
+                    ->getStateUsing(fn (Mecanico $record) => static::pendiente($record)['monto'])
+                    ->formatStateUsing(fn ($state) => '$ ' . number_format((float) $state, 0, ',', '.'))
                     ->badge()
-                    ->color(fn ($state) => $state['monto'] > 0 ? 'warning' : 'gray'),
+                    ->color(fn ($state) => (float) $state > 0 ? 'warning' : 'gray'),
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('activo')->label('Estado'),
