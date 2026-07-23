@@ -207,13 +207,24 @@
   <div class="sep">------------------------</div>
   Gracias!
 
-  @if($factura->vendedor || $factura->cajero)
+  @php
+      // "Cajero" = quien proceso/registro la venta (cajero_id, o el
+      // creador de la factura si no hay uno distinto). "Vendedor" es el
+      // colaborador asignado para la comision (vendedor_id) -- solo se
+      // muestra aparte si es una persona DISTINTA al cajero, para no
+      // repetir el mismo nombre dos veces cuando el cajero atendio la
+      // venta el mismo sin que hubiera un vendedor de por medio.
+      $nombreCajero = optional($factura->cajero)->name ?: optional($factura->vendedor)->name;
+      $nombreVendedorAsignado = optional($factura->vendedorAsignado)->name;
+      $mostrarVendedorAparte = $nombreVendedorAsignado && $nombreVendedorAsignado !== $nombreCajero;
+  @endphp
+  @if($mostrarVendedorAparte || $nombreCajero)
     <div style="margin-top:10px; font-size:11px; text-align:left;">
-        @if($factura->vendedor)
-            <div>Vendedor: {{ optional($factura->vendedor)->name }}</div>
+        @if($mostrarVendedorAparte)
+            <div>Vendedor: {{ $nombreVendedorAsignado }}</div>
         @endif
-        @if($factura->cajero)
-            <div>Cajero: {{ optional($factura->cajero)->name }}</div>
+        @if($nombreCajero)
+            <div>Cajero: {{ $nombreCajero }}</div>
         @endif
     </div>
   @endif
