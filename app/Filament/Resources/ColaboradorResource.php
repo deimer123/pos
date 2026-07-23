@@ -11,7 +11,9 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use App\Exports\LiquidacionesComisionesExport;
 use Illuminate\Database\Eloquent\Builder;
+use Maatwebsite\Excel\Facades\Excel;
 
 /**
  * Reusa el modelo/tabla de "Mecanico" (y todo su motor de liquidacion,
@@ -173,6 +175,25 @@ class ColaboradorResource extends Resource
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('activo')->label('Estado'),
+            ])
+            ->headerActions([
+                Tables\Actions\Action::make('reporte_comisiones')
+                    ->label('Descargar reporte')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('success')
+                    ->form([
+                        Forms\Components\DatePicker::make('desde')->label('Desde'),
+                        Forms\Components\DatePicker::make('hasta')->label('Hasta')->default(now()),
+                    ])
+                    ->action(function (array $data) {
+                        $empresaId = static::empresaId();
+                        $rol = static::rolActual();
+
+                        return Excel::download(
+                            new LiquidacionesComisionesExport($empresaId, (string) $rol, $data['desde'] ?? null, $data['hasta'] ?? null),
+                            'comisiones-' . $rol . '-' . now()->format('Y-m-d') . '.xlsx'
+                        );
+                    }),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
