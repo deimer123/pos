@@ -34,7 +34,9 @@ class VarianteProductoResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        return static::canAccess();
+        // Es solo informativo (las variantes se editan dentro de cada
+        // Producto) -- se saca del menu para no duplicar la navegacion.
+        return false;
     }
 
     public static function canAccess(): bool

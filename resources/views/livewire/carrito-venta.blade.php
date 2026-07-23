@@ -20,15 +20,8 @@
             </button>
             @endif
 
-            {{-- Algunos vendedores no tienen acceso al POS: el cajero les
-                 asigna la venta manualmente aqui para que la comision quede
-                 a nombre del vendedor y no del cajero. --}}
-            @if ($usaComisionVendedor)
-            <button type="button" wire:click="abrirSelectorVendedor"
-                class="inline-flex items-center bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-full shadow-sm transition whitespace-nowrap">
-                {{ $vendedorAsignadoNombre ? '🧑‍💼 ' . $vendedorAsignadoNombre : ($rolComision === 'mesero' ? 'Asignar mesero' : 'Asignar vendedor') }}
-            </button>
-            @endif
+            {{-- El vendedor/mesero se elige directo en el modal "Confirmar
+                 factura" (ver mas abajo), no aqui. --}}
 
             @if ($rolComision === 'mesero' && $porcentajePropina > 0)
             <label class="inline-flex items-center gap-2 bg-amber-50 border border-amber-300 text-amber-800 text-sm font-semibold px-3 py-2 rounded-full whitespace-nowrap">
@@ -2311,42 +2304,6 @@
     @endif
 
 
-    @if ($mostrarModalVendedor)
-        <div wire:key="modal-asignar-vendedor"
-            class="pos-cierre-caja-overlay fixed inset-0 bg-black/50 flex items-center justify-center z-[200020]">
-            <div class="bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 p-6 w-full"
-                style="max-width:420px; max-height:90vh; overflow-y:auto; background:#eef6ff;">
-                <h2 class="text-xl font-bold mb-4">{{ $rolComision === 'mesero' ? 'Asignar mesero' : 'Asignar vendedor' }}</h2>
-
-                @if ($vendedorAsignadoNombre)
-                    <div class="mb-3 p-3 rounded-lg text-sm" style="background:#eef2ff; border:1px solid #93c5fd;">
-                        Actualmente asignado a: <strong>{{ $vendedorAsignadoNombre }}</strong>
-                        <button type="button" wire:click="quitarVendedorAsignado" class="ml-2 text-red-600 font-semibold underline">Quitar</button>
-                    </div>
-                @endif
-
-                <div class="flex flex-col gap-2">
-                    @forelse ($this->vendedoresDisponibles as $v)
-                        <button type="button" wire:click="elegirVendedor({{ $v->id }})"
-                            class="w-full text-left px-4 py-3 rounded-lg font-semibold"
-                            style="border:1px solid #93c5fd; background:#ffffff; color:#1f2937;">
-                            {{ $v->nombre }}
-                        </button>
-                    @empty
-                        <p class="text-sm text-gray-500">No hay {{ $rolComision === 'mesero' ? 'meseros' : 'vendedores' }} activos registrados. Ve al menú "Comisiones" para crear uno.</p>
-                    @endforelse
-                </div>
-
-                <div class="mt-5 flex justify-end gap-2 sticky bottom-0 bg-white pt-3">
-                    <button type="button" class="text-white text-sm font-semibold px-4 py-2 rounded-full shadow-sm"
-                        style="background:#ef4444 !important;color:#fff !important;"
-                        wire:click="$set('mostrarModalVendedor', false)">Cerrar</button>
-                </div>
-            </div>
-        </div>
-    @endif
-
-
     @if ($mostrarModalCerrarCaja)
         <div wire:key="modal-cerrar-caja"
             class="fixed inset-0 flex items-center justify-center" style="z-index:2147483000;background:rgba(15,23,42,.62);padding:16px;">
@@ -2915,6 +2872,12 @@
                     Swal.showValidationMessage('Seleccione la fecha de vencimiento.');
                     return false;
                 }
+                @if ($usaComisionVendedor)
+                if (!document.getElementById('swal_vendedor_id')?.value) {
+                    Swal.showValidationMessage('Selecciona el {{ $rolComision === "mesero" ? "mesero" : "vendedor" }}.');
+                    return false;
+                }
+                @endif
                 if (tipoPago === 'contado' && medioPago === 'efectivo' && recibido < saldoACobrar) {
                     Swal.showValidationMessage('El valor recibido no puede ser menor al saldo a cobrar.');
                     return false;
