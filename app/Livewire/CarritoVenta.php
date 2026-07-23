@@ -2425,8 +2425,16 @@ public function confirmarFacturar()
         $tipoPedidoFactura = $tipoPedidoOrden === 'mesa' ? 'local' : $tipoPedidoOrden;
         $esDomicilio  = $tipoPedidoOrden === 'domicilio';
         $costoEmpaque = $mesaId ? $this->ordenCostoEmpaque : 0;
+        // Si el mesero ofreció propina y el cliente aceptó (checkbox), el
+        // total que ve el cajero (vuelto, cupo de credito, etc.) tiene que
+        // incluirla -- antes solo se sumaba dentro de FacturarVentaService
+        // (ya facturada), y el modal de confirmar mostraba/cobraba un total
+        // mas bajo que el real.
+        $propinaMonto = ($this->rolComision === 'mesero' && $this->agregarPropina)
+            ? round($totalActual * $this->porcentajePropina / 100, 2)
+            : 0;
         // El total que ve el cajero debe incluir los extras
-        $totalConExtras = $totalActual + $costoEmpaque;
+        $totalConExtras = $totalActual + $costoEmpaque + $propinaMonto;
 
         $this->dispatch(
             'confirmar-facturar',
@@ -2434,6 +2442,7 @@ public function confirmarFacturar()
             creditoInfo: $this->clienteCreditoInfo,
             totalVenta: $totalConExtras,
             totalProductos: $totalActual,
+            propinaMonto: $propinaMonto,
             factusHabilitado: $this->facturacionElectronicaDisponible($this->getEmpresaId()),
             mesa_id: $mesaId,
             tipo_pedido: $tipoPedidoFactura,
