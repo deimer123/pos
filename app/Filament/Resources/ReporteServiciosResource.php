@@ -106,6 +106,7 @@ class ReporteServiciosResource extends Resource
                         Select::make('mecanico_id')
                             ->label('Mecánico')
                             ->options(fn () => Mecanico::where('empresa_id', $empresaId)
+                                ->where('rol', Mecanico::ROL_MECANICO)
                                 ->where('activo', true)
                                 ->orderBy('nombre')
                                 ->pluck('nombre', 'id'))

@@ -66,6 +66,11 @@ class ReporteMecanicosResource extends Resource
             ->query(
                 FacturaDetalle::query()
                     ->whereNotNull('mecanico_id')
+                    // Este reporte es exclusivo de Taller: si la empresa
+                    // tambien activo "Comision a vendedores" (universal),
+                    // no deben mezclarse aqui las lineas de venta de
+                    // productos comisionadas a un vendedor.
+                    ->whereHas('mecanico', fn ($m) => $m->where('rol', Mecanico::ROL_MECANICO))
                     ->whereHas('factura', fn ($q) => $q->where('empresa_id', $empresaId))
                     ->with(['factura', 'mecanico'])
             )
@@ -89,7 +94,7 @@ class ReporteMecanicosResource extends Resource
 
                 SelectFilter::make('mecanico_id')
                     ->label('Mecánico')
-                    ->options(fn () => Mecanico::where('empresa_id', $empresaId)->pluck('nombre', 'id'))
+                    ->options(fn () => Mecanico::where('empresa_id', $empresaId)->where('rol', Mecanico::ROL_MECANICO)->pluck('nombre', 'id'))
                     ->placeholder('Todos'),
             ])
             ->columns([

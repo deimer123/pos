@@ -143,6 +143,7 @@ class ServicioResource extends Resource
                                 ->label('Mecánico')
                                 ->native(false)
                                 ->options(fn () => Mecanico::where('empresa_id', auth()->user()->getEmpresaActualId())
+                                    ->where('rol', Mecanico::ROL_MECANICO)
                                     ->where('activo', true)
                                     ->pluck('nombre', 'id'))
                                 ->searchable()

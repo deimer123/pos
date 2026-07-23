@@ -407,6 +407,7 @@ return \App\Models\Familia::create($data)->id;
                         ->options(function () {
                             $empresaId = auth()->user()->getEmpresaActualId();
                             return Mecanico::where('empresa_id', $empresaId)
+                                ->where('rol', Mecanico::ROL_MECANICO)
                                 ->where('activo', true)
                                 ->pluck('nombre', 'id');
                         })

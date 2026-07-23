@@ -332,7 +332,11 @@ class TallerPanel extends Component
     public function getMecanicosProperty()
     {
         $empresaId = $this->empresaId();
-        $mecanicos = Mecanico::where('empresa_id', $empresaId)->where('activo', true)->get();
+        // Filtrado explicito por rol: si el taller tambien activo "Comision
+        // a vendedores" (universal, ver ConfiguracionEmpresa::rolComisionActual()),
+        // podria tener filas de Mecanico con rol=vendedor creadas en el
+        // recurso "Colaboradores" -- no deben mezclarse en este panel.
+        $mecanicos = Mecanico::where('empresa_id', $empresaId)->where('rol', Mecanico::ROL_MECANICO)->where('activo', true)->get();
 
         return $mecanicos->map(function (Mecanico $m) use ($empresaId) {
             $pendiente = $this->pendienteMecanico($m->id, $empresaId);

@@ -44,8 +44,14 @@ class MecanicoResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
+        // Filtrado explicito por rol: desde que "Comision a vendedores" es
+        // universal (ver ConfiguracionEmpresa::rolComisionActual()), un
+        // taller tambien puede tener filas de Mecanico con rol=vendedor
+        // (creadas en el recurso "Colaboradores") -- sin este filtro se
+        // mezclarian con los mecanicos en este listado.
         return parent::getEloquentQuery()
-            ->where('empresa_id', auth()->user()->getEmpresaActualId());
+            ->where('empresa_id', auth()->user()->getEmpresaActualId())
+            ->where('rol', Mecanico::ROL_MECANICO);
     }
 
     public static function form(Form $form): Form
@@ -88,7 +94,7 @@ class MecanicoResource extends Resource
         $empresaId = auth()->user()->getEmpresaActualId();
 
         return $table
-            ->query(Mecanico::query()->where('empresa_id', $empresaId))
+            ->query(Mecanico::query()->where('empresa_id', $empresaId)->where('rol', Mecanico::ROL_MECANICO))
             ->columns([
                 Tables\Columns\TextColumn::make('nombre')
                     ->label('Nombre')
