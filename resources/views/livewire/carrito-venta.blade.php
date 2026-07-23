@@ -2872,7 +2872,12 @@
                     Swal.showValidationMessage('Seleccione la fecha de vencimiento.');
                     return false;
                 }
-                @if ($usaComisionVendedor)
+                {{-- Si hay una prefactura cargada, el vendedor ya viene de
+                     ahi (vendedor_id de esa prefactura) y no se pide de
+                     nuevo aqui -- asi sigue funcionando el flujo de
+                     "el vendedor guarda la prefactura, otro cajero la
+                     factura despues". --}}
+                @if ($usaComisionVendedor && ! $prefacturaCargadaId)
                 if (!document.getElementById('swal_vendedor_id')?.value) {
                     Swal.showValidationMessage('Selecciona el {{ $rolComision === "mesero" ? "mesero" : "vendedor" }}.');
                     return false;
@@ -3027,7 +3032,7 @@
                             </div>
                         </div>
 
-                        @if ($usaComisionVendedor)
+                        @if ($usaComisionVendedor && ! $prefacturaCargadaId)
                         <div style="margin-bottom:6px;">
                             <label style="display:block;font-size:10px;font-weight:700;color:#4b5563;margin-bottom:2px;">{{ $rolComision === 'mesero' ? 'Mesero' : 'Vendedor' }}</label>
                             <select id="swal_vendedor_id" style="width:100%;height:30px;border:1px solid #cbd5e1;border-radius:7px;padding:2px 6px;font-size:11px;background:white;">
