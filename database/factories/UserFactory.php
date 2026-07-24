@@ -30,6 +30,13 @@ class UserFactory extends Factory
             'remember_token' => Str::random(10),
             'profile_photo_path' => null,
             'current_team_id' => null,
+            // Explicito (no solo confiar en el default de la columna): sin
+            // esto, un modelo recien creado con factory()->create() y usado
+            // directo en actingAs() (sin recargar de la BD) trae 'activo'
+            // en null en memoria, y EnsureEmpresaActiva::puedeIngresarPorPlan()
+            // lo trata como empresa inactiva -- rompe cualquier test que
+            // actue como una empresa recien creada.
+            'activo' => true,
         ];
     }
 

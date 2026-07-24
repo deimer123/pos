@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /*
@@ -14,7 +15,22 @@ use Tests\TestCase;
 |
 */
 
-uses(TestCase::class, RefreshDatabase::class)->in('Feature');
+// Tablas de referencia minimas que UserObserver necesita al crear
+// cualquier empresa (User con tipo_usuario='empresa'): crea de una vez un
+// cliente "CONSUMIDOR FINAL" (Actor) con tipo_documento_id=6,
+// departamento_id=1 y ciudad_id=1. Sin esto, cualquier test de Feature que
+// cree una empresa falla con un error de llave foranea en una base de
+// datos de pruebas recien migrada (RefreshDatabase no siembra datos por su
+// cuenta). insertOrIgnore porque RefreshDatabase envuelve cada test en una
+// transaccion que se revierte al terminar -- hay que reinsertar antes de
+// cada test.
+uses(TestCase::class, RefreshDatabase::class)
+    ->beforeEach(function () {
+        DB::table('tipos_documento')->insertOrIgnore(['id' => 6, 'nombre' => 'NIT']);
+        DB::table('departamentos')->insertOrIgnore(['id' => 1, 'nombre' => 'Santander', 'codigo_dian' => 68]);
+        DB::table('ciudades')->insertOrIgnore(['id' => 1, 'nombre' => 'Bucaramanga', 'codigo_dian' => 68001, 'departamento_id' => 1]);
+    })
+    ->in('Feature');
 
 /*
 |--------------------------------------------------------------------------

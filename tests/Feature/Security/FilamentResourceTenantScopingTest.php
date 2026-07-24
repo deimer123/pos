@@ -16,24 +16,16 @@ use App\Models\HotelHabitacion;
 use App\Models\Mecanico;
 use App\Models\NotaCredito;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
 
 // Regresion de la vulnerabilidad IDOR corregida: las paginas de edicion de
 // estos resources no tenian getEloquentQuery() propio, asi que Filament
 // resolvia el registro con la consulta global (sin filtrar por empresa_id).
 // La lista (table()) si filtraba, pero eso no protegia la URL directa de
 // edicion contra otra empresa.
-
-// UserObserver crea automaticamente un cliente "CONSUMIDOR FINAL" (Actor)
-// con tipo_documento_id=6, departamento_id=1 y ciudad_id=1 cada vez que se
-// crea una empresa nueva -- todos los tests de este archivo crean
-// empresas, asi que esas tablas de referencia tienen que existir antes de
-// cada uno.
-beforeEach(function () {
-    DB::table('tipos_documento')->insert(['id' => 6, 'nombre' => 'NIT']);
-    DB::table('departamentos')->insert(['id' => 1, 'nombre' => 'Santander', 'codigo_dian' => 68]);
-    DB::table('ciudades')->insert(['id' => 1, 'nombre' => 'Bucaramanga', 'codigo_dian' => 68001, 'departamento_id' => 1]);
-});
+//
+// Las tablas de referencia que UserObserver necesita al crear una empresa
+// (tipos_documento, departamentos, ciudades) se siembran globalmente en
+// tests/Pest.php antes de cada test de Feature.
 
 test('MecanicoResource::getEloquentQuery no expone mecanicos de otra empresa', function () {
     $empresaA = User::factory()->create(['tipo_usuario' => 'empresa']);
