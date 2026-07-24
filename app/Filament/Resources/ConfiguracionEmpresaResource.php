@@ -107,7 +107,13 @@ class ConfiguracionEmpresaResource extends Resource
                                 ])
                                 ->live()
                                 ->required()
-                                ->default('tienda')
+                                ->placeholder('Selecciona un tipo de negocio')
+                                // Sin valor por defecto A PROPOSITO: como esta decision
+                                // queda bloqueada para siempre despues de guardar (ver
+                                // mas abajo), la persona tiene que elegirlo de forma
+                                // consciente -- si viniera pre-seleccionado, alguien
+                                // podria pasar de largo el wizard sin darse cuenta y
+                                // quedar con un tipo de negocio que nunca eligio.
                                 // Una vez la empresa ya quedo configurada, el tipo de
                                 // negocio no se puede cambiar desde aqui -- cambia
                                 // demasiadas reglas del sistema (variantes, mesas,
