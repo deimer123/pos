@@ -25,7 +25,10 @@ class CatalogoResource extends Resource
     {
         $user = auth()->user();
         if (! $user) return false;
-        if ($user->hasAnyRole(['super_admin', 'admin_empresa'])) return true;
+        // Es un catalogo de UNA empresa especifica, no un catalogo global --
+        // no le corresponde al super_admin (que administra todas las
+        // empresas), solo al admin_empresa (o digitador con permiso).
+        if ($user->hasRole('admin_empresa')) return true;
         return $user->hasRole('digitador') && $user->puedeVerResource('catalogo');
     }
 
@@ -284,14 +287,8 @@ class CatalogoResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $user = auth()->user();
-
-        if ($user && $user->hasRole('super_admin')) {
-            return parent::getEloquentQuery();
-        }
-
         return parent::getEloquentQuery()
-            ->where('empresa_id', $user->getEmpresaActualId());
+            ->where('empresa_id', auth()->user()->getEmpresaActualId());
     }
 
     public static function getPages(): array
