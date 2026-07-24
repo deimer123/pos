@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: yes
+          MYSQL_DATABASE: pos_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, fileinfo, mysql, pdo_mysql, bcmath, intl, zip, gd
+          coverage: none
+
+      - name: Check PHP syntax
+        run: find app database config routes -name "*.php" -print0 | xargs -0 -n1 -P4 php -l
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Prepare environment file
+        run: |
+          cp .env.example .env
+          sed -i "s/^DB_DATABASE=.*/DB_DATABASE=pos_ci/" .env
+          sed -i "s/^DB_PASSWORD=.*/DB_PASSWORD=/" .env
+          php artisan key:generate
+
+      - name: Run test suite
+        run: vendor/bin/pest
