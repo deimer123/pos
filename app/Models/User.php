@@ -35,6 +35,9 @@ class User extends Authenticatable implements FilamentUser
         'plan_meses',
         'plan_started_at',
         'plan_ends_at',
+        'plan_id',
+        'paquete_usuarios_id',
+        'valor_plan_total',
         'max_vendedores',
         'max_cajeros',
         'max_digitadores',
@@ -120,6 +123,23 @@ class User extends Authenticatable implements FilamentUser
     public function empleados(): HasMany
     {
         return $this->hasMany(User::class, 'empresa_id')->where('tipo_usuario', 'empleado');
+    }
+
+    public function plan(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Plan::class, 'plan_id');
+    }
+
+    public function paqueteUsuarios(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\PaqueteUsuarios::class, 'paquete_usuarios_id');
+    }
+
+    public function complementos(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(\App\Models\Complemento::class, 'empresa_complementos', 'empresa_id', 'complemento_id')
+            ->withPivot('precio_aplicado')
+            ->withTimestamps();
     }
 
     public function products(): HasMany

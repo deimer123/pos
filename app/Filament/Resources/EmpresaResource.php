@@ -2,6 +2,9 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\EmpresaResource\Pages;
+use App\Models\Complemento;
+use App\Models\PaqueteUsuarios;
+use App\Models\Plan;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Get;
@@ -86,6 +89,42 @@ class EmpresaResource extends Resource
 
                         Forms\Components\Hidden::make('tipo_usuario')
                             ->default('empresa'),
+                    ])
+                    ->columns(2),
+
+                Forms\Components\Section::make('Plan comercial')
+                    ->description('Los planes, complementos y paquetes de usuarios se administran en los menus "Planes", "Complementos" y "Paquetes de usuarios". Al elegir un plan se autocompletan la duracion y los usuarios incluidos abajo (se pueden ajustar despues si hace falta).')
+                    ->schema([
+                        Forms\Components\Select::make('plan_id')
+                            ->label('Plan')
+                            ->options(fn () => Plan::where('activo', true)->orderBy('orden')->pluck('nombre', 'id'))
+                            ->placeholder('Sin plan (configurar manualmente abajo)')
+                            ->live()
+                            ->afterStateUpdated(fn (Set $set, Get $get) => static::recalcularPlanComercial($get, $set)),
+
+                        Forms\Components\Select::make('paquete_usuarios_id')
+                            ->label('Paquete de usuarios adicionales')
+                            ->options(fn () => PaqueteUsuarios::where('activo', true)->orderBy('orden')->pluck('nombre', 'id'))
+                            ->placeholder('Ninguno')
+                            ->live()
+                            ->afterStateUpdated(fn (Set $set, Get $get) => static::recalcularPlanComercial($get, $set)),
+
+                        Forms\Components\CheckboxList::make('complementos_ids')
+                            ->label('Complementos')
+                            ->options(fn () => Complemento::where('activo', true)->orderBy('orden')->pluck('nombre', 'id'))
+                            ->afterStateHydrated(function (Forms\Components\CheckboxList $component, ?User $record): void {
+                                if ($record) {
+                                    $component->state($record->complementos()->pluck('complemento_id')->all());
+                                }
+                            })
+                            ->live()
+                            ->columns(2)
+                            ->columnSpanFull(),
+
+                        Forms\Components\Placeholder::make('total_plan_preview')
+                            ->label('Total a cobrar')
+                            ->content(fn (Get $get) => static::totalPlanHtml($get))
+                            ->columnSpanFull(),
                     ])
                     ->columns(2),
 
@@ -333,6 +372,11 @@ class EmpresaResource extends Resource
                     ->trueColor('success')
                     ->falseColor('danger'),
 
+                Tables\Columns\TextColumn::make('valor_plan_total')
+                    ->label('Total plan')
+                    ->formatStateUsing(fn ($state) => $state !== null ? '$ ' . number_format((float) $state, 0, ',', '.') : '—')
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('plan_meses')
                     ->label('Plan')
                     ->formatStateUsing(fn ($state) => $state ? "{$state} meses" : 'Sin plan')
@@ -528,6 +572,62 @@ class EmpresaResource extends Resource
     public static function calculatePlanEndDate(mixed $startDate, int $months): string
     {
         return Carbon::parse($startDate ?: today())->addMonths($months ?: 3)->toDateString();
+    }
+
+    // Al elegir un plan o un paquete de usuarios adicionales, autocompleta
+    // la duracion (plan_meses/plan_ends_at) y el cupo de vendedores -- el
+    // super_admin puede seguir ajustando esos campos manualmente despues,
+    // esto solo rellena un punto de partida razonable.
+    public static function recalcularPlanComercial(Get $get, Set $set): void
+    {
+        $plan = ($planId = $get('plan_id')) ? Plan::find($planId) : null;
+        $paquete = ($paqueteId = $get('paquete_usuarios_id')) ? PaqueteUsuarios::find($paqueteId) : null;
+
+        if ($plan) {
+            $set('plan_meses', $plan->meses);
+            $set('plan_ends_at', static::calculatePlanEndDate(
+                $get('plan_started_at') ?: today()->toDateString(),
+                (int) $plan->meses,
+            ));
+        }
+
+        $set('max_vendedores', (int) ($plan?->usuarios_incluidos ?? 0) + (int) ($paquete?->usuarios_adicionales ?? 0));
+    }
+
+    public static function calcularTotalPlan(?int $planId, array $complementosIds, ?int $paqueteId): float
+    {
+        $plan = $planId ? Plan::find($planId) : null;
+        $totalComplementos = (float) Complemento::whereIn('id', $complementosIds)->sum('precio');
+        $paquete = $paqueteId ? PaqueteUsuarios::find($paqueteId) : null;
+
+        return (float) ($plan?->precio ?? 0) + $totalComplementos + (float) ($paquete?->precio ?? 0);
+    }
+
+    public static function totalPlanHtml(Get $get): \Illuminate\Support\HtmlString
+    {
+        $total = static::calcularTotalPlan(
+            $get('plan_id') ? (int) $get('plan_id') : null,
+            $get('complementos_ids') ?? [],
+            $get('paquete_usuarios_id') ? (int) $get('paquete_usuarios_id') : null,
+        );
+
+        return new \Illuminate\Support\HtmlString(
+            '<span style="font-size:1.4rem;font-weight:700;">$ ' . number_format($total, 0, ',', '.') . '</span>'
+        );
+    }
+
+    // Sincroniza la tabla pivote empresa_complementos, guardando el precio
+    // vigente del complemento como "precio_aplicado" (snapshot) -- si mas
+    // adelante el super_admin cambia el precio del complemento en el
+    // catalogo, no altera retroactivamente lo ya aplicado a esta empresa.
+    public static function sincronizarComplementos(User $empresa, array $complementosIds): void
+    {
+        $sync = Complemento::whereIn('id', $complementosIds)
+            ->get()
+            ->mapWithKeys(fn (Complemento $c) => [$c->id => ['precio_aplicado' => $c->precio]])
+            ->all();
+
+        $empresa->complementos()->sync($sync);
     }
 
     public static function saveFactusConfig(User $empresa, array $factus): void

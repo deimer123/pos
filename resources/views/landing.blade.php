@@ -459,7 +459,7 @@
                 <div class="plan-card">
                     <div class="duracion">Trimestral · 3 meses</div>
                     <h3>Plan Emprende</h3>
-                    <div class="price">$165.000</div>
+                    <div class="price">$330.000</div>
                     <div class="plan-meta">1 usuario incluido</div>
                     <ul class="plan-list">
                         <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Ideal para empezar y probar el sistema</li>
@@ -472,7 +472,7 @@
                 <div class="plan-card">
                     <div class="duracion">Semestral · 6 meses</div>
                     <h3>Plan Crece</h3>
-                    <div class="price">$300.000</div>
+                    <div class="price">$600.000</div>
                     <div class="plan-meta">2 usuarios incluidos</div>
                     <ul class="plan-list">
                         <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Para negocios que ya están vendiendo con regularidad</li>
@@ -486,7 +486,7 @@
                     <div class="plan-badge">Recomendado</div>
                     <div class="duracion">Anual · 12 meses</div>
                     <h3>Plan Empresarial</h3>
-                    <div class="price">$500.000</div>
+                    <div class="price">$1.000.000</div>
                     <div class="plan-meta">3 usuarios incluidos</div>
                     <ul class="plan-list">
                         <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> El mejor precio por mes de todos los planes</li>
@@ -501,17 +501,17 @@
                 <div class="addon-card">
                     <h4>Complementos</h4>
                     <ul class="addon-list">
-                        <li><span>Facturación Electrónica (Activación)</span><span class="valor">$400.000</span></li>
-                        <li><span>Renovación anual Facturación Electrónica</span><span class="valor">$400.000</span></li>
-                        <li><span>POS Híbrido (por equipo)</span><span class="valor">$300.000</span></li>
+                        <li><span>Facturación Electrónica (Activación)</span><span class="valor">$800.000</span></li>
+                        <li><span>Renovación anual Facturación Electrónica</span><span class="valor">$800.000</span></li>
+                        <li><span>POS Híbrido (por equipo)</span><span class="valor">$600.000</span></li>
                     </ul>
                 </div>
                 <div class="addon-card">
                     <h4>Paquetes de usuarios adicionales</h4>
                     <ul class="addon-list">
-                        <li><span>1 usuario adicional</span><span class="valor">$80.000/año</span></li>
-                        <li><span>Hasta 3 usuarios adicionales</span><span class="valor">$200.000/año</span></li>
-                        <li><span>Hasta 5 usuarios adicionales</span><span class="valor">$300.000/año</span></li>
+                        <li><span>1 usuario adicional</span><span class="valor">$160.000/año</span></li>
+                        <li><span>Hasta 3 usuarios adicionales</span><span class="valor">$400.000/año</span></li>
+                        <li><span>Hasta 5 usuarios adicionales</span><span class="valor">$600.000/año</span></li>
                     </ul>
                 </div>
             </div>

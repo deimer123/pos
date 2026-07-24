@@ -9,6 +9,12 @@ class CreateEmpresa extends CreateRecord
 {
     protected static string $resource = EmpresaResource::class;
 
+    // complementos_ids no es una columna real de "users" (es una relacion
+    // muchos-a-muchos con precio_aplicado en la tabla pivote), asi que se
+    // extrae en mutateFormDataBeforeCreate() y se guarda aqui para poder
+    // sincronizar el pivote en afterCreate(), ya con el registro creado.
+    protected array $complementosSeleccionados = [];
+
     protected function getRedirectUrl(): string
     {
         return $this->getResource()::getUrl('index');
@@ -28,18 +34,28 @@ class CreateEmpresa extends CreateRecord
         $data['max_vendedores'] = (int) ($data['max_vendedores'] ?? 1);
         $data['max_cajeros'] = (int) ($data['max_cajeros'] ?? 1);
         $data['max_digitadores'] = (int) ($data['max_digitadores'] ?? 0);
-        
+
+        $this->complementosSeleccionados = $data['complementos_ids'] ?? [];
+        unset($data['complementos_ids']);
+
+        $data['valor_plan_total'] = EmpresaResource::calcularTotalPlan(
+            $data['plan_id'] ?? null,
+            $this->complementosSeleccionados,
+            $data['paquete_usuarios_id'] ?? null,
+        );
+
         return $data;
     }
 
     protected function afterCreate(): void
     {
         $record = $this->record;
-        
+
         // Asignar rol de admin_empresa
         $record->assignRole('admin_empresa');
         EmpresaResource::saveFactusConfig($record, $this->form->getRawState()['factus'] ?? []);
-        
+        EmpresaResource::sincronizarComplementos($record, $this->complementosSeleccionados);
+
         Notification::make()
             ->title('Empresa creada exitosamente')
             ->success()

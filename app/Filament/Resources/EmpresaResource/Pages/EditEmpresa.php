@@ -12,6 +12,9 @@ class EditEmpresa extends EditRecord
 {
     protected static string $resource = EmpresaResource::class;
 
+    // Ver CreateEmpresa::$complementosSeleccionados -- mismo motivo.
+    protected array $complementosSeleccionados = [];
+
     protected function getHeaderActions(): array
     {
         return [
@@ -152,6 +155,15 @@ class EditEmpresa extends EditRecord
             );
         }
 
+        $this->complementosSeleccionados = $data['complementos_ids'] ?? [];
+        unset($data['complementos_ids']);
+
+        $data['valor_plan_total'] = EmpresaResource::calcularTotalPlan(
+            $data['plan_id'] ?? null,
+            $this->complementosSeleccionados,
+            $data['paquete_usuarios_id'] ?? null,
+        );
+
         return $data;
     }
 
@@ -175,6 +187,7 @@ class EditEmpresa extends EditRecord
     protected function afterSave(): void
     {
         EmpresaResource::saveFactusConfig($this->record, $this->form->getRawState()['factus'] ?? []);
+        EmpresaResource::sincronizarComplementos($this->record, $this->complementosSeleccionados);
     }
 
     private function extractRanges(array $response): array
