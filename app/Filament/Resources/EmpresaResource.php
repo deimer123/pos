@@ -128,75 +128,38 @@ class EmpresaResource extends Resource
                     ])
                     ->columns(2),
 
-                Forms\Components\Section::make('Plan de activacion')
-                    ->schema([
-                        Forms\Components\Select::make('plan_meses')
-                            ->label('Plan')
-                            ->options([
-                                3 => '3 meses',
-                                6 => '6 meses',
-                                9 => '9 meses',
-                                12 => '1 año',
-                            ])
-                            ->required()
-                            ->default(3)
-                            ->afterStateHydrated(function ($state, Set $set, Get $get): void {
-                                if (blank($get('plan_ends_at'))) {
-                                    $set('plan_ends_at', static::calculatePlanEndDate(
-                                        $get('plan_started_at') ?: today()->toDateString(),
-                                        (int) ($state ?: 3),
-                                    ));
-                                }
-                            })
-                            ->live()
-                            ->afterStateUpdated(function ($state, Set $set, Get $get): void {
-                                $set('plan_ends_at', static::calculatePlanEndDate(
-                                    $get('plan_started_at') ?: today()->toDateString(),
-                                    (int) ($state ?: 3),
-                                ));
-                            }),
-
-                        Forms\Components\DatePicker::make('plan_started_at')
-                            ->label('Fecha de activacion')
-                            ->default(fn () => today()->toDateString())
-                            ->required()
-                            ->afterStateHydrated(function ($state, Set $set, ?\App\Models\User $record): void {
-                                if (filled($state)) {
-                                    return;
-                                }
-
-                                $set('plan_started_at', $record?->plan_started_at?->toDateString()
-                                    ?? $record?->created_at?->toDateString()
-                                    ?? today()->toDateString());
-                            })
-                            ->afterStateHydrated(function ($state, Set $set, Get $get): void {
-                                if (blank($get('plan_ends_at'))) {
-                                    $set('plan_ends_at', static::calculatePlanEndDate(
-                                        $state ?: today()->toDateString(),
-                                        (int) ($get('plan_meses') ?: 3),
-                                    ));
-                                }
-                            })
-                            ->live()
-                            ->afterStateUpdated(function ($state, Set $set, Get $get): void {
-                                $set('plan_ends_at', static::calculatePlanEndDate(
-                                    $state ?: today()->toDateString(),
-                                    (int) ($get('plan_meses') ?: 3),
-                                ));
-                            }),
-
-                        Forms\Components\DatePicker::make('plan_ends_at')
-                            ->label('Vence')
-                            ->default(fn (Get $get) => static::calculatePlanEndDate(
+                // La duracion/vencimiento del plan ya se define eligiendo un
+                // Plan arriba en "Plan comercial" (recalcularPlanComercial()
+                // autocompleta estos 3 campos) -- se quita la seccion visible
+                // duplicada, pero los campos se siguen guardando ocultos.
+                Forms\Components\Hidden::make('plan_meses')
+                    ->default(3)
+                    ->afterStateHydrated(function ($state, Set $set, Get $get): void {
+                        if (blank($get('plan_ends_at'))) {
+                            $set('plan_ends_at', static::calculatePlanEndDate(
                                 $get('plan_started_at') ?: today()->toDateString(),
-                                (int) ($get('plan_meses') ?: 3),
-                            ))
-                            ->required()
-                            ->disabled()
-                            ->dehydrated()
-                            ->helperText('Al llegar esta fecha, la empresa y sus empleados no podran iniciar sesion.'),
-                    ])
-                    ->columns(3),
+                                (int) ($state ?: 3),
+                            ));
+                        }
+                    }),
+
+                Forms\Components\Hidden::make('plan_started_at')
+                    ->default(fn () => today()->toDateString())
+                    ->afterStateHydrated(function ($state, Set $set, ?\App\Models\User $record): void {
+                        if (filled($state)) {
+                            return;
+                        }
+
+                        $set('plan_started_at', $record?->plan_started_at?->toDateString()
+                            ?? $record?->created_at?->toDateString()
+                            ?? today()->toDateString());
+                    }),
+
+                Forms\Components\Hidden::make('plan_ends_at')
+                    ->default(fn (Get $get) => static::calculatePlanEndDate(
+                        $get('plan_started_at') ?: today()->toDateString(),
+                        (int) ($get('plan_meses') ?: 3),
+                    )),
 
                 Forms\Components\Section::make('Limites de usuarios')
                     ->description('Estos cupos controlan cuantos empleados puede crear cada empresa. Si necesita mas, debe solicitarlo al super admin.')
@@ -234,98 +197,107 @@ class EmpresaResource extends Resource
                             ->live()
                             ->default(false),
 
-                        Forms\Components\TextInput::make('nit')
-                            ->label('NIT de la empresa')
-                            ->maxLength(20)
-                            ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled'))
-                            ->helperText('Obligatorio para activar facturacion electronica y mostrarlo en la factura impresa.'),
+                        // Los datos/credenciales de Factus solo tienen sentido si
+                        // se activo la facturacion electronica -- si esta apagada
+                        // no hay nada que configurar todavia, asi que se ocultan
+                        // en vez de solo dejarlos opcionales.
+                        Forms\Components\Group::make([
+                            Forms\Components\TextInput::make('nit')
+                                ->label('NIT de la empresa')
+                                ->maxLength(20)
+                                ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled'))
+                                ->helperText('Obligatorio para activar facturacion electronica y mostrarlo en la factura impresa.'),
 
-                        Forms\Components\Select::make('factus_environment')
-                            ->label('Ambiente Factus')
-                            ->options([
-                                'sandbox' => 'Pruebas / Sandbox',
-                                'production' => 'Produccion',
-                            ])
-                            ->default('sandbox')
-                            ->required(),
+                            Forms\Components\Select::make('factus_environment')
+                                ->label('Ambiente Factus')
+                                ->options([
+                                    'sandbox' => 'Pruebas / Sandbox',
+                                    'production' => 'Produccion',
+                                ])
+                                ->default('sandbox')
+                                ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled')),
 
-                        Forms\Components\TextInput::make('factus_base_url')
-                            ->label('URL API Factus')
-                            ->placeholder('Dejar vacio para usar la URL del ambiente seleccionado')
-                            ->maxLength(255),
+                            Forms\Components\TextInput::make('factus_base_url')
+                                ->label('URL API Factus')
+                                ->placeholder('Dejar vacio para usar la URL del ambiente seleccionado')
+                                ->maxLength(255),
 
-                        Forms\Components\TextInput::make('factus_username')
-                            ->label('Usuario Factus')
-                            ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled'))
-                            ->maxLength(255),
+                            Forms\Components\TextInput::make('factus_username')
+                                ->label('Usuario Factus')
+                                ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled'))
+                                ->maxLength(255),
 
-                        Forms\Components\TextInput::make('factus_password')
-                            ->label('Password Factus')
-                            ->password()
-                            ->required(fn (Forms\Get $get, ?string $operation): bool => (bool) $get('factus_enabled') && $operation === 'create')
-                            ->dehydrated(fn ($state) => filled($state))
-                            ->helperText('En edicion puedes dejarlo vacio para conservar el password guardado.'),
+                            Forms\Components\TextInput::make('factus_password')
+                                ->label('Password Factus')
+                                ->password()
+                                ->required(fn (Forms\Get $get, ?string $operation): bool => (bool) $get('factus_enabled') && $operation === 'create')
+                                ->dehydrated(fn ($state) => filled($state))
+                                ->helperText('En edicion puedes dejarlo vacio para conservar el password guardado.'),
 
-                        Forms\Components\TextInput::make('factus_client_id')
-                            ->label('Client ID Factus')
-                            ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled'))
-                            ->maxLength(255),
+                            Forms\Components\TextInput::make('factus_client_id')
+                                ->label('Client ID Factus')
+                                ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled'))
+                                ->maxLength(255),
 
-                        Forms\Components\TextInput::make('factus_client_secret')
-                            ->label('Client Secret Factus')
-                            ->password()
-                            ->required(fn (Forms\Get $get, ?string $operation): bool => (bool) $get('factus_enabled') && $operation === 'create')
-                            ->dehydrated(fn ($state) => filled($state))
-                            ->helperText('En edicion puedes dejarlo vacio para conservar el secreto guardado.'),
+                            Forms\Components\TextInput::make('factus_client_secret')
+                                ->label('Client Secret Factus')
+                                ->password()
+                                ->required(fn (Forms\Get $get, ?string $operation): bool => (bool) $get('factus_enabled') && $operation === 'create')
+                                ->dehydrated(fn ($state) => filled($state))
+                                ->helperText('En edicion puedes dejarlo vacio para conservar el secreto guardado.'),
 
-                        Forms\Components\TextInput::make('factus_numbering_range_id')
-                            ->label('ID Rango Factus')
-                            ->numeric()
-                            ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled'))
-                            ->helperText('Se llena con el boton Sincronizar rangos, o puedes escribirlo si Factus te lo entrega.'),
+                            Forms\Components\TextInput::make('factus_numbering_range_id')
+                                ->label('ID Rango Factus')
+                                ->numeric()
+                                ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled'))
+                                ->helperText('Se llena con el boton Sincronizar rangos, o puedes escribirlo si Factus te lo entrega.'),
 
-                        Forms\Components\TextInput::make('factus_credit_note_numbering_range_id')
-                            ->label('ID Rango Nota Credito Factus')
-                            ->numeric()
-                            ->helperText('Rango para notas credito electronicas. En Factus corresponde al documento 22; si solo existe un rango activo, Factus puede tomarlo automaticamente.'),
+                            Forms\Components\TextInput::make('factus_credit_note_numbering_range_id')
+                                ->label('ID Rango Nota Credito Factus')
+                                ->numeric()
+                                ->helperText('Rango para notas credito electronicas. En Factus corresponde al documento 22; si solo existe un rango activo, Factus puede tomarlo automaticamente.'),
 
-                        Forms\Components\Toggle::make('factus_send_email')
-                            ->label('Enviar correo desde Factus')
-                            ->default(false),
+                            Forms\Components\Toggle::make('factus_send_email')
+                                ->label('Enviar correo desde Factus')
+                                ->default(false),
 
-                        Forms\Components\TextInput::make('prefijo')
-                            ->label('Prefijo')
-                            ->maxLength(10)
-                            ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled')),
+                            Forms\Components\TextInput::make('prefijo')
+                                ->label('Prefijo')
+                                ->maxLength(10)
+                                ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled')),
 
-                        Forms\Components\TextInput::make('rango_desde')
-                            ->label('Rango desde')
-                            ->numeric()
-                            ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled')),
+                            Forms\Components\TextInput::make('rango_desde')
+                                ->label('Rango desde')
+                                ->numeric()
+                                ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled')),
 
-                        Forms\Components\TextInput::make('rango_hasta')
-                            ->label('Rango hasta')
-                            ->numeric()
-                            ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled')),
+                            Forms\Components\TextInput::make('rango_hasta')
+                                ->label('Rango hasta')
+                                ->numeric()
+                                ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled')),
 
-                        Forms\Components\TextInput::make('rango_actual')
-                            ->label('Rango actual')
-                            ->numeric()
-                            ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled')),
+                            Forms\Components\TextInput::make('rango_actual')
+                                ->label('Rango actual')
+                                ->numeric()
+                                ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled')),
 
-                        Forms\Components\TextInput::make('numero_resolucion')
-                            ->label('Numero de resolucion DIAN')
-                            ->maxLength(50)
-                            ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled'))
-                            ->helperText('Numero de la autorizacion de numeracion de facturacion. Debe verse en la representacion impresa.'),
+                            Forms\Components\TextInput::make('numero_resolucion')
+                                ->label('Numero de resolucion DIAN')
+                                ->maxLength(50)
+                                ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled'))
+                                ->helperText('Numero de la autorizacion de numeracion de facturacion. Debe verse en la representacion impresa.'),
 
-                        Forms\Components\DatePicker::make('fecha_inicio')
-                            ->label('Fecha inicio')
-                            ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled')),
+                            Forms\Components\DatePicker::make('fecha_inicio')
+                                ->label('Fecha inicio')
+                                ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled')),
 
-                        Forms\Components\DatePicker::make('fecha_fin')
-                            ->label('Fecha fin')
-                            ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled')),
+                            Forms\Components\DatePicker::make('fecha_fin')
+                                ->label('Fecha fin')
+                                ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled')),
+                        ])
+                            ->visible(fn (Forms\Get $get): bool => (bool) $get('factus_enabled'))
+                            ->columns(2)
+                            ->columnSpanFull(),
                     ])
                     ->columns(2),
             ]);
