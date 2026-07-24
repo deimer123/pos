@@ -108,6 +108,14 @@ class ConfiguracionEmpresaResource extends Resource
                                 ->live()
                                 ->required()
                                 ->placeholder('Selecciona un tipo de negocio')
+                                // native(false) A PROPOSITO: un <select> nativo del
+                                // navegador SIEMPRE muestra/envia la primera opcion
+                                // como si estuviera elegida (asi no se le haya dado
+                                // clic), incluso con el placeholder puesto -- por eso
+                                // se guardaba "Tienda / Almacen" sin que nadie lo
+                                // seleccionara de verdad. El selector propio de
+                                // Filament (no nativo) si arranca realmente vacio.
+                                ->native(false)
                                 // Sin valor por defecto A PROPOSITO: como esta decision
                                 // queda bloqueada para siempre despues de guardar (ver
                                 // mas abajo), la persona tiene que elegirlo de forma
