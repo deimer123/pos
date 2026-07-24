@@ -5,6 +5,7 @@ namespace App\Filament\Resources\ConfiguracionEmpresaResource\Pages;
 use App\Filament\Resources\ConfiguracionEmpresaResource;
 use Filament\Actions\Action;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Validation\ValidationException;
 
 class EditConfiguracionEmpresa extends EditRecord
 {
@@ -28,9 +29,17 @@ class EditConfiguracionEmpresa extends EditRecord
         // vez configurado no se puede cambiar por ningun medio.
         if (filled($this->record->tipo_negocio)) {
             $data['tipo_negocio'] = $this->record->tipo_negocio;
+        } elseif (blank($data['tipo_negocio'] ?? null)) {
+            // Guardia dura: un registro que quedo sin tipo_negocio (por el
+            // bug ya corregido en CreateConfiguracionEmpresa) se puede
+            // corregir desde aqui, pero no se puede volver a guardar en
+            // blanco.
+            throw ValidationException::withMessages([
+                'data.tipo_negocio' => 'Debes seleccionar un tipo de negocio antes de continuar.',
+            ]);
         }
 
-        $data = array_merge($data, \App\Models\ConfiguracionEmpresa::flagsModuloParaTipo($data['tipo_negocio'] ?? 'tienda'));
+        $data = array_merge($data, \App\Models\ConfiguracionEmpresa::flagsModuloParaTipo($data['tipo_negocio']));
 
         if (empty($data['slug']) && ! empty($data['nombre_empresa'])) {
             $data['slug'] = \Illuminate\Support\Str::slug($data['nombre_empresa']) . '-' . $this->record->empresa_id;

@@ -34,3 +34,47 @@ test('el select de tipo_negocio no es un <select> nativo del navegador', functio
     expect($tipoNegocioField)->toBeInstanceOf(Select::class);
     expect($tipoNegocioField->isNative())->toBeFalse();
 });
+
+// Guardia dura en el servidor: sin importar como haya llegado vacio
+// (bug del select nativo, o cualquier otra causa futura), crear la
+// configuracion con tipo_negocio en blanco debe rechazarse -- nunca
+// guardarse en silencio con un valor por defecto.
+
+test('crear la configuracion con tipo_negocio vacio se rechaza con un error de validacion', function () {
+    Role::firstOrCreate(['name' => 'admin_empresa', 'guard_name' => 'web']);
+
+    $empresa = User::factory()->create(['tipo_usuario' => 'empresa']);
+    $empresa->assignRole('admin_empresa');
+
+    Livewire::actingAs($empresa)
+        ->test(CreateConfiguracionEmpresa::class)
+        ->fillForm([
+            'nombre_empresa' => 'Empresa de prueba',
+            'representante_legal' => 'Rep Legal',
+            'tipo_negocio' => null,
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['tipo_negocio']);
+
+    expect(\App\Models\ConfiguracionEmpresa::where('empresa_id', $empresa->id)->exists())->toBeFalse();
+});
+
+test('crear la configuracion con un tipo_negocio elegido si funciona', function () {
+    Role::firstOrCreate(['name' => 'admin_empresa', 'guard_name' => 'web']);
+
+    $empresa = User::factory()->create(['tipo_usuario' => 'empresa']);
+    $empresa->assignRole('admin_empresa');
+
+    Livewire::actingAs($empresa)
+        ->test(CreateConfiguracionEmpresa::class)
+        ->fillForm([
+            'nombre_empresa' => 'Empresa de prueba',
+            'representante_legal' => 'Rep Legal',
+            'nit' => '900123456',
+            'tipo_negocio' => 'taller',
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(\App\Models\ConfiguracionEmpresa::where('empresa_id', $empresa->id)->value('tipo_negocio'))->toBe('taller');
+});

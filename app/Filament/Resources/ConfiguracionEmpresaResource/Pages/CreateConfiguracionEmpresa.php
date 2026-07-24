@@ -5,6 +5,7 @@ namespace App\Filament\Resources\ConfiguracionEmpresaResource\Pages;
 
 use App\Filament\Resources\ConfiguracionEmpresaResource;
 use Filament\Resources\Pages\CreateRecord;
+use Illuminate\Validation\ValidationException;
 
 class CreateConfiguracionEmpresa extends CreateRecord
 {
@@ -31,10 +32,22 @@ class CreateConfiguracionEmpresa extends CreateRecord
     {
         $user = auth()->user();
 
+        // Guardia dura: sin importar la causa (navegador, algun paso del
+        // wizard que se salte la validacion, etc.), NUNCA se debe crear
+        // una configuracion sin tipo_negocio elegido de verdad -- si se
+        // permitiera, el fallback de abajo (`?? 'tienda'`) lo dejaria
+        // guardado en silencio, y como despues queda bloqueado para
+        // siempre, la empresa terminaria con un tipo que nadie eligio.
+        if (blank($data['tipo_negocio'] ?? null)) {
+            throw ValidationException::withMessages([
+                'data.tipo_negocio' => 'Debes seleccionar un tipo de negocio antes de continuar.',
+            ]);
+        }
+
         // Solo asignar empresa_id
         $data['empresa_id'] = $user->id;
 
-        $data = array_merge($data, \App\Models\ConfiguracionEmpresa::flagsModuloParaTipo($data['tipo_negocio'] ?? 'tienda'));
+        $data = array_merge($data, \App\Models\ConfiguracionEmpresa::flagsModuloParaTipo($data['tipo_negocio']));
 
         if (empty($data['slug']) && ! empty($data['nombre_empresa'])) {
             $data['slug'] = \Illuminate\Support\Str::slug($data['nombre_empresa']) . '-' . $user->id;
