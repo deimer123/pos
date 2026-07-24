@@ -114,7 +114,7 @@ class CarritoVenta extends Component
     public ?string $fHasta = null;
     public string $minFechaFacturas;
     public string $maxFechaFacturas;
-    public $facturas = []; // colecciÃ³n de facturas
+    public $facturas = []; // colección de facturas
     public ?Factura $facturaSeleccionada = null;
     public $detalleFacturaSeleccionada = []; // array para tabla detalle
     public bool $mostrarModalDevolucion = false;
@@ -137,7 +137,7 @@ class CarritoVenta extends Component
     public $verFacturaSaldo = 0;
     public float $abonoSaldo = 0.0;
     public float $abonoMonto = 0.0;
-    public string $abonoTransferObs = '';              // observaciÃ³n transferencia
+    public string $abonoTransferObs = '';              // observación transferencia
     public string $abonoClienteNombre = '';
     public int $carteraRefreshKey = 0;
     public bool $mostrarModalHistorial = false;
@@ -648,9 +648,9 @@ if (request()->hasSession() && session()->has('observaciones_guardadas')) {
     $this->fHasta = $this->maxFechaFacturas;
     $this->cargarCajaActual();
 
-    // Verificar si hay caja abierta de dÃ­as anteriores
+    // Verificar si hay caja abierta de días anteriores
     if ($this->cajaActual && $this->cajaActual->opened_at->format('Y-m-d') !== now()->format('Y-m-d')) {
-        // Cierra automÃ¡ticamente la caja anterior
+        // Cierra automáticamente la caja anterior
         $this->cajaActual->update([
             'monto_cierre' => $this->cajaActual->monto_apertura,
             'closed_at'    => now()->startOfDay(),
@@ -708,7 +708,7 @@ public function asignarConsumidorFinalPorDefecto()
     }
 }
 
-    // âœ… CORREGIR: Solo un mÃ©todo abrirModalClientes
+    // ✅ CORREGIR: Solo un método abrirModalClientes
     public function abrirModalBuscarCliente()
     {
         $empresaId = $this->getEmpresaId();
@@ -773,7 +773,7 @@ public function asignarConsumidorFinalPorDefecto()
 
     $this->validate();
 
-    $empresaId = $this->getEmpresaId(); // Esta funciÃ³n debe estar definida en este mismo componente
+    $empresaId = $this->getEmpresaId(); // Esta función debe estar definida en este mismo componente
 
     
 
@@ -813,7 +813,7 @@ public function asignarConsumidorFinalPorDefecto()
 
     public function confirmarGuardarPrefactura()
 {
-    // âœ… VALIDAR CARRITO VACÃO
+    // ✅ VALIDAR CARRITO VACÍO
     if (empty($this->carrito)) {
         $this->dispatch('mostrar-carrito-vacio');
         return;
@@ -825,7 +825,7 @@ public function asignarConsumidorFinalPorDefecto()
         return;
     }
     
-    // âœ… SI TODO ESTÃ BIEN, MOSTRAR CONFIRMACIÃ“N
+    // ✅ SI TODO ESTÁ BIEN, MOSTRAR CONFIRMACIÓN
     $this->dispatch('confirmar-guardar-prefactura');
 }
 
@@ -990,7 +990,7 @@ public function guardarEdicionCliente()
     if (!$esNoAcumulable && isset($this->carrito[$key])) {
         $this->carrito[$key]['cantidad'] += 1;
     } else {
-        // âœ… CONVERTIR EXPLÃCITAMENTE A NÃšMEROS
+        // ✅ CONVERTIR EXPLÍCITAMENTE A NÚMEROS
         $ivaVenta    = floatval($producto->iva_venta ?? 0);
         $costoExtra  = $variante ? floatval($variante->costo_extra) : 0;
         $precioVenta = floatval($producto->precio_venta1) + ($variante ? floatval($variante->precio_extra) : 0);
@@ -1067,7 +1067,7 @@ public function guardarEdicionCliente()
     }
 
 
-    // âœ… MÃ‰TODO PARA AGREGAR PRODUCTO MANUAL
+    // ✅ MÉTODO PARA AGREGAR PRODUCTO MANUAL
     public function agregarProductoManual($data)
 {
     if (!is_array($data)) {
@@ -1077,7 +1077,7 @@ public function guardarEdicionCliente()
 
     $uuid = (string) Str::uuid();
     
-    // âœ… CONVERTIR EXPLÃCITAMENTE A NÃšMEROS
+    // ✅ CONVERTIR EXPLÍCITAMENTE A NÚMEROS
     $precio = floatval($data['precio']);
     
     $this->carrito[$uuid] = [
@@ -1086,7 +1086,7 @@ public function guardarEdicionCliente()
         'nombre'       => $this->textoUtf8($data['nombre'] ?? ''),
         'precio'       => $precio,
         'cantidad'     => 1,
-        'total'        => $precio, // âœ… CONVERSIÃ“N SEGURA
+        'total'        => $precio, // ✅ CONVERSIÓN SEGURA
         'costo'        => 0,
         'nuevo_precio' => $precio,
         'descuento'    => 0,
@@ -1169,7 +1169,7 @@ public function guardarEdicionCliente()
 }
 public function updatedCarrito($value, $key)
 {
-    // Detectar si cambiÃ³ la cantidad de algÃºn producto
+    // Detectar si cambió la cantidad de algún producto
     if (strpos($key, '.cantidad') !== false) {
         // Obtener el ID del producto desde el key
         $productId = str_replace('.cantidad', '', $key);
@@ -1389,7 +1389,7 @@ public function recalcularPorDescuento($id, $descuento)
     }
 }
 
-// âœ… MÃ‰TODO SEPARADO PARA ACTUALIZAR CUANDO SE MODIFICA PRECIO DIRECTAMENTE
+// ✅ MÉTODO SEPARADO PARA ACTUALIZAR CUANDO SE MODIFICA PRECIO DIRECTAMENTE
 public function recalcularPorPrecio($id, $nuevoPrecio)
 {
     if (isset($this->carrito[$id])) {
@@ -1425,7 +1425,7 @@ public function aplicarCambiosModal($cambios)
     $maxDescuento = $this->descuentoMaximoPermitido($empresaIdCambios);
 
     // âœ… Validar TODOS los items antes de aplicar nada: si alguno excede el
-    // descuento mÃ¡ximo permitido, se bloquea el guardado completo (no se
+    // descuento máximo permitido, se bloquea el guardado completo (no se
     // cierra el modal ni se toca el carrito) para que el usuario lo corrija.
     if ($maxDescuento !== null) {
         foreach ($cambios as $datos) {
@@ -1494,7 +1494,7 @@ public function calcularTotalGeneral()
 session()->put('observaciones_guardadas', $this->observacionesPrefactura);
     $this->guardarCarritoPersistente();
 
-    // âœ… AGREGAR ESTA LÃNEA
+    // ✅ AGREGAR ESTA LÍNEA
 }
 
 
@@ -1512,7 +1512,7 @@ public function guardarPrefacturaConfirmada()
     }
 
     if (collect($this->carrito)->filter(fn($item) => $item['cantidad'] > 0)->isEmpty()) {
-        $this->dispatch('error', 'El carrito estÃ¡ vacÃ­o. Agregue productos antes de guardar.');
+        $this->dispatch('error', 'El carrito está vacío. Agregue productos antes de guardar.');
         return;
     }
 
@@ -1585,10 +1585,10 @@ public function guardarPrefacturaConfirmada()
         $prefactura = Prefactura::create([
             'empresa_id'    => $empresaId,
             'cliente_id'    => $this->clienteId,
-             // ðŸ'¨â€ðŸ'¼ vendedor que creÃ³ prefactura
+             // vendedor que creó prefactura
             'vendedor_id'   => auth()->id(),
 
-            // ðŸ'° aÃºn no se factura
+            // aún no se factura
             'cajero_id'     => null,
             'observaciones' => $this->observacionesPrefactura ?? '',
             'estado'        => 'borrador',
@@ -1618,7 +1618,7 @@ public function guardarPrefacturaConfirmada()
         session()->forget('observaciones_guardadas');
         $this->olvidarCarritoPersistente();
 
-        // âœ… Ahora sÃ­: asignar "CONSUMIDOR FINAL"
+        // ✅ Ahora sí: asignar "CONSUMIDOR FINAL"
         $this->asignarConsumidorFinalPorDefecto();
 
         session()->flash('success', 'âœ… Prefactura guardada correctamente');
@@ -2058,7 +2058,7 @@ public function guardarPrefacturaConfirmada()
             ->where('estado', 'borrador');
 
 
-        // ðŸ'¨â€ðŸ'¼ SOLO vendedor
+        // SOLO vendedor
         if (
             $user->hasRole('vendedor') &&
             ! $user->hasAnyRole(['cajero', 'admin_empresa'])
@@ -2101,7 +2101,7 @@ public function guardarPrefacturaConfirmada()
             ->where('empresa_id', $empresaId);
 
 
-        // ðŸ'¨â€ðŸ'¼ SOLO vendedor
+        // SOLO vendedor
         if (
             $user->hasRole('vendedor') &&
             ! $user->hasAnyRole(['cajero', 'admin_empresa'])
@@ -2219,7 +2219,7 @@ $prefactura = $query->first();
     $this->cargandoPrefactura = false;
     $this->mostrarModalPrefacturas = false;
 
-$this->calcularTotalGeneral(); // âœ… RECALCULAR TOTAL DESPUÃ‰S DE CARGAR
+$this->calcularTotalGeneral(); // ✅ RECALCULAR TOTAL DESPUÉS DE CARGAR
 $this->dispatch('guardar-carrito-en-cache', $this->carrito); // âœ… GUARDAR EN CACHE
 
 }
@@ -2298,7 +2298,7 @@ $this->dispatch('guardar-carrito-en-cache', $this->carrito); // âœ… GUARDAR 
     ]);
 }
 
-    // âœ… MÃ‰TODOS ADICIONALES NECESARIOS
+    // ✅ MÉTODOS ADICIONALES NECESARIOS
     public function abrirModalRenombrar($uuid)
     {
         $this->uuidProductoEditando  = $uuid;
@@ -2372,7 +2372,7 @@ public function borrarPrefacturaConfirmada()
         $prefactura->delete();
     }
 
-    // âœ… LIMPIAR TODO DESPUÃ‰S DE BORRAR
+    // ✅ LIMPIAR TODO DESPUÉS DE BORRAR
     $this->reset([
         'prefacturaSeleccionada',
         'detalleSeleccionado', 
@@ -2643,7 +2643,7 @@ public function cargarFacturas()
     if ($user->hasRole('admin_empresa')) {
         // Admin ve todas las facturas de la empresa.
     } elseif ($user->hasRole('cajero') && $user->hasRole('vendedor')) {
-        // Si es cajero y vendedor, ver facturas que facturÃ³ como cajero o que generÃ³ como vendedor.
+        // Si es cajero y vendedor, ver facturas que facturó como cajero o que generó como vendedor.
         $query->where(function ($q) use ($user) {
             $q->where('cajero_id', $user->id)
               ->orWhere('vendedor_id', $user->id);
@@ -2692,7 +2692,7 @@ public function imprimirFacturaSeleccionada()
     return redirect()->route('factura.imprimir', $this->facturaSeleccionada->id);
 }
 
-// DevoluciÃ³n total
+// Devolución total
 public function devolverFacturaCompleta()
 {
     if (!$this->facturaSeleccionada) return;
@@ -2725,21 +2725,21 @@ public function devolverFacturaCompleta()
         $f->observaciones = trim(($f->observaciones ?? '').' | DEVUELTA TOTAL '.now()->toDateTimeString());
         $f->save();
 
-        // ðŸ'‡ AGREGA ESTA LÃNEA
+        // AGREGA ESTA LINEA
         $f->recalcularTotales();
     });
 
     $this->seleccionarFactura($this->facturaSeleccionada->id);
-    $this->dispatch('success','DevoluciÃ³n total realizada.');
+    $this->dispatch('success','Devolución total realizada.');
 }
 
-// DevoluciÃ³n parcial (por Ã­tem)
+// Devolución parcial (por ítem)
 public function devolverItemFactura(int $detalleId, $cantidad)
 {
     if (!$this->facturaSeleccionada) return;
 
     $cantidad = (float)$cantidad;
-    if ($cantidad <= 0) { $this->dispatch('error','Cantidad invÃ¡lida.'); return; }
+    if ($cantidad <= 0) { $this->dispatch('error','Cantidad inválida.'); return; }
 
     DB::transaction(function () use ($detalleId, $cantidad) {
         /** @var FacturaDetalle $det */
@@ -2762,7 +2762,7 @@ public function devolverItemFactura(int $detalleId, $cantidad)
         $det->devuelto_cantidad = (float)$det->devuelto_cantidad + $cantidad;
         $det->save();
 
-        // Si todos los Ã­tems quedaron devueltos, marcamos la factura como total
+        // Si todos los ítems quedaron devueltos, marcamos la factura como total
         $f = $this->facturaSeleccionada->fresh(['detalles']);
         $todosDev = $f->detalles->every(fn($d) => (float)$d->devuelto_cantidad >= (float)$d->cantidad);
         if ($todosDev && !$f->devuelta_total) {
@@ -2771,12 +2771,12 @@ public function devolverItemFactura(int $detalleId, $cantidad)
             $f->save();
         }
 
-        // ðŸ'‡ AGREGA ESTA LÃNEA
+        // AGREGA ESTA LINEA
         $f->recalcularTotales();
     });
 
     $this->seleccionarFactura($this->facturaSeleccionada->id);
-    $this->dispatch('success','DevoluciÃ³n parcial registrada.');
+    $this->dispatch('success','Devolución parcial registrada.');
 }
 
 private function getConsumidorFinalId(int $empresaId): ?int
@@ -2810,7 +2810,7 @@ public function updatedMostrarModalPrefacturas($isOpen)
 
 public function onOpenModalPrefacturas(): void
 {
-    // PestaÃ±a inicial
+    // Pestaña inicial
     $this->tab = 'prefacturas';
     // Rango 3 meses
     $this->maxFechaFacturas = now()->toDateString();
@@ -2819,7 +2819,7 @@ public function onOpenModalPrefacturas(): void
     $this->fHasta = $this->maxFechaFacturas;
     // Cargar listas
     $this->cargarFacturas();          // ya lo tienes
-    // (si tienes mÃ©todo para prefacturas, llÃ¡malo aquÃ­)
+    // (si tienes método para prefacturas, llámalo aquí)
     // $this->cargarPrefacturasGuardadas();
 }
 
@@ -3015,12 +3015,12 @@ public function abrirDialogoDevolucion()
         return;
     }
 
-    // ðŸš« Validar: si es crÃ©dito y NO estÃ¡ pagada, no permitir devoluciÃ³n
+    // 🚫 Validar: si es crédito y NO está pagada, no permitir devolución
     if (
         $this->facturaSeleccionada->tipo_pago === 'credito' &&
         $this->facturaSeleccionada->estado_pago !== 'pagada'
     ) {
-        $this->dispatch('error','No puedes hacer devoluciones en facturas a crÃ©dito hasta que estÃ©n pagadas.');
+        $this->dispatch('error','No puedes hacer devoluciones en facturas a crédito hasta que estén pagadas.');
         return;
     }
 
@@ -3140,22 +3140,22 @@ public function confirmarDevolucion()
 
     // Filtrar seleccionados con cantidad > 0
     $items = array_filter($this->carritoDevolucion, fn($r) => $r['seleccion'] && $r['cantidad'] > 0);
-    if (empty($items)) { $this->dispatch('error','No hay Ã­tems seleccionados.'); return; }
+    if (empty($items)) { $this->dispatch('error','No hay ítems seleccionados.'); return; }
 
     try {
         DB::transaction(function() use ($items) {
         $f = $this->facturaSeleccionada->fresh(['detalles', 'configuracionEmpresa']);
         $empresaId = $f->empresa_id;
 
-        // Crear cabecera devoluciÃ³n
+        // Crear cabecera devolución
         $dev = \App\Models\Devolucion::create([
             'empresa_id'   => $empresaId,
             'factura_id'   => $f->id,
             'cliente_id'   => $f->cliente_id,
-            'user_id'      => auth()->id(),   // <-- aquÃ­ capturas al usuario logueado
+            'user_id'      => auth()->id(),   // <-- aquí capturas al usuario logueado
             'fecha'        => now(),
             'total'        => 0,
-            'observaciones'=> 'DevoluciÃ³n de factura #'.$f->id,
+            'observaciones'=> 'Devolución de factura #'.$f->id,
         ]);
 
         $total = 0;
@@ -3178,7 +3178,7 @@ if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->
 
     $stockAnterior = $producto->existencias;
 
-    // ðŸ”¥ ACTUALIZA STOCK
+    // 🔥 ACTUALIZA STOCK
     $producto->existencias += $cant;
     $producto->save();
 
@@ -3188,14 +3188,14 @@ if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->
             ->increment('stock', $cant);
     }
 
-    // ðŸ”¥ KARDEX (ENTRADA POR DEVOLUCIÃ“N)
+    // 🔥 KARDEX (ENTRADA POR DEVOLUCIÓN)
     guardarKardex(
         $row['producto_id'],
         'devolucion_venta',
         $cant,
         $empresaId,
         $dev->id,
-        $stockAnterior // ðŸ'ˆ CLAVE
+        $stockAnterior // CLAVE
     );
 }
 
@@ -3203,7 +3203,7 @@ if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->
             $det->devuelto_cantidad = (float)$det->devuelto_cantidad + $cant;
             $det->save();
 
-            // Detalle devoluciÃ³n
+            // Detalle devolución
             $precio   = (float)$row['precio'];
             $subtotal = round($precio * $cant, 2);
 
@@ -3220,7 +3220,7 @@ if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->
             $total += $subtotal;
         }
 
-        // Total devoluciÃ³n
+        // Total devolución
         $dev->total = $total;
         $dev->save();
 
@@ -3228,7 +3228,7 @@ if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->
             throw new \RuntimeException('No hay cantidades pendientes para devolver en esta factura.');
         }
 
-        // Si todos los Ã­tems quedaron devueltos, marcar la factura como total
+        // Si todos los ítems quedaron devueltos, marcar la factura como total
         $f->recalcularTotales();
 
         $f2 = $f->fresh(['detalles', 'configuracionEmpresa']);
@@ -3249,12 +3249,12 @@ if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->
             }
         }
 
-        // Cerrar modal y abrir impresiÃ³n
+        // Cerrar modal y abrir impresión
         $this->mostrarModalDevolucion = false;
         $this->carritoDevolucion = [];
         $this->totalDevolucion = 0;
 
-        // Refrescar la selecciÃ³n de factura en la UI
+        // Refrescar la selección de factura en la UI
         $this->seleccionarFactura($f2->id);
 
         // Imprimir
@@ -3322,7 +3322,7 @@ private function cargarClientesConCartera(): void
               ->orWhere('devuelta_total', false);
         })
         ->with([
-            // solo campos usados en el cÃ¡lculo
+            // solo campos usados en el cálculo
             'detalles:id,factura_id,precio,cantidad,devuelto_cantidad',
             'pagos:id,factura_id,monto',
         ])
@@ -3337,7 +3337,7 @@ private function cargarClientesConCartera(): void
         $vence         = max(0, $totalOriginal - $totalDevuelto - $totalPagado);
 
         if ($vence <= 0) {
-            continue; // esta factura ya no debe nada segÃºn el cÃ¡lculo real
+            continue; // esta factura ya no debe nada según el cálculo real
         }
 
         $cid = (int) $f->cliente_id;
@@ -3352,7 +3352,7 @@ private function cargarClientesConCartera(): void
         $porCliente[$cid]['saldo']    += $vence;
         $porCliente[$cid]['facturas'] += 1;
 
-        // actualizar fecha de vencimiento mÃ¡xima
+        // actualizar fecha de vencimiento máxima
         $cur = $porCliente[$cid]['max_venc'];
         $fv  = $f->fecha_vencimiento?->toDateString();
         if ($fv && (!$cur || $fv > $cur)) {
@@ -3360,7 +3360,7 @@ private function cargarClientesConCartera(): void
         }
     }
 
-    // 3) Cargamos nombres de actores y aplicamos filtro de bÃºsqueda
+    // 3) Cargamos nombres de actores y aplicamos filtro de búsqueda
     $ids = array_keys($porCliente);
     $actores = $ids
         ? \App\Models\Actor::query()
@@ -3389,9 +3389,9 @@ private function cargarClientesConCartera(): void
         $rows[] = [
             'id'       => (int) $cid,
             'nombre'   => $nombre,
-            'saldo'    => (float) $agg['saldo'],      // ðŸ'ˆ ahora es la suma de VENCE
+            'saldo'    => (float) $agg['saldo'],      // ahora es la suma de VENCE
             'facturas' => (int) $agg['facturas'],
-            'max_venc' => (string) ($agg['max_venc'] ?? 'â€”'),
+            'max_venc' => (string) ($agg['max_venc'] ?? '—'),
         ];
     }
 
@@ -3399,7 +3399,7 @@ private function cargarClientesConCartera(): void
     usort($rows, fn($a, $b) => strcasecmp($a['nombre'], $b['nombre']));
     $this->carteraClientes = $rows;
 
-    // 5) Si el seleccionado desapareciÃ³, limpiamos
+    // 5) Si el seleccionado desapareció, limpiamos
     if ($this->carteraClienteId && !collect($this->carteraClientes)->firstWhere('id', $this->carteraClienteId)) {
         $this->carteraClienteId = null;
         $this->carteraFacturas = [];
@@ -3480,7 +3480,7 @@ public function abrirAbono(int $id): void
 
     $this->abonoFacturaId     = $f->id;
     $this->abonoSaldo         = (float) $f->saldo;
-    $this->abonoVence         = $vence; // <-- Ahora sÃ­ estÃ¡ definido
+    $this->abonoVence         = $vence; // <-- Ahora sí está definido
     $this->abonoMonto         = $vence; // Valor sugerido por defecto
     $this->abonoMedio         = 'efectivo';
     $this->abonoTransferObs   = '';
@@ -3531,14 +3531,14 @@ public function abrirAbono(int $id): void
     }
 
 
- // ================ PAGO RÃPIDO (saldo total) =========
+ // ================ PAGO RÁPIDO (saldo total) =========
     public function pagarFactura(int $id): void
     {
         $empresaId = $this->getEmpresaId();
         $f = Factura::where('empresa_id', $empresaId)->lockForUpdate()->findOrFail($id);
 
         $saldo = (float) $f->saldo;
-        if ($saldo <= 0) { $this->dispatch('info','La factura ya estÃ¡ pagada.'); return; }
+        if ($saldo <= 0) { $this->dispatch('info','La factura ya está pagada.'); return; }
 
         $this->abonarEnCartera($f->id, [
             'monto' => $saldo,
@@ -3550,10 +3550,10 @@ public function abrirAbono(int $id): void
         $f->refresh();
         $this->cargarCarteraCliente($f->cliente_id);
 
-        // cierra cartera y abre impresiÃ³n
+        // cierra cartera y abre impresión
         $this->mostrarModalCartera = false;
 
-        // abre en nueva pestaÃ±a: usa el que prefieras
+        // abre en nueva pestaña: usa el que prefieras
         // $url = route('factura.imprimir', $f->id); // ticket
         $url = route('factura.ver', $f->id);         // misma vista del "Ver"
         $this->dispatch('open-print', url: $url);
@@ -3612,7 +3612,7 @@ protected function cargarCarteraCliente(int $clienteId): void
         $this->abonoMonto = (float) $n;
     }
 
-// âœ… NO imprime aquÃ­. Solo registra el abono y refresca la UI.
+// ✅ NO imprime aquí. Solo registra el abono y refresca la UI.
 public function abonarEnCartera(int $facturaId, array $data): void
 {
     $empresaId = $this->getEmpresaId();
@@ -3653,7 +3653,7 @@ public function abonarEnCartera(int $facturaId, array $data): void
         // Refresca el modelo para obtener el saldo actualizado
         $factura->refresh();
 
-        // ðŸ'‡ AquÃ­ va tu bloque para actualizar el estado correctamente:
+        // Aqui va tu bloque para actualizar el estado correctamente:
         $totalOriginal = (float) $factura->detalles()->sum(\DB::raw('precio * cantidad'));
         $totalDevuelto = (float) $factura->detalles()->sum(\DB::raw('precio * devuelto_cantidad'));
         $totalPagado   = (float) $factura->pagos()->sum('monto');
@@ -3674,7 +3674,7 @@ public function abonarEnCartera(int $facturaId, array $data): void
 
         DB::commit();
 
-        // ðŸ”„ Refresca UI (sin imprimir)
+        // 🔄 Refresca UI (sin imprimir)
         $this->abonoTransferObs = '';
         $this->abonoSaldo       = (float) $factura->saldo;
         $this->abonoMonto       = $this->abonoSaldo;
@@ -3684,7 +3684,7 @@ public function abonarEnCartera(int $facturaId, array $data): void
         $this->carteraRefreshKey = ($this->carteraRefreshKey ?? 0) + 1;
         $this->dispatch('$refresh');
 
-        // ðŸ–¨ï¸ Imprimir ticket de abono
+        // 🖨️ Imprimir ticket de abono
         $url = route('abono.imprimir', $pago->id);
         $this->dispatch('open-print', url: $url);
 
@@ -3702,11 +3702,11 @@ public function abrirFacturaLectura(int $id): void
     $f = \App\Models\Factura::where('empresa_id',$empresaId)->findOrFail($id);
 
     $this->verFacturaId    = $f->id;
-    $this->verFacturaSaldo = (float) $f->saldo; // ðŸ'ˆ saldo disponible para el botÃ³n
+    $this->verFacturaSaldo = (float) $f->saldo; // saldo disponible para el boton
     $this->mostrarModalFactura = true;
 }
 
-// âœ… AquÃ­ SÃ decide imprimir si quedÃ³ saldada, y asegura que "Ver" NO se abra.
+// ✅ Aquí SÍ decide imprimir si quedó saldada, y asegura que "Ver" NO se abra.
 public function confirmarAbonoConValor($montoRaw): void
 {
     if (!$this->abonoFacturaId) return;
@@ -3718,7 +3718,7 @@ public function confirmarAbonoConValor($montoRaw): void
         ->lockForUpdate()
         ->findOrFail($this->abonoFacturaId);
 
-    if ($monto <= 0) { $this->dispatch('error','Monto invÃ¡lido.'); return; }
+    if ($monto <= 0) { $this->dispatch('error','Monto inválido.'); return; }
     if ($monto > (float) $f->saldo) $monto = (float) $f->saldo;
 
     $medio = in_array($this->abonoMedio, ['efectivo','transferencia','otro'], true)
@@ -3754,7 +3754,7 @@ public function confirmarAbonoConValor($montoRaw): void
     $this->carteraRefreshKey = ($this->carteraRefreshKey ?? 0) + 1;
     $this->dispatch('$refresh');
 
-    // ðŸ–¨ï¸ Imprime ticket de abono SIEMPRE
+    // 🖨️ Imprime ticket de abono SIEMPRE
     $url = route('abono.imprimir', $pago->id);
     $this->dispatch('open-print', url: $url);
     $this->dispatch('success','Abono registrado.');
@@ -3765,7 +3765,7 @@ public function confirmarAbonoConValor($montoRaw): void
 
     public function abrirHistorial(): void
 {
-    // Rango por defecto: Ãºltimos 30 dÃ­as
+    // Rango por defecto: últimos 30 días
     $this->histDesde = now()->subDays(30)->toDateString();
     $this->histHasta = now()->toDateString();
     $this->histBuscar = '';
@@ -3824,7 +3824,7 @@ public function cargarHistorial(): void
         });
     }
 
-    // BÃºsqueda por #factura o nombre de cliente
+    // Búsqueda por #factura o nombre de cliente
     if ($this->histBuscar !== '') {
         $term = trim($this->histBuscar);
         $q->where(function ($w) use ($term) {
@@ -3868,18 +3868,18 @@ public function imprimirFacturaActual(): void
 {
     if (!$this->verFacturaId) return;
 
-    // Usa tu ruta de impresiÃ³n. Si en tu proyecto no existe 'factura.imprimir',
+    // Usa tu ruta de impresión. Si en tu proyecto no existe 'factura.imprimir',
     // cambia por route('factura.ver', $this->verFacturaId)
     $url = route('factura.imprimir', $this->verFacturaId);
 
-    // Dispara evento al front para abrir ventana de impresiÃ³n
+    // Dispara evento al front para abrir ventana de impresión
     $this->dispatch('open-print', url: $url);
 }
 public function pagarEImprimir(int $facturaId, array $data = [])
 {
     $empresaId = $this->getEmpresaId();
 
-    // === ValidaciÃ³n rÃ¡pida de entrada
+    // === Validación rápida de entrada
     $medio = (string)($data['medio'] ?? 'efectivo');
     if (!in_array($medio, ['efectivo','transferencia','otro'], true)) {
         $medio = 'efectivo';
@@ -3889,7 +3889,7 @@ public function pagarEImprimir(int $facturaId, array $data = [])
         : null;
     $monto = (float)($data['monto'] ?? 0);
     if ($monto <= 0) {
-        throw new \Exception('Monto invÃ¡lido.');
+        throw new \Exception('Monto inválido.');
     }
 
     DB::beginTransaction();
@@ -3917,7 +3917,7 @@ public function pagarEImprimir(int $facturaId, array $data = [])
             transferenciaObs: $transferObs
         );
 
-        // Recalcular estado/saldo por si quedÃ³ en 0
+        // Recalcular estado/saldo por si quedó en 0
         $factura->refresh();
         $this->cargarCarteraCliente($factura->cliente_id);
 
@@ -3927,7 +3927,7 @@ public function pagarEImprimir(int $facturaId, array $data = [])
         $this->mostrarModalCartera = false;
         $this->carteraRefreshKey   = ($this->carteraRefreshKey ?? 0) + 1;
 
-        // Devuelve URL de impresiÃ³n (usa tu ruta real)
+        // Devuelve URL de impresión (usa tu ruta real)
         return [
             'ok'        => true,
             'facturaId' => $factura->id,
@@ -4014,7 +4014,7 @@ if (! auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcio
         $this->dispatch('ui-caja-abierta', ['monto_apertura' => $caja->monto_apertura]);
     }
 
-    // Verificar antes de facturar (ya la usas; asegÃºrate de llamarla)
+    // Verificar antes de facturar (ya la usas; asegúrate de llamarla)
     private function verificarCajaAbierta(): bool
     {
         $this->cargarCajaActual();
@@ -4074,7 +4074,7 @@ public function confirmarCerrarCaja()
         ->first();
 
     if ($caja) {
-        // Si comparas contra total contado del dÃ­a:
+        // Si comparas contra total contado del día:
         $this->diferenciaCaja = ($this->montoCierre ?? 0) - (float)($this->resumenCaja['efectivo'] ?? 0);
 
         $caja->update([
@@ -4094,7 +4094,7 @@ public function confirmarCerrarCaja()
     $this->dispatch('$refresh');
     $this->dispatch('caja-cerrada', diferencia: $this->diferenciaCaja);
 
-    // si ademÃ¡s imprimes:
+    // si además imprimes:
     if ($caja) {
         $this->dispatch('imprimir-cierre-caja', $caja->id);
     }
@@ -4246,7 +4246,7 @@ public function calcularResumenCaja(?int $userId = null, ?int $empresaId = null,
     $inicio = $inicio ?? now()->startOfDay();
     $fin = $fin ?? now()->endOfDay();
 
-    // ----- VENTAS DEL DÃA -----
+    // ----- VENTAS DEL DÍA -----
     $qVentas = \App\Models\Factura::query()
         ->where('empresa_id', $empresaId)
         ->where('user_id', $userId)
@@ -4256,7 +4256,7 @@ public function calcularResumenCaja(?int $userId = null, ?int $empresaId = null,
     $ventasContadoEfectivo      = (clone $qVentas)->where('tipo_pago','contado')->where('medio_pago','efectivo')->sum('total');
     $ventasContadoTransferencia = (clone $qVentas)->where('tipo_pago','contado')->where('medio_pago','transferencia')->sum('total');
 
-    // Ventas a crÃ©dito
+    // Ventas a crédito
     $ventasCredito = (clone $qVentas)->where('tipo_pago','credito')->sum('total');
 
     // ----- COBROS EN CARTERA (ABONOS / PAGOS) -----
@@ -4266,7 +4266,7 @@ public function calcularResumenCaja(?int $userId = null, ?int $empresaId = null,
     ->whereBetween('fecha', [$inicio, $fin])
     ->whereHas('factura', function ($q) use ($empresaId) {
         $q->where('empresa_id', $empresaId)
-          ->where('tipo_pago', 'credito');   // ðŸ'ˆ clave para no contar pagos de contado
+          ->where('tipo_pago', 'credito');   // clave para no contar pagos de contado
     });
 
 $carteraEfectivo      = (clone $qPagosCredito)->where('medio_pago','efectivo')->sum('monto');
@@ -4390,12 +4390,12 @@ $carteraOtro          = (clone $qPagosCredito)->where('medio_pago','otro')->sum(
     $domCobradoTotal         = $domCobradoEfectivo + $domCobradoTransferencia;
 
     // ----- DEVOLUCIONES -----
-    // Regla: SIEMPRE restan al EFECTIVO del dÃ­a y al TOTAL CONTADO
+    // Regla: SIEMPRE restan al EFECTIVO del día y al TOTAL CONTADO
     $devolucionesConPago = \App\Models\Devolucion::query()
     ->where('empresa_id', $empresaId)
     ->where('user_id', $userId)
     ->whereBetween('fecha', [$inicio, $fin])
-    ->whereHas('factura.pagos')   // ðŸ'ˆ la factura tiene pagos (cualquier medio)
+    ->whereHas('factura.pagos')   // la factura tiene pagos (cualquier medio)
     ->sum('total');
 
 // B) Devoluciones de facturas SIN pagos/abonos (NO afectan efectivo ni contado)
@@ -4403,16 +4403,16 @@ $devolucionesSinPago = \App\Models\Devolucion::query()
     ->where('empresa_id', $empresaId)
     ->where('user_id', $userId)
     ->whereBetween('fecha', [$inicio, $fin])
-    ->whereDoesntHave('factura.pagos')  // ðŸ'ˆ la factura no tiene pagos
+    ->whereDoesntHave('factura.pagos')  // la factura no tiene pagos
     ->sum('total');
 
 $devolucionesDia = $devolucionesConPago + $devolucionesSinPago; // informativo
 
 // ----- TOTALES DE FLUJO DE CAJA (SOLO PRODUCTOS) -----
-// Efectivo del dÃ­a = ventas contado (efectivo) - servicios (van a caja de mecanicos) + cobros cartera (efectivo) - devoluciones de facturas CON pago
+// Efectivo del día = ventas contado (efectivo) - servicios (van a caja de mecanicos) + cobros cartera (efectivo) - devoluciones de facturas CON pago
 $efectivo = ($ventasContadoEfectivo - $serviciosContadoEfectivo - $passthroughContadoEfectivo + $carteraEfectivo + $entradasEfectivo) - $devolucionesConPago - $salidasEfectivo;
 
-    // Transferencia del dÃ­a = ventas contado (transferencia) - servicios + cobros cartera (transferencia)
+    // Transferencia del día = ventas contado (transferencia) - servicios + cobros cartera (transferencia)
     $transferencia = ($ventasContadoTransferencia - $serviciosContadoTransferencia - $passthroughContadoTransferencia) + $carteraTransferencia + $entradasTransferencia - $salidasTransferencia;
 
     // Total contado (lo que comparas contra "Monto de cierre")
@@ -4436,7 +4436,7 @@ $efectivo = ($ventasContadoEfectivo - $serviciosContadoEfectivo - $passthroughCo
             ->orWhere('fd.descripcion_larga', 'like', 'Abono ya recibido al reservar%'))
         ->sum('fd.subtotal');
 
-    // Total de ventas (informativo: contado + crÃ©dito, sin items manuales/reembolsos)
+    // Total de ventas (informativo: contado + crédito, sin items manuales/reembolsos)
     $totalVentas = $ventasContadoEfectivo + $ventasContadoTransferencia + $ventasCredito - $ventasPassthrough;
 
     // ----- VENTAS: SERVICIOS vs PRODUCTOS -----
@@ -4483,8 +4483,8 @@ $efectivo = ($ventasContadoEfectivo - $serviciosContadoEfectivo - $passthroughCo
         'abonos_hotel_transferencia'    => $abonosHotelTransferencia,
 
         // Devoluciones (siempre restadas al efectivo y al contado)
-        'devoluciones_con_pago' => $devolucionesConPago,     // ðŸ'ˆ restadas al EFECTIVO y al CONTADO
-    'devoluciones_sin_pago' => $devolucionesSinPago,     // ðŸ'ˆ no afectan flujo
+        'devoluciones_con_pago' => $devolucionesConPago,     // restadas al EFECTIVO y al CONTADO
+    'devoluciones_sin_pago' => $devolucionesSinPago,     // no afectan flujo
     'devoluciones'          => $devolucionesDia,     
 
         // Totales de flujo
@@ -4520,7 +4520,7 @@ public function cerrarCajaAutomaticaSiEsFinDeDia()
     $this->cargarCajaActual();
 
     if ($this->cajaActual && $this->cajaActual->opened_at->format('Y-m-d') === now()->format('Y-m-d')) {
-        // Si la caja sigue abierta al final del dÃ­a, ciÃ©rrala automÃ¡ticamente
+        // Si la caja sigue abierta al final del día, ciérrala automáticamente
         if ($this->cajaActual->estado === 'abierta' && now()->isEndOfDay()) {
             $this->cajaActual->update([
                 'monto_cierre' => $this->cajaActual->monto_apertura,
