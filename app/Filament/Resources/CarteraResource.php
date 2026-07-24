@@ -57,6 +57,17 @@ class CarteraResource extends Resource
         return static::canViewAny();
     }
 
+    // Defensa en profundidad: table() ya filtra por empresa via ->query()
+    // explicito, pero getEloquentQuery() (usado por Filament para
+    // resolver un registro por su ID, ej. en relation managers o acciones
+    // futuras) no tenia su propio filtro -- mismo patron que causo el IDOR
+    // corregido en MecanicoResource/CuentaContableResource/HotelHabitacionResource.
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->where('empresa_id', auth()->user()?->getEmpresaActualId());
+    }
+
     public static function table(Table $table): Table
     {
         $empresaId = auth()->user()->getEmpresaActualId();

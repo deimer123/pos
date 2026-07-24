@@ -1,18 +1,39 @@
 <?php
 
+use App\Filament\Resources\CarteraResource;
+use App\Filament\Resources\CompraResource;
 use App\Filament\Resources\CuentaContableResource;
+use App\Filament\Resources\GastoResource;
 use App\Filament\Resources\HotelHabitacionResource;
 use App\Filament\Resources\MecanicoResource;
+use App\Filament\Resources\NotaCreditoResource;
+use App\Models\Actor;
+use App\Models\Compra;
 use App\Models\CuentaContable;
+use App\Models\Factura;
+use App\Models\Gasto;
 use App\Models\HotelHabitacion;
 use App\Models\Mecanico;
+use App\Models\NotaCredito;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 // Regresion de la vulnerabilidad IDOR corregida: las paginas de edicion de
 // estos resources no tenian getEloquentQuery() propio, asi que Filament
 // resolvia el registro con la consulta global (sin filtrar por empresa_id).
 // La lista (table()) si filtraba, pero eso no protegia la URL directa de
 // edicion contra otra empresa.
+
+// UserObserver crea automaticamente un cliente "CONSUMIDOR FINAL" (Actor)
+// con tipo_documento_id=6, departamento_id=1 y ciudad_id=1 cada vez que se
+// crea una empresa nueva -- todos los tests de este archivo crean
+// empresas, asi que esas tablas de referencia tienen que existir antes de
+// cada uno.
+beforeEach(function () {
+    DB::table('tipos_documento')->insert(['id' => 6, 'nombre' => 'NIT']);
+    DB::table('departamentos')->insert(['id' => 1, 'nombre' => 'Santander', 'codigo_dian' => 68]);
+    DB::table('ciudades')->insert(['id' => 1, 'nombre' => 'Bucaramanga', 'codigo_dian' => 68001, 'departamento_id' => 1]);
+});
 
 test('MecanicoResource::getEloquentQuery no expone mecanicos de otra empresa', function () {
     $empresaA = User::factory()->create(['tipo_usuario' => 'empresa']);
@@ -36,10 +57,13 @@ test('CuentaContableResource::getEloquentQuery no expone cuentas de otra empresa
     $empresaA = User::factory()->create(['tipo_usuario' => 'empresa']);
     $empresaB = User::factory()->create(['tipo_usuario' => 'empresa']);
 
+    // Codigo fuera del PUC base que UserObserver crea automaticamente para
+    // cada empresa nueva (CuentasContablesPucSeeder::cuentasBase()) -- si
+    // se usa un codigo real como '1105' choca con la cuenta que ya existe.
     $cuentaB = CuentaContable::create([
         'empresa_id' => $empresaB->id,
-        'codigo' => '1105',
-        'nombre' => 'Caja general de empresa B',
+        'codigo' => '9999',
+        'nombre' => 'Cuenta de prueba de empresa B',
     ]);
 
     $this->actingAs($empresaA);
@@ -67,4 +91,97 @@ test('HotelHabitacionResource::getEloquentQuery no expone habitaciones de otra e
     $this->actingAs($empresaB);
 
     expect(HotelHabitacionResource::getEloquentQuery()->find($habitacionB->id))->not->toBeNull();
+});
+
+// Ampliacion del mismo caso de prueba a los recursos que manejan dinero
+// directamente (gastos, compras, notas credito, cartera/facturas) --
+// pedido explicito antes de pasar a produccion.
+
+test('GastoResource::getEloquentQuery no expone gastos de otra empresa', function () {
+    $empresaA = User::factory()->create(['tipo_usuario' => 'empresa']);
+    $empresaB = User::factory()->create(['tipo_usuario' => 'empresa']);
+
+    $gastoB = Gasto::create([
+        'id_gasto' => 1,
+        'empresa_id' => $empresaB->id,
+        'tipo' => 'salida',
+        'categoria' => 'otros',
+        'descripcion' => 'Gasto de empresa B',
+        'monto' => 50000,
+        'fecha' => now()->toDateString(),
+    ]);
+
+    $this->actingAs($empresaA);
+
+    expect(GastoResource::getEloquentQuery()->find($gastoB->id))->toBeNull();
+
+    $this->actingAs($empresaB);
+
+    expect(GastoResource::getEloquentQuery()->find($gastoB->id))->not->toBeNull();
+});
+
+test('CompraResource::getEloquentQuery no expone compras de otra empresa', function () {
+    $empresaA = User::factory()->create(['tipo_usuario' => 'empresa']);
+    $empresaB = User::factory()->create(['tipo_usuario' => 'empresa']);
+
+    // tipo_documento_id 6 = NIT, ya sembrado por TiposDocumentoSeeder (el
+    // UserObserver depende de esa misma fila al crear el "CONSUMIDOR FINAL"
+    // de cada empresa nueva).
+    $proveedorB = Actor::create([
+        'empresa_id' => $empresaB->id,
+        'id_clip_pro' => 1,
+        'tipo' => 2,
+        'tipo_documento_id' => 6,
+        'nombre' => 'Proveedor de empresa B',
+    ]);
+
+    $compraB = Compra::create([
+        'empresa_id' => $empresaB->id,
+        'proveedor_id' => $proveedorB->id,
+    ]);
+
+    $this->actingAs($empresaA);
+
+    expect(CompraResource::getEloquentQuery()->find($compraB->id))->toBeNull();
+
+    $this->actingAs($empresaB);
+
+    expect(CompraResource::getEloquentQuery()->find($compraB->id))->not->toBeNull();
+});
+
+test('NotaCreditoResource::getEloquentQuery no expone notas credito de otra empresa', function () {
+    $empresaA = User::factory()->create(['tipo_usuario' => 'empresa']);
+    $empresaB = User::factory()->create(['tipo_usuario' => 'empresa']);
+
+    $notaB = NotaCredito::create([
+        'empresa_id' => $empresaB->id,
+        'numero' => 'NC-000001',
+        'total' => 10000,
+    ]);
+
+    $this->actingAs($empresaA);
+
+    expect(NotaCreditoResource::getEloquentQuery()->find($notaB->id))->toBeNull();
+
+    $this->actingAs($empresaB);
+
+    expect(NotaCreditoResource::getEloquentQuery()->find($notaB->id))->not->toBeNull();
+});
+
+test('CarteraResource::getEloquentQuery no expone facturas de otra empresa', function () {
+    $empresaA = User::factory()->create(['tipo_usuario' => 'empresa']);
+    $empresaB = User::factory()->create(['tipo_usuario' => 'empresa']);
+
+    $facturaB = Factura::create([
+        'empresa_id' => $empresaB->id,
+        'user_id' => $empresaB->id,
+    ]);
+
+    $this->actingAs($empresaA);
+
+    expect(CarteraResource::getEloquentQuery()->find($facturaB->id))->toBeNull();
+
+    $this->actingAs($empresaB);
+
+    expect(CarteraResource::getEloquentQuery()->find($facturaB->id))->not->toBeNull();
 });
