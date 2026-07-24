@@ -78,3 +78,23 @@ test('crear la configuracion con un tipo_negocio elegido si funciona', function 
 
     expect(\App\Models\ConfiguracionEmpresa::where('empresa_id', $empresa->id)->value('tipo_negocio'))->toBe('taller');
 });
+
+// Reproduce la causa raiz real reportada por el usuario (varias empresas
+// seguidas quedaban con "Tienda / Almacen" sin elegirlo, incluso con los
+// fixes anteriores del wizard): EmpresaResource::saveFactusConfig() crea
+// la fila de configuracion_empresas al crear la empresa (para el NIT/
+// Factus), mucho antes de que el admin_empresa vea el wizard, y nunca
+// incluye 'tipo_negocio' -- si la columna tuviera un default a nivel de
+// base de datos, quedaria relleno solo. Debe quedar en null.
+
+test('crear una empresa desde EmpresaResource no deja tipo_negocio predefinido', function () {
+    $empresa = User::factory()->create(['tipo_usuario' => 'empresa', 'name' => 'SURTIMOTOS']);
+
+    \App\Filament\Resources\EmpresaResource::saveFactusConfig($empresa, []);
+
+    $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresa->id)->first();
+
+    expect($config)->not->toBeNull();
+    expect($config->tipo_negocio)->toBeNull();
+    expect($empresa->fresh()->necesitaConfiguracionInicial())->toBeTrue();
+});
