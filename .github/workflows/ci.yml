@@ -35,11 +35,22 @@ jobs:
           extensions: mbstring, dom, fileinfo, mysql, pdo_mysql, bcmath, intl, zip, gd
           coverage: none
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
       - name: Check PHP syntax
         run: find app database config routes -name "*.php" -print0 | xargs -0 -n1 -P4 php -l
 
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Install npm dependencies and build assets
+        run: |
+          npm ci
+          npm run build
 
       - name: Prepare environment file
         run: |
