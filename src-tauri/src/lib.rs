@@ -272,6 +272,14 @@ pub fn run() {
                 )?;
             }
 
+            // Actualizaciones automaticas: revisa el manifiesto configurado en
+            // tauri.conf.json (plugins.updater.endpoints) y, si hay una
+            // version nueva firmada correctamente, la descarga e instala.
+            // tauri-plugin-process habilita relaunch() para reiniciar la app
+            // ya con la version nueva instalada.
+            app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
+            app.handle().plugin(tauri_plugin_process::init())?;
+
             let env = preparar_entorno_local(app);
             let port = find_free_port();
             let app_url = format!("http://127.0.0.1:{port}");
