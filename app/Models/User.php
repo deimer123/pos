@@ -38,6 +38,7 @@ class User extends Authenticatable implements FilamentUser
         'plan_id',
         'paquete_usuarios_id',
         'valor_plan_total',
+        'es_empresa_emisora',
         'max_vendedores',
         'max_cajeros',
         'max_digitadores',
@@ -65,6 +66,7 @@ class User extends Authenticatable implements FilamentUser
         'recursos_ocultos_admin' => 'array',
         'plan_started_at' => 'date',
         'plan_ends_at' => 'date',
+        'es_empresa_emisora' => 'boolean',
     ];
 
     public function puedeVerBotonPos(string $boton): bool

@@ -87,6 +87,19 @@ class EmpresaResource extends Resource
                             ->label('Empresa Activa')
                             ->default(true),
 
+                        Forms\Components\Toggle::make('es_empresa_emisora')
+                            ->label('Empresa emisora de facturas de planes')
+                            ->helperText('Marca UNA sola empresa (la tuya propia, con su NIT real) como emisora -- las facturas de cobro de plan de las demas empresas saldran a nombre de esta. Al activarla se desmarca de cualquier otra.')
+                            ->default(false)
+                            ->live()
+                            ->afterStateUpdated(function ($state, ?\App\Models\User $record): void {
+                                if ($state) {
+                                    \App\Models\User::where('es_empresa_emisora', true)
+                                        ->when($record, fn ($q) => $q->whereKeyNot($record->id))
+                                        ->update(['es_empresa_emisora' => false]);
+                                }
+                            }),
+
                         Forms\Components\Hidden::make('tipo_usuario')
                             ->default('empresa'),
                     ])

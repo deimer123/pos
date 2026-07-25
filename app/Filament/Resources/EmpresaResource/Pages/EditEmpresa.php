@@ -4,7 +4,9 @@ namespace App\Filament\Resources\EmpresaResource\Pages;
 
 use App\Filament\Resources\EmpresaResource;
 use App\Services\Factus\FactusClient;
+use App\Services\Ventas\FacturarPlanService;
 use Filament\Actions;
+use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 
@@ -18,6 +20,58 @@ class EditEmpresa extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('generarFacturaPlan')
+                ->label('Generar factura del plan')
+                ->icon('heroicon-o-document-currency-dollar')
+                ->color('success')
+                ->visible(fn () => ! $this->record->es_empresa_emisora && $this->record->valor_plan_total > 0)
+                ->form([
+                    Forms\Components\Select::make('tipo_factura')
+                        ->label('Tipo de documento')
+                        ->options([
+                            'salida' => 'Salida de mercancía (no fiscal)',
+                            'electronica' => 'Factura electrónica (DIAN)',
+                        ])
+                        ->default('salida')
+                        ->required(),
+
+                    Forms\Components\Select::make('medio_pago')
+                        ->label('Medio de pago')
+                        ->options([
+                            'efectivo' => 'Efectivo',
+                            'transferencia' => 'Transferencia',
+                        ])
+                        ->default('efectivo')
+                        ->required(),
+                ])
+                ->modalDescription(fn () => 'Se facturará $' . number_format((float) $this->record->valor_plan_total, 0, ',', '.') . ' a nombre de la empresa emisora configurada.')
+                ->action(function (array $data): void {
+                    try {
+                        $factura = app(FacturarPlanService::class)->facturar(
+                            $this->record,
+                            $data['tipo_factura'],
+                            $data['medio_pago'],
+                        );
+
+                        Notification::make()
+                            ->title('Factura del plan generada')
+                            ->success()
+                            ->actions([
+                                \Filament\Notifications\Actions\Action::make('ver')
+                                    ->label('Ver / imprimir')
+                                    ->url(route('factura.imprimir', $factura->id), shouldOpenInNewTab: true)
+                                    ->button(),
+                            ])
+                            ->send();
+                    } catch (\Throwable $exception) {
+                        Notification::make()
+                            ->title('No se pudo generar la factura')
+                            ->body($exception->getMessage())
+                            ->danger()
+                            ->send();
+                    }
+                }),
+
             Actions\Action::make('probarFactus')
                 ->label('Probar conexion Factus')
                 ->icon('heroicon-o-signal')

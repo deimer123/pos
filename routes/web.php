@@ -186,9 +186,16 @@ Route::middleware(['auth'])->get('/taller/pdf/reporte', function (\Illuminate\Ht
 
 Route::middleware(['auth'])->get('/prefactura/imprimir/{id}', [\App\Http\Controllers\PrefacturaController::class, 'imprimir'])->name('prefactura.imprimir');
 Route::middleware(['auth'])->get('/salida/imprimir/{id}', function ($id) {
-    $factura = \App\Models\Factura::with(['cliente','detalles'])
-        ->where('empresa_id', auth()->user()->getEmpresaActualId())
-        ->findOrFail($id);
+    $query = \App\Models\Factura::with(['cliente','detalles']);
+
+    // El super_admin puede generar/ver facturas de cobro de plan a nombre
+    // de la empresa emisora (ver FacturarPlanService), que no es "su"
+    // empresa -- por eso no se le aplica el filtro por empresa_id.
+    if (! auth()->user()->hasRole('super_admin')) {
+        $query->where('empresa_id', auth()->user()->getEmpresaActualId());
+    }
+
+    $factura = $query->findOrFail($id);
     $config  = \App\Models\ConfiguracionEmpresa::where('empresa_id', $factura->empresa_id)->first();
 
     return view('facturas.imprimir-salida', compact('factura','config'));
