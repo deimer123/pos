@@ -13,7 +13,6 @@ use App\Models\ProductoVariante;
 use App\Models\Receta;
 use App\Models\TallerOrden;
 use App\Services\Factus\FactusInvoiceService;
-use App\Services\Turion\ColaSincronizacion;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -259,52 +258,7 @@ class FacturarVentaService
             $this->liberarMesaSiCorresponde($opciones['mesa_id']);
         }
 
-        $this->encolarSubidaSiEsLocal($carrito, $opciones);
-
         return $factura;
-    }
-
-    /**
-     * En la base de datos local de Turion (SQLite), cada factura hecha sin
-     * conexion queda pendiente de subir al droplet -- ahi es donde se le
-     * asigna el numero fiscal real. No-op en el droplet mismo.
-     */
-    private function encolarSubidaSiEsLocal(array $carrito, array $opciones): void
-    {
-        $medioPago = $opciones['medio_pago'] ?? null;
-
-        if (! empty($opciones['taller_orden_id'])) {
-            ColaSincronizacion::encolar('taller_facturar', [
-                'taller_orden_id' => $opciones['taller_orden_id'],
-                'medio_pago' => $medioPago,
-            ]);
-
-            return;
-        }
-
-        if (! empty($opciones['hotel_reserva_id'])) {
-            ColaSincronizacion::encolar('hotel_facturar', [
-                'hotel_reserva_id' => $opciones['hotel_reserva_id'],
-                'medio_pago' => $medioPago,
-            ]);
-
-            return;
-        }
-
-        if (! empty($opciones['mesa_id'])) {
-            ColaSincronizacion::encolar('mesa_facturar', [
-                'mesa_id' => $opciones['mesa_id'],
-                'medio_pago' => $medioPago,
-            ]);
-
-            return;
-        }
-
-        ColaSincronizacion::encolar('venta', [
-            'carrito' => $carrito,
-            'medio_pago' => $medioPago,
-            'observaciones' => $opciones['observaciones'] ?? null,
-        ]);
     }
 
     public function getConsumidorFinalId(int $empresaId): ?int
@@ -312,6 +266,44 @@ class FacturarVentaService
         return Actor::where('empresa_id', $empresaId)
             ->where('nombre', 'CONSUMIDOR FINAL')
             ->value('id');
+    }
+
+    /**
+     * Misma logica que App\Livewire\CarritoVenta::getClienteCreditoInfoProperty(),
+     * pero como metodo reutilizable: el credito de un cliente es dato
+     * financiero, asi que cuando el pedido de facturar viene de una
+     * terminal de Turion (API), el cupo disponible se recalcula aqui en
+     * el servidor en vez de confiar en lo que mande el cliente.
+     */
+    public static function calcularCreditoCliente(int $empresaId, ?int $clienteId): array
+    {
+        if (! $clienteId) {
+            return ['permite' => false, 'limite' => 0.0, 'dias' => 0, 'deuda' => 0.0, 'cupo_disponible' => 0.0];
+        }
+
+        $actor = Actor::where('empresa_id', $empresaId)->where('id', $clienteId)->first();
+
+        if (! $actor) {
+            return ['permite' => false, 'limite' => 0.0, 'dias' => 0, 'deuda' => 0.0, 'cupo_disponible' => 0.0];
+        }
+
+        $deuda = Factura::where('empresa_id', $empresaId)
+            ->where('cliente_id', $actor->id)
+            ->where('saldo', '>', 0)
+            ->where(function ($q) {
+                $q->whereNull('devuelta_total')->orWhere('devuelta_total', false);
+            })
+            ->sum('saldo');
+
+        $limite = (float) ($actor->limite_credito ?? 0);
+
+        return [
+            'permite' => (bool) ($actor->permite_credito ?? false),
+            'limite' => $limite,
+            'dias' => (int) ($actor->dias_credito ?? 0),
+            'deuda' => (float) $deuda,
+            'cupo_disponible' => max(0, $limite - (float) $deuda),
+        ];
     }
 
     public function facturacionElectronicaDisponible(int $empresaId): bool

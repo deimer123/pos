@@ -32,6 +32,13 @@ Route::prefix('pairing')->group(function () {
         Route::get('/catalogo', [PairingController::class, 'refrescarCatalogo'])
             ->name('api.pairing.catalogo');
 
+        // Chequeo liviano de conectividad real (no solo "hay red", sino
+        // "el droplet responde ahora"): lo usa ConectividadDroplet::
+        // estaEnLinea() para decidir si el boton "Facturar" de Turion
+        // puede facturar en el momento.
+        Route::get('/ping', fn () => response()->json(['ok' => true]))
+            ->name('api.pairing.ping');
+
         // Subida de lo hecho offline en una terminal de Turion (boton
         // "Subir"): mismo controlador que ya usaba el navegador (sesion
         // web), aqui autenticado por el token de Sanctum que "bootstrap"

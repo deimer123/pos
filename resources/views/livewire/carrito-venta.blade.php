@@ -654,6 +654,10 @@
 
     
 
+    @if ($esTurion)
+        <div wire:poll.10s="refrescarConectividadTurion"></div>
+    @endif
+
     <div class="pos-cart-total-bar px-3 py-2 border-t bg-white flex items-center justify-between">
         @if($mesaId)
             {{-- Enviar cocina y Facturar: visibles siempre (desktop Y móvil) --}}
@@ -666,12 +670,24 @@
                         @if($ordenCostoEmpaque > 0) +${{ number_format($ordenCostoEmpaque,0,',','.') }} @endif
                     </span>
                 @endif
+                @if ($esTurion && ! $puedeFacturarTurion)
+                    <span style="background:#fee2e2;border:1px solid #fecaca;color:#991b1b;border-radius:999px;padding:2px 10px;font-size:10px;font-weight:800;white-space:nowrap;">
+                        📴 Sin conexión: guarda y factura al volver
+                    </span>
+                @endif
                 <button x-on:click="window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '', $wire.get('ordenDomDireccion') || $wire.get('clienteDireccion') || '', $wire.get('ordenDomTelefono') || $wire.get('clienteTelefono') || '', $wire.get('ordenDomNombre') || '', $wire.get('ordenDomObservaciones') || '', $wire.get('ordenDomCostoDomicilio') || 0, $wire.get('ordenDomCostoDesechables') || 0, $wire.get('ordenEstadoActual') || 'abierta', $wire.get('ordenTipoPedido') || 'mesa', $wire.get('usaDomicilios') || false, $wire.get('esMesero') || false, $wire.get('esMesaDomicilio') || false)"
                     class="pos-mesa-total-btn"
                     style="background:#2563eb; color:white; border:none; border-radius:9999px; padding:0 14px; height:34px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">
                     📤 Enviar cocina
                 </button>
                 @if ((auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa')) && auth()->user()->puedeVerBotonPos('facturar'))
+                @if ($esTurion && ! $puedeFacturarTurion)
+                <button id="btn-mesa-facturar" type="button" disabled
+                    class="pos-mesa-total-btn"
+                    style="background:#94a3b8; color:white; border:none; border-radius:9999px; padding:0 14px; height:34px; font-size:12px; font-weight:700; cursor:not-allowed; white-space:nowrap;">
+                    💳 Facturar
+                </button>
+                @else
                 <button id="btn-mesa-facturar"
                     onclick="if (navigator.onLine === false) { window.Swal?.fire('Sin conexion', 'Cerrar una mesa necesita internet.', 'warning'); } else { window.Livewire.dispatch('mesa-facturar'); }"
                     class="pos-mesa-total-btn"
@@ -679,14 +695,27 @@
                     💳 Facturar
                 </button>
                 @endif
+                @endif
             </div>
         @else
         @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion']) && auth()->user()->puedeVerBotonPos('facturar'))
+            @if ($esTurion && ! $puedeFacturarTurion)
+                <div class="flex items-center gap-2">
+                    <span style="background:#fee2e2;border:1px solid #fecaca;color:#991b1b;border-radius:999px;padding:2px 10px;font-size:10px;font-weight:800;white-space:nowrap;">
+                        📴 Sin conexión: guarda la prefactura/orden y factura al volver
+                    </span>
+                    <button type="button" id="btn-abrir-facturar" disabled
+                        class="bg-gray-400 text-white text-xs px-3 h-8 rounded-full shadow cursor-not-allowed">
+                        Facturar
+                    </button>
+                </div>
+            @else
             <button type="button" id="btn-abrir-facturar"
                 class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow"
                 wire:loading.attr="disabled" wire:target="confirmarFacturar">
                 Facturar
             </button>
+            @endif
         @endif
         @endif
         <div class="text-right">
@@ -2026,6 +2055,13 @@
                                 </button>
 
                                 @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa']) && auth()->user()->puedeVerBotonPos('facturar'))
+                                @if ($esTurion && ! $puedeFacturarTurion)
+                                <button type="button" disabled
+                                    class="h-9 px-4 bg-gray-400 text-white text-sm font-semibold rounded-full shadow-sm cursor-not-allowed"
+                                    title="Sin conexión con el droplet: guarda la prefactura y factura al volver.">
+                                    💳 Facturar
+                                </button>
+                                @else
                                 <button x-data="{ hayProductos: {{ $hayProductosEnCarrito ? 'true' : 'false' }} }"
                                     x-on:click="
                                     if (hayProductos) {
@@ -2039,6 +2075,7 @@
                                     style="background:#16a34a;">
                                     💳 Facturar
                                 </button>
+                                @endif
                                 @endif
                             @endif
 

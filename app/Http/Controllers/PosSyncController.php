@@ -32,12 +32,11 @@ class PosSyncController extends Controller
 {
     public function venta(Request $request): JsonResponse
     {
-        $data = $request->validate([
+        $data = $request->validate(array_merge([
             'uuid' => 'required|uuid',
             'carrito' => 'required|array|min:1',
             'medio_pago' => 'nullable|string|in:efectivo,transferencia',
-            'observaciones' => 'nullable|string',
-        ]);
+        ], $this->reglasFacturarComunes()));
 
         $empresaId = auth()->user()->getEmpresaActualId();
 
@@ -46,19 +45,11 @@ class PosSyncController extends Controller
         }
 
         try {
-            $factura = app(FacturarVentaService::class)->facturar($data['carrito'], [
+            $factura = app(FacturarVentaService::class)->facturar($data['carrito'], array_merge([
                 'empresa_id' => $empresaId,
                 'user_id' => auth()->id(),
-                'vendedor_id' => auth()->id(),
-                // Regla de negocio: las ventas offline siempre son
-                // "salida" (no fiscal) y de contado. No hay cliente ni
-                // factura electronica sin conexion -- eso se hace despues,
-                // ya con internet, editando la venta si hace falta.
-                'tipo_factura' => 'salida',
-                'tipo_pago' => 'contado',
                 'medio_pago' => $data['medio_pago'] ?? 'efectivo',
-                'observaciones' => $data['observaciones'] ?? null,
-            ]);
+            ], $this->opcionesFacturarComunes($data, $empresaId)));
         } catch (\Throwable $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
@@ -101,11 +92,11 @@ class PosSyncController extends Controller
 
     public function mesaFacturar(Request $request, AgregarItemMesaService $mesaService): JsonResponse
     {
-        $data = $request->validate([
+        $data = $request->validate(array_merge([
             'uuid' => 'required|uuid',
             'mesa_id' => 'required|integer',
             'medio_pago' => 'nullable|string|in:efectivo,transferencia',
-        ]);
+        ], $this->reglasFacturarComunes()));
 
         $empresaId = auth()->user()->getEmpresaActualId();
 
@@ -129,16 +120,12 @@ class PosSyncController extends Controller
         }
 
         try {
-            $factura = app(FacturarVentaService::class)->facturar($carrito, [
+            $factura = app(FacturarVentaService::class)->facturar($carrito, array_merge([
                 'empresa_id' => $empresaId,
                 'user_id' => auth()->id(),
-                'vendedor_id' => auth()->id(),
-                'cliente_id' => null,
-                'tipo_factura' => 'salida',
-                'tipo_pago' => 'contado',
                 'medio_pago' => $data['medio_pago'] ?? 'efectivo',
                 'mesa_id' => (int) $data['mesa_id'],
-            ]);
+            ], $this->opcionesFacturarComunes($data, $empresaId)));
         } catch (\Throwable $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
@@ -233,11 +220,11 @@ class PosSyncController extends Controller
 
     public function tallerFacturar(Request $request, GuardarOrdenTallerService $tallerService): JsonResponse
     {
-        $data = $request->validate([
+        $data = $request->validate(array_merge([
             'uuid' => 'required|uuid',
             'taller_orden_id' => 'required|integer',
             'medio_pago' => 'nullable|string|in:efectivo,transferencia',
-        ]);
+        ], $this->reglasFacturarComunes()));
 
         $empresaId = auth()->user()->getEmpresaActualId();
 
@@ -252,10 +239,11 @@ class PosSyncController extends Controller
 
         // Igual que CarritoVenta::cargarOrdenTaller(): si el nombre del
         // cliente de la orden coincide con un Actor existente, la factura
-        // queda a nombre de ese cliente en vez de Consumidor Final.
-        $clienteId = null;
+        // queda a nombre de ese cliente en vez de Consumidor Final (a
+        // menos que el que factura haya elegido otro cliente explicito).
+        $clienteIdDefault = null;
         if ($orden->cliente_nombre) {
-            $clienteId = Actor::where('empresa_id', $empresaId)
+            $clienteIdDefault = Actor::where('empresa_id', $empresaId)
                 ->whereRaw('LOWER(TRIM(nombre)) = ?', [mb_strtolower(trim($orden->cliente_nombre))])
                 ->value('id');
         }
@@ -267,16 +255,12 @@ class PosSyncController extends Controller
         }
 
         try {
-            $factura = app(FacturarVentaService::class)->facturar($carrito, [
+            $factura = app(FacturarVentaService::class)->facturar($carrito, array_merge([
                 'empresa_id' => $empresaId,
                 'user_id' => auth()->id(),
-                'vendedor_id' => auth()->id(),
-                'cliente_id' => $clienteId,
-                'tipo_factura' => 'salida',
-                'tipo_pago' => 'contado',
                 'medio_pago' => $data['medio_pago'] ?? 'efectivo',
                 'taller_orden_id' => (int) $data['taller_orden_id'],
-            ]);
+            ], $this->opcionesFacturarComunes($data, $empresaId, $clienteIdDefault)));
         } catch (\Throwable $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
@@ -374,11 +358,11 @@ class PosSyncController extends Controller
 
     public function hotelFacturar(Request $request, GuardarReservaService $hotelService): JsonResponse
     {
-        $data = $request->validate([
+        $data = $request->validate(array_merge([
             'uuid' => 'required|uuid',
             'hotel_reserva_id' => 'required|integer',
             'medio_pago' => 'nullable|string|in:efectivo,transferencia',
-        ]);
+        ], $this->reglasFacturarComunes()));
 
         $empresaId = auth()->user()->getEmpresaActualId();
 
@@ -391,11 +375,11 @@ class PosSyncController extends Controller
             return response()->json(['message' => 'La reserva no existe.'], 422);
         }
 
-        $clienteId = null;
+        $clienteIdDefault = null;
         if ($reserva->actor_id) {
-            $clienteId = $reserva->actor_id;
+            $clienteIdDefault = $reserva->actor_id;
         } elseif ($reserva->huesped_nombre) {
-            $clienteId = Actor::where('empresa_id', $empresaId)
+            $clienteIdDefault = Actor::where('empresa_id', $empresaId)
                 ->whereRaw('LOWER(TRIM(nombre)) = ?', [mb_strtolower(trim($reserva->huesped_nombre))])
                 ->value('id');
         }
@@ -407,17 +391,13 @@ class PosSyncController extends Controller
         }
 
         try {
-            $factura = app(FacturarVentaService::class)->facturar($carrito, [
+            $factura = app(FacturarVentaService::class)->facturar($carrito, array_merge([
                 'empresa_id' => $empresaId,
                 'user_id' => auth()->id(),
-                'vendedor_id' => auth()->id(),
-                'cliente_id' => $clienteId,
-                'tipo_factura' => 'salida',
-                'tipo_pago' => 'contado',
                 'medio_pago' => $data['medio_pago'] ?? 'efectivo',
                 'hotel_reserva_id' => (int) $data['hotel_reserva_id'],
                 'hotel_abono_monto' => (float) $reserva->abono_monto,
-            ]);
+            ], $this->opcionesFacturarComunes($data, $empresaId, $clienteIdDefault)));
         } catch (\Throwable $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
@@ -425,6 +405,78 @@ class PosSyncController extends Controller
         $this->registrarSincronizada($data['uuid'], 'hotel_facturar', $empresaId, $factura->id);
 
         return $this->respuestaFactura($factura->id);
+    }
+
+    /**
+     * Reglas de validacion comunes a los 4 endpoints de facturar: el set
+     * completo que soporta FacturarVentaService::facturar(), para que
+     * facturar en linea desde Turion (ver FacturarEnLineaService) tenga
+     * la misma funcionalidad que facturar directo en el droplet -- cliente,
+     * factura electronica, credito, domicilio, propina, vendedor manual.
+     */
+    private function reglasFacturarComunes(): array
+    {
+        return [
+            'cliente_id' => 'nullable|integer',
+            'vendedor_id' => 'nullable|integer',
+            'tipo_factura' => 'nullable|string|in:salida,electronica',
+            'tipo_pago' => 'nullable|string|in:contado,credito',
+            'fecha_vencimiento' => 'nullable|date',
+            'transferencia_obs' => 'nullable|string',
+            'observaciones' => 'nullable|string',
+            'tipo_pedido' => 'nullable|string|in:local,para_llevar,domicilio',
+            'costo_empaque' => 'nullable|numeric|min:0',
+            'cobro_domicilio' => 'nullable|string',
+            'dom_nombre' => 'nullable|string',
+            'dom_telefono' => 'nullable|string',
+            'dom_direccion' => 'nullable|string',
+            'dom_observaciones' => 'nullable|string',
+            'dom_nit' => 'nullable|string',
+            'dom_email' => 'nullable|string',
+            'dom_razon_social' => 'nullable|string',
+            'dom_costo_domicilio' => 'nullable|numeric|min:0',
+            'dom_costo_desechables' => 'nullable|numeric|min:0',
+            'propina_monto' => 'nullable|numeric|min:0',
+        ];
+    }
+
+    /**
+     * $clienteIdDefault: a que cliente facturar si el llamador no mando
+     * "cliente_id" explicito (ej. el cliente ya vinculado a la orden de
+     * taller/reserva de hotel). Si tipo_pago es "credito", el cupo
+     * disponible se recalcula aqui mismo (dato financiero, no se confia
+     * en lo que mande el cliente).
+     */
+    private function opcionesFacturarComunes(array $data, int $empresaId, ?int $clienteIdDefault = null): array
+    {
+        $clienteId = ! empty($data['cliente_id']) ? (int) $data['cliente_id'] : $clienteIdDefault;
+        $tipoPago = $data['tipo_pago'] ?? 'contado';
+
+        return [
+            'cliente_id' => $clienteId,
+            'vendedor_id' => $data['vendedor_id'] ?? auth()->id(),
+            'tipo_factura' => $data['tipo_factura'] ?? 'salida',
+            'tipo_pago' => $tipoPago,
+            'fecha_vencimiento' => $data['fecha_vencimiento'] ?? null,
+            'transferencia_obs' => $data['transferencia_obs'] ?? null,
+            'observaciones' => $data['observaciones'] ?? null,
+            'tipo_pedido' => $data['tipo_pedido'] ?? 'local',
+            'costo_empaque' => (float) ($data['costo_empaque'] ?? 0),
+            'cobro_domicilio' => $data['cobro_domicilio'] ?? null,
+            'dom_nombre' => $data['dom_nombre'] ?? null,
+            'dom_telefono' => $data['dom_telefono'] ?? null,
+            'dom_direccion' => $data['dom_direccion'] ?? null,
+            'dom_observaciones' => $data['dom_observaciones'] ?? null,
+            'dom_nit' => $data['dom_nit'] ?? null,
+            'dom_email' => $data['dom_email'] ?? null,
+            'dom_razon_social' => $data['dom_razon_social'] ?? null,
+            'dom_costo_domicilio' => (float) ($data['dom_costo_domicilio'] ?? 0),
+            'dom_costo_desechables' => (float) ($data['dom_costo_desechables'] ?? 0),
+            'propina_monto' => (float) ($data['propina_monto'] ?? 0),
+            'cliente_credito_info' => $tipoPago === 'credito'
+                ? FacturarVentaService::calcularCreditoCliente($empresaId, $clienteId)
+                : null,
+        ];
     }
 
     private function respuestaFactura(int $facturaId): JsonResponse

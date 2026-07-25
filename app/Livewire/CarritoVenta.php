@@ -22,6 +22,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Caja;
 use App\Models\ConfiguracionEmpresa;
+use App\Services\Turion\ConectividadDroplet;
+use App\Services\Turion\FacturarEnLineaService;
 use App\Services\Ventas\FacturarVentaService;
 use Livewire\WithFileUploads;
 class CarritoVenta extends Component
@@ -31,6 +33,15 @@ class CarritoVenta extends Component
     public bool $usaDomicilios = false;
     public bool $esMesero = false;
     public bool $esMesaDomicilio = false;
+
+    // Turion (terminal offline): facturar solo se permite con conexion al
+    // droplet -- sin ella la factura fiscal no se puede generar (ver
+    // ConectividadDroplet). $puedeFacturarTurion se refresca solo, tanto
+    // periodicamente (wire:poll en la vista) como justo antes de facturar,
+    // asi que la UI no se queda mostrando el boton habilitado por un rato
+    // despues de perder la conexion.
+    public bool $esTurion = false;
+    public bool $puedeFacturarTurion = true;
 
     // Comision de vendedor: algunos vendedores no tienen acceso al POS,
     // asi que el cajero les asigna la venta manualmente al facturar (ver
@@ -461,6 +472,9 @@ private function limpiarUtf8Array(array $datos): array
      public function mount()
 {
     $empresaId = $this->getEmpresaId();
+
+    $this->esTurion = DB::getDriverName() === 'sqlite';
+    $this->puedeFacturarTurion = ! $this->esTurion || ConectividadDroplet::estaEnLinea();
 
     $config = ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();
     $this->usaDomicilios = (bool)($config?->usa_domicilios ?? false);
@@ -2456,6 +2470,106 @@ public function confirmarFacturar()
     }
 
 
+// Turion sin conexion: se refresca sola via wire:poll en la vista para
+// que el boton "Facturar" se oculte/deshabilite apenas se cae la
+// conexion, sin que el cajero tenga que refrescar la pagina a mano.
+public function refrescarConectividadTurion(): void
+{
+    if ($this->esTurion) {
+        $this->puedeFacturarTurion = ConectividadDroplet::estaEnLinea();
+    }
+}
+
+/**
+ * Ultima linea de defensa antes de facturar: en Turion, aunque el boton
+ * ya deberia estar oculto/deshabilitado sin conexion, se vuelve a
+ * verificar aqui mismo por si la conexion se cayo justo despues del
+ * ultimo poll. Devuelve true si SI se puede facturar.
+ */
+private function verificarPuedeFacturarTurion(): bool
+{
+    if (! $this->esTurion) {
+        return true;
+    }
+
+    $this->puedeFacturarTurion = ConectividadDroplet::estaEnLinea();
+
+    return $this->puedeFacturarTurion;
+}
+
+/**
+ * Arma las mismas opciones que ya armaban facturarConfirmada()/
+ * facturarEImprimir() y factura contra el droplet directo en el momento
+ * (Turion, via FacturarEnLineaService) o localmente (FacturarVentaService,
+ * comportamiento identico al de siempre en el droplet mismo).
+ *
+ * @return array{id: int, numero_visual: ?string, print_url: string}
+ */
+private function ejecutarFacturar(array $data, int $empresaId): array
+{
+    $tipoPago = $data['tipo_pago'] ?? 'contado';
+
+    // El cajero que factura puede no ser el vendedor que se lleva la
+    // comision (algunos vendedores no tienen acceso al POS) -- si se
+    // eligio en el select del modal "Confirmar factura", ese manda; si
+    // no, el asignado antes con el boton; si no, el de la prefactura
+    // cargada; si tampoco, el propio cajero logueado.
+    $vendedorId = ! empty($data['vendedor_id']) ? (int) $data['vendedor_id'] : ($this->vendedorAsignadoId ?? auth()->id());
+    if ($this->prefacturaCargadaId) {
+        $prefactura = Prefactura::find($this->prefacturaCargadaId);
+        $vendedorId = $prefactura?->vendedor_id ?? $vendedorId;
+    }
+
+    $opciones = [
+        'empresa_id' => $empresaId,
+        'cliente_id' => $this->clienteId ?: null,
+        'user_id' => auth()->id(),
+        'vendedor_id' => $vendedorId,
+        'tipo_factura' => $data['tipo_factura'] ?? 'salida',
+        'tipo_pago' => $tipoPago,
+        'medio_pago' => $data['medio_pago'] ?? null,
+        'fecha_vencimiento' => $data['fecha_vencimiento'] ?? null,
+        'tipo_pedido' => $data['tipo_pedido'] ?? 'local',
+        'costo_empaque' => (float) ($data['costo_empaque'] ?? 0),
+        'cobro_domicilio' => $data['cobro_domicilio'] ?? null,
+        'transferencia_obs' => $data['transferencia_obs'] ?? null,
+        'observaciones' => $this->observacionesPrefactura,
+        'dom_costo_domicilio' => $data['dom_costo_domicilio'] ?? $this->ordenDomCostoDomicilio,
+        'dom_costo_desechables' => $data['dom_costo_desechables'] ?? $this->ordenDomCostoDesechables,
+        'dom_nombre' => $data['dom_nombre'] ?? null,
+        'dom_telefono' => $data['dom_telefono'] ?? null,
+        'dom_direccion' => $data['dom_direccion'] ?? null,
+        'dom_observaciones' => $data['dom_observaciones'] ?? $this->ordenDomObservaciones ?: null,
+        'dom_nit' => $data['dom_nit'] ?? null,
+        'dom_email' => $data['dom_email'] ?? null,
+        'dom_razon_social' => $data['dom_razon_social'] ?? null,
+        'cliente_credito_info' => $tipoPago === 'credito' ? $this->clienteCreditoInfo : null,
+        'mesa_id' => $this->mesaId,
+        'taller_orden_id' => $this->tallerOrdenId,
+        'hotel_reserva_id' => $this->hotelReservaId,
+        'hotel_abono_monto' => $this->hotelAbonoMonto,
+        'propina_monto' => $this->agregarPropina ? round($this->totalGeneral * $this->porcentajePropina / 100) : 0,
+    ];
+
+    if ($this->esTurion) {
+        $resultado = app(FacturarEnLineaService::class)->facturar($this->carrito, $opciones);
+
+        return [
+            'id' => (int) $resultado['id'],
+            'numero_visual' => $resultado['numero_visual'] ?? null,
+            'print_url' => $resultado['print_url'],
+        ];
+    }
+
+    $factura = app(FacturarVentaService::class)->facturar($this->carrito, $opciones);
+
+    return [
+        'id' => $factura->id,
+        'numero_visual' => $factura->numero_visual,
+        'print_url' => route('factura.imprimir', $factura->id),
+    ];
+}
+
 // Los items manuales del carrito (hospedaje de hotel, repuestos sueltos de
 // taller, empaque/domicilio, etc.) se guardan con una clave sintética como
 // id_producto ('hotel-reserva-3', un uuid...) que no existe como Product
@@ -2473,6 +2587,11 @@ public function facturarConfirmada(array $data = [])
         return;
      }
 
+    if (! $this->verificarPuedeFacturarTurion()) {
+        $this->dispatch('error', 'Sin conexión con el droplet: no se puede facturar ahora. Guarda la prefactura/orden y factura cuando vuelva la conexión.');
+        return;
+    }
+
     try {
         Log::info('POS facturarConfirmada inicio', [
             'empresa_id' => $empresaId,
@@ -2482,49 +2601,7 @@ public function facturarConfirmada(array $data = [])
             'data' => $data,
         ]);
 
-        $tipoPago = $data['tipo_pago'] ?? 'contado';
-
-        // El cajero que factura puede no ser el vendedor que se lleva la
-        // comision (algunos vendedores no tienen acceso al POS) -- si se
-        // eligio en el select del modal "Confirmar factura", ese manda; si
-        // no, el asignado antes con el boton; si no, el de la prefactura
-        // cargada; si tampoco, el propio cajero logueado.
-        $vendedorId = ! empty($data['vendedor_id']) ? (int) $data['vendedor_id'] : ($this->vendedorAsignadoId ?? auth()->id());
-        if ($this->prefacturaCargadaId) {
-            $prefactura = Prefactura::find($this->prefacturaCargadaId);
-            $vendedorId = $prefactura?->vendedor_id ?? $vendedorId;
-        }
-
-        $factura = app(FacturarVentaService::class)->facturar($this->carrito, [
-            'empresa_id' => $empresaId,
-            'cliente_id' => $this->clienteId ?: null,
-            'user_id' => auth()->id(),
-            'vendedor_id' => $vendedorId,
-            'tipo_factura' => $data['tipo_factura'] ?? 'salida',
-            'tipo_pago' => $tipoPago,
-            'medio_pago' => $data['medio_pago'] ?? null,
-            'fecha_vencimiento' => $data['fecha_vencimiento'] ?? null,
-            'tipo_pedido' => $data['tipo_pedido'] ?? 'local',
-            'costo_empaque' => (float) ($data['costo_empaque'] ?? 0),
-            'cobro_domicilio' => $data['cobro_domicilio'] ?? null,
-            'transferencia_obs' => $data['transferencia_obs'] ?? null,
-            'observaciones' => $this->observacionesPrefactura,
-            'dom_costo_domicilio' => $data['dom_costo_domicilio'] ?? $this->ordenDomCostoDomicilio,
-            'dom_costo_desechables' => $data['dom_costo_desechables'] ?? $this->ordenDomCostoDesechables,
-            'dom_nombre' => $data['dom_nombre'] ?? null,
-            'dom_telefono' => $data['dom_telefono'] ?? null,
-            'dom_direccion' => $data['dom_direccion'] ?? null,
-            'dom_observaciones' => $data['dom_observaciones'] ?? $this->ordenDomObservaciones ?: null,
-            'dom_nit' => $data['dom_nit'] ?? null,
-            'dom_email' => $data['dom_email'] ?? null,
-            'dom_razon_social' => $data['dom_razon_social'] ?? null,
-            'cliente_credito_info' => $tipoPago === 'credito' ? $this->clienteCreditoInfo : null,
-            'mesa_id' => $this->mesaId,
-            'taller_orden_id' => $this->tallerOrdenId,
-            'hotel_reserva_id' => $this->hotelReservaId,
-            'hotel_abono_monto' => $this->hotelAbonoMonto,
-            'propina_monto' => $this->agregarPropina ? round($this->totalGeneral * $this->porcentajePropina / 100) : 0,
-        ]);
+        $resultado = $this->ejecutarFacturar($data, $empresaId);
 
         $eraOrdenTaller = (bool) $this->tallerOrdenId;
         $eraReservaHotel = (bool) $this->hotelReservaId;
@@ -2562,7 +2639,7 @@ public function facturarConfirmada(array $data = [])
         session()->forget('observaciones_guardadas');
         $this->olvidarCarritoPersistente();
 
-        $this->dispatch('success', $factura->numero_visual . ' creada.');
+        $this->dispatch('success', $resultado['numero_visual'] . ' creada.');
         $this->dispatch('venta-facturada', items: $itemsVendidos);
         if ($this->mesaId || $eraOrdenTaller) {
             $this->redirect(route('pos'));
@@ -2844,50 +2921,14 @@ public function facturarEImprimir(array $data = [])
         return ['ok' => false, 'error' => 'El carrito está vacío.'];
     }
 
+    if (! $this->verificarPuedeFacturarTurion()) {
+        $mensaje = 'Sin conexión con el droplet: no se puede facturar ahora. Guarda la prefactura/orden y factura cuando vuelva la conexión.';
+        $this->dispatch('error', $mensaje);
+        return ['ok' => false, 'error' => $mensaje];
+    }
+
     try {
-        $tipoPago = $data['tipo_pago'] ?? 'contado';
-
-        // El cajero que factura puede no ser el vendedor que se lleva la
-        // comision (algunos vendedores no tienen acceso al POS) -- si se
-        // eligio en el select del modal "Confirmar factura", ese manda; si
-        // no, el asignado antes con el boton; si no, el de la prefactura
-        // cargada; si tampoco, el propio cajero logueado.
-        $vendedorId = ! empty($data['vendedor_id']) ? (int) $data['vendedor_id'] : ($this->vendedorAsignadoId ?? auth()->id());
-        if ($this->prefacturaCargadaId) {
-            $prefactura = Prefactura::find($this->prefacturaCargadaId);
-            $vendedorId = $prefactura?->vendedor_id ?? $vendedorId;
-        }
-
-        $factura = app(FacturarVentaService::class)->facturar($this->carrito, [
-            'empresa_id' => $empresaId,
-            'cliente_id' => $this->clienteId ?: null,
-            'user_id' => auth()->id(),
-            'vendedor_id' => $vendedorId,
-            'tipo_factura' => $data['tipo_factura'] ?? 'salida',
-            'tipo_pago' => $tipoPago,
-            'medio_pago' => $data['medio_pago'] ?? null,
-            'fecha_vencimiento' => $data['fecha_vencimiento'] ?? null,
-            'tipo_pedido' => $data['tipo_pedido'] ?? 'local',
-            'costo_empaque' => (float) ($data['costo_empaque'] ?? 0),
-            'cobro_domicilio' => $data['cobro_domicilio'] ?? null,
-            'transferencia_obs' => $data['transferencia_obs'] ?? null,
-            'observaciones' => $this->observacionesPrefactura,
-            'dom_costo_domicilio' => $data['dom_costo_domicilio'] ?? $this->ordenDomCostoDomicilio,
-            'dom_costo_desechables' => $data['dom_costo_desechables'] ?? $this->ordenDomCostoDesechables,
-            'dom_nombre' => $data['dom_nombre'] ?? null,
-            'dom_telefono' => $data['dom_telefono'] ?? null,
-            'dom_direccion' => $data['dom_direccion'] ?? null,
-            'dom_observaciones' => $data['dom_observaciones'] ?? $this->ordenDomObservaciones ?: null,
-            'dom_nit' => $data['dom_nit'] ?? null,
-            'dom_email' => $data['dom_email'] ?? null,
-            'dom_razon_social' => $data['dom_razon_social'] ?? null,
-            'cliente_credito_info' => $tipoPago === 'credito' ? $this->clienteCreditoInfo : null,
-            'mesa_id' => $this->mesaId,
-            'taller_orden_id' => $this->tallerOrdenId,
-            'hotel_reserva_id' => $this->hotelReservaId,
-            'hotel_abono_monto' => $this->hotelAbonoMonto,
-            'propina_monto' => $this->agregarPropina ? round($this->totalGeneral * $this->porcentajePropina / 100) : 0,
-        ]);
+        $resultado = $this->ejecutarFacturar($data, $empresaId);
 
         $eraOrdenTaller = (bool) $this->tallerOrdenId;
         $eraReservaHotel = (bool) $this->hotelReservaId;
@@ -2930,11 +2971,10 @@ public function facturarEImprimir(array $data = [])
         // de taller: al imprimir se abre una ventana nueva y, en algunos
         // navegadores, la ventana principal no reflejaba de inmediato el
         // carrito ya vacio hasta refrescar manualmente.
-        $url = route('factura.imprimir', $factura->id);
-        $this->dispatch('success', $factura->numero_visual . ' creada.');
+        $this->dispatch('success', $resultado['numero_visual'] . ' creada.');
         $this->dispatch('venta-facturada', items: $itemsVendidos);
         $redirectUrl = $this->mesaId ? route('pos') : ($eraOrdenTaller ? route('pos') : ($eraReservaHotel ? route('hotel') : null));
-        return ['ok' => true, 'factura_id' => $factura->id, 'print_url' => $url, 'redirect_url' => $redirectUrl];
+        return ['ok' => true, 'factura_id' => $resultado['id'], 'print_url' => $resultado['print_url'], 'redirect_url' => $redirectUrl];
 
     } catch (\Throwable $e) {
         Log::error('POS no pudo crear/imprimir salida', [

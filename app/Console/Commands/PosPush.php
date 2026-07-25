@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Services\Turion\ConectividadDroplet;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
 
 /**
  * Sube al droplet lo que esta terminal de Turion hizo sin conexion (boton
@@ -58,7 +58,7 @@ class PosPush extends Command
             $payload = json_decode($operacion->payload, true) ?? [];
 
             try {
-                $resultado = $this->subirOperacion($syncState->servidor_url, $syncState->terminal_token, $operacion->tipo, $payload);
+                $resultado = $this->subirOperacion($operacion->tipo, $payload);
 
                 DB::table('pending_sync_operations')->where('id', $operacion->id)->update([
                     'estado' => 'sincronizado',
@@ -123,7 +123,7 @@ class PosPush extends Command
             });
     }
 
-    private function subirOperacion(string $servidor, string $token, string $tipo, array $payload): array
+    private function subirOperacion(string $tipo, array $payload): array
     {
         [$ruta, $body] = match ($tipo) {
             'venta' => ['/api/pairing/subir/venta', $payload],
@@ -138,15 +138,7 @@ class PosPush extends Command
             default => throw new \RuntimeException("Tipo de operacion desconocido: {$tipo}"),
         };
 
-        $body['uuid'] ??= (string) \Illuminate\Support\Str::uuid();
-
-        $respuesta = Http::withToken($token)->timeout(30)->post(rtrim($servidor, '/').$ruta, $body);
-
-        if (! $respuesta->successful()) {
-            throw new \RuntimeException($respuesta->json('message') ?? "HTTP {$respuesta->status()}");
-        }
-
-        return $respuesta->json();
+        return ConectividadDroplet::llamar($ruta, $body);
     }
 
     private function conTallerOrdenIdResuelto(array $payload): array
