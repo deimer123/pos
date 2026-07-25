@@ -1514,7 +1514,6 @@ session()->put('observaciones_guardadas', $this->observacionesPrefactura);
 
 
 
-    #[On('guardar-prefactura-confirmada')]
 /**
  * En Turion (SQLite), cada vez que se crea o edita una prefactura se
  * encola una foto COMPLETA de su estado actual (no un log de cambios):
@@ -1570,6 +1569,7 @@ private function encolarPrefacturaSiEsLocal(Prefactura $prefactura, Actor $clien
     ]);
 }
 
+#[On('guardar-prefactura-confirmada')]
 public function guardarPrefacturaConfirmada()
 {
     $empresaId = $this->getEmpresaId();
