@@ -1,0 +1,127 @@
+name: Turion Release
+
+# Se dispara al crear un tag turion-vX.Y.Z (ej: turion-v1.2.0).
+# Compila el instalador de Windows de Turion, lo firma con la clave de
+# actualizaciones automaticas, genera el manifiesto latest.json y lo
+# sube al droplet para que las instalaciones existentes lo detecten.
+on:
+  push:
+    tags:
+      - 'turion-v*'
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extraer version del tag
+        id: version
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF#refs/tags/turion-v}"
+          echo "version=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Fijar version en tauri.conf.json
+        shell: pwsh
+        run: |
+          $path = "src-tauri/tauri.conf.json"
+          $json = Get-Content $path -Raw | ConvertFrom-Json
+          $json.version = "${{ steps.version.outputs.version }}"
+          $json | ConvertTo-Json -Depth 20 | Set-Content $path -Encoding utf8
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, fileinfo, mysql, pdo_mysql, bcmath, intl, zip, gd
+          coverage: none
+
+      - name: Instalar dependencias de Composer (produccion)
+        run: composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Instalar dependencias npm y compilar assets
+        run: |
+          npm ci
+          npm run build
+
+      - name: Preparar runtime de PHP portable para Turion
+        shell: bash
+        run: bash scripts/setup-php-portable.sh
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache de Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Compilar y firmar Turion
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npm run tauri:build:prod
+
+      - name: Generar manifiesto latest.json
+        id: manifest
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $bundleDir = "src-tauri/target/release/bundle/nsis"
+          $installer = Get-ChildItem -Path $bundleDir -Filter "*-setup.exe" | Select-Object -First 1
+          $sigFile = "$($installer.FullName).sig"
+          $signature = (Get-Content $sigFile -Raw).Trim()
+          $pubDate = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+
+          $manifest = [ordered]@{
+            version   = $version
+            notes     = "Actualizacion de Turion $version"
+            pub_date  = $pubDate
+            platforms = [ordered]@{
+              "windows-x86_64" = [ordered]@{
+                signature = $signature
+                url       = "https://sistemapo.com/turion/$($installer.Name)"
+              }
+            }
+          }
+          $manifest | ConvertTo-Json -Depth 10 | Set-Content "latest.json" -Encoding utf8
+
+          echo "installer_path=$($installer.FullName)" >> $env:GITHUB_OUTPUT
+          echo "installer_name=$($installer.Name)" >> $env:GITHUB_OUTPUT
+
+      - name: Guardar instalador y manifiesto como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: turion-${{ steps.version.outputs.version }}
+          path: |
+            ${{ steps.manifest.outputs.installer_path }}
+            latest.json
+
+      - name: Subir instalador y manifiesto al droplet
+        shell: bash
+        env:
+          DROPLET_HOST: ${{ secrets.DROPLET_HOST }}
+          DROPLET_USER: ${{ secrets.DROPLET_USER }}
+          DROPLET_SSH_KEY: ${{ secrets.DROPLET_SSH_KEY }}
+          # OJO: ajustar esta ruta a donde realmente sirve el droplet los
+          # archivos publicos de Laravel (ej: /var/www/pos/public/turion).
+          DROPLET_TURION_DIR: ${{ secrets.DROPLET_TURION_DIR }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DROPLET_SSH_KEY" > ~/.ssh/turion_deploy_key
+          chmod 600 ~/.ssh/turion_deploy_key
+          ssh-keyscan -H "$DROPLET_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          scp -i ~/.ssh/turion_deploy_key "${{ steps.manifest.outputs.installer_path }}" \
+            "$DROPLET_USER@$DROPLET_HOST:$DROPLET_TURION_DIR/"
+          scp -i ~/.ssh/turion_deploy_key latest.json \
+            "$DROPLET_USER@$DROPLET_HOST:$DROPLET_TURION_DIR/"
