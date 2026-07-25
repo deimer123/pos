@@ -66,10 +66,19 @@ jobs:
           workspaces: src-tauri
 
       - name: Compilar y firmar Turion
+        shell: pwsh
         env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_B64: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: npm run tauri:build:prod
+        run: |
+          # El secret TAURI_SIGNING_PRIVATE_KEY guarda la clave (2 lineas)
+          # codificada en base64 de una sola linea -- pegar el archivo
+          # original de 2 lineas directo en el textarea de GitHub
+          # corrompia el salto de linea al guardarlo. Se decodifica aqui
+          # mismo, en memoria, justo antes de compilar.
+          $bytes = [Convert]::FromBase64String($env:TAURI_SIGNING_PRIVATE_KEY_B64)
+          $env:TAURI_SIGNING_PRIVATE_KEY = [System.Text.Encoding]::UTF8.GetString($bytes)
+          npm run tauri:build:prod
 
       - name: Generar manifiesto latest.json
         id: manifest
