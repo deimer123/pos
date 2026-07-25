@@ -38,6 +38,39 @@ class ColaSincronizacion
         return $uuid;
     }
 
+    /**
+     * Resuelve el id que el droplet le asigno a un registro creado/editado
+     * localmente (prefactura, orden de taller, reserva de hotel...) la
+     * ULTIMA vez que se subio con exito -- ej. para saber si una prefactura
+     * ya tiene contraparte en el droplet (actualizarla) o todavia no
+     * (crearla alla por primera vez), o para poder decirle al droplet
+     * "esta venta viene de tu prefactura #X, bórrala al facturar".
+     *
+     * Escanea en PHP (no con JSON del motor de la BD) porque el volumen
+     * por terminal es bajo y sqlite/mysql no comparten la misma sintaxis
+     * de funciones JSON.
+     */
+    public static function servidorIdSincronizado(string $tipo, string $campoLocalId, $localId): ?int
+    {
+        if (DB::getDriverName() !== 'sqlite' || ! self::tablaDisponible() || $localId === null) {
+            return null;
+        }
+
+        $operacion = DB::table('pending_sync_operations')
+            ->where('tipo', $tipo)
+            ->where('estado', 'sincronizado')
+            ->whereNotNull('resultado_id')
+            ->orderByDesc('id')
+            ->get(['payload', 'resultado_id'])
+            ->first(function ($fila) use ($campoLocalId, $localId) {
+                $payload = json_decode($fila->payload, true) ?? [];
+
+                return isset($payload[$campoLocalId]) && (string) $payload[$campoLocalId] === (string) $localId;
+            });
+
+        return $operacion ? (int) $operacion->resultado_id : null;
+    }
+
     private static function tablaDisponible(): bool
     {
         static $existe = null;

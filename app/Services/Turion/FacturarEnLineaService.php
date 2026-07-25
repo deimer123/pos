@@ -58,15 +58,32 @@ class FacturarEnLineaService
             'propina_monto' => $opciones['propina_monto'] ?? 0,
         ];
 
+        // taller_orden_id/hotel_reserva_id que trae CarritoVenta son el id
+        // LOCAL de Turion -- si la orden/reserva se creo offline, el
+        // droplet tiene su PROPIA fila con un id distinto (asignado al
+        // subir su "_crear"). Sin este mapeo se mandaria un id que en el
+        // droplet no existe (o, peor, que ya es de otra orden/reserva).
         if (! empty($opciones['taller_orden_id'])) {
+            $servidorId = ColaSincronizacion::servidorIdSincronizado('taller_crear', 'local_id', $opciones['taller_orden_id']);
+
+            if (! $servidorId) {
+                throw new \RuntimeException('Esta orden de taller todavia no se ha subido al droplet. Presiona "Sincronizar/Subir" antes de facturar.');
+            }
+
             return ['/api/pairing/subir/taller/facturar', array_merge($comunes, [
-                'taller_orden_id' => $opciones['taller_orden_id'],
+                'taller_orden_id' => $servidorId,
             ])];
         }
 
         if (! empty($opciones['hotel_reserva_id'])) {
+            $servidorId = ColaSincronizacion::servidorIdSincronizado('hotel_crear', 'local_id', $opciones['hotel_reserva_id']);
+
+            if (! $servidorId) {
+                throw new \RuntimeException('Esta reserva de hotel todavia no se ha subido al droplet. Presiona "Sincronizar/Subir" antes de facturar.');
+            }
+
             return ['/api/pairing/subir/hotel/facturar', array_merge($comunes, [
-                'hotel_reserva_id' => $opciones['hotel_reserva_id'],
+                'hotel_reserva_id' => $servidorId,
             ])];
         }
 
@@ -78,6 +95,7 @@ class FacturarEnLineaService
 
         return ['/api/pairing/subir/venta', array_merge($comunes, [
             'carrito' => $carrito,
+            'prefactura_servidor_id' => $opciones['prefactura_servidor_id'] ?? null,
         ])];
     }
 }

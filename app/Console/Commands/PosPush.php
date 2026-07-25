@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Prefactura;
+use App\Services\Turion\ColaSincronizacion;
 use App\Services\Turion\ConectividadDroplet;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -76,6 +78,14 @@ class PosPush extends Command
                     $this->hotelIdMap[$payload['local_id']] = $resultado['id'];
                 }
 
+                // La prefactura ya se facturo (o se borro) directo en el
+                // droplet mientras esta terminal estaba desconectada --
+                // se borra tambien aqui para no dejarla disponible para
+                // facturarla otra vez desde Turion.
+                if ($operacion->tipo === 'prefactura_guardar' && ($resultado['ya_facturada'] ?? false) && isset($payload['prefactura_local_id'])) {
+                    $this->borrarPrefacturaLocal((int) $payload['prefactura_local_id']);
+                }
+
                 $subidas++;
             } catch (\Throwable $e) {
                 DB::table('pending_sync_operations')->where('id', $operacion->id)->update([
@@ -135,6 +145,7 @@ class PosPush extends Command
             'hotel_crear' => ['/api/pairing/subir/hotel/crear', $payload],
             'hotel_item' => ['/api/pairing/subir/hotel/item', $this->conHotelReservaIdResuelto($payload)],
             'hotel_facturar' => ['/api/pairing/subir/hotel/facturar', $this->conHotelReservaIdResuelto($payload)],
+            'prefactura_guardar' => ['/api/pairing/subir/prefactura/guardar', $this->conPrefacturaServidorIdResuelto($payload)],
             default => throw new \RuntimeException("Tipo de operacion desconocido: {$tipo}"),
         };
 
@@ -163,6 +174,41 @@ class PosPush extends Command
         }
 
         $payload['hotel_reserva_id'] = $this->hotelIdMap[$localId];
+
+        return $payload;
+    }
+
+    private function borrarPrefacturaLocal(int $localId): void
+    {
+        $prefactura = Prefactura::find($localId);
+
+        if ($prefactura) {
+            $prefactura->productos()->delete();
+            $prefactura->delete();
+        }
+    }
+
+    /**
+     * A diferencia de taller/hotel (que exigen un "_crear" previo), una
+     * prefactura no tiene un tipo de operacion separado para su primera
+     * subida -- "prefactura_guardar" sirve tanto para crearla en el
+     * droplet la primera vez como para actualizarla despues. Si ya se
+     * subio antes con exito, se le agrega su servidor_id para que el
+     * controlador la actualice en vez de crear una segunda; si no, el
+     * controlador la crea y esta subida queda como el "primer" registro
+     * sincronizado para futuras ediciones.
+     */
+    private function conPrefacturaServidorIdResuelto(array $payload): array
+    {
+        $servidorId = ColaSincronizacion::servidorIdSincronizado(
+            'prefactura_guardar',
+            'prefactura_local_id',
+            $payload['prefactura_local_id']
+        );
+
+        if ($servidorId) {
+            $payload['servidor_id'] = $servidorId;
+        }
 
         return $payload;
     }

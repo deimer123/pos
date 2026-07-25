@@ -7,6 +7,7 @@ use App\Models\Factura;
 use App\Models\HotelReserva;
 use App\Models\Mesa;
 use App\Models\OperacionOfflineSincronizada;
+use App\Models\Prefactura;
 use App\Models\TallerOrden;
 use App\Services\Hotel\GuardarReservaService;
 use App\Services\Mesas\AgregarItemMesaService;
@@ -36,12 +37,30 @@ class PosSyncController extends Controller
             'uuid' => 'required|uuid',
             'carrito' => 'required|array|min:1',
             'medio_pago' => 'nullable|string|in:efectivo,transferencia',
+            'prefactura_servidor_id' => 'nullable|integer',
         ], $this->reglasFacturarComunes()));
 
         $empresaId = auth()->user()->getEmpresaActualId();
 
         if ($existente = $this->buscarSincronizada($data['uuid'])) {
             return $this->respuestaFactura($existente->resultado_id);
+        }
+
+        // Si esta venta viene de una prefactura que ya se subio antes
+        // (Turion la referencia por el id que le asigno el servidor), hay
+        // que confirmar que siga viva -- si ya no existe es porque alguien
+        // mas ya la facturo (o la borro) desde el droplet directamente, y
+        // dejar pasar esta venta facturaria lo mismo dos veces.
+        if (! empty($data['prefactura_servidor_id'])) {
+            $prefactura = Prefactura::where('id', $data['prefactura_servidor_id'])
+                ->where('empresa_id', $empresaId)
+                ->first();
+
+            if (! $prefactura) {
+                return response()->json([
+                    'message' => 'Esta prefactura ya fue facturada o eliminada. Actualiza la lista de prefacturas.',
+                ], 409);
+            }
         }
 
         try {
@@ -54,9 +73,171 @@ class PosSyncController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
+        if (! empty($data['prefactura_servidor_id'])) {
+            Prefactura::where('id', $data['prefactura_servidor_id'])->where('empresa_id', $empresaId)->delete();
+        }
+
         $this->registrarSincronizada($data['uuid'], 'venta', $empresaId, $factura->id);
 
         return $this->respuestaFactura($factura->id);
+    }
+
+    /**
+     * Crea o actualiza en el servidor la prefactura que Turion tiene
+     * guardada localmente -- foto COMPLETA de su estado actual (no un
+     * historial de ediciones), asi que cada subida reemplaza cliente,
+     * observaciones y productos de una vez.
+     *
+     * Si ya se habia subido antes (viene "servidor_id") pero esa
+     * prefactura ya no existe -- porque se facturo o se borro directo en
+     * el droplet mientras tanto -- NO se revive: se avisa con
+     * "ya_facturada" para que Turion borre tambien su copia local (asi es
+     * como se evita facturarla otra vez desde Turion).
+     */
+    public function prefacturaGuardar(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'uuid' => 'required|uuid',
+            'servidor_id' => 'nullable|integer',
+            'cliente_id' => 'nullable|integer',
+            'cliente' => 'nullable|array',
+            'cliente.identificacion' => 'nullable|string',
+            'cliente.nombre' => 'nullable|string',
+            'cliente.razon_social' => 'nullable|string',
+            'cliente.tipo_documento_id' => 'nullable|integer',
+            'cliente.telefono' => 'nullable|string',
+            'cliente.email' => 'nullable|string',
+            'cliente.direccion' => 'nullable|string',
+            'cliente.departamento_id' => 'nullable|integer',
+            'cliente.ciudad_id' => 'nullable|integer',
+            'cliente.tipo_persona' => 'nullable|string',
+            'cliente.regimen_tributario' => 'nullable|string',
+            'cliente.responsable_iva' => 'nullable|boolean',
+            'vendedor_id' => 'nullable|integer',
+            'observaciones' => 'nullable|string',
+            'estado' => 'nullable|string|in:borrador,vendida',
+            'items' => 'required|array',
+            'items.*.producto_id' => 'required',
+            'items.*.nombre' => 'required|string',
+            'items.*.cantidad' => 'required|numeric|min:0.01',
+            'items.*.precio' => 'required|numeric|min:0',
+            'items.*.descuento' => 'nullable|numeric',
+        ]);
+
+        $empresaId = auth()->user()->getEmpresaActualId();
+
+        if ($existente = $this->buscarSincronizada($data['uuid'])) {
+            return response()->json(['id' => $existente->resultado_id, 'ya_facturada' => $existente->resultado_id === null]);
+        }
+
+        if (! empty($data['servidor_id'])) {
+            $prefactura = Prefactura::where('id', $data['servidor_id'])->where('empresa_id', $empresaId)->first();
+
+            if (! $prefactura) {
+                $this->registrarSincronizada($data['uuid'], 'prefactura_guardar', $empresaId, null);
+
+                return response()->json(['id' => null, 'ya_facturada' => true]);
+            }
+        } else {
+            $prefactura = new Prefactura(['empresa_id' => $empresaId]);
+        }
+
+        $clienteId = $this->resolverClientePrefactura($empresaId, $data);
+
+        $prefactura->fill([
+            'empresa_id' => $empresaId,
+            'cliente_id' => $clienteId,
+            'vendedor_id' => $data['vendedor_id'] ?? auth()->id(),
+            'cajero_id' => null,
+            'observaciones' => $data['observaciones'] ?? '',
+            'estado' => $data['estado'] ?? 'borrador',
+        ])->save();
+
+        $prefactura->productos()->delete();
+
+        foreach ($data['items'] as $item) {
+            $cantidad = (float) $item['cantidad'];
+            $precio = (float) $item['precio'];
+
+            $prefactura->productos()->create([
+                'empresa_id' => $empresaId,
+                'producto_id' => is_numeric($item['producto_id']) ? (int) $item['producto_id'] : 0,
+                'descripcion_larga' => $item['nombre'],
+                'cantidad' => $cantidad,
+                'precio_unitario' => $precio,
+                'subtotal' => round($precio * $cantidad, 2),
+                'descuento' => (float) ($item['descuento'] ?? 0),
+            ]);
+        }
+
+        $this->registrarSincronizada($data['uuid'], 'prefactura_guardar', $empresaId, $prefactura->id);
+
+        return response()->json(['id' => $prefactura->id, 'ya_facturada' => false]);
+    }
+
+    /**
+     * Encuentra el Actor correspondiente al cliente que trae la
+     * prefactura: primero por id (valido si ya existia al ultimo
+     * emparejar, ya que el catalogo preserva los ids reales), si no por
+     * identificacion, si no por nombre (igual patron que
+     * tallerFacturar()/hotelFacturar() para el cliente de la orden/
+     * reserva); si nada matchea y hay datos de cliente, se crea uno
+     * nuevo con esos datos. Sin datos de cliente, null (Consumidor Final
+     * por defecto al facturar).
+     */
+    private function resolverClientePrefactura(int $empresaId, array $data): ?int
+    {
+        if (! empty($data['cliente_id'])) {
+            $existente = Actor::where('empresa_id', $empresaId)->where('id', $data['cliente_id'])->exists();
+            if ($existente) {
+                return (int) $data['cliente_id'];
+            }
+        }
+
+        $cliente = $data['cliente'] ?? [];
+        $identificacion = trim((string) ($cliente['identificacion'] ?? ''));
+        $nombre = trim((string) ($cliente['nombre'] ?? ''));
+
+        if ($identificacion !== '') {
+            $id = Actor::where('empresa_id', $empresaId)->where('identificacion', $identificacion)->value('id');
+            if ($id) {
+                return (int) $id;
+            }
+        }
+
+        if ($nombre !== '') {
+            $id = Actor::where('empresa_id', $empresaId)
+                ->whereRaw('LOWER(TRIM(nombre)) = ?', [mb_strtolower($nombre)])
+                ->value('id');
+            if ($id) {
+                return (int) $id;
+            }
+        }
+
+        if ($nombre === '') {
+            return null;
+        }
+
+        $nuevo = Actor::create([
+            'id_clip_pro' => (int) Actor::where('empresa_id', $empresaId)->max('id_clip_pro') + 1,
+            'empresa_id' => $empresaId,
+            'tipo' => 1,
+            'clasificacion' => 'cliente',
+            'tipo_documento_id' => $cliente['tipo_documento_id'] ?? 3,
+            'identificacion' => $identificacion !== '' ? $identificacion : null,
+            'nombre' => $nombre,
+            'razon_social' => $cliente['razon_social'] ?? null,
+            'telefono' => $cliente['telefono'] ?? null,
+            'email' => $cliente['email'] ?? null,
+            'direccion' => $cliente['direccion'] ?? null,
+            'departamento_id' => $cliente['departamento_id'] ?? null,
+            'ciudad_id' => $cliente['ciudad_id'] ?? null,
+            'tipo_persona' => $cliente['tipo_persona'] ?? null,
+            'regimen_tributario' => $cliente['regimen_tributario'] ?? null,
+            'responsable_iva' => $cliente['responsable_iva'] ?? false,
+        ]);
+
+        return $nuevo->id;
     }
 
     public function mesaItem(Request $request, AgregarItemMesaService $service): JsonResponse

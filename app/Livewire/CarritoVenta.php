@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Caja;
 use App\Models\ConfiguracionEmpresa;
+use App\Services\Turion\ColaSincronizacion;
 use App\Services\Turion\ConectividadDroplet;
 use App\Services\Turion\FacturarEnLineaService;
 use App\Services\Ventas\FacturarVentaService;
@@ -1514,6 +1515,61 @@ session()->put('observaciones_guardadas', $this->observacionesPrefactura);
 
 
     #[On('guardar-prefactura-confirmada')]
+/**
+ * En Turion (SQLite), cada vez que se crea o edita una prefactura se
+ * encola una foto COMPLETA de su estado actual (no un log de cambios):
+ * si se edita varias veces sin conexion, cada guardado reemplaza al
+ * anterior en el droplet al subir, asi que lo que queda es siempre la
+ * ULTIMA version, sin tener que subir cada edicion intermedia a mano.
+ *
+ * El cliente se manda por nombre/identificacion ademas del id: los
+ * clientes ya existentes al emparejar comparten el mismo id que el
+ * droplet (el catalogo los trae con su id real), pero uno creado nuevo
+ * mientras Turion estaba offline solo existe localmente -- el droplet lo
+ * resuelve por identificacion/nombre en vez de confiar en ese id.
+ */
+private function encolarPrefacturaSiEsLocal(Prefactura $prefactura, Actor $cliente): void
+{
+    if (DB::getDriverName() !== 'sqlite') {
+        return;
+    }
+
+    ColaSincronizacion::encolar('prefactura_guardar', [
+        'prefactura_local_id' => $prefactura->id,
+        'cliente_id' => $cliente->id,
+        // Snapshot completo del cliente (no solo el id): uno que ya
+        // existia al ultimo emparejar comparte el mismo id en Turion y en
+        // el droplet (el catalogo lo trae con su id real), pero uno
+        // creado nuevo mientras Turion estaba offline solo existe
+        // localmente -- el droplet lo busca por identificacion/nombre y,
+        // si tampoco existe alla, lo crea con estos mismos datos.
+        'cliente' => [
+            'identificacion' => $cliente->identificacion,
+            'nombre' => $cliente->nombre,
+            'razon_social' => $cliente->razon_social,
+            'tipo_documento_id' => $cliente->tipo_documento_id,
+            'telefono' => $cliente->telefono,
+            'email' => $cliente->email,
+            'direccion' => $cliente->direccion,
+            'departamento_id' => $cliente->departamento_id,
+            'ciudad_id' => $cliente->ciudad_id,
+            'tipo_persona' => $cliente->tipo_persona,
+            'regimen_tributario' => $cliente->regimen_tributario,
+            'responsable_iva' => $cliente->responsable_iva,
+        ],
+        'vendedor_id' => $prefactura->vendedor_id,
+        'observaciones' => $prefactura->observaciones,
+        'estado' => $prefactura->estado,
+        'items' => $prefactura->productos->map(fn ($item) => [
+            'producto_id' => $item->producto_id,
+            'nombre' => $item->descripcion_larga,
+            'cantidad' => (float) $item->cantidad,
+            'precio' => (float) $item->precio_unitario,
+            'descuento' => (float) $item->descuento,
+        ])->values()->all(),
+    ]);
+}
+
 public function guardarPrefacturaConfirmada()
 {
     $empresaId = $this->getEmpresaId();
@@ -1578,6 +1634,8 @@ public function guardarPrefacturaConfirmada()
                 }
             });
 
+            $this->encolarPrefacturaSiEsLocal($prefactura->fresh('productos'), $cliente);
+
             $this->reset(['carrito', 'observacionesPrefactura', 'clienteId', 'clienteSeleccionadoNombre']);
             $this->totalGeneral = 0;
             $this->prefacturaCargadaId = null;
@@ -1623,6 +1681,8 @@ public function guardarPrefacturaConfirmada()
                 'empresa_id'        => $empresaId,
             ]);
         }
+
+        $this->encolarPrefacturaSiEsLocal($prefactura->fresh('productos'), $cliente);
 
         // âœ… Limpieza completa antes de asignar nuevo cliente
         $this->reset(['carrito', 'observacionesPrefactura', 'clienteId', 'clienteSeleccionadoNombre']);
@@ -2552,6 +2612,20 @@ private function ejecutarFacturar(array $data, int $empresaId): array
     ];
 
     if ($this->esTurion) {
+        // Si esta venta viene de una prefactura ya subida antes, se le
+        // avisa al droplet cual es su contraparte alla -- asi puede
+        // rechazar facturarla si alguien ya la factuo/borro directo en
+        // el droplet mientras tanto (ver PosSyncController::venta()), y
+        // borrarla despues de facturar con exito para que no quede
+        // duplicada ni en Turion ni en el droplet.
+        if ($this->prefacturaCargadaId) {
+            $opciones['prefactura_servidor_id'] = ColaSincronizacion::servidorIdSincronizado(
+                'prefactura_guardar',
+                'prefactura_local_id',
+                $this->prefacturaCargadaId
+            );
+        }
+
         $resultado = app(FacturarEnLineaService::class)->facturar($this->carrito, $opciones);
 
         return [

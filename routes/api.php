@@ -53,6 +53,7 @@ Route::prefix('pairing')->group(function () {
             Route::post('/hotel/crear', [PosSyncController::class, 'hotelCrear'])->name('api.pairing.subir.hotel-crear');
             Route::post('/hotel/item', [PosSyncController::class, 'hotelItem'])->name('api.pairing.subir.hotel-item');
             Route::post('/hotel/facturar', [PosSyncController::class, 'hotelFacturar'])->name('api.pairing.subir.hotel-facturar');
+            Route::post('/prefactura/guardar', [PosSyncController::class, 'prefacturaGuardar'])->name('api.pairing.subir.prefactura-guardar');
         });
     });
 });
