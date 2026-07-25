@@ -196,9 +196,12 @@ Route::middleware(['auth'])->get('/salida/imprimir/{id}', function ($id) {
     }
 
     $factura = $query->findOrFail($id);
-    $config  = \App\Models\ConfiguracionEmpresa::where('empresa_id', $factura->empresa_id)->first();
 
-    return view('facturas.imprimir-salida', compact('factura','config'));
+    // ?formato=carta muestra la misma factura en una vista para
+    // imprimir en hoja carta en vez de la tira angosta de POS.
+    $vista = request('formato') === 'carta' ? 'facturas.imprimir-carta' : 'facturas.imprimir-salida';
+
+    return view($vista, ['factura' => $factura, ...\App\Support\FacturaImpresionData::calcular($factura)]);
 })->name('factura.imprimir');
 
 Route::middleware(['auth'])->get('/devoluciones/{id}/imprimir', [\App\Http\Controllers\DevolucionController::class, 'imprimir'])

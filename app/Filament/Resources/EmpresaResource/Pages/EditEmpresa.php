@@ -57,10 +57,15 @@ class EditEmpresa extends EditRecord
                             ->title('Factura del plan generada')
                             ->success()
                             ->actions([
-                                \Filament\Notifications\Actions\Action::make('ver')
-                                    ->label('Ver / imprimir')
+                                \Filament\Notifications\Actions\Action::make('verTira')
+                                    ->label('Ver / imprimir (tira POS)')
                                     ->url(route('factura.imprimir', $factura->id), shouldOpenInNewTab: true)
                                     ->button(),
+                                \Filament\Notifications\Actions\Action::make('verCarta')
+                                    ->label('Ver / imprimir (carta)')
+                                    ->url(route('factura.imprimir', ['id' => $factura->id, 'formato' => 'carta']), shouldOpenInNewTab: true)
+                                    ->button()
+                                    ->color('gray'),
                             ])
                             ->send();
                     } catch (\Throwable $exception) {

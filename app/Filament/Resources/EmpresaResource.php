@@ -210,17 +210,22 @@ class EmpresaResource extends Resource
                             ->live()
                             ->default(false),
 
-                        // Los datos/credenciales de Factus solo tienen sentido si
-                        // se activo la facturacion electronica -- si esta apagada
-                        // no hay nada que configurar todavia, asi que se ocultan
-                        // en vez de solo dejarlos opcionales.
-                        Forms\Components\Group::make([
-                            Forms\Components\TextInput::make('nit')
-                                ->label('NIT de la empresa')
-                                ->maxLength(20)
-                                ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled'))
-                                ->helperText('Obligatorio para activar facturacion electronica y mostrarlo en la factura impresa.'),
+                        // El NIT NO es solo para Factus: tambien identifica a la
+                        // empresa en su propio ticket impreso y en las facturas de
+                        // cobro de plan que le genera el super_admin -- por eso
+                        // queda siempre visible/editable, aunque no active
+                        // facturacion electronica.
+                        Forms\Components\TextInput::make('nit')
+                            ->label('NIT o cédula de la empresa')
+                            ->maxLength(20)
+                            ->required(fn (Forms\Get $get): bool => (bool) $get('factus_enabled'))
+                            ->helperText('Se muestra en su ticket impreso y en las facturas que le genere el super admin. Obligatorio si se activa facturación electrónica.'),
 
+                        // Las credenciales de Factus (todo lo demas) solo tienen
+                        // sentido si se activo la facturacion electronica -- si
+                        // esta apagada no hay nada que configurar todavia, asi
+                        // que se ocultan en vez de solo dejarlas opcionales.
+                        Forms\Components\Group::make([
                             Forms\Components\Select::make('factus_environment')
                                 ->label('Ambiente Factus')
                                 ->options([
