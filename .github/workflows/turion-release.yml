@@ -120,13 +120,17 @@ jobs:
         env:
           DROPLET_HOST: ${{ secrets.DROPLET_HOST }}
           DROPLET_USER: ${{ secrets.DROPLET_USER }}
-          DROPLET_SSH_KEY: ${{ secrets.DROPLET_SSH_KEY }}
+          # Igual que TAURI_SIGNING_PRIVATE_KEY: el secret guarda la llave
+          # privada (varias lineas) codificada en base64 de una sola linea
+          # -- pegarla tal cual en el textarea de GitHub corrompia los
+          # saltos de linea ("error in libcrypto: unsupported").
+          DROPLET_SSH_KEY_B64: ${{ secrets.DROPLET_SSH_KEY }}
           # OJO: ajustar esta ruta a donde realmente sirve el droplet los
           # archivos publicos de Laravel (ej: /var/www/pos/public/turion).
           DROPLET_TURION_DIR: ${{ secrets.DROPLET_TURION_DIR }}
         run: |
           mkdir -p ~/.ssh
-          echo "$DROPLET_SSH_KEY" > ~/.ssh/turion_deploy_key
+          echo "$DROPLET_SSH_KEY_B64" | base64 -d > ~/.ssh/turion_deploy_key
           chmod 600 ~/.ssh/turion_deploy_key
           ssh-keyscan -H "$DROPLET_HOST" >> ~/.ssh/known_hosts 2>/dev/null
 
