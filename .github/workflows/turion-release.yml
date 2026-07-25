@@ -98,7 +98,7 @@ jobs:
             platforms = [ordered]@{
               "windows-x86_64" = [ordered]@{
                 signature = $signature
-                url       = "https://sistemapo.com/turion/$($installer.Name)"
+                url       = "https://www.sistemapo.com/turion/$($installer.Name)"
               }
             }
           }

@@ -17,7 +17,7 @@
     "updater": {
       "active": true,
       "endpoints": [
-        "https://sistemapo.com/turion/latest.json"
+        "https://www.sistemapo.com/turion/latest.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI3RTg2QUMxQjgzOTJBNTUKUldSVktqbTR3V3JvSjRtL1IzY3ZwbTNiTHpLTUxrL1dHSWtUY1VwazVBTC9JWVM4WGdhY2x5T0cK"
     }
