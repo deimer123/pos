@@ -33,6 +33,23 @@ Route::get('/manual', fn () => view('manual'))->name('manual');
 Route::get('/emparejar', [EmparejarTerminalController::class, 'mostrar'])->name('emparejar');
 Route::post('/emparejar', [EmparejarTerminalController::class, 'emparejar']);
 
+// Link estable para descargar el instalador de Turion mas reciente -- lee
+// el mismo latest.json que ya usa el auto-actualizador (ver
+// src-tauri/tauri.conf.json) y redirige a la url del instalador de esa
+// version, sin tener que actualizar este link a mano en cada release.
+Route::get('/turion/descargar', function () {
+    $manifiesto = public_path('turion/latest.json');
+
+    abort_unless(file_exists($manifiesto), 404, 'Todavia no se ha publicado ninguna version de Turion.');
+
+    $datos = json_decode(file_get_contents($manifiesto), true);
+    $url = $datos['platforms']['windows-x86_64']['url'] ?? null;
+
+    abort_unless($url, 404, 'El manifiesto de Turion no tiene un instalador de Windows.');
+
+    return redirect()->away($url);
+})->name('turion.descargar');
+
 // Catálogo público de productos por empresa (sin login, para compartir con clientes)
 Route::get('/catalogo/{slug}', \App\Livewire\CatalogoPublico::class)->name('catalogo.publico');
 

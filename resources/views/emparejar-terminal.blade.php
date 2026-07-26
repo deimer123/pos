@@ -46,7 +46,7 @@
             <input type="text" id="codigo" name="codigo" value="{{ old('codigo') }}" maxlength="12" required autofocus>
 
             <label for="servidor">Servidor</label>
-            <input type="url" id="servidor" name="servidor" value="{{ old('servidor', 'https://159-89-81-81.sslip.io') }}" required>
+            <input type="url" id="servidor" name="servidor" value="{{ old('servidor', 'https://www.sistemapo.com') }}" required>
 
             <button type="submit">Emparejar</button>
         </form>

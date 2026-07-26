@@ -11,6 +11,16 @@
         </x-filament::button>
     </div>
 
+    <div class="rounded-xl border border-gray-200 p-4 space-y-3">
+        <div class="text-sm text-gray-600">
+            ¿Todavía no tienes instalado Turión en esta computadora? Descarga la última versión.
+        </div>
+
+        <x-filament::button tag="a" href="{{ route('turion.descargar') }}" color="gray" icon="heroicon-o-arrow-down-tray">
+            Descargar Turión
+        </x-filament::button>
+    </div>
+
     @if($codigoActivo)
         <div class="rounded-xl border border-green-200 bg-green-50 p-6 text-center space-y-2">
             <div class="text-sm text-gray-600">Código de emparejamiento</div>
