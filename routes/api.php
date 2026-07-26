@@ -44,6 +44,15 @@ Route::prefix('pairing')->group(function () {
         Route::get('/prefacturas', [PairingController::class, 'prefacturas'])
             ->name('api.pairing.prefacturas');
 
+        // Ordenes de taller y reservas de hotel activas (no cerradas) de la
+        // empresa, para que Turion las baje al sincronizar -- mismo
+        // mecanismo que /prefacturas (ver TallerSyncPull/HotelSyncPull).
+        Route::get('/ordenes-taller', [PairingController::class, 'ordenesTaller'])
+            ->name('api.pairing.ordenes-taller');
+
+        Route::get('/reservas-hotel', [PairingController::class, 'reservasHotel'])
+            ->name('api.pairing.reservas-hotel');
+
         // Subida de lo hecho offline en una terminal de Turion (boton
         // "Subir"): mismo controlador que ya usaba el navegador (sesion
         // web), aqui autenticado por el token de Sanctum que "bootstrap"

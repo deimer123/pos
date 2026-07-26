@@ -3,7 +3,9 @@
 namespace App\Console\Commands;
 
 use App\Services\Turion\CatalogoImportador;
+use App\Services\Turion\HotelSyncPull;
 use App\Services\Turion\PrefacturaSyncPull;
+use App\Services\Turion\TallerSyncPull;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -13,12 +15,13 @@ use Illuminate\Support\Facades\Http;
  * segundo plano, ver src-tauri/src/lib.rs): refresca el catalogo local
  * (productos, precios, stock, mesas, habitaciones, usuarios) desde el
  * droplet, usando el token ya guardado al emparejar (no hace falta un
- * nuevo codigo). Tambien baja y fusiona las prefacturas activas del
- * droplet (ver PrefacturaSyncPull) -- asi Turion se entera de prefacturas
- * creadas en el droplet (u otra terminal) y de las que ya se facturaron/
- * borraron alla. No toca pending_sync_operations -- lo que este pendiente
- * de subir se sube por separado, siempre de forma manual, con el boton
- * "Subir" ("php artisan pos:push").
+ * nuevo codigo). Tambien baja y fusiona las prefacturas, ordenes de taller
+ * y reservas de hotel activas del droplet (ver PrefacturaSyncPull/
+ * TallerSyncPull/HotelSyncPull) -- asi Turion se entera de lo que se creo
+ * en el droplet (u otra terminal) y de lo que ya se cerro alla. No toca
+ * pending_sync_operations -- lo que este pendiente de subir se sube por
+ * separado, siempre de forma manual, con el boton "Subir" ("php artisan
+ * pos:push").
  */
 class PosSyncCatalog extends Command
 {
@@ -68,6 +71,24 @@ class PosSyncCatalog extends Command
 
         if ($respuestaPrefacturas->successful() && $syncState->empresa_id) {
             PrefacturaSyncPull::fusionar($respuestaPrefacturas->json('prefacturas') ?? [], (int) $syncState->empresa_id);
+        }
+
+        if ($syncState->empresa_id) {
+            $respuestaTaller = Http::withToken($syncState->terminal_token)
+                ->timeout(30)
+                ->get(rtrim($syncState->servidor_url, '/').'/api/pairing/ordenes-taller');
+
+            if ($respuestaTaller->successful()) {
+                TallerSyncPull::fusionar($respuestaTaller->json('ordenes') ?? [], (int) $syncState->empresa_id);
+            }
+
+            $respuestaHotel = Http::withToken($syncState->terminal_token)
+                ->timeout(30)
+                ->get(rtrim($syncState->servidor_url, '/').'/api/pairing/reservas-hotel');
+
+            if ($respuestaHotel->successful()) {
+                HotelSyncPull::fusionar($respuestaHotel->json('reservas') ?? [], (int) $syncState->empresa_id);
+            }
         }
 
         DB::table('sync_state')->update(['ultima_sincronizacion_at' => now()]);

@@ -14,6 +14,7 @@ class TallerOrden extends Model
 
     protected $fillable = [
         'empresa_id',
+        'servidor_id',
         'numero_orden',
         'cliente_id',
         'cliente_nombre',
