@@ -19,6 +19,11 @@ class EditConfiguracionEmpresa extends EditRecord
                 ->icon('heroicon-o-computer-desktop')
                 ->color('primary')
                 ->url(fn () => \App\Filament\Pages\EmparejarTerminal::getUrl()),
+            Action::make('descargarTurion')
+                ->label('Descargar Turión')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('gray')
+                ->url(fn () => route('turion.descargar')),
         ];
     }
 

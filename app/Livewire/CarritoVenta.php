@@ -2619,11 +2619,7 @@ private function ejecutarFacturar(array $data, int $empresaId): array
         // borrarla despues de facturar con exito para que no quede
         // duplicada ni en Turion ni en el droplet.
         if ($this->prefacturaCargadaId) {
-            $opciones['prefactura_servidor_id'] = ColaSincronizacion::servidorIdSincronizado(
-                'prefactura_guardar',
-                'prefactura_local_id',
-                $this->prefacturaCargadaId
-            );
+            $opciones['prefactura_servidor_id'] = Prefactura::find($this->prefacturaCargadaId)?->servidor_id;
         }
 
         $resultado = app(FacturarEnLineaService::class)->facturar($this->carrito, $opciones);

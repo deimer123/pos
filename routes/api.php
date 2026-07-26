@@ -39,6 +39,11 @@ Route::prefix('pairing')->group(function () {
         Route::get('/ping', fn () => response()->json(['ok' => true]))
             ->name('api.pairing.ping');
 
+        // Prefacturas activas ("borrador") de la empresa, para que Turion
+        // las baje al sincronizar (ver PosSyncPrefacturas).
+        Route::get('/prefacturas', [PairingController::class, 'prefacturas'])
+            ->name('api.pairing.prefacturas');
+
         // Subida de lo hecho offline en una terminal de Turion (boton
         // "Subir"): mismo controlador que ya usaba el navegador (sesion
         // web), aqui autenticado por el token de Sanctum que "bootstrap"

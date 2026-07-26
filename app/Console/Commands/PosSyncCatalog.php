@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\Turion\CatalogoImportador;
+use App\Services\Turion\PrefacturaSyncPull;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -12,7 +13,10 @@ use Illuminate\Support\Facades\Http;
  * segundo plano, ver src-tauri/src/lib.rs): refresca el catalogo local
  * (productos, precios, stock, mesas, habitaciones, usuarios) desde el
  * droplet, usando el token ya guardado al emparejar (no hace falta un
- * nuevo codigo). No toca pending_sync_operations -- lo que este pendiente
+ * nuevo codigo). Tambien baja y fusiona las prefacturas activas del
+ * droplet (ver PrefacturaSyncPull) -- asi Turion se entera de prefacturas
+ * creadas en el droplet (u otra terminal) y de las que ya se facturaron/
+ * borraron alla. No toca pending_sync_operations -- lo que este pendiente
  * de subir se sube por separado, siempre de forma manual, con el boton
  * "Subir" ("php artisan pos:push").
  */
@@ -57,6 +61,14 @@ class PosSyncCatalog extends Command
         }
 
         CatalogoImportador::sembrar($respuesta->json('catalogo'));
+
+        $respuestaPrefacturas = Http::withToken($syncState->terminal_token)
+            ->timeout(30)
+            ->get(rtrim($syncState->servidor_url, '/').'/api/pairing/prefacturas');
+
+        if ($respuestaPrefacturas->successful() && $syncState->empresa_id) {
+            PrefacturaSyncPull::fusionar($respuestaPrefacturas->json('prefacturas') ?? [], (int) $syncState->empresa_id);
+        }
 
         DB::table('sync_state')->update(['ultima_sincronizacion_at' => now()]);
 

@@ -10,7 +10,7 @@ class Prefactura extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['empresa_id', 'vendedor_id', 'cajero_id', 'cliente_id', 'observaciones', 'estado'];
+    protected $fillable = ['empresa_id', 'vendedor_id', 'cajero_id', 'cliente_id', 'observaciones', 'estado', 'servidor_id'];
 
     public function getNumeroVisualAttribute(): string
     {
