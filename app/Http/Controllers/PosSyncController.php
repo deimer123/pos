@@ -209,6 +209,12 @@ class PosSyncController extends Controller
     /**
      * Borra en el servidor una orden de taller que se borro offline en
      * Turion -- mismo motivo que prefacturaBorrar().
+     *
+     * No se borra si ya se facturo directo en el droplet (factura_id
+     * asignado) mientras Turion estaba desconectado: es el choque real de
+     * trabajar sin conexion -- alguien pudo facturarla ahi antes de que
+     * este "Subir" llegara, y borrarla ahora destruiria el vinculo con una
+     * venta ya real. Se deja intacta en vez de perder ese historial.
      */
     public function tallerBorrar(Request $request): JsonResponse
     {
@@ -223,7 +229,9 @@ class PosSyncController extends Controller
             return response()->json(['ok' => true]);
         }
 
-        TallerOrden::where('id', $data['servidor_id'])->where('empresa_id', $empresaId)->delete();
+        TallerOrden::where('id', $data['servidor_id'])->where('empresa_id', $empresaId)
+            ->whereNull('factura_id')
+            ->delete();
 
         $this->registrarSincronizada($data['uuid'], 'taller_borrar', $empresaId, null);
 
@@ -235,6 +243,11 @@ class PosSyncController extends Controller
      * Turion -- mismo motivo que prefacturaBorrar(). No se borra (una
      * reserva cancelada sigue siendo historial util), se marca 'cancelada'
      * igual que HotelPanel::cancelarReserva() en linea.
+     *
+     * No se toca si ya se facturo (factura_id asignado) o ya se hizo
+     * checkout directo en el droplet -- mismo choque que en tallerBorrar():
+     * cancelar por encima de un cierre real que paso mientras Turion
+     * estaba desconectado borraria ese historial.
      */
     public function hotelCancelar(Request $request): JsonResponse
     {
@@ -250,6 +263,8 @@ class PosSyncController extends Controller
         }
 
         HotelReserva::where('id', $data['servidor_id'])->where('empresa_id', $empresaId)
+            ->whereNull('factura_id')
+            ->where('estado', '!=', 'checkout')
             ->update(['estado' => 'cancelada']);
 
         $this->registrarSincronizada($data['uuid'], 'hotel_cancelar', $empresaId, null);

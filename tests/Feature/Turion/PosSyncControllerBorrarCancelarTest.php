@@ -103,6 +103,25 @@ test('tallerBorrar() borra la orden y sus repuestos en el droplet', function () 
     expect(\Illuminate\Support\Facades\DB::table('taller_repuestos')->where('orden_id', $orden->id)->count())->toBe(0);
 });
 
+test('tallerBorrar() NO borra una orden que ya se facturo en el droplet mientras Turion estaba desconectado', function () {
+    $empresa = crearEmpresaBorrarCancelarTest();
+    cajeroAutenticadoBorrarCancelarTest($empresa);
+
+    $orden = TallerOrden::create([
+        'empresa_id' => $empresa->id, 'numero_orden' => 1,
+        'cliente_nombre' => 'Cliente', 'placa' => 'ABC123', 'estado' => 'entregado',
+        'factura_id' => 999,
+    ]);
+
+    $respuesta = $this->postJson('/api/pairing/subir/taller/borrar', [
+        'uuid' => (string) Str::uuid(),
+        'servidor_id' => $orden->id,
+    ]);
+
+    $respuesta->assertOk();
+    expect(TallerOrden::find($orden->id))->not->toBeNull();
+});
+
 test('hotelCancelar() marca la reserva como cancelada en el droplet', function () {
     $empresa = crearEmpresaBorrarCancelarTest();
     cajeroAutenticadoBorrarCancelarTest($empresa);
@@ -120,6 +139,26 @@ test('hotelCancelar() marca la reserva como cancelada en el droplet', function (
 
     $respuesta->assertOk();
     expect($reserva->fresh()->estado)->toBe('cancelada');
+});
+
+test('hotelCancelar() NO cancela una reserva que ya se facturo o hizo checkout en el droplet', function () {
+    $empresa = crearEmpresaBorrarCancelarTest();
+    cajeroAutenticadoBorrarCancelarTest($empresa);
+
+    $habitacion = HotelHabitacion::create(['empresa_id' => $empresa->id, 'numero' => '102']);
+    $reserva = HotelReserva::create([
+        'empresa_id' => $empresa->id, 'habitacion_id' => $habitacion->id, 'numero_reserva' => 2,
+        'huesped_nombre' => 'Huesped', 'fecha_checkin' => now()->toDateString(), 'estado' => 'checkout',
+        'factura_id' => 999,
+    ]);
+
+    $respuesta = $this->postJson('/api/pairing/subir/hotel/cancelar', [
+        'uuid' => (string) Str::uuid(),
+        'servidor_id' => $reserva->id,
+    ]);
+
+    $respuesta->assertOk();
+    expect($reserva->fresh()->estado)->toBe('checkout');
 });
 
 test('mesaLiberar() cancela la orden abierta de esa mesa en el droplet', function () {
