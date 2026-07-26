@@ -2127,16 +2127,29 @@ public function guardarPrefacturaConfirmada()
 
     public function verPrefacturas()
     {
-        $empresaId = $this->getEmpresaId();
-        
+        $this->prefacturasDisponibles = $this->prefacturasSegunRol();
+
+        $this->mostrarModalPrefacturas = true;
+        if ($this->mesaId) {
+            $this->tab = 'facturas';
+        }
+    }
+
+    /**
+     * Un vendedor (que no sea tambien cajero/admin_empresa) solo ve sus
+     * propias prefacturas guardadas; cajero y admin_empresa ven las de
+     * todos los vendedores -- misma regla en las 3 pantallas que recargan
+     * esta lista (abrir el modal, cargar una prefactura al carrito,
+     * borrarla), para que no se filtre distinto segun por donde se llegue.
+     */
+    private function prefacturasSegunRol()
+    {
         $user = auth()->user();
 
         $query = Prefactura::with(['cliente', 'productos'])
             ->where('empresa_id', $this->getEmpresaId())
             ->where('estado', 'borrador');
 
-
-        // SOLO vendedor
         if (
             $user->hasRole('vendedor') &&
             ! $user->hasAnyRole(['cajero', 'admin_empresa'])
@@ -2144,15 +2157,7 @@ public function guardarPrefacturaConfirmada()
             $query->where('vendedor_id', $user->id);
         }
 
-        $this->prefacturasDisponibles = $query
-            ->latest()
-            ->get();
-
-        $this->mostrarModalPrefacturas = true;
-        $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $this->getEmpresaId())->first();
-        if ($this->mesaId || $config?->usa_taller || $config?->usa_hotel) {
-            $this->tab = 'facturas';
-        }
+        return $query->latest()->get();
     }
 
     public function seleccionarPrefactura($id)
@@ -2288,11 +2293,7 @@ $prefactura = $query->first();
     $this->prefacturaSeleccionada = null;
     $this->detalleSeleccionado = [];
 
-    $this->prefacturasDisponibles = Prefactura::with(['cliente', 'productos'])
-        ->where('empresa_id', $empresaId)
-        ->where('estado', 'borrador')
-        ->latest()
-        ->get();
+    $this->prefacturasDisponibles = $this->prefacturasSegunRol();
 
     $this->cargandoPrefactura = false;
     $this->mostrarModalPrefacturas = false;
@@ -2461,11 +2462,7 @@ public function borrarPrefacturaConfirmada()
     $this->observacionKey++; // âœ… FORZAR RE-RENDER DEL TEXTAREA
     $this->calcularTotalGeneral(); // âœ… RECALCULAR TOTAL
 
-    $this->prefacturasDisponibles = Prefactura::with(['cliente', 'productos'])
-        ->where('empresa_id', $empresaId)
-        ->where('estado', 'borrador')
-        ->latest()
-        ->get();
+    $this->prefacturasDisponibles = $this->prefacturasSegunRol();
 
     $this->mostrarModalPrefacturas = false;
 
