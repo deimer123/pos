@@ -17,14 +17,14 @@ if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
             const update = await check();
 
             if (update) {
-                console.log(`Turion: actualización ${update.version} disponible, descargando...`);
+                console.log(`Sistema POS Offline: actualización ${update.version} disponible, descargando...`);
                 await update.downloadAndInstall();
                 await relaunch();
             }
         } catch (error) {
             // Sin conexion, o el endpoint no respondio -- no interrumpe el
             // uso normal del POS, se vuelve a intentar en el proximo arranque.
-            console.warn('Turion: no se pudo revisar actualizaciones', error);
+            console.warn('Sistema POS Offline: no se pudo revisar actualizaciones', error);
         }
     })();
 }

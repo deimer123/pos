@@ -154,7 +154,7 @@ fn preparar_entorno_local(app: &tauri::App) -> LocalEnv {
     };
 
     let vars = vec![
-        ("APP_NAME".into(), "Sistema POS".into()),
+        ("APP_NAME".into(), "Sistema POS Offline".into()),
         // Version del bundle actual (la de tauri.conf.json en el momento
         // de compilar) -- TurionSyncBar la muestra junto a Sincronizar/
         // Subir para confirmar a simple vista que version quedo instalada
@@ -242,6 +242,87 @@ fn iniciar_sincronizacion_automatica(env: LocalEnv, app_url: String) {
     });
 }
 
+/// Genera (o refresca) un .bat que corre "Subir" + "Sincronizar" sin abrir
+/// la ventana de Turion -- hace falta porque el Programador de tareas de
+/// Windows no puede invocar el runtime de Laravel directamente: necesita
+/// las mismas variables de entorno (APP_KEY, ruta de la base de datos...)
+/// que hoy solo arma este mismo proceso al arrancar. Se regenera en cada
+/// arranque para que, si una actualizacion cambio de ruta de instalacion
+/// o de llave, el .bat programado siga apuntando a lo correcto.
+fn generar_script_sincronizacion(env: &LocalEnv, data_dir: &std::path::Path) -> PathBuf {
+    let bat_path = data_dir.join("sincronizar-en-segundo-plano.bat");
+
+    let mut set_vars = String::new();
+    for (k, v) in &env.vars {
+        set_vars.push_str(&format!("set \"{k}={v}\"\r\n"));
+    }
+
+    let php = env.php_exe.display();
+    let ini = env.php_ini.display();
+    let cacert = env.cacert_path.display();
+    let laravel = env.laravel_dir.display();
+
+    let contenido = format!(
+        "@echo off\r\n\
+         cd /d \"{laravel}\"\r\n\
+         {set_vars}\
+         \"{php}\" -c \"{ini}\" -d \"curl.cainfo={cacert}\" -d \"openssl.cafile={cacert}\" artisan pos:push\r\n\
+         \"{php}\" -c \"{ini}\" -d \"curl.cainfo={cacert}\" -d \"openssl.cafile={cacert}\" artisan pos:sync-catalog\r\n"
+    );
+
+    fs::write(&bat_path, contenido)
+        .expect("no se pudo escribir el script de sincronizacion en segundo plano");
+
+    bat_path
+}
+
+/// Registra (o refresca) dos tareas del Programador de tareas de Windows
+/// para que el equipo se sincronice con el droplet aunque Sistema POS
+/// Offline este cerrado -- al iniciar sesion en Windows, y todos los dias
+/// a las 6pm (para que un corte de internet de varios dias no deje la
+/// informacion mas de un dia desactualizada). "onlogon" (no "onstart")
+/// para no necesitar permisos de administrador: corre con la sesion del
+/// usuario actual, que es lo mas parecido a "tan pronto se prende el
+/// equipo" en una terminal que se deja siempre con la misma sesion
+/// iniciada.
+fn registrar_tareas_programadas(bat_path: &std::path::Path) {
+    let tareas: [(&str, &[&str]); 2] = [
+        ("SistemaPOSOfflineSync_AlIniciarSesion", &["/sc", "onlogon"]),
+        ("SistemaPOSOfflineSync_6PM", &["/sc", "daily", "/st", "18:00"]),
+    ];
+
+    for (nombre, args_extra) in tareas {
+        let mut cmd = Command::new("schtasks");
+        cmd.arg("/create")
+            .arg("/tn")
+            .arg(nombre)
+            .arg("/tr")
+            .arg(format!("\"{}\"", bat_path.display()))
+            .args(args_extra)
+            .arg("/f")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+
+        #[cfg(windows)]
+        cmd.creation_flags(CREATE_NO_WINDOW);
+
+        match cmd.status() {
+            Ok(status) if status.success() => {
+                log::info!("Tarea programada '{nombre}' registrada.");
+            }
+            Ok(status) => {
+                log::warn!(
+                    "No se pudo registrar la tarea programada '{nombre}' (codigo {:?}).",
+                    status.code()
+                );
+            }
+            Err(e) => {
+                log::warn!("No se pudo ejecutar schtasks para '{nombre}': {e}");
+            }
+        }
+    }
+}
+
 fn lanzar_servidor_php(env: &LocalEnv, port: u16, app_url: &str) -> Child {
     let mut cmd = Command::new(&env.php_exe);
     cmd.current_dir(env.laravel_dir.join("public"))
@@ -289,6 +370,16 @@ pub fn run() {
             let port = find_free_port();
             let app_url = format!("http://127.0.0.1:{port}");
 
+            // Sincronizar aunque la ventana este cerrada: al iniciar
+            // sesion en Windows y todos los dias a las 6pm (ver
+            // registrar_tareas_programadas). Esto es ADEMAS de
+            // iniciar_sincronizacion_automatica(), que solo corre
+            // mientras esta app esta abierta.
+            if let Ok(data_dir) = app.path().app_data_dir() {
+                let bat_path = generar_script_sincronizacion(&env, &data_dir);
+                registrar_tareas_programadas(&bat_path);
+            }
+
             // Siempre (no solo en el primer arranque): "migrate" es
             // idempotente y rapido cuando no hay nada pendiente, y asi una
             // actualizacion del bundle que trae migraciones nuevas las
@@ -325,7 +416,7 @@ pub fn run() {
             let ventana_url = format!("{app_url}/login");
 
             WebviewWindowBuilder::new(app, "main", WebviewUrl::External(ventana_url.parse().unwrap()))
-                .title("Sistema POS")
+                .title("Sistema POS Offline")
                 .inner_size(1280.0, 800.0)
                 .min_inner_size(1024.0, 640.0)
                 .maximized(true)

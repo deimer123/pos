@@ -2,8 +2,8 @@
 
     <div class="rounded-xl border border-gray-200 p-4 space-y-3">
         <div class="text-sm text-gray-600">
-            Genera un código de un solo uso, válido por 30 minutos, y escríbelo en la pantalla de Turión
-            de la computadora que quieres emparejar como caja de este negocio.
+            Genera un código de un solo uso, válido por 30 minutos, y escríbelo en la pantalla de
+            Sistema POS Offline de la computadora que quieres emparejar como caja de este negocio.
         </div>
 
         <x-filament::button wire:click="generarCodigo" color="primary" icon="heroicon-o-key">

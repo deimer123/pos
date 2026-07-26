@@ -2,7 +2,7 @@
 @if($esTurion)
     <div class="flex items-center gap-2" wire:loading.class="opacity-60">
         @if($version)
-            <span class="text-[10px] text-white/60 font-mono" title="Versión de Turión instalada">v{{ $version }}</span>
+            <span class="text-[10px] text-white/60 font-mono" title="Versión de Sistema POS Offline instalada">v{{ $version }}</span>
         @endif
 
         <div class="flex flex-col items-end leading-tight">

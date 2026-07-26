@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Sistema POS",
+  "productName": "Sistema POS Offline",
   "version": "0.1.0",
   "identifier": "com.deimer.sistemapos",
   "build": {

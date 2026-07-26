@@ -15,12 +15,12 @@ class EditConfiguracionEmpresa extends EditRecord
     {
         return [
             Action::make('emparejarTurion')
-                ->label('Emparejar Turión')
+                ->label('Emparejar equipo offline')
                 ->icon('heroicon-o-computer-desktop')
                 ->color('primary')
                 ->url(fn () => \App\Filament\Pages\EmparejarTerminal::getUrl()),
             Action::make('descargarTurion')
-                ->label('Descargar Turión')
+                ->label('Descargar Sistema POS Offline')
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('gray')
                 ->url(fn () => route('turion.descargar')),

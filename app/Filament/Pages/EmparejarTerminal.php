@@ -8,13 +8,14 @@ use Filament\Pages\Page;
 class EmparejarTerminal extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-computer-desktop';
-    protected static ?string $navigationLabel = 'Emparejar Turión';
+    protected static ?string $navigationLabel = 'Emparejar equipo offline';
     protected static string $view = 'filament.pages.emparejar-terminal';
 
     public ?PairingCode $codigoActivo = null;
 
-    // Se entra desde el boton "Emparejar Turion" dentro de Configuracion de
-    // Empresa (ver EditConfiguracionEmpresa), no como item propio del menu.
+    // Se entra desde el boton "Emparejar equipo offline" dentro de
+    // Configuracion de Empresa (ver EditConfiguracionEmpresa), no como
+    // item propio del menu.
     public static function shouldRegisterNavigation(): bool
     {
         return false;
@@ -27,7 +28,7 @@ class EmparejarTerminal extends Page
 
     public function getTitle(): string
     {
-        return 'Emparejar una terminal de Turión';
+        return 'Emparejar un equipo para trabajar offline';
     }
 
     public function generarCodigo(): void

@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="utf-8">
-    <title>Emparejar Turión</title>
+    <title>Emparejar Sistema POS Offline</title>
     <style>
         html, body {
             margin: 0; height: 100%;
@@ -34,7 +34,7 @@
 <body>
     <div class="card">
         <h1>Emparejar esta terminal</h1>
-        <p class="sub">Escribe el código generado en el panel del negocio (Filament → Emparejar Turión) y la dirección de tu servidor.</p>
+        <p class="sub">Escribe el código generado en el panel del negocio (Filament → Emparejar equipo offline) y la dirección de tu servidor.</p>
 
         @if ($errors->any())
             <div class="error">{{ $errors->first() }}</div>
