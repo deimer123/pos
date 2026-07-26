@@ -155,6 +155,11 @@ fn preparar_entorno_local(app: &tauri::App) -> LocalEnv {
 
     let vars = vec![
         ("APP_NAME".into(), "Sistema POS".into()),
+        // Version del bundle actual (la de tauri.conf.json en el momento
+        // de compilar) -- TurionSyncBar la muestra junto a Sincronizar/
+        // Subir para confirmar a simple vista que version quedo instalada
+        // despues de una actualizacion, sin tener que abrir DevTools.
+        ("TURION_VERSION".into(), app.package_info().version.to_string()),
         ("APP_ENV".into(), "production".into()),
         ("APP_DEBUG".into(), "false".into()),
         ("APP_KEY".into(), app_key),
