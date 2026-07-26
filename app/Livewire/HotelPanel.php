@@ -7,7 +7,9 @@ use App\Models\Caja;
 use App\Models\Gasto;
 use App\Models\HotelHabitacion;
 use App\Models\HotelReserva;
+use App\Services\Turion\ColaSincronizacion;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -445,6 +447,10 @@ class HotelPanel extends Component
             'responsable_iva'    => $this->nuevoClienteHotel['responsable_iva'],
             'clasificacion'      => 'cliente',
         ]);
+
+        if (DB::getDriverName() === 'sqlite') {
+            ColaSincronizacion::encolarActorCreado($actor);
+        }
 
         $this->resActorId          = $actor->id;
         $this->resHuespedNombre    = (string) $actor->nombre;

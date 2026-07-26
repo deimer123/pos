@@ -12,6 +12,7 @@ use App\Models\TallerOrden;
 use App\Services\Hotel\GuardarReservaService;
 use App\Services\Mesas\AgregarItemMesaService;
 use App\Services\Taller\GuardarOrdenTallerService;
+use App\Services\Turion\ResolverActorService;
 use App\Services\Ventas\FacturarVentaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -175,69 +176,49 @@ class PosSyncController extends Controller
         return response()->json(['id' => $prefactura->id, 'ya_facturada' => false]);
     }
 
-    /**
-     * Encuentra el Actor correspondiente al cliente que trae la
-     * prefactura: primero por id (valido si ya existia al ultimo
-     * emparejar, ya que el catalogo preserva los ids reales), si no por
-     * identificacion, si no por nombre (igual patron que
-     * tallerFacturar()/hotelFacturar() para el cliente de la orden/
-     * reserva); si nada matchea y hay datos de cliente, se crea uno
-     * nuevo con esos datos. Sin datos de cliente, null (Consumidor Final
-     * por defecto al facturar).
-     */
     private function resolverClientePrefactura(int $empresaId, array $data): ?int
     {
-        if (! empty($data['cliente_id'])) {
-            $existente = Actor::where('empresa_id', $empresaId)->where('id', $data['cliente_id'])->exists();
-            if ($existente) {
-                return (int) $data['cliente_id'];
-            }
-        }
+        return ResolverActorService::resolverOCrear($empresaId, $data['cliente'] ?? [], $data['cliente_id'] ?? null);
+    }
 
-        $cliente = $data['cliente'] ?? [];
-        $identificacion = trim((string) ($cliente['identificacion'] ?? ''));
-        $nombre = trim((string) ($cliente['nombre'] ?? ''));
-
-        if ($identificacion !== '') {
-            $id = Actor::where('empresa_id', $empresaId)->where('identificacion', $identificacion)->value('id');
-            if ($id) {
-                return (int) $id;
-            }
-        }
-
-        if ($nombre !== '') {
-            $id = Actor::where('empresa_id', $empresaId)
-                ->whereRaw('LOWER(TRIM(nombre)) = ?', [mb_strtolower($nombre)])
-                ->value('id');
-            if ($id) {
-                return (int) $id;
-            }
-        }
-
-        if ($nombre === '') {
-            return null;
-        }
-
-        $nuevo = Actor::create([
-            'id_clip_pro' => (int) Actor::where('empresa_id', $empresaId)->max('id_clip_pro') + 1,
-            'empresa_id' => $empresaId,
-            'tipo' => 1,
-            'clasificacion' => 'cliente',
-            'tipo_documento_id' => $cliente['tipo_documento_id'] ?? 3,
-            'identificacion' => $identificacion !== '' ? $identificacion : null,
-            'nombre' => $nombre,
-            'razon_social' => $cliente['razon_social'] ?? null,
-            'telefono' => $cliente['telefono'] ?? null,
-            'email' => $cliente['email'] ?? null,
-            'direccion' => $cliente['direccion'] ?? null,
-            'departamento_id' => $cliente['departamento_id'] ?? null,
-            'ciudad_id' => $cliente['ciudad_id'] ?? null,
-            'tipo_persona' => $cliente['tipo_persona'] ?? null,
-            'regimen_tributario' => $cliente['regimen_tributario'] ?? null,
-            'responsable_iva' => $cliente['responsable_iva'] ?? false,
+    /**
+     * Sube un cliente (Actor) creado directo en Turion -- ver
+     * ColaSincronizacion::encolarActorCreado(), llamado desde
+     * CarritoVenta/HotelPanel justo despues de Actor::create(). Encuentra
+     * o crea el Actor en el droplet (mismo resolver que usa
+     * prefacturaGuardar()) y devuelve su id real para que Turion lo
+     * guarde en actors.servidor_id.
+     */
+    public function actorCrear(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'uuid' => 'required|uuid',
+            'actor_local_id' => 'required|integer',
+            'identificacion' => 'nullable|string',
+            'nombre' => 'required|string',
+            'razon_social' => 'nullable|string',
+            'tipo_documento_id' => 'nullable|integer',
+            'telefono' => 'nullable|string',
+            'email' => 'nullable|string',
+            'direccion' => 'nullable|string',
+            'departamento_id' => 'nullable|integer',
+            'ciudad_id' => 'nullable|integer',
+            'tipo_persona' => 'nullable|string',
+            'regimen_tributario' => 'nullable|string',
+            'responsable_iva' => 'nullable|boolean',
         ]);
 
-        return $nuevo->id;
+        $empresaId = auth()->user()->getEmpresaActualId();
+
+        if ($existente = $this->buscarSincronizada($data['uuid'])) {
+            return response()->json(['id' => $existente->resultado_id]);
+        }
+
+        $id = ResolverActorService::resolverOCrear($empresaId, $data);
+
+        $this->registrarSincronizada($data['uuid'], 'actor_crear', $empresaId, $id);
+
+        return response()->json(['id' => $id]);
     }
 
     public function mesaItem(Request $request, AgregarItemMesaService $service): JsonResponse

@@ -71,6 +71,33 @@ class ColaSincronizacion
         return $operacion ? (int) $operacion->resultado_id : null;
     }
 
+    /**
+     * Encola la subida de un cliente (Actor) creado en Turion -- se llama
+     * justo despues de Actor::create() en CarritoVenta/HotelPanel. A
+     * diferencia de taller_crear/hotel_crear, el droplet resuelve el
+     * cliente por identificacion/nombre (mismo find-or-create que ya usa
+     * PosSyncController::prefacturaGuardar()), no crea uno nuevo a ciegas
+     * si ya existe alla uno equivalente.
+     */
+    public static function encolarActorCreado(\App\Models\Actor $actor): void
+    {
+        self::encolar('actor_crear', [
+            'actor_local_id' => $actor->id,
+            'identificacion' => $actor->identificacion,
+            'nombre' => $actor->nombre,
+            'razon_social' => $actor->razon_social,
+            'tipo_documento_id' => $actor->tipo_documento_id,
+            'telefono' => $actor->telefono,
+            'email' => $actor->email,
+            'direccion' => $actor->direccion,
+            'departamento_id' => $actor->departamento_id,
+            'ciudad_id' => $actor->ciudad_id,
+            'tipo_persona' => $actor->tipo_persona,
+            'regimen_tributario' => $actor->regimen_tributario,
+            'responsable_iva' => $actor->responsable_iva,
+        ]);
+    }
+
     private static function tablaDisponible(): bool
     {
         static $existe = null;

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Actor;
 use App\Models\Prefactura;
 use App\Services\Turion\ConectividadDroplet;
 use Illuminate\Console\Command;
@@ -75,6 +76,15 @@ class PosPush extends Command
 
                 if ($operacion->tipo === 'hotel_crear' && isset($payload['local_id'], $resultado['id'])) {
                     $this->hotelIdMap[$payload['local_id']] = $resultado['id'];
+                }
+
+                if ($operacion->tipo === 'actor_crear' && isset($payload['actor_local_id'], $resultado['id'])) {
+                    // Guarda el id real del droplet en la fila local: a
+                    // partir de ahora, el proximo "Sincronizar" (que
+                    // reemplaza todo el catalogo de clientes) ya no
+                    // necesita preservar este actor a mano -- ya tiene
+                    // contraparte real alla.
+                    Actor::where('id', $payload['actor_local_id'])->update(['servidor_id' => $resultado['id']]);
                 }
 
                 if ($operacion->tipo === 'prefactura_guardar' && isset($payload['prefactura_local_id'])) {
@@ -154,6 +164,7 @@ class PosPush extends Command
             'hotel_item' => ['/api/pairing/subir/hotel/item', $this->conHotelReservaIdResuelto($payload)],
             'hotel_facturar' => ['/api/pairing/subir/hotel/facturar', $this->conHotelReservaIdResuelto($payload)],
             'prefactura_guardar' => ['/api/pairing/subir/prefactura/guardar', $this->conPrefacturaServidorIdResuelto($payload)],
+            'actor_crear' => ['/api/pairing/subir/actor/crear', $payload],
             default => throw new \RuntimeException("Tipo de operacion desconocido: {$tipo}"),
         };
 

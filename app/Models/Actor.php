@@ -29,6 +29,7 @@ public bool $omitEmpresaAutoAssign = false;
      'permite_credito',
     'dias_credito',
     'limite_credito',
+    'servidor_id',
 ];
 
 public function ciudad()

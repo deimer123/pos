@@ -57,7 +57,17 @@ class CatalogoImportador
                         continue;
                     }
 
-                    DB::table($tabla)->delete();
+                    // Clientes creados directo en Turion (offline) que
+                    // todavia no se han subido (servidor_id null): si se
+                    // borraran aqui como el resto del catalogo, se
+                    // perderian para siempre en este mismo Sincronizar,
+                    // antes de que "Subir" alcanzara a mandarlos al
+                    // droplet. Se preservan aparte y no se tocan.
+                    $idsAPreservar = ($tabla === 'actors' && Schema::hasColumn('actors', 'servidor_id'))
+                        ? DB::table('actors')->whereNull('servidor_id')->pluck('id')->all()
+                        : [];
+
+                    DB::table($tabla)->whereNotIn('id', $idsAPreservar)->delete();
 
                     // El droplet puede tener columnas en produccion que no
                     // estan (o ya no estan) en nuestras migraciones -- ej.
@@ -78,7 +88,18 @@ class CatalogoImportador
                             $lote
                         );
 
-                        DB::table($tabla)->insert($filas);
+                        // Si por coincidencia un id de la lista preservada
+                        // ya vino ocupado por el catalogo nuevo, gana el
+                        // dato del servidor (fuente de verdad) -- se
+                        // omite esa fila puntual del catalogo para no
+                        // chocar con la llave primaria local.
+                        if ($idsAPreservar) {
+                            $filas = array_filter($filas, fn ($fila) => ! in_array($fila['id'] ?? null, $idsAPreservar, true));
+                        }
+
+                        if ($filas) {
+                            DB::table($tabla)->insert(array_values($filas));
+                        }
                     }
                 }
 

@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Services\Turion\ConectividadDroplet;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
@@ -15,6 +16,7 @@ use Livewire\Component;
 class TurionSyncBar extends Component
 {
     public bool $esTurion = false;
+    public bool $enLinea = true;
     public int $pendientes = 0;
     public ?string $ultimaSincronizacion = null;
     public ?string $ultimaSubida = null;
@@ -26,6 +28,7 @@ class TurionSyncBar extends Component
         $this->esTurion = DB::getDriverName() === 'sqlite';
 
         if ($this->esTurion) {
+            $this->enLinea = ConectividadDroplet::estaEnLinea();
             $this->refrescarEstado();
         }
     }
@@ -33,16 +36,33 @@ class TurionSyncBar extends Component
     // Turion sincroniza el catalogo solo, en segundo plano (ver
     // src-tauri/src/lib.rs) -- este poll es solo para que la hora de
     // "ultima sincronizacion" que ve el cajero se actualice sola cuando
-    // eso pase, sin que tenga que refrescar la pagina a mano.
+    // eso pase, sin que tenga que refrescar la pagina a mano. Tambien
+    // refresca si hay conexion, para que los botones se deshabiliten
+    // solos apenas se cae internet, sin que el cajero tenga que darle
+    // click para descubrirlo.
     public function refrescarEstadoPeriodico(): void
     {
         if ($this->esTurion) {
+            $this->enLinea = ConectividadDroplet::estaEnLinea();
             $this->refrescarEstado();
         }
     }
 
     public function sincronizar(): void
     {
+        if (! $this->esTurion) {
+            return;
+        }
+
+        $this->enLinea = ConectividadDroplet::estaEnLinea();
+
+        if (! $this->enLinea) {
+            $this->mensaje = 'Sin conexión con el droplet: no se puede sincronizar ahora.';
+            $this->conError = true;
+
+            return;
+        }
+
         $codigo = Artisan::call('pos:sync-catalog');
         $this->mensaje = trim(Artisan::output()) ?: 'Sincronizado.';
         $this->conError = $codigo !== 0;
@@ -51,6 +71,19 @@ class TurionSyncBar extends Component
 
     public function subir(): void
     {
+        if (! $this->esTurion) {
+            return;
+        }
+
+        $this->enLinea = ConectividadDroplet::estaEnLinea();
+
+        if (! $this->enLinea) {
+            $this->mensaje = 'Sin conexión con el droplet: no se puede subir ahora.';
+            $this->conError = true;
+
+            return;
+        }
+
         $codigo = Artisan::call('pos:push');
         $this->mensaje = trim(Artisan::output()) ?: 'Subido.';
         $this->conError = $codigo !== 0;

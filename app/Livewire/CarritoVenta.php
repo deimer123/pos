@@ -811,6 +811,10 @@ public function asignarConsumidorFinalPorDefecto()
         'tipo'               => 1,
     ]);
 
+    if (DB::getDriverName() === 'sqlite') {
+        ColaSincronizacion::encolarActorCreado($cliente);
+    }
+
     $this->clienteId                 = $cliente->id;
     $this->clienteSeleccionadoNombre = $this->textoUtf8($cliente->nombre);
     $this->clienteDireccion          = $cliente->direccion ?? null;
