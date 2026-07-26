@@ -7,6 +7,7 @@ export default defineConfig({
             input: [
                 'resources/css/app.css',
                 'resources/js/app.js',
+                'resources/js/turion-updater.js',
                 'resources/js/pos-catalogo-offline.js',
                 'resources/js/pos-offline-queue.js',
             ],
