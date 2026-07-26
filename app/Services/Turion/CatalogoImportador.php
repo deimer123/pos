@@ -78,15 +78,35 @@ class CatalogoImportador
                     // con el historial de migraciones.
                     $columnasLocales = Schema::getColumnListing($tabla);
 
+                    $columnasObligatorias = self::columnasNotNullSinDefault($tabla);
+
                     foreach (array_chunk($catalogo[$tabla], 200) as $lote) {
                         if (empty($lote)) {
                             continue;
                         }
 
-                        $filas = array_map(
-                            fn ($fila) => array_intersect_key((array) $fila, array_flip($columnasLocales)),
-                            $lote
-                        );
+                        // El droplet tambien puede tener filas viejas o
+                        // incompletas a las que les falta un valor en una
+                        // columna NOT NULL de aqui (ej. product_combos.precio_combo
+                        // en datos previos a esa columna). Si la PRIMERA fila
+                        // de un lote no trae esa clave, el insert masivo de
+                        // Laravel arma el SQL solo con las columnas de esa
+                        // fila -- la columna faltante desaparece del INSERT
+                        // completo (no solo de esa fila) y SQLite lo rechaza.
+                        // Se completa con un valor por defecto en vez de
+                        // tumbar el emparejamiento/sincronizacion entero por
+                        // un dato viejo de una sola fila.
+                        $filas = array_map(function ($fila) use ($columnasLocales, $columnasObligatorias) {
+                            $fila = array_intersect_key((array) $fila, array_flip($columnasLocales));
+
+                            foreach ($columnasObligatorias as $columna) {
+                                if (! array_key_exists($columna, $fila) || $fila[$columna] === null) {
+                                    $fila[$columna] = 0;
+                                }
+                            }
+
+                            return $fila;
+                        }, $lote);
 
                         // Si por coincidencia un id de la lista preservada
                         // ya vino ocupado por el catalogo nuevo, gana el
@@ -110,6 +130,23 @@ class CatalogoImportador
                 DB::statement('PRAGMA foreign_keys = ON');
             }
         }
+    }
+
+    /**
+     * Columnas NOT NULL sin valor por defecto de una tabla local (SQLite),
+     * excluyendo la llave primaria -- si una fila del droplet no trae
+     * alguna, se completa con 0 en vez de dejar que el INSERT masivo falle.
+     */
+    private static function columnasNotNullSinDefault(string $tabla): array
+    {
+        if (DB::getDriverName() !== 'sqlite') {
+            return [];
+        }
+
+        return collect(DB::select('PRAGMA table_info("'.$tabla.'")'))
+            ->filter(fn ($columna) => $columna->notnull && $columna->dflt_value === null && ! $columna->pk)
+            ->pluck('name')
+            ->all();
     }
 
     private static function capturarSesionesLocales(): array

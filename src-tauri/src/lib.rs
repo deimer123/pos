@@ -2,7 +2,7 @@ use std::fs;
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
@@ -25,6 +25,17 @@ const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x0100_0000;
 /// Handle al proceso del servidor PHP local, guardado como estado de la app
 /// para poder matarlo cuando Turion se cierra.
 struct PhpServerHandle(Mutex<Option<Child>>);
+
+/// PID del proceso "php artisan ..." que este momento este corriendo en
+/// segundo plano (la sincronizacion automatica), si hay alguno. Se usa para
+/// poder matarlo tambien antes de instalar una actualizacion -- sin esto,
+/// si el chequeo de actualizacion coincide con una sincronizacion en curso
+/// (pasa justo al abrir la app: ambas arrancan casi al mismo tiempo), ese
+/// php.exe sobrevive al cierre forzado de app.exe (por CREATE_BREAKAWAY_FROM_JOB,
+/// necesario para que php.exe ni siquiera pueda arrancar empaquetado) y
+/// queda huerfano bloqueando sus propios .dll para el siguiente intento de
+/// instalar.
+struct SincronizacionEnCurso(Mutex<Option<u32>>);
 
 #[derive(Clone)]
 struct LocalEnv {
@@ -185,7 +196,7 @@ fn preparar_entorno_local(app: &tauri::App) -> LocalEnv {
     }
 }
 
-fn correr_artisan(env: &LocalEnv, args: &[&str], app_url: &str) {
+fn correr_artisan(env: &LocalEnv, args: &[&str], app_url: &str, en_curso: &SincronizacionEnCurso) {
     let mut cmd = Command::new(&env.php_exe);
     cmd.current_dir(&env.laravel_dir)
         .arg("-c")
@@ -204,7 +215,11 @@ fn correr_artisan(env: &LocalEnv, args: &[&str], app_url: &str) {
     #[cfg(windows)]
     cmd.creation_flags(CREATE_BREAKAWAY_FROM_JOB);
 
-    let salida = cmd.output().expect("no se pudo ejecutar artisan localmente");
+    let child = cmd.spawn().expect("no se pudo ejecutar artisan localmente");
+    *en_curso.0.lock().unwrap() = Some(child.id());
+
+    let salida = child.wait_with_output().expect("no se pudo esperar a artisan localmente");
+    *en_curso.0.lock().unwrap() = None;
 
     if !salida.status.success() {
         let salida_std = String::from_utf8_lossy(&salida.stdout);
@@ -223,7 +238,7 @@ fn correr_artisan(env: &LocalEnv, args: &[&str], app_url: &str) {
 // "Subir" (mandar ventas/mesas/ordenes al droplet) sigue siendo SOLO manual
 // a proposito: subir datos hacia afuera no deberia pasar sin que alguien lo
 // decida.
-fn iniciar_sincronizacion_automatica(env: LocalEnv, app_url: String) {
+fn iniciar_sincronizacion_automatica(env: LocalEnv, app_url: String, en_curso: Arc<SincronizacionEnCurso>) {
     std::thread::spawn(move || {
         // Al abrir la app: intento FORZADO (sin --if-due), sin importar
         // cuanto paso desde la ultima vez -- si hay internet, se
@@ -232,19 +247,19 @@ fn iniciar_sincronizacion_automatica(env: LocalEnv, app_url: String) {
         // panic, catch_unwind lo atrapa aqui abajo) y la app sigue
         // funcionando con los datos que ya tenia (la ultima sincronizacion
         // programada mientras estaba cerrada, o la ultima manual).
-        sincronizar_con_log(&env, &app_url, &["pos:sync-catalog"]);
+        sincronizar_con_log(&env, &app_url, &["pos:sync-catalog"], &en_curso);
 
         loop {
             std::thread::sleep(Duration::from_secs(60 * 60));
 
-            sincronizar_con_log(&env, &app_url, &["pos:sync-catalog", "--if-due=12"]);
+            sincronizar_con_log(&env, &app_url, &["pos:sync-catalog", "--if-due=12"], &en_curso);
         }
     });
 }
 
-fn sincronizar_con_log(env: &LocalEnv, app_url: &str, args: &[&str]) {
+fn sincronizar_con_log(env: &LocalEnv, app_url: &str, args: &[&str], en_curso: &SincronizacionEnCurso) {
     let intento = std::panic::catch_unwind(|| {
-        correr_artisan(env, args, app_url);
+        correr_artisan(env, args, app_url, en_curso);
     });
 
     if let Err(e) = intento {
@@ -393,10 +408,24 @@ fn lanzar_servidor_php(env: &LocalEnv, port: u16, app_url: &str) -> Child {
 /// writing". Se llama desde turion-updater.js justo antes de
 /// downloadAndInstall().
 #[tauri::command]
-fn detener_servidor_local(state: tauri::State<PhpServerHandle>) {
-    if let Some(mut child) = state.0.lock().unwrap().take() {
+fn detener_servidor_local(
+    servidor: tauri::State<PhpServerHandle>,
+    sincronizacion: tauri::State<Arc<SincronizacionEnCurso>>,
+) {
+    if let Some(mut child) = servidor.0.lock().unwrap().take() {
         let _ = child.kill();
         log::info!("Servidor PHP local detenido antes de instalar la actualizacion.");
+    }
+
+    if let Some(pid) = sincronizacion.0.lock().unwrap().take() {
+        let mut cmd = Command::new("taskkill");
+        cmd.args(["/PID", &pid.to_string(), "/F"]);
+
+        #[cfg(windows)]
+        cmd.creation_flags(CREATE_NO_WINDOW);
+
+        let _ = cmd.output();
+        log::info!("Sincronizacion en segundo plano (pid {pid}) detenida antes de instalar la actualizacion.");
     }
 }
 
@@ -424,6 +453,7 @@ pub fn run() {
             let env = preparar_entorno_local(app);
             let port = find_free_port();
             let app_url = format!("http://127.0.0.1:{port}");
+            let sincronizacion_en_curso = Arc::new(SincronizacionEnCurso(Mutex::new(None)));
 
             // Sincronizar aunque la ventana este cerrada: al iniciar
             // sesion en Windows y todos los dias a las 6pm (ver
@@ -441,7 +471,7 @@ pub fn run() {
             // actualizacion del bundle que trae migraciones nuevas las
             // aplica sola en el siguiente arranque, sin depender de que el
             // usuario reinstale sobre una base de datos vacia.
-            correr_artisan(&env, &["migrate", "--force"], &app_url);
+            correr_artisan(&env, &["migrate", "--force"], &app_url, &sincronizacion_en_curso);
 
             // Datos de referencia (tipos de documento, roles, ciudades,
             // plan de cuentas) que hacen falta para operar -- ej. crear un
@@ -453,6 +483,7 @@ pub fn run() {
                     &env,
                     &["db:seed", "--class=Database\\Seeders\\TurionLocalSeeder", "--force"],
                     &app_url,
+                    &sincronizacion_en_curso,
                 );
             }
 
@@ -463,8 +494,9 @@ pub fn run() {
             }
 
             app.manage(PhpServerHandle(Mutex::new(Some(child))));
+            app.manage(sincronizacion_en_curso.clone());
 
-            iniciar_sincronizacion_automatica(env.clone(), app_url.clone());
+            iniciar_sincronizacion_automatica(env.clone(), app_url.clone(), sincronizacion_en_curso);
 
             // "/" es la pagina de aterrizaje (marketing) del sitio -- en
             // Turion no tiene sentido, se entra directo al login (que
