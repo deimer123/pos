@@ -92,25 +92,6 @@ class TurionSyncBar extends Component
         $this->refrescarEstado();
     }
 
-    /**
-     * Borra el emparejamiento local (sync_state) para que esta terminal
-     * vuelva a pedir el codigo de emparejamiento -- util si se empareja
-     * por error con la empresa equivocada, o para reasignar la terminal a
-     * otro negocio. No toca pending_sync_operations: lo que ya estaba
-     * pendiente de subir sigue ahi por si se vuelve a emparejar con la
-     * misma empresa.
-     */
-    public function olvidarEmparejamiento()
-    {
-        if (! $this->esTurion) {
-            return;
-        }
-
-        DB::table('sync_state')->delete();
-
-        return redirect()->route('emparejar');
-    }
-
     private function refrescarEstado(): void
     {
         $this->pendientes = (int) DB::table('pending_sync_operations')->where('estado', 'pendiente')->count();

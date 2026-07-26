@@ -88,6 +88,10 @@ class AdminPanelProvider extends PanelProvider
             fn () => view('filament.topbar-brand')
         )
         ->renderHook(
+            PanelsRenderHook::AUTH_LOGIN_FORM_AFTER,
+            fn () => view('filament.turion-olvidar-emparejamiento')
+        )
+        ->renderHook(
     'panels::head.end',
     function () {
         $cssPath = public_path('css/admin.css');

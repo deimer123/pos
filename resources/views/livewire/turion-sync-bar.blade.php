@@ -55,13 +55,6 @@
                 {{ $mensaje }}
             </span>
         @endif
-
-        <button type="button" wire:click="olvidarEmparejamiento"
-            wire:confirm="¿Seguro que quieres olvidar el emparejamiento? Esta terminal va a pedir el código de emparejamiento otra vez."
-            class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 text-xs rounded shadow inline-flex items-center gap-1"
-            title="Olvidar emparejamiento (para volver a emparejar con otra empresa)">
-            🔌 Olvidar emparejamiento
-        </button>
     </div>
 @endif
 </div>

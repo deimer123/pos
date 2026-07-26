@@ -33,6 +33,10 @@ Route::get('/manual', fn () => view('manual'))->name('manual');
 Route::get('/emparejar', [EmparejarTerminalController::class, 'mostrar'])->name('emparejar');
 Route::post('/emparejar', [EmparejarTerminalController::class, 'emparejar']);
 
+// Olvidar emparejamiento desde el login (sin necesitar sesion activa) -- ver
+// App\Http\Controllers\EmparejarTerminalController::olvidar.
+Route::post('/turion/olvidar-emparejamiento', [EmparejarTerminalController::class, 'olvidar'])->name('turion.olvidar-emparejamiento');
+
 // Link estable para descargar el instalador de Turion mas reciente -- lee
 // el mismo latest.json que ya usa el auto-actualizador (ver
 // src-tauri/tauri.conf.json) y redirige a la url del instalador de esa
