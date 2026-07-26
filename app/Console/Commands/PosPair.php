@@ -46,6 +46,28 @@ class PosPair extends Command
         $data = $respuesta->json();
 
         $this->info('Emparejado con: '.$data['empresa_nombre']);
+
+        // Prefacturas, ordenes de taller y reservas de hotel NO estan en
+        // CatalogoImportador::TABLAS (se sincronizan aparte, por pull) --
+        // si esta terminal ya trabajo con OTRA empresa antes (se le "olvido
+        // el emparejamiento" y se reasigno, probando varias empresas desde
+        // el mismo equipo), esos datos de la empresa vieja se quedarian acá
+        // para siempre. El riesgo real no es solo verlos mezclados: si
+        // quedo algo pendiente de subir de la empresa vieja en
+        // pending_sync_operations, "Subir" lo mandaria al droplet
+        // autenticado con el token de la empresa NUEVA, creando ahi una
+        // prefactura/orden que en realidad es de la empresa anterior.
+        $this->info('Limpiando datos locales de un posible emparejamiento anterior...');
+        DB::statement('PRAGMA foreign_keys = OFF');
+        DB::table('pending_sync_operations')->delete();
+        DB::table('prefactura_productos')->delete();
+        DB::table('prefacturas')->delete();
+        DB::table('taller_repuestos')->delete();
+        DB::table('taller_ordenes')->delete();
+        DB::table('hotel_reserva_consumos')->delete();
+        DB::table('hotel_reservas')->delete();
+        DB::statement('PRAGMA foreign_keys = ON');
+
         $this->info('Sembrando catálogo local...');
 
         CatalogoImportador::sembrar($data['catalogo']);

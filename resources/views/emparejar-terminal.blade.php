@@ -40,7 +40,8 @@
             <div class="error">{{ $errors->first() }}</div>
         @endif
 
-        <form method="POST" action="{{ url('/emparejar') }}">
+        <form method="POST" action="{{ url('/emparejar') }}"
+            onsubmit="return confirm('Si esta terminal ya trabajo antes con otra empresa, todo lo que haya quedado sin subir (prefacturas, ordenes de taller, reservas de hotel) se va a borrar para no mezclarse con la empresa nueva. ¿Continuar?');">
             @csrf
             <label for="codigo">Código de emparejamiento</label>
             <input type="text" id="codigo" name="codigo" value="{{ old('codigo') }}" maxlength="12" required autofocus>

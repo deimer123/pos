@@ -2144,17 +2144,12 @@ public function guardarPrefacturaConfirmada()
      */
     private function prefacturasSegunRol()
     {
-        $user = auth()->user();
-
         $query = Prefactura::with(['cliente', 'productos'])
             ->where('empresa_id', $this->getEmpresaId())
             ->where('estado', 'borrador');
 
-        if (
-            $user->hasRole('vendedor') &&
-            ! $user->hasAnyRole(['cajero', 'admin_empresa'])
-        ) {
-            $query->where('vendedor_id', $user->id);
+        if ($this->esSoloVendedor()) {
+            $query->where('vendedor_id', auth()->id());
         }
 
         return $query->latest()->get();
@@ -2754,8 +2749,24 @@ private function facturacionElectronicaDisponible(int $empresaId): bool
 }
 public function setTab(string $t)
 {
+    if ($t === 'facturas' && $this->esSoloVendedor()) {
+        return;
+    }
+
     $this->tab = $t;
     if ($t === 'facturas') $this->cargarFacturas();
+}
+
+/**
+ * Un vendedor (que no sea tambien cajero/admin_empresa) solo puede ver
+ * SUS prefacturas guardadas -- no tiene acceso a la pestana "Facturas"
+ * (eso es del cajero/admin, que factura y ve lo facturado en el momento).
+ */
+private function esSoloVendedor(): bool
+{
+    $user = auth()->user();
+
+    return $user->hasRole('vendedor') && ! $user->hasAnyRole(['cajero', 'admin_empresa']);
 }
 
 public function actualizarRangoFacturas()

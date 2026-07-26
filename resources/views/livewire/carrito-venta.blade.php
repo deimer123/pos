@@ -1705,10 +1705,12 @@
                                 </button>
                                 @endif
 
+                                @if(! (auth()->user()->hasRole('vendedor') && ! auth()->user()->hasAnyRole(['cajero', 'admin_empresa'])))
                                 <button wire:click="setTab('facturas')"
                                     class="px-3 py-1.5 rounded-full text-sm font-semibold shadow-sm {{ $tab === 'facturas' ? 'bg-indigo-600 text-white' : 'bg-white text-indigo-700 border border-indigo-200' }}">
                                     Facturas
                                 </button>
+                                @endif
                             </div>
 
                         </div>
