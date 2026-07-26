@@ -503,8 +503,10 @@ pub fn run() {
             // redirige solo al POS si ya hay sesion activa).
             let ventana_url = format!("{app_url}/login");
 
+            let titulo_ventana = format!("Sistema POS Offline v{}", app.package_info().version);
+
             WebviewWindowBuilder::new(app, "main", WebviewUrl::External(ventana_url.parse().unwrap()))
-                .title("Sistema POS Offline")
+                .title(titulo_ventana)
                 .inner_size(1280.0, 800.0)
                 .min_inner_size(1024.0, 640.0)
                 .maximized(true)

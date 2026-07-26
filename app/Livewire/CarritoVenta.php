@@ -2423,6 +2423,10 @@ $this->dispatch('guardar-carrito-en-cache', $this->carrito); // âœ… GUARDAR 
 
         $prefactura = Prefactura::with('productos')->find($this->prefacturaCargadaId);
         if ($prefactura) {
+            if ($this->esTurion && $prefactura->servidor_id) {
+                \App\Services\Turion\ColaSincronizacion::encolarPrefacturaBorrada($prefactura->servidor_id);
+            }
+
             $prefactura->productos()->delete();
             $prefactura->delete();
         }
@@ -2442,6 +2446,10 @@ public function borrarPrefacturaConfirmada()
         ->first();
 
     if ($prefactura) {
+        if ($this->esTurion && $prefactura->servidor_id) {
+            \App\Services\Turion\ColaSincronizacion::encolarPrefacturaBorrada($prefactura->servidor_id);
+        }
+
         $prefactura->productos()->delete();
         $prefactura->delete();
     }

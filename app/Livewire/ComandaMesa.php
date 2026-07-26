@@ -6,6 +6,8 @@ use App\Models\Mesa;
 use App\Models\OrdenMesa;
 use App\Models\OrdenMesaItem;
 use App\Models\Product;
+use App\Services\Turion\ColaSincronizacion;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
 class ComandaMesa extends Component
@@ -198,6 +200,14 @@ class ComandaMesa extends Component
                 'estado'     => 'cancelada',
                 'cerrada_en' => now(),
             ]);
+
+            // Sin esto, si esta mesa tenia una orden activa tambien en el
+            // droplet, el siguiente "Sincronizar" no la tocaba (las
+            // ordenes de mesa no bajan por pull), pero el droplet
+            // quedaria con una orden abierta que aca ya se cerro.
+            if (DB::getDriverName() === 'sqlite') {
+                ColaSincronizacion::encolarMesaLiberada($this->mesaId);
+            }
         }
 
         Mesa::where('id', $this->mesaId)->update(['estado' => 'libre']);

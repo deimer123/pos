@@ -17,7 +17,6 @@ class TurionSyncBar extends Component
 {
     public bool $esTurion = false;
     public bool $enLinea = true;
-    public ?string $version = null;
     public int $pendientes = 0;
     public ?string $ultimaSincronizacion = null;
     public ?string $ultimaSubida = null;
@@ -29,7 +28,6 @@ class TurionSyncBar extends Component
         $this->esTurion = DB::getDriverName() === 'sqlite';
 
         if ($this->esTurion) {
-            $this->version = env('TURION_VERSION');
             $this->enLinea = ConectividadDroplet::estaEnLinea();
             $this->refrescarEstado();
         }

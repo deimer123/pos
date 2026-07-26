@@ -176,6 +176,124 @@ class PosSyncController extends Controller
         return response()->json(['id' => $prefactura->id, 'ya_facturada' => false]);
     }
 
+    /**
+     * Borra en el servidor una prefactura que se borro offline en Turion --
+     * sin esto, el siguiente "Sincronizar" la volvia a bajar (el droplet
+     * nunca se entero de que se habia borrado localmente).
+     */
+    public function prefacturaBorrar(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'uuid' => 'required|uuid',
+            'servidor_id' => 'required|integer',
+        ]);
+
+        $empresaId = auth()->user()->getEmpresaActualId();
+
+        if ($this->buscarSincronizada($data['uuid'])) {
+            return response()->json(['ok' => true]);
+        }
+
+        $prefactura = Prefactura::where('id', $data['servidor_id'])->where('empresa_id', $empresaId)->first();
+
+        if ($prefactura) {
+            $prefactura->productos()->delete();
+            $prefactura->delete();
+        }
+
+        $this->registrarSincronizada($data['uuid'], 'prefactura_borrar', $empresaId, null);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Borra en el servidor una orden de taller que se borro offline en
+     * Turion -- mismo motivo que prefacturaBorrar().
+     */
+    public function tallerBorrar(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'uuid' => 'required|uuid',
+            'servidor_id' => 'required|integer',
+        ]);
+
+        $empresaId = auth()->user()->getEmpresaActualId();
+
+        if ($this->buscarSincronizada($data['uuid'])) {
+            return response()->json(['ok' => true]);
+        }
+
+        TallerOrden::where('id', $data['servidor_id'])->where('empresa_id', $empresaId)->delete();
+
+        $this->registrarSincronizada($data['uuid'], 'taller_borrar', $empresaId, null);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Cancela en el servidor una reserva de hotel que se cancelo offline en
+     * Turion -- mismo motivo que prefacturaBorrar(). No se borra (una
+     * reserva cancelada sigue siendo historial util), se marca 'cancelada'
+     * igual que HotelPanel::cancelarReserva() en linea.
+     */
+    public function hotelCancelar(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'uuid' => 'required|uuid',
+            'servidor_id' => 'required|integer',
+        ]);
+
+        $empresaId = auth()->user()->getEmpresaActualId();
+
+        if ($this->buscarSincronizada($data['uuid'])) {
+            return response()->json(['ok' => true]);
+        }
+
+        HotelReserva::where('id', $data['servidor_id'])->where('empresa_id', $empresaId)
+            ->update(['estado' => 'cancelada']);
+
+        $this->registrarSincronizada($data['uuid'], 'hotel_cancelar', $empresaId, null);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Libera en el servidor una mesa que se libero offline en Turion.
+     * A diferencia de taller/hotel, una orden de mesa no tiene su propio
+     * servidor_id -- se identifica por mesa_id (mesas SI vienen en el
+     * catalogo con el mismo id en ambos lados), buscando la orden
+     * actualmente activa de esa mesa (mismo criterio de "activa" que usa
+     * AgregarItemMesaService al agregar items).
+     */
+    public function mesaLiberar(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'uuid' => 'required|uuid',
+            'mesa_id' => 'required|integer',
+        ]);
+
+        $empresaId = auth()->user()->getEmpresaActualId();
+
+        if ($this->buscarSincronizada($data['uuid'])) {
+            return response()->json(['ok' => true]);
+        }
+
+        $mesa = Mesa::where('id', $data['mesa_id'])->where('empresa_id', $empresaId)->first();
+
+        if ($mesa) {
+            \App\Models\OrdenMesa::where('mesa_id', $mesa->id)
+                ->where('empresa_id', $empresaId)
+                ->whereIn('estado', ['abierta', 'en_preparacion'])
+                ->update(['estado' => 'cancelada', 'cerrada_en' => now()]);
+
+            $mesa->update(['estado' => 'libre']);
+        }
+
+        $this->registrarSincronizada($data['uuid'], 'mesa_liberar', $empresaId, null);
+
+        return response()->json(['ok' => true]);
+    }
+
     private function resolverClientePrefactura(int $empresaId, array $data): ?int
     {
         return ResolverActorService::resolverOCrear($empresaId, $data['cliente'] ?? [], $data['cliente_id'] ?? null);

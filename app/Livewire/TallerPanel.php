@@ -324,7 +324,17 @@ class TallerPanel extends Component
 
     public function eliminarOrden(int $id): void
     {
-        TallerOrden::where('empresa_id', $this->empresaId())->findOrFail($id)->delete();
+        $orden = TallerOrden::where('empresa_id', $this->empresaId())->findOrFail($id);
+
+        // Sin esto, si esta orden ya tenia contraparte en el droplet (se
+        // subio antes, o se bajo de ahi), el siguiente "Sincronizar" la
+        // volvia a traer -- el droplet nunca se enteraba de que se borro
+        // localmente.
+        if (DB::getDriverName() === 'sqlite' && $orden->servidor_id) {
+            \App\Services\Turion\ColaSincronizacion::encolarTallerBorrado($orden->servidor_id);
+        }
+
+        $orden->delete();
     }
 
     // ── Mecánicos / Liquidación ──────────────────────────────────────────────

@@ -722,6 +722,15 @@ class HotelPanel extends Component
             return;
         }
 
+        $reserva = HotelReserva::where('empresa_id', $this->empresaId())->where('id', $reservaId)->first();
+
+        // Sin esto, si esta reserva ya tenia contraparte en el droplet, el
+        // siguiente "Sincronizar" la volvia a traer activa -- el droplet
+        // nunca se enteraba de que se cancelo localmente.
+        if ($reserva && DB::getDriverName() === 'sqlite' && $reserva->servidor_id) {
+            ColaSincronizacion::encolarHotelCancelado($reserva->servidor_id);
+        }
+
         HotelReserva::where('empresa_id', $this->empresaId())->where('id', $reservaId)->update(['estado' => 'cancelada']);
         $this->dispatch('notify', type: 'success', message: 'Reserva cancelada.');
     }

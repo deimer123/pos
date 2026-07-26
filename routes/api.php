@@ -68,6 +68,10 @@ Route::prefix('pairing')->group(function () {
             Route::post('/hotel/item', [PosSyncController::class, 'hotelItem'])->name('api.pairing.subir.hotel-item');
             Route::post('/hotel/facturar', [PosSyncController::class, 'hotelFacturar'])->name('api.pairing.subir.hotel-facturar');
             Route::post('/prefactura/guardar', [PosSyncController::class, 'prefacturaGuardar'])->name('api.pairing.subir.prefactura-guardar');
+            Route::post('/prefactura/borrar', [PosSyncController::class, 'prefacturaBorrar'])->name('api.pairing.subir.prefactura-borrar');
+            Route::post('/taller/borrar', [PosSyncController::class, 'tallerBorrar'])->name('api.pairing.subir.taller-borrar');
+            Route::post('/hotel/cancelar', [PosSyncController::class, 'hotelCancelar'])->name('api.pairing.subir.hotel-cancelar');
+            Route::post('/mesa/liberar', [PosSyncController::class, 'mesaLiberar'])->name('api.pairing.subir.mesa-liberar');
             Route::post('/actor/crear', [PosSyncController::class, 'actorCrear'])->name('api.pairing.subir.actor-crear');
         });
     });

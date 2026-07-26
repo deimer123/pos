@@ -72,10 +72,18 @@ class PosPush extends Command
 
                 if ($operacion->tipo === 'taller_crear' && isset($payload['local_id'], $resultado['id'])) {
                     $this->tallerIdMap[$payload['local_id']] = $resultado['id'];
+
+                    // Igual que con Actor/Prefactura mas abajo: sin guardar
+                    // esto en la fila local, borrar o cancelar esta orden
+                    // MAS TARDE (otra sesion, no esta misma corrida de
+                    // "Subir") no tendria como saber cual es su id en el
+                    // droplet hasta el proximo "Sincronizar".
+                    DB::table('taller_ordenes')->where('id', $payload['local_id'])->update(['servidor_id' => $resultado['id']]);
                 }
 
                 if ($operacion->tipo === 'hotel_crear' && isset($payload['local_id'], $resultado['id'])) {
                     $this->hotelIdMap[$payload['local_id']] = $resultado['id'];
+                    DB::table('hotel_reservas')->where('id', $payload['local_id'])->update(['servidor_id' => $resultado['id']]);
                 }
 
                 if ($operacion->tipo === 'actor_crear' && isset($payload['actor_local_id'], $resultado['id'])) {
@@ -164,6 +172,10 @@ class PosPush extends Command
             'hotel_item' => ['/api/pairing/subir/hotel/item', $this->conHotelReservaIdResuelto($payload)],
             'hotel_facturar' => ['/api/pairing/subir/hotel/facturar', $this->conHotelReservaIdResuelto($payload)],
             'prefactura_guardar' => ['/api/pairing/subir/prefactura/guardar', $this->conPrefacturaServidorIdResuelto($payload)],
+            'prefactura_borrar' => ['/api/pairing/subir/prefactura/borrar', $payload],
+            'taller_borrar' => ['/api/pairing/subir/taller/borrar', $payload],
+            'hotel_cancelar' => ['/api/pairing/subir/hotel/cancelar', $payload],
+            'mesa_liberar' => ['/api/pairing/subir/mesa/liberar', $payload],
             'actor_crear' => ['/api/pairing/subir/actor/crear', $payload],
             default => throw new \RuntimeException("Tipo de operacion desconocido: {$tipo}"),
         };

@@ -98,6 +98,39 @@ class ColaSincronizacion
         ]);
     }
 
+    /**
+     * Encola borrar/cancelar en el droplet algo que se borro/cancelo
+     * offline en Turion -- sin esto, el siguiente "Sincronizar" lo volvia
+     * a bajar del droplet (que nunca se entero del borrado local). Solo
+     * tiene sentido si esa fila YA tenia contraparte alla (servidor_id):
+     * si nunca se subio, no hay nada que borrar en el droplet.
+     */
+    public static function encolarPrefacturaBorrada(int $servidorId): void
+    {
+        self::encolar('prefactura_borrar', ['servidor_id' => $servidorId]);
+    }
+
+    public static function encolarTallerBorrado(int $servidorId): void
+    {
+        self::encolar('taller_borrar', ['servidor_id' => $servidorId]);
+    }
+
+    public static function encolarHotelCancelado(int $servidorId): void
+    {
+        self::encolar('hotel_cancelar', ['servidor_id' => $servidorId]);
+    }
+
+    /**
+     * A diferencia de las anteriores, una mesa no tiene su propio
+     * servidor_id -- se identifica por mesa_id (las mesas SI vienen en el
+     * catalogo con el mismo id en ambos lados), asi que siempre tiene
+     * sentido encolarla.
+     */
+    public static function encolarMesaLiberada(int $mesaId): void
+    {
+        self::encolar('mesa_liberar', ['mesa_id' => $mesaId]);
+    }
+
     private static function tablaDisponible(): bool
     {
         static $existe = null;
