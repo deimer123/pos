@@ -224,22 +224,37 @@ fn correr_artisan(env: &LocalEnv, args: &[&str], app_url: &str) {
 // a proposito: subir datos hacia afuera no deberia pasar sin que alguien lo
 // decida.
 fn iniciar_sincronizacion_automatica(env: LocalEnv, app_url: String) {
-    std::thread::spawn(move || loop {
-        let intento = std::panic::catch_unwind(|| {
-            correr_artisan(&env, &["pos:sync-catalog", "--if-due=12"], &app_url);
-        });
+    std::thread::spawn(move || {
+        // Al abrir la app: intento FORZADO (sin --if-due), sin importar
+        // cuanto paso desde la ultima vez -- si hay internet, se
+        // sincroniza ya mismo con lo mas reciente del droplet; si no hay
+        // internet, esto falla en silencio (correr_artisan entra en
+        // panic, catch_unwind lo atrapa aqui abajo) y la app sigue
+        // funcionando con los datos que ya tenia (la ultima sincronizacion
+        // programada mientras estaba cerrada, o la ultima manual).
+        sincronizar_con_log(&env, &app_url, &["pos:sync-catalog"]);
 
-        if let Err(e) = intento {
-            let mensaje = e
-                .downcast_ref::<String>()
-                .cloned()
-                .or_else(|| e.downcast_ref::<&str>().map(|s| s.to_string()))
-                .unwrap_or_else(|| "error desconocido".into());
-            log::warn!("Sincronizacion automatica en segundo plano fallo (se reintenta en la proxima revision): {mensaje}");
+        loop {
+            std::thread::sleep(Duration::from_secs(60 * 60));
+
+            sincronizar_con_log(&env, &app_url, &["pos:sync-catalog", "--if-due=12"]);
         }
-
-        std::thread::sleep(Duration::from_secs(60 * 60));
     });
+}
+
+fn sincronizar_con_log(env: &LocalEnv, app_url: &str, args: &[&str]) {
+    let intento = std::panic::catch_unwind(|| {
+        correr_artisan(env, args, app_url);
+    });
+
+    if let Err(e) = intento {
+        let mensaje = e
+            .downcast_ref::<String>()
+            .cloned()
+            .or_else(|| e.downcast_ref::<&str>().map(|s| s.to_string()))
+            .unwrap_or_else(|| "error desconocido".into());
+        log::warn!("Sincronizacion automatica en segundo plano fallo (se reintenta en la proxima revision): {mensaje}");
+    }
 }
 
 /// Genera (o refresca) un .bat que corre "Subir" + "Sincronizar" sin abrir
@@ -276,50 +291,72 @@ fn generar_script_sincronizacion(env: &LocalEnv, data_dir: &std::path::Path) -> 
     bat_path
 }
 
-/// Registra (o refresca) dos tareas del Programador de tareas de Windows
-/// para que el equipo se sincronice con el droplet aunque Sistema POS
-/// Offline este cerrado -- al iniciar sesion en Windows, y todos los dias
-/// a las 6pm (para que un corte de internet de varios dias no deje la
-/// informacion mas de un dia desactualizada). "onlogon" (no "onstart")
-/// para no necesitar permisos de administrador: corre con la sesion del
-/// usuario actual, que es lo mas parecido a "tan pronto se prende el
-/// equipo" en una terminal que se deja siempre con la misma sesion
-/// iniciada.
+/// Registra (o refresca) la sincronizacion diaria a las 6pm en el
+/// Programador de tareas de Windows -- para que un corte de internet de
+/// varios dias no deje la informacion mas de un dia desactualizada. El
+/// disparador "al iniciar sesion" (onlogon) se maneja aparte, en
+/// registrar_inicio_con_windows(): crear una tarea con ese disparador
+/// via schtasks pide permisos de administrador en equipos con ciertas
+/// politicas (probado: "Acceso denegado" con una cuenta normal), mientras
+/// que "daily" no los pide.
 fn registrar_tareas_programadas(bat_path: &std::path::Path) {
-    let tareas: [(&str, &[&str]); 2] = [
-        ("SistemaPOSOfflineSync_AlIniciarSesion", &["/sc", "onlogon"]),
-        ("SistemaPOSOfflineSync_6PM", &["/sc", "daily", "/st", "18:00"]),
-    ];
+    let mut cmd = Command::new("schtasks");
+    cmd.arg("/create")
+        .arg("/tn")
+        .arg("SistemaPOSOfflineSync_6PM")
+        .arg("/tr")
+        .arg(format!("\"{}\"", bat_path.display()))
+        .args(["/sc", "daily", "/st", "18:00"])
+        .arg("/f")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
 
-    for (nombre, args_extra) in tareas {
-        let mut cmd = Command::new("schtasks");
-        cmd.arg("/create")
-            .arg("/tn")
-            .arg(nombre)
-            .arg("/tr")
-            .arg(format!("\"{}\"", bat_path.display()))
-            .args(args_extra)
-            .arg("/f")
-            .stdout(Stdio::null())
-            .stderr(Stdio::null());
+    #[cfg(windows)]
+    cmd.creation_flags(CREATE_NO_WINDOW);
 
-        #[cfg(windows)]
-        cmd.creation_flags(CREATE_NO_WINDOW);
-
-        match cmd.status() {
-            Ok(status) if status.success() => {
-                log::info!("Tarea programada '{nombre}' registrada.");
-            }
-            Ok(status) => {
-                log::warn!(
-                    "No se pudo registrar la tarea programada '{nombre}' (codigo {:?}).",
-                    status.code()
-                );
-            }
-            Err(e) => {
-                log::warn!("No se pudo ejecutar schtasks para '{nombre}': {e}");
-            }
+    match cmd.status() {
+        Ok(status) if status.success() => {
+            log::info!("Tarea programada de sincronizacion diaria (6pm) registrada.");
         }
+        Ok(status) => {
+            log::warn!(
+                "No se pudo registrar la tarea programada de las 6pm (codigo {:?}).",
+                status.code()
+            );
+        }
+        Err(e) => {
+            log::warn!("No se pudo ejecutar schtasks para la tarea de las 6pm: {e}");
+        }
+    }
+}
+
+/// Hace que Windows corra el script de sincronizacion, sin ventana
+/// visible, cada vez que este usuario inicia sesion -- escribiendo un
+/// .vbs en la carpeta de Inicio (%APPDATA%\...\Startup), que Windows ya
+/// ejecuta solo al iniciar sesion, sin necesitar el Programador de
+/// tareas ni permisos de administrador (a diferencia del intento con
+/// schtasks /sc onlogon, que en la practica pidio elevacion).
+fn registrar_inicio_con_windows(bat_path: &std::path::Path) {
+    let Ok(appdata) = std::env::var("APPDATA") else {
+        log::warn!("No se pudo resolver %APPDATA% para registrar el inicio con Windows.");
+        return;
+    };
+
+    let carpeta_inicio = PathBuf::from(appdata).join("Microsoft\\Windows\\Start Menu\\Programs\\Startup");
+    let vbs_path = carpeta_inicio.join("SistemaPOSOfflineSync.vbs");
+
+    // El .vbs solo reenvia al .bat con la ventana oculta (el 0 en Run) --
+    // sin esto, Windows abriria brevemente una consola negra al iniciar
+    // sesion cada vez.
+    let contenido = format!(
+        "Set objShell = CreateObject(\"WScript.Shell\")\r\nobjShell.Run \"\"\"{}\"\"\", 0, False\r\n",
+        bat_path.display()
+    );
+
+    if let Err(e) = fs::write(&vbs_path, contenido) {
+        log::warn!("No se pudo escribir el script de inicio con Windows: {e}");
+    } else {
+        log::info!("Sincronizacion al iniciar sesion registrada en la carpeta de Inicio.");
     }
 }
 
@@ -378,6 +415,7 @@ pub fn run() {
             if let Ok(data_dir) = app.path().app_data_dir() {
                 let bat_path = generar_script_sincronizacion(&env, &data_dir);
                 registrar_tareas_programadas(&bat_path);
+                registrar_inicio_con_windows(&bat_path);
             }
 
             // Siempre (no solo en el primer arranque): "migrate" es
