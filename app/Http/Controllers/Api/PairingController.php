@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\HotelReserva;
+use App\Models\OrdenMesa;
 use App\Models\PairingCode;
 use App\Models\Prefactura;
 use App\Models\TallerOrden;
@@ -181,6 +182,55 @@ class PairingController extends Controller
                     'nombre' => $item->descripcion,
                     'cantidad' => (float) $item->cantidad,
                     'precio' => (float) $item->precio_unitario,
+                ])->values(),
+            ])->values(),
+        ]);
+    }
+
+    /**
+     * Ordenes de mesa activas (abierta/en_preparacion/lista) de la
+     * empresa, con sus items -- para que Turion las baje al sincronizar
+     * (ver OrdenMesaSyncPull). Cubre tanto mesas de salon como domicilios
+     * (tipo_pedido='domicilio' es la MISMA orden de mesa, solo marcada
+     * distinto) -- ninguna de las dos bajaba antes de esto, aunque sus
+     * items se hubieran subido desde Turion.
+     */
+    public function ordenesMesa(Request $request): JsonResponse
+    {
+        $empresaId = $request->user()->getEmpresaActualId();
+
+        $ordenes = OrdenMesa::with('items')
+            ->where('empresa_id', $empresaId)
+            ->whereIn('estado', ['abierta', 'en_preparacion', 'lista'])
+            ->get();
+
+        return response()->json([
+            'ordenes' => $ordenes->map(fn (OrdenMesa $o) => [
+                'mesa_id' => $o->mesa_id,
+                'cliente_id' => $o->cliente_id,
+                'estado' => $o->estado,
+                'subtotal' => (float) $o->subtotal,
+                'impuestos' => (float) $o->impuestos,
+                'descuento' => (float) $o->descuento,
+                'total' => (float) $o->total,
+                'observaciones' => $o->observaciones,
+                'tipo_pedido' => $o->tipo_pedido,
+                'costo_empaque' => (float) $o->costo_empaque,
+                'dom_nombre' => $o->dom_nombre,
+                'dom_telefono' => $o->dom_telefono,
+                'dom_direccion' => $o->dom_direccion,
+                'dom_observaciones' => $o->dom_observaciones,
+                'dom_costo_domicilio' => (float) $o->dom_costo_domicilio,
+                'dom_costo_desechables' => (float) $o->dom_costo_desechables,
+                'numero_cocina_dia' => $o->numero_cocina_dia,
+                'entregada' => (bool) $o->entregada,
+                'items' => $o->items->map(fn ($item) => [
+                    'product_id' => $item->product_id,
+                    'cantidad' => (float) $item->cantidad,
+                    'precio_unitario' => (float) $item->precio_unitario,
+                    'subtotal' => (float) $item->subtotal,
+                    'estado_cocina' => $item->estado_cocina,
+                    'nota_cocina' => $item->nota_cocina,
                 ])->values(),
             ])->values(),
         ]);

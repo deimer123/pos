@@ -53,6 +53,9 @@ Route::prefix('pairing')->group(function () {
         Route::get('/reservas-hotel', [PairingController::class, 'reservasHotel'])
             ->name('api.pairing.reservas-hotel');
 
+        Route::get('/ordenes-mesa', [PairingController::class, 'ordenesMesa'])
+            ->name('api.pairing.ordenes-mesa');
+
         // Subida de lo hecho offline en una terminal de Turion (boton
         // "Subir"): mismo controlador que ya usaba el navegador (sesion
         // web), aqui autenticado por el token de Sanctum que "bootstrap"
@@ -72,6 +75,7 @@ Route::prefix('pairing')->group(function () {
             Route::post('/taller/borrar', [PosSyncController::class, 'tallerBorrar'])->name('api.pairing.subir.taller-borrar');
             Route::post('/hotel/cancelar', [PosSyncController::class, 'hotelCancelar'])->name('api.pairing.subir.hotel-cancelar');
             Route::post('/mesa/liberar', [PosSyncController::class, 'mesaLiberar'])->name('api.pairing.subir.mesa-liberar');
+            Route::post('/mesa/actualizar', [PosSyncController::class, 'mesaActualizar'])->name('api.pairing.subir.mesa-actualizar');
             Route::post('/actor/crear', [PosSyncController::class, 'actorCrear'])->name('api.pairing.subir.actor-crear');
         });
     });

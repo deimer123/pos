@@ -309,6 +309,60 @@ class PosSyncController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    /**
+     * Actualiza en el servidor los datos de la orden de una mesa (tipo de
+     * pedido, datos de domicilio, observaciones) que se enviaron a cocina
+     * offline en Turion -- ver CarritoVenta::mesaEnviarACocina(). Los
+     * items en si ya suben aparte via "mesa_item"; esto es solo la
+     * metadata de la orden (lo que hace que un pedido quede marcado como
+     * domicilio, con nombre/telefono/direccion, en vez de un pedido local
+     * comun).
+     */
+    public function mesaActualizar(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'uuid' => 'required|uuid',
+            'mesa_id' => 'required|integer',
+            'tipo_pedido' => 'nullable|string',
+            'observaciones' => 'nullable|string',
+            'costo_empaque' => 'nullable|numeric',
+            'dom_nombre' => 'nullable|string',
+            'dom_telefono' => 'nullable|string',
+            'dom_direccion' => 'nullable|string',
+            'dom_observaciones' => 'nullable|string',
+            'dom_costo_domicilio' => 'nullable|numeric',
+            'dom_costo_desechables' => 'nullable|numeric',
+        ]);
+
+        $empresaId = auth()->user()->getEmpresaActualId();
+
+        if ($this->buscarSincronizada($data['uuid'])) {
+            return response()->json(['ok' => true]);
+        }
+
+        \App\Models\OrdenMesa::where('mesa_id', $data['mesa_id'])
+            ->where('empresa_id', $empresaId)
+            ->whereIn('estado', ['abierta', 'en_preparacion', 'lista'])
+            ->latest()
+            ->first()
+            ?->update(array_filter([
+                'estado' => 'en_preparacion',
+                'tipo_pedido' => $data['tipo_pedido'] ?? null,
+                'observaciones' => $data['observaciones'] ?? null,
+                'costo_empaque' => $data['costo_empaque'] ?? null,
+                'dom_nombre' => $data['dom_nombre'] ?? null,
+                'dom_telefono' => $data['dom_telefono'] ?? null,
+                'dom_direccion' => $data['dom_direccion'] ?? null,
+                'dom_observaciones' => $data['dom_observaciones'] ?? null,
+                'dom_costo_domicilio' => $data['dom_costo_domicilio'] ?? null,
+                'dom_costo_desechables' => $data['dom_costo_desechables'] ?? null,
+            ], fn ($v) => $v !== null));
+
+        $this->registrarSincronizada($data['uuid'], 'mesa_actualizar', $empresaId, null);
+
+        return response()->json(['ok' => true]);
+    }
+
     private function resolverClientePrefactura(int $empresaId, array $data): ?int
     {
         return ResolverActorService::resolverOCrear($empresaId, $data['cliente'] ?? [], $data['cliente_id'] ?? null);

@@ -4834,6 +4834,26 @@ public function uiCreditoActual(): array
             'dom_costo_desechables'=> $costoEmpaque,
         ]);
 
+        // A diferencia de AgregarItemMesaService (que ya encola cada item
+        // agregado), esto encola los datos de la ORDEN en si -- tipo de
+        // pedido, datos del domicilio, observaciones. Sin esto un pedido
+        // marcado como domicilio en Turion nunca llegaba marcado como tal
+        // al droplet, aunque sus items si se subieran.
+        if ($this->esTurion) {
+            \App\Services\Turion\ColaSincronizacion::encolar('mesa_actualizar', [
+                'mesa_id' => $this->mesaId,
+                'tipo_pedido' => $tipoPedido,
+                'observaciones' => $obsBase,
+                'costo_empaque' => $costoDomicilio + $costoEmpaque,
+                'dom_nombre' => $domNombre,
+                'dom_telefono' => $domTelefono,
+                'dom_direccion' => $domDireccion,
+                'dom_observaciones' => $domObservaciones,
+                'dom_costo_domicilio' => $costoDomicilio,
+                'dom_costo_desechables' => $costoEmpaque,
+            ]);
+        }
+
         // Marcar en el carrito local como enviado
         foreach ($this->carrito as $key => $item) {
             if (empty($item['enviado_cocina'])) {
