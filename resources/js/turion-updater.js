@@ -18,6 +18,17 @@ if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
 
             if (update) {
                 console.log(`Sistema POS Offline: actualización ${update.version} disponible, descargando...`);
+
+                // Apaga el servidor PHP local ANTES de instalar: si no,
+                // el instalador cierra la ventana pero deja ese proceso
+                // hijo huerfano bloqueando sus propios archivos ("Error
+                // opening file for writing" al reinstalar encima).
+                try {
+                    await window.__TAURI_INTERNALS__.invoke('detener_servidor_local');
+                } catch (e) {
+                    console.warn('Sistema POS Offline: no se pudo detener el servidor local antes de actualizar', e);
+                }
+
                 await update.downloadAndInstall();
                 await relaunch();
             }

@@ -3408,6 +3408,12 @@ public function abrirModalCartera(): void
         abort(403);
     }
 
+    if ($this->esTurion) {
+        $this->dispatch('error', 'Cartera no está disponible en modo offline.');
+
+        return;
+    }
+
     $this->carteraBuscar = '';
     $this->carteraClienteId = null;
     $this->carteraFacturas = [];
@@ -4218,6 +4224,12 @@ public function abrirMovimientoCajaModal(string $tipo = 'salida'): void
 {
     if (! auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion'])) {
         abort(403);
+    }
+
+    if ($this->esTurion) {
+        $this->dispatch('error', 'Entrada/Salida de caja no está disponible en modo offline.');
+
+        return;
     }
 
     if (! $this->verificarCajaAbierta()) {

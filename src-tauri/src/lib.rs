@@ -383,9 +383,27 @@ fn lanzar_servidor_php(env: &LocalEnv, port: u16, app_url: &str) -> Child {
     cmd.spawn().expect("no se pudo iniciar el servidor local del POS (php -S)")
 }
 
+/// Apaga el servidor PHP local (el "hijo" que arranca esta app para que
+/// funcione el POS) justo antes de instalar una actualizacion. Sin esto,
+/// cuando el instalador de la version nueva cierra la ventana para
+/// reemplazar los archivos, mata "app.exe" pero NO a este proceso hijo
+/// (que solo se cierra solo cuando la ventana se cierra de forma normal,
+/// via el evento ExitRequested mas abajo) -- queda huerfano bloqueando
+/// sus propios .dll y el instalador falla con "Error opening file for
+/// writing". Se llama desde turion-updater.js justo antes de
+/// downloadAndInstall().
+#[tauri::command]
+fn detener_servidor_local(state: tauri::State<PhpServerHandle>) {
+    if let Some(mut child) = state.0.lock().unwrap().take() {
+        let _ = child.kill();
+        log::info!("Servidor PHP local detenido antes de instalar la actualizacion.");
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .invoke_handler(tauri::generate_handler![detener_servidor_local])
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(

@@ -809,7 +809,7 @@
             </button>
             @endif
 
-            @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion']) && $cajaEstado === 'abierta' && auth()->user()->puedeVerBotonPos('entrada_salida'))
+            @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion']) && $cajaEstado === 'abierta' && auth()->user()->puedeVerBotonPos('entrada_salida') && ! $esTurion)
             <button type="button" x-on:click="$wire.abrirMovimientoCajaModal('salida');"
                 style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#0891b2;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;">
                 Entrada/Salida
@@ -845,7 +845,7 @@
             </button>
             @endif
 
-            @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'recepcion']))
+            @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'recepcion']) && ! $esTurion)
                 @if (auth()->user()->puedeVerBotonPos('cartera'))
                 <button type="button" wire:click="abrirModalCartera"
                     style="width:100%;text-align:center;background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 12px;height:30px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
@@ -914,7 +914,7 @@
                 class="pos-cart-secondary-action pos-btn-texto-doble pos-hide-mobile bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow">
                 + Crear Cliente
             </button>
-            @if (auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa'))
+            @if ((auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa')) && ! $esTurion)
             @if ($cajaEstado === 'abierta')
             <button type="button"
                 class="pos-cart-secondary-action pos-btn-texto-doble pos-hide-mobile bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 h-8 rounded-full shadow"
@@ -1012,7 +1012,7 @@
 
                 @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'recepcion']))
                     @if ($cajaEstado === 'abierta')
-                        @if (auth()->user()->puedeVerBotonPos('entrada_salida'))
+                        @if (auth()->user()->puedeVerBotonPos('entrada_salida') && ! $esTurion)
                         <button type="button" class="pos-cart-menu-item pos-cart-menu-item-cash-move" wire:key="mobile-action-movimiento-caja" @click.prevent.stop="open = false; $wire.abrirMovimientoCajaModal('salida');">
                             Entrada / salida
                         </button>
@@ -1025,7 +1025,7 @@
                         @endif
                     @endif
 
-                    @if (auth()->user()->puedeVerBotonPos('cartera'))
+                    @if (auth()->user()->puedeVerBotonPos('cartera') && ! $esTurion)
                     <button type="button" class="pos-cart-menu-item pos-cart-menu-item-wallet" wire:key="mobile-action-cartera" @click.prevent.stop="open = false; $wire.abrirModalCartera();">
                         Cartera
                     </button>
