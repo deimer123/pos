@@ -12,6 +12,10 @@
         .mt { margin-top: 10px; }
         .mb { margin-bottom: 10px; }
         hr { border: 0; border-top: 1px dashed #333; margin: 10px 0; }
+        @media print {
+            @page { size: auto; margin: 0; }
+            body { margin: 0; }
+        }
     </style>
 </head>
 <body onload="window.print()">

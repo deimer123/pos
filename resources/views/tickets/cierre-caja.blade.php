@@ -8,6 +8,10 @@
         .titulo { font-size: 18px; font-weight: bold; text-align: center; }
         .resumen { margin: 10px 0; }
         .totales { font-weight: bold; }
+        @media print {
+            @page { size: auto; margin: 0; }
+            body { margin: 0; }
+        }
     </style>
 </head>
 <body>
