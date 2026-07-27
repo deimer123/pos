@@ -16,7 +16,7 @@
         .nota { font-size: 10px; color: #555; text-align: center; margin-top: 8px; }
         @media print {
             @page { size: auto; margin: 0; }
-            body { width: 100%; margin: 0; }
+            body { margin: 0; }
             .no-print { display: none; }
         }
     </style>
