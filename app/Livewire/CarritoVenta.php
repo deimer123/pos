@@ -4905,6 +4905,12 @@ public function uiCreditoActual(): array
             \App\Models\Mesa::where('id', $this->mesaId)->update(['estado' => 'libre']);
         }
 
+        // Este es el metodo real que usa la pantalla de mesa (pos-mesa.blade.php
+        // -> carrito-venta, no ComandaMesa.php, que no lo usa ninguna vista).
+        if ($this->esTurion) {
+            \App\Services\Turion\ColaSincronizacion::encolarMesaLiberada($this->mesaId);
+        }
+
         $this->limpiarCarrito();
         $this->redirect(route('pos'));
     }
@@ -4920,6 +4926,10 @@ public function uiCreditoActual(): array
 
         // Mesa queda libre para nuevos clientes
         \App\Models\Mesa::where('id', $this->mesaId)->update(['estado' => 'libre']);
+
+        if ($this->esTurion) {
+            \App\Services\Turion\ColaSincronizacion::encolar('mesa_en_espera', ['mesa_id' => $this->mesaId]);
+        }
 
         $this->limpiarCarrito();
         $this->redirect(route('pos'));

@@ -145,6 +145,7 @@ class PosPush extends Command
             'taller_borrar' => ['/api/pairing/subir/taller/borrar', $payload],
             'hotel_cancelar' => ['/api/pairing/subir/hotel/cancelar', $payload],
             'mesa_liberar' => ['/api/pairing/subir/mesa/liberar', $payload],
+            'mesa_en_espera' => ['/api/pairing/subir/mesa/en-espera', $payload],
             'mesa_actualizar' => ['/api/pairing/subir/mesa/actualizar', $payload],
             'actor_crear' => ['/api/pairing/subir/actor/crear', $payload],
             default => throw new \RuntimeException("Tipo de operacion desconocido: {$tipo}"),

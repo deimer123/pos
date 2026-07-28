@@ -190,3 +190,62 @@ test('PosSyncController::mesaActualizar() marca la orden activa de esa mesa como
     expect($orden->dom_nombre)->toBe('Lucas Dangos');
     expect((float) $orden->dom_costo_domicilio)->toBe(5000.0);
 });
+
+test('PosSyncController::mesaLiberar() cancela la orden activa y libera la mesa', function () {
+    $empresa = crearEmpresaMesaPullTest();
+    $mesa = crearMesaPullTest($empresa, 'M3');
+    $mesa->update(['estado' => 'ocupada']);
+    $cajero = User::factory()->create(['empresa_id' => $empresa->id, 'tipo_usuario' => 'empleado']);
+    Sanctum::actingAs($cajero, ['*']);
+
+    $orden = OrdenMesa::create(['empresa_id' => $empresa->id, 'mesa_id' => $mesa->id, 'estado' => 'en_preparacion']);
+
+    $respuesta = $this->postJson('/api/pairing/subir/mesa/liberar', [
+        'uuid' => (string) \Illuminate\Support\Str::uuid(),
+        'mesa_id' => $mesa->id,
+    ]);
+
+    $respuesta->assertOk();
+    expect($orden->fresh()->estado)->toBe('cancelada');
+    expect($mesa->fresh()->estado)->toBe('libre');
+});
+
+test('PosSyncController::mesaLiberar() NO libera la mesa si queda una cuenta en espera', function () {
+    $empresa = crearEmpresaMesaPullTest();
+    $mesa = crearMesaPullTest($empresa, 'M4');
+    $mesa->update(['estado' => 'ocupada']);
+    $cajero = User::factory()->create(['empresa_id' => $empresa->id, 'tipo_usuario' => 'empleado']);
+    Sanctum::actingAs($cajero, ['*']);
+
+    $activa = OrdenMesa::create(['empresa_id' => $empresa->id, 'mesa_id' => $mesa->id, 'estado' => 'en_preparacion']);
+    $enEspera = OrdenMesa::create(['empresa_id' => $empresa->id, 'mesa_id' => $mesa->id, 'estado' => 'lista']);
+
+    $respuesta = $this->postJson('/api/pairing/subir/mesa/liberar', [
+        'uuid' => (string) \Illuminate\Support\Str::uuid(),
+        'mesa_id' => $mesa->id,
+    ]);
+
+    $respuesta->assertOk();
+    expect($activa->fresh()->estado)->toBe('cancelada');
+    expect($enEspera->fresh()->estado)->toBe('lista');
+    expect($mesa->fresh()->estado)->toBe('ocupada');
+});
+
+test('PosSyncController::mesaEnEspera() pone la orden activa en lista y libera la mesa fisica', function () {
+    $empresa = crearEmpresaMesaPullTest();
+    $mesa = crearMesaPullTest($empresa, 'M5');
+    $mesa->update(['estado' => 'ocupada']);
+    $cajero = User::factory()->create(['empresa_id' => $empresa->id, 'tipo_usuario' => 'empleado']);
+    Sanctum::actingAs($cajero, ['*']);
+
+    $orden = OrdenMesa::create(['empresa_id' => $empresa->id, 'mesa_id' => $mesa->id, 'estado' => 'en_preparacion']);
+
+    $respuesta = $this->postJson('/api/pairing/subir/mesa/en-espera', [
+        'uuid' => (string) \Illuminate\Support\Str::uuid(),
+        'mesa_id' => $mesa->id,
+    ]);
+
+    $respuesta->assertOk();
+    expect($orden->fresh()->estado)->toBe('lista');
+    expect($mesa->fresh()->estado)->toBe('libre');
+});

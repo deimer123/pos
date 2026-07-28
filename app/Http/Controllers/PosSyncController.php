@@ -301,10 +301,57 @@ class PosSyncController extends Controller
                 ->whereIn('estado', ['abierta', 'en_preparacion'])
                 ->update(['estado' => 'cancelada', 'cerrada_en' => now()]);
 
-            $mesa->update(['estado' => 'libre']);
+            // Igual que CarritoVenta::mesaLiberar() en linea: si quedan
+            // cuentas en espera (estado 'lista') de esta misma mesa, no se
+            // libera -- todavia hay algo pendiente de cobrar ahi.
+            $cuentasEnEspera = \App\Models\OrdenMesa::where('mesa_id', $mesa->id)
+                ->where('empresa_id', $empresaId)
+                ->where('estado', 'lista')
+                ->exists();
+
+            if (! $cuentasEnEspera) {
+                $mesa->update(['estado' => 'libre']);
+            }
         }
 
         $this->registrarSincronizada($data['uuid'], 'mesa_liberar', $empresaId, null);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Pone en espera (cuenta pendiente por cobrar) la orden activa de una
+     * mesa que se puso en espera offline en Turion -- ver
+     * CarritoVenta::mesaEnEspera(). A diferencia de mesaLiberar(), la
+     * orden no se cancela (queda 'lista' para cobrarse despues, ver
+     * PanelMesas::cobrarCuentaPendiente()), solo se libera la mesa fisica
+     * para que puedan sentar otro cliente ahi mientras tanto.
+     */
+    public function mesaEnEspera(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'uuid' => 'required|uuid',
+            'mesa_id' => 'required|integer',
+        ]);
+
+        $empresaId = auth()->user()->getEmpresaActualId();
+
+        if ($this->buscarSincronizada($data['uuid'])) {
+            return response()->json(['ok' => true]);
+        }
+
+        $mesa = Mesa::where('id', $data['mesa_id'])->where('empresa_id', $empresaId)->first();
+
+        if ($mesa) {
+            \App\Models\OrdenMesa::where('mesa_id', $mesa->id)
+                ->where('empresa_id', $empresaId)
+                ->whereIn('estado', ['abierta', 'en_preparacion'])
+                ->update(['estado' => 'lista']);
+
+            $mesa->update(['estado' => 'libre']);
+        }
+
+        $this->registrarSincronizada($data['uuid'], 'mesa_en_espera', $empresaId, null);
 
         return response()->json(['ok' => true]);
     }

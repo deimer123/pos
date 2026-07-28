@@ -258,6 +258,13 @@ class PanelMesas extends Component
         $orden->update(['estado' => 'en_preparacion']);
         \App\Models\Mesa::where('id', $orden->mesa_id)->update(['estado' => 'ocupada']);
 
+        // Mismo tipo de operacion que CarritoVenta::mesaEnviarACocina() (el
+        // droplet solo necesita saber que esta mesa volvio a 'en_preparacion',
+        // reusa la misma logica del lado servidor).
+        if (\Illuminate\Support\Facades\DB::getDriverName() === 'sqlite') {
+            \App\Services\Turion\ColaSincronizacion::encolar('mesa_actualizar', ['mesa_id' => $orden->mesa_id]);
+        }
+
         $this->redirect(route('pos.mesa', $orden->mesa_id));
     }
 
