@@ -3,7 +3,9 @@
 namespace App\Console\Commands;
 
 use App\Models\Actor;
+use App\Models\HotelReserva;
 use App\Models\Prefactura;
+use App\Models\TallerOrden;
 use App\Services\Turion\ConectividadDroplet;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -14,20 +16,19 @@ use Illuminate\Support\Facades\DB;
  * y llama al endpoint de PosSyncController que corresponda segun el tipo,
  * usando el token de Sanctum guardado en sync_state al emparejar.
  *
- * Las ordenes de taller y reservas de hotel creadas offline solo existen
- * localmente hasta que se suben -- "taller_item"/"taller_facturar" (y sus
- * equivalentes de hotel) referencian el taller_orden_id/hotel_reserva_id
- * LOCAL, asi que antes de subirlos se resuelve cual fue el id real que el
- * servidor le asigno a esa orden/reserva cuando se subio su "_crear".
+ * Las ordenes de taller y reservas de hotel referencian el taller_orden_id/
+ * hotel_reserva_id LOCAL, asi que antes de subir un item/facturar se
+ * resuelve cual es su id real en el servidor -- leyendo directo la columna
+ * servidor_id de la fila local (no solo de un "_crear" en esta misma
+ * corrida): esa columna tambien queda poblada si la orden/reserva vino de
+ * un "Sincronizar" (bajada del droplet, ver TallerSyncPull/HotelSyncPull)
+ * en vez de haberse creado offline aqui.
  */
 class PosPush extends Command
 {
     protected $signature = 'pos:push';
 
     protected $description = 'Sube al droplet las ventas, mesas, ordenes de taller y reservas de hotel pendientes.';
-
-    private array $tallerIdMap = [];
-    private array $hotelIdMap = [];
 
     public function handle(): int
     {
@@ -51,8 +52,6 @@ class PosPush extends Command
             return self::SUCCESS;
         }
 
-        $this->cargarMapasYaSincronizados();
-
         $subidas = 0;
         $errores = 0;
 
@@ -71,18 +70,15 @@ class PosPush extends Command
                 ]);
 
                 if ($operacion->tipo === 'taller_crear' && isset($payload['local_id'], $resultado['id'])) {
-                    $this->tallerIdMap[$payload['local_id']] = $resultado['id'];
-
-                    // Igual que con Actor/Prefactura mas abajo: sin guardar
-                    // esto en la fila local, borrar o cancelar esta orden
-                    // MAS TARDE (otra sesion, no esta misma corrida de
-                    // "Subir") no tendria como saber cual es su id en el
-                    // droplet hasta el proximo "Sincronizar".
+                    // Se guarda en la fila local (no solo en memoria): sin
+                    // esto, borrar o cancelar esta orden MAS TARDE (otra
+                    // sesion, no esta misma corrida de "Subir") no tendria
+                    // como saber cual es su id en el droplet hasta el
+                    // proximo "Sincronizar".
                     DB::table('taller_ordenes')->where('id', $payload['local_id'])->update(['servidor_id' => $resultado['id']]);
                 }
 
                 if ($operacion->tipo === 'hotel_crear' && isset($payload['local_id'], $resultado['id'])) {
-                    $this->hotelIdMap[$payload['local_id']] = $resultado['id'];
                     DB::table('hotel_reservas')->where('id', $payload['local_id'])->update(['servidor_id' => $resultado['id']]);
                 }
 
@@ -132,33 +128,6 @@ class PosPush extends Command
         return $errores > 0 ? self::FAILURE : self::SUCCESS;
     }
 
-    /**
-     * Si una corrida anterior ya subio con exito algunas "_crear" (pero se
-     * quedaron otras operaciones pendientes por un corte de conexion a
-     * mitad de camino), esos mapeos local->servidor tambien deben quedar
-     * disponibles ahora, no solo los de esta misma corrida.
-     */
-    private function cargarMapasYaSincronizados(): void
-    {
-        DB::table('pending_sync_operations')
-            ->whereIn('tipo', ['taller_crear', 'hotel_crear'])
-            ->where('estado', 'sincronizado')
-            ->get()
-            ->each(function ($op) {
-                $payload = json_decode($op->payload, true) ?? [];
-
-                if (! isset($payload['local_id']) || ! $op->resultado_id) {
-                    return;
-                }
-
-                if ($op->tipo === 'taller_crear') {
-                    $this->tallerIdMap[$payload['local_id']] = $op->resultado_id;
-                } else {
-                    $this->hotelIdMap[$payload['local_id']] = $op->resultado_id;
-                }
-            });
-    }
-
     private function subirOperacion(string $tipo, array $payload): array
     {
         [$ruta, $body] = match ($tipo) {
@@ -187,12 +156,13 @@ class PosPush extends Command
     private function conTallerOrdenIdResuelto(array $payload): array
     {
         $localId = $payload['taller_orden_id'];
+        $servidorId = TallerOrden::find($localId)?->servidor_id;
 
-        if (! isset($this->tallerIdMap[$localId])) {
+        if (! $servidorId) {
             throw new \RuntimeException("Todavia no se ha subido la orden de taller local #{$localId}.");
         }
 
-        $payload['taller_orden_id'] = $this->tallerIdMap[$localId];
+        $payload['taller_orden_id'] = $servidorId;
 
         return $payload;
     }
@@ -200,12 +170,13 @@ class PosPush extends Command
     private function conHotelReservaIdResuelto(array $payload): array
     {
         $localId = $payload['hotel_reserva_id'];
+        $servidorId = HotelReserva::find($localId)?->servidor_id;
 
-        if (! isset($this->hotelIdMap[$localId])) {
+        if (! $servidorId) {
             throw new \RuntimeException("Todavia no se ha subido la reserva de hotel local #{$localId}.");
         }
 
-        $payload['hotel_reserva_id'] = $this->hotelIdMap[$localId];
+        $payload['hotel_reserva_id'] = $servidorId;
 
         return $payload;
     }

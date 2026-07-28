@@ -59,12 +59,13 @@ class FacturarEnLineaService
         ];
 
         // taller_orden_id/hotel_reserva_id que trae CarritoVenta son el id
-        // LOCAL de Turion -- si la orden/reserva se creo offline, el
-        // droplet tiene su PROPIA fila con un id distinto (asignado al
-        // subir su "_crear"). Sin este mapeo se mandaria un id que en el
-        // droplet no existe (o, peor, que ya es de otra orden/reserva).
+        // LOCAL de Turion -- el droplet tiene su PROPIA fila con un id
+        // distinto, guardado en la columna servidor_id (se llena al subir
+        // "_crear", o al bajarla en un "Sincronizar" si se creo directo en
+        // el droplet). Sin resolverlo se mandaria un id que en el droplet
+        // no existe (o, peor, que ya es de otra orden/reserva).
         if (! empty($opciones['taller_orden_id'])) {
-            $servidorId = ColaSincronizacion::servidorIdSincronizado('taller_crear', 'local_id', $opciones['taller_orden_id']);
+            $servidorId = \App\Models\TallerOrden::find($opciones['taller_orden_id'])?->servidor_id;
 
             if (! $servidorId) {
                 throw new \RuntimeException('Esta orden de taller todavia no se ha subido al droplet. Presiona "Sincronizar/Subir" antes de facturar.');
@@ -76,7 +77,7 @@ class FacturarEnLineaService
         }
 
         if (! empty($opciones['hotel_reserva_id'])) {
-            $servidorId = ColaSincronizacion::servidorIdSincronizado('hotel_crear', 'local_id', $opciones['hotel_reserva_id']);
+            $servidorId = \App\Models\HotelReserva::find($opciones['hotel_reserva_id'])?->servidor_id;
 
             if (! $servidorId) {
                 throw new \RuntimeException('Esta reserva de hotel todavia no se ha subido al droplet. Presiona "Sincronizar/Subir" antes de facturar.');
