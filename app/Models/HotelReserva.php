@@ -53,6 +53,12 @@ class HotelReserva extends Model
                 'fecha_checkout' => $reserva->fecha_checkout?->toDateString(),
                 'precio_noche' => $reserva->precio_noche,
                 'observaciones' => $reserva->observaciones,
+                // 'reservada' (fecha futura, sin check-in todavia) vs
+                // 'checkin' (el huesped llega de una vez) -- sin esto el
+                // droplet siempre la creaba como 'checkin', mostrando la
+                // habitacion ocupada aunque la reserva fuera para un dia
+                // futuro.
+                'estado' => $reserva->estado,
             ]);
         });
     }

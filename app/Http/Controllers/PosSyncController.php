@@ -637,6 +637,7 @@ class PosSyncController extends Controller
             'fecha_checkout' => 'nullable|date',
             'precio_noche' => 'nullable|numeric|min:0',
             'observaciones' => 'nullable|string',
+            'estado' => 'nullable|string|in:reservada,checkin',
         ]);
 
         $empresaId = auth()->user()->getEmpresaActualId();
@@ -650,6 +651,13 @@ class PosSyncController extends Controller
             return response()->json(['message' => 'La habitación no existe.'], 422);
         }
 
+        // Si Turion no manda estado (terminales viejas, antes de este
+        // arreglo), se asume 'checkin' para no cambiar el comportamiento
+        // previo -- pero si SI lo manda, se respeta: una reserva para una
+        // fecha futura ('reservada') no debe marcar la habitacion como
+        // ocupada de una vez.
+        $estado = $data['estado'] ?? 'checkin';
+
         $reserva = HotelReserva::create([
             'empresa_id' => $empresaId,
             'habitacion_id' => $data['habitacion_id'],
@@ -661,8 +669,8 @@ class PosSyncController extends Controller
             'fecha_checkout' => $data['fecha_checkout'] ?? null,
             'precio_noche' => $data['precio_noche'] ?? $habitacion->precioParaPersonas($data['numero_personas'] ?? 1),
             'observaciones' => $data['observaciones'] ?? null,
-            'estado' => 'checkin',
-            'checkin_real_at' => now(),
+            'estado' => $estado,
+            'checkin_real_at' => $estado === 'checkin' ? now() : null,
             'creado_por' => auth()->id(),
         ]);
 
