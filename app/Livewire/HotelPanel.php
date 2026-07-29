@@ -53,8 +53,11 @@ class HotelPanel extends Component
     public string $calDesde = '';
     public string $calHasta = '';
 
+    public bool $esTurion = false;
+
     public function mount(): void
     {
+        $this->esTurion = DB::getDriverName() === 'sqlite';
         $this->calDesde = now()->toDateString();
         $this->calHasta = now()->addDays(6)->toDateString();
         $this->cancelarReservasNoPresentadas();
@@ -533,8 +536,12 @@ class HotelPanel extends Component
         ]);
 
         // Una reserva a futuro (no entrada inmediata) exige abono para
-        // asegurarla — evita que se "aparten" habitaciones sin compromiso.
-        if (! $this->reservaId && ! $this->resInmediato && (float) $this->resAbonoMonto <= 0) {
+        // asegurarla -- evita que se "aparten" habitaciones sin compromiso.
+        // En Turion no aplica: el abono es un ingreso de caja real que solo
+        // se puede registrar con conexion al droplet (ver guardarReserva()
+        // mas abajo), asi que exigirlo aqui dejaria imposible crear una
+        // reserva a futuro estando offline.
+        if (! $this->reservaId && ! $this->resInmediato && ! $this->esTurion && (float) $this->resAbonoMonto <= 0) {
             $this->addError('resAbonoMonto', 'Debes registrar un abono para asegurar la reserva.');
             return;
         }
@@ -621,6 +628,11 @@ class HotelPanel extends Component
 
         if ($this->reservaId) {
             HotelReserva::where('empresa_id', $empresaId)->where('id', $this->reservaId)->update($data);
+
+            $servidorId = $this->esTurion ? HotelReserva::find($this->reservaId)?->servidor_id : null;
+            if ($servidorId) {
+                ColaSincronizacion::encolar('hotel_actualizar', array_merge($data, ['servidor_id' => $servidorId]));
+            }
         } else {
             $data['creado_por'] = auth()->id();
 
@@ -637,7 +649,17 @@ class HotelPanel extends Component
 
             $abono = (float) $this->resAbonoMonto;
             if ($abono > 0) {
-                $this->registrarAbonoReserva($reserva, $abono, $this->resAbonoMedioPago);
+                // Un abono es un ingreso de caja real (igual que Cartera y
+                // Entrada/Salida, ya bloqueados en Turion): registrarlo
+                // offline crearia un Gasto local que nunca sube al droplet,
+                // dejando esa plata sin cuadrar en caja. Se cobra despues,
+                // ya en linea (el mensaje avisa, no se pierde el dato --
+                // solo no se registra el pago todavia).
+                if ($this->esTurion) {
+                    $this->dispatch('notify', type: 'warning', message: 'Reserva creada, pero el abono no se registro: eso solo se puede hacer con conexion al droplet.');
+                } else {
+                    $this->registrarAbonoReserva($reserva, $abono, $this->resAbonoMedioPago);
+                }
             }
         }
 
@@ -680,6 +702,14 @@ class HotelPanel extends Component
         $r = HotelReserva::where('empresa_id', $this->empresaId())->findOrFail($reservaId);
         $r->update(['estado' => 'checkin', 'checkin_real_at' => now()]);
 
+        if ($this->esTurion && $r->servidor_id) {
+            ColaSincronizacion::encolar('hotel_actualizar', [
+                'servidor_id' => $r->servidor_id,
+                'estado' => 'checkin',
+                'checkin_real_at' => $r->checkin_real_at->toIso8601String(),
+            ]);
+        }
+
         $this->dispatch('notify', type: 'success', message: 'Check-in registrado para ' . $r->huesped_nombre . '.');
     }
 
@@ -709,6 +739,13 @@ class HotelPanel extends Component
         }
 
         $reserva->update(['fecha_checkout' => $hoy]);
+
+        if ($this->esTurion && $reserva->servidor_id) {
+            ColaSincronizacion::encolar('hotel_actualizar', [
+                'servidor_id' => $reserva->servidor_id,
+                'fecha_checkout' => $hoy,
+            ]);
+        }
 
         $this->dispatch('notify', type: 'success', message: 'Salida anticipada registrada: ' . $reserva->fresh()->numero_noches . ' noche(s). Ya puedes facturar la salida.');
 

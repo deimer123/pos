@@ -273,6 +273,52 @@ class PosSyncController extends Controller
     }
 
     /**
+     * Actualiza en el servidor una reserva de hotel que se edito offline en
+     * Turion -- cubre 3 acciones (HotelPanel::guardarReserva() en modo
+     * edicion, confirmarCheckin(), registrarSalidaAnticipada()), todas
+     * mandan aqui solo los campos que cambiaron. No se toca si ya se
+     * facturo (factura_id asignado) o ya se hizo checkout, mismo motivo
+     * que hotelCancelar().
+     */
+    public function hotelActualizar(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'uuid' => 'required|uuid',
+            'servidor_id' => 'required|integer',
+            'habitacion_id' => 'nullable|integer',
+            'actor_id' => 'nullable|integer',
+            'huesped_nombre' => 'nullable|string|max:200',
+            'huesped_telefono' => 'nullable|string|max:30',
+            'huesped_documento' => 'nullable|string|max:50',
+            'climatizacion' => 'nullable|string',
+            'numero_personas' => 'nullable|integer|min:1',
+            'fecha_checkin' => 'nullable|date',
+            'fecha_checkout' => 'nullable|date',
+            'precio_noche' => 'nullable|numeric|min:0',
+            'observaciones' => 'nullable|string',
+            'estado' => 'nullable|string|in:checkin',
+            'checkin_real_at' => 'nullable|date',
+        ]);
+
+        $empresaId = auth()->user()->getEmpresaActualId();
+
+        if ($this->buscarSincronizada($data['uuid'])) {
+            return response()->json(['ok' => true]);
+        }
+
+        $cambios = collect($data)->except(['uuid', 'servidor_id'])->all();
+
+        HotelReserva::where('id', $data['servidor_id'])->where('empresa_id', $empresaId)
+            ->whereNull('factura_id')
+            ->where('estado', '!=', 'checkout')
+            ->update($cambios);
+
+        $this->registrarSincronizada($data['uuid'], 'hotel_actualizar', $empresaId, null);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
      * Libera en el servidor una mesa que se libero offline en Turion.
      * A diferencia de taller/hotel, una orden de mesa no tiene su propio
      * servidor_id -- se identifica por mesa_id (mesas SI vienen en el

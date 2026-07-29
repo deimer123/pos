@@ -74,6 +74,7 @@ Route::prefix('pairing')->group(function () {
             Route::post('/prefactura/borrar', [PosSyncController::class, 'prefacturaBorrar'])->name('api.pairing.subir.prefactura-borrar');
             Route::post('/taller/borrar', [PosSyncController::class, 'tallerBorrar'])->name('api.pairing.subir.taller-borrar');
             Route::post('/hotel/cancelar', [PosSyncController::class, 'hotelCancelar'])->name('api.pairing.subir.hotel-cancelar');
+            Route::post('/hotel/actualizar', [PosSyncController::class, 'hotelActualizar'])->name('api.pairing.subir.hotel-actualizar');
             Route::post('/mesa/liberar', [PosSyncController::class, 'mesaLiberar'])->name('api.pairing.subir.mesa-liberar');
             Route::post('/mesa/en-espera', [PosSyncController::class, 'mesaEnEspera'])->name('api.pairing.subir.mesa-en-espera');
             Route::post('/mesa/actualizar', [PosSyncController::class, 'mesaActualizar'])->name('api.pairing.subir.mesa-actualizar');

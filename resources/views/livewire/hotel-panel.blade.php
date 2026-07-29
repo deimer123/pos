@@ -537,7 +537,13 @@
                 </div>
                 @endif
 
-                @if(! $reservaId)
+                @if(! $reservaId && $esTurion)
+                <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:10px 12px; margin-bottom:12px; font-size:11px; color:#1e40af;">
+                    ℹ️ El abono no se puede registrar sin conexión al droplet -- la reserva se crea igual, cóbralo cuando vuelva la conexión o desde el panel web.
+                </div>
+                @endif
+
+                @if(! $reservaId && ! $esTurion)
                 <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:12px; margin-bottom:12px;" x-data="{
                         formato(v) { const limpio = String(v || '').replace(/\D/g, ''); return limpio ? Number(limpio).toLocaleString('es-CO') : ''; },
                         limpiar(v) { return String(v || '').replace(/\D/g, ''); }

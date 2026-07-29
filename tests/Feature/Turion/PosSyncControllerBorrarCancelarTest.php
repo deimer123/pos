@@ -192,3 +192,92 @@ test('mesaLiberar() no revienta si la mesa no tiene ninguna orden activa', funct
     $respuesta->assertOk();
     expect($mesa->fresh()->estado)->toBe('libre');
 });
+
+test('hotelActualizar() edita los datos de una reserva que se edito offline en Turion', function () {
+    $empresa = crearEmpresaBorrarCancelarTest();
+    cajeroAutenticadoBorrarCancelarTest($empresa);
+
+    $habitacion = HotelHabitacion::create(['empresa_id' => $empresa->id, 'numero' => '101']);
+    $reserva = HotelReserva::create([
+        'empresa_id' => $empresa->id, 'habitacion_id' => $habitacion->id, 'numero_reserva' => 1,
+        'huesped_nombre' => 'Nombre viejo', 'fecha_checkin' => now()->toDateString(), 'estado' => 'reservada',
+    ]);
+
+    $respuesta = $this->postJson('/api/pairing/subir/hotel/actualizar', [
+        'uuid' => (string) Str::uuid(),
+        'servidor_id' => $reserva->id,
+        'huesped_nombre' => 'Nombre nuevo',
+        'observaciones' => 'Editado offline',
+    ]);
+
+    $respuesta->assertOk();
+    $reserva->refresh();
+    expect($reserva->huesped_nombre)->toBe('Nombre nuevo');
+    expect($reserva->observaciones)->toBe('Editado offline');
+    expect($reserva->estado)->toBe('reservada');
+});
+
+test('hotelActualizar() confirma un check-in que se hizo offline en Turion', function () {
+    $empresa = crearEmpresaBorrarCancelarTest();
+    cajeroAutenticadoBorrarCancelarTest($empresa);
+
+    $habitacion = HotelHabitacion::create(['empresa_id' => $empresa->id, 'numero' => '102']);
+    $reserva = HotelReserva::create([
+        'empresa_id' => $empresa->id, 'habitacion_id' => $habitacion->id, 'numero_reserva' => 2,
+        'huesped_nombre' => 'Huesped', 'fecha_checkin' => now()->toDateString(), 'estado' => 'reservada',
+    ]);
+
+    $respuesta = $this->postJson('/api/pairing/subir/hotel/actualizar', [
+        'uuid' => (string) Str::uuid(),
+        'servidor_id' => $reserva->id,
+        'estado' => 'checkin',
+        'checkin_real_at' => now()->toIso8601String(),
+    ]);
+
+    $respuesta->assertOk();
+    expect($reserva->fresh()->estado)->toBe('checkin');
+});
+
+test('hotelActualizar() registra una salida anticipada hecha offline en Turion', function () {
+    $empresa = crearEmpresaBorrarCancelarTest();
+    cajeroAutenticadoBorrarCancelarTest($empresa);
+
+    $habitacion = HotelHabitacion::create(['empresa_id' => $empresa->id, 'numero' => '103']);
+    $reserva = HotelReserva::create([
+        'empresa_id' => $empresa->id, 'habitacion_id' => $habitacion->id, 'numero_reserva' => 3,
+        'huesped_nombre' => 'Huesped', 'fecha_checkin' => now()->subDays(2)->toDateString(),
+        'fecha_checkout' => now()->addDays(3)->toDateString(), 'estado' => 'checkin',
+    ]);
+
+    $hoy = now()->toDateString();
+
+    $respuesta = $this->postJson('/api/pairing/subir/hotel/actualizar', [
+        'uuid' => (string) Str::uuid(),
+        'servidor_id' => $reserva->id,
+        'fecha_checkout' => $hoy,
+    ]);
+
+    $respuesta->assertOk();
+    expect($reserva->fresh()->fecha_checkout->toDateString())->toBe($hoy);
+});
+
+test('hotelActualizar() NO toca una reserva que ya se facturo en el droplet mientras Turion estaba desconectado', function () {
+    $empresa = crearEmpresaBorrarCancelarTest();
+    cajeroAutenticadoBorrarCancelarTest($empresa);
+
+    $habitacion = HotelHabitacion::create(['empresa_id' => $empresa->id, 'numero' => '104']);
+    $reserva = HotelReserva::create([
+        'empresa_id' => $empresa->id, 'habitacion_id' => $habitacion->id, 'numero_reserva' => 4,
+        'huesped_nombre' => 'Ya facturada', 'fecha_checkin' => now()->toDateString(),
+        'estado' => 'checkout', 'factura_id' => 999,
+    ]);
+
+    $respuesta = $this->postJson('/api/pairing/subir/hotel/actualizar', [
+        'uuid' => (string) Str::uuid(),
+        'servidor_id' => $reserva->id,
+        'huesped_nombre' => 'Intento de editar tarde',
+    ]);
+
+    $respuesta->assertOk();
+    expect($reserva->fresh()->huesped_nombre)->toBe('Ya facturada');
+});
