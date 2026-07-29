@@ -15,7 +15,7 @@ usuario tenga PHP instalado, y sin conexión al droplet.
 bash scripts/setup-php-portable.sh
 ```
 
-Descarga `php-8.3.32-nts-Win32-vs16-x64.zip` de `windows.php.net`, lo
+Descarga `php-8.3.33-nts-Win32-vs16-x64.zip` de `windows.php.net`, lo
 descomprime, deja solo las extensiones que el POS necesita (pdo_sqlite,
 sqlite3, curl, openssl, mbstring, intl, fileinfo, gd, zip, opcache) y copia
 `php.ini` dentro de `runtime/`.

@@ -8,7 +8,7 @@
 # Uso: bash scripts/setup-php-portable.sh
 set -euo pipefail
 
-PHP_VERSION="8.3.32"
+PHP_VERSION="8.3.33"
 ZIP_NAME="php-${PHP_VERSION}-nts-Win32-vs16-x64.zip"
 URL="https://downloads.php.net/~windows/releases/${ZIP_NAME}"
 
