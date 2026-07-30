@@ -98,6 +98,13 @@ class TallerPanel extends Component
     public string $cajaMecHasta       = '';
     public string $cajaMecMontoCierre = '';
 
+    public bool $esTurion = false;
+
+    public function mount(): void
+    {
+        $this->esTurion = DB::getDriverName() === 'sqlite';
+    }
+
     private function empresaId(): int
     {
         return auth()->user()->getEmpresaActualId();
@@ -258,6 +265,13 @@ class TallerPanel extends Component
         if ($this->ordenId) {
             $orden = TallerOrden::where('empresa_id', $this->empresaId())->findOrFail($this->ordenId);
             $orden->update($data);
+
+            if ($this->esTurion && $orden->servidor_id) {
+                \App\Services\Turion\ColaSincronizacion::encolar('taller_actualizar', array_merge(
+                    collect($data)->except(['empresa_id', 'creado_por'])->all(),
+                    ['servidor_id' => $orden->servidor_id]
+                ));
+            }
         } else {
             $orden = TallerOrden::create($data);
         }
@@ -296,6 +310,25 @@ class TallerPanel extends Component
             ->when($idsExistentes, fn($q) => $q->whereNotIn('id', $idsExistentes))
             ->delete();
 
+        // A diferencia del carrito normal (CarritoVenta -> Guardar
+        // OrdenTallerService), este modal escribe los repuestos directo a
+        // la base de datos sin pasar por ese servicio -- asi que nunca
+        // quedaban encolados para subir. Se usa "taller_orden_id" LOCAL
+        // (igual que GuardarOrdenTallerService): si la orden es nueva y
+        // todavia no se ha subido su "_crear", PosPush resuelve el id real
+        // en el momento de subir, no hace falta saberlo ahora.
+        if ($this->esTurion) {
+            \App\Services\Turion\ColaSincronizacion::encolar('taller_item', [
+                'taller_orden_id' => $orden->id,
+                'items' => TallerRepuesto::where('orden_id', $orden->id)->get()->map(fn ($r) => [
+                    'id_producto' => $r->producto_id ?? 0,
+                    'nombre' => $r->descripcion,
+                    'cantidad' => (float) $r->cantidad,
+                    'precio' => (float) $r->precio_unitario,
+                ])->values()->all(),
+            ]);
+        }
+
         $this->modalOrden = false;
         $this->dispatch('success', 'Orden #' . $orden->numero_orden . ' guardada.');
     }
@@ -308,13 +341,28 @@ class TallerPanel extends Component
             $update['entregado_at'] = now();
         }
         $orden->update($update);
+
+        if ($this->esTurion && $orden->servidor_id) {
+            $cambios = ['estado' => $nuevoEstado, 'servidor_id' => $orden->servidor_id];
+            if (isset($update['entregado_at'])) {
+                $cambios['entregado_at'] = $update['entregado_at']->toIso8601String();
+            }
+            \App\Services\Turion\ColaSincronizacion::encolar('taller_actualizar', $cambios);
+        }
     }
 
     public function guardarNotaTrabajo(int $id, string $nota): void
     {
-        TallerOrden::where('empresa_id', $this->empresaId())
-            ->where('id', $id)
-            ->update(['nota_trabajo' => trim($nota) ?: null]);
+        $orden = TallerOrden::where('empresa_id', $this->empresaId())->findOrFail($id);
+        $notaTrabajo = trim($nota) ?: null;
+        $orden->update(['nota_trabajo' => $notaTrabajo]);
+
+        if ($this->esTurion && $orden->servidor_id) {
+            \App\Services\Turion\ColaSincronizacion::encolar('taller_actualizar', [
+                'servidor_id' => $orden->servidor_id,
+                'nota_trabajo' => $notaTrabajo,
+            ]);
+        }
     }
 
     public function abrirOrden(int $id): void

@@ -281,3 +281,89 @@ test('hotelActualizar() NO toca una reserva que ya se facturo en el droplet mien
     $respuesta->assertOk();
     expect($reserva->fresh()->huesped_nombre)->toBe('Ya facturada');
 });
+
+test('tallerActualizar() edita los datos de una orden que se edito offline en Turion', function () {
+    $empresa = crearEmpresaBorrarCancelarTest();
+    cajeroAutenticadoBorrarCancelarTest($empresa);
+
+    $orden = TallerOrden::create([
+        'empresa_id' => $empresa->id, 'numero_orden' => 1,
+        'cliente_nombre' => 'Cliente viejo', 'placa' => 'ABC123', 'estado' => 'pendiente',
+    ]);
+
+    $respuesta = $this->postJson('/api/pairing/subir/taller/actualizar', [
+        'uuid' => (string) Str::uuid(),
+        'servidor_id' => $orden->id,
+        'cliente_nombre' => 'Cliente nuevo',
+        'diagnostico' => 'Editado offline',
+    ]);
+
+    $respuesta->assertOk();
+    $orden->refresh();
+    expect($orden->cliente_nombre)->toBe('Cliente nuevo');
+    expect($orden->diagnostico)->toBe('Editado offline');
+    expect($orden->estado)->toBe('pendiente');
+});
+
+test('tallerActualizar() cambia el estado de una orden (cambiarEstado offline) incluyendo entregado_at', function () {
+    $empresa = crearEmpresaBorrarCancelarTest();
+    cajeroAutenticadoBorrarCancelarTest($empresa);
+
+    $orden = TallerOrden::create([
+        'empresa_id' => $empresa->id, 'numero_orden' => 2,
+        'cliente_nombre' => 'Cliente', 'placa' => 'XYZ789', 'estado' => 'listo',
+    ]);
+
+    $entregadoAt = now()->toIso8601String();
+
+    $respuesta = $this->postJson('/api/pairing/subir/taller/actualizar', [
+        'uuid' => (string) Str::uuid(),
+        'servidor_id' => $orden->id,
+        'estado' => 'entregado',
+        'entregado_at' => $entregadoAt,
+    ]);
+
+    $respuesta->assertOk();
+    $orden->refresh();
+    expect($orden->estado)->toBe('entregado');
+    expect($orden->entregado_at)->not->toBeNull();
+});
+
+test('tallerActualizar() guarda la nota de trabajo (guardarNotaTrabajo offline)', function () {
+    $empresa = crearEmpresaBorrarCancelarTest();
+    cajeroAutenticadoBorrarCancelarTest($empresa);
+
+    $orden = TallerOrden::create([
+        'empresa_id' => $empresa->id, 'numero_orden' => 3,
+        'cliente_nombre' => 'Cliente', 'placa' => 'DEF456', 'estado' => 'en_proceso',
+    ]);
+
+    $respuesta = $this->postJson('/api/pairing/subir/taller/actualizar', [
+        'uuid' => (string) Str::uuid(),
+        'servidor_id' => $orden->id,
+        'nota_trabajo' => 'Falta pieza',
+    ]);
+
+    $respuesta->assertOk();
+    expect($orden->fresh()->nota_trabajo)->toBe('Falta pieza');
+});
+
+test('tallerActualizar() NO toca una orden que ya se facturo en el droplet mientras Turion estaba desconectado', function () {
+    $empresa = crearEmpresaBorrarCancelarTest();
+    cajeroAutenticadoBorrarCancelarTest($empresa);
+
+    $orden = TallerOrden::create([
+        'empresa_id' => $empresa->id, 'numero_orden' => 4,
+        'cliente_nombre' => 'Ya facturado', 'placa' => 'GHI012', 'estado' => 'entregado',
+        'factura_id' => 999,
+    ]);
+
+    $respuesta = $this->postJson('/api/pairing/subir/taller/actualizar', [
+        'uuid' => (string) Str::uuid(),
+        'servidor_id' => $orden->id,
+        'cliente_nombre' => 'Intento de editar tarde',
+    ]);
+
+    $respuesta->assertOk();
+    expect($orden->fresh()->cliente_nombre)->toBe('Ya facturado');
+});

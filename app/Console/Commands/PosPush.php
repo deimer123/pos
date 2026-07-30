@@ -145,6 +145,7 @@ class PosPush extends Command
             'taller_borrar' => ['/api/pairing/subir/taller/borrar', $payload],
             'hotel_cancelar' => ['/api/pairing/subir/hotel/cancelar', $payload],
             'hotel_actualizar' => ['/api/pairing/subir/hotel/actualizar', $payload],
+            'taller_actualizar' => ['/api/pairing/subir/taller/actualizar', $payload],
             'mesa_liberar' => ['/api/pairing/subir/mesa/liberar', $payload],
             'mesa_en_espera' => ['/api/pairing/subir/mesa/en-espera', $payload],
             'mesa_actualizar' => ['/api/pairing/subir/mesa/actualizar', $payload],

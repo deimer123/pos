@@ -319,6 +319,49 @@ class PosSyncController extends Controller
     }
 
     /**
+     * Actualiza en el servidor una orden de taller que se edito offline en
+     * Turion -- cubre TallerPanel::guardarOrden() (modo edicion),
+     * cambiarEstado() y guardarNotaTrabajo(), todas mandan solo los campos
+     * que cambiaron. No se toca si ya se facturo (factura_id asignado),
+     * mismo motivo que tallerBorrar().
+     */
+    public function tallerActualizar(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'uuid' => 'required|uuid',
+            'servidor_id' => 'required|integer',
+            'cliente_nombre' => 'nullable|string|max:200',
+            'cliente_telefono' => 'nullable|string|max:30',
+            'placa' => 'nullable|string|max:20',
+            'marca' => 'nullable|string|max:100',
+            'modelo' => 'nullable|string|max:100',
+            'color' => 'nullable|string|max:50',
+            'km_ingreso' => 'nullable|integer|min:0',
+            'diagnostico' => 'nullable|string',
+            'observaciones' => 'nullable|string',
+            'estado' => 'nullable|string|in:pendiente,en_proceso,listo,entregado,cancelado',
+            'entregado_at' => 'nullable|date',
+            'nota_trabajo' => 'nullable|string',
+        ]);
+
+        $empresaId = auth()->user()->getEmpresaActualId();
+
+        if ($this->buscarSincronizada($data['uuid'])) {
+            return response()->json(['ok' => true]);
+        }
+
+        $cambios = collect($data)->except(['uuid', 'servidor_id'])->all();
+
+        TallerOrden::where('id', $data['servidor_id'])->where('empresa_id', $empresaId)
+            ->whereNull('factura_id')
+            ->update($cambios);
+
+        $this->registrarSincronizada($data['uuid'], 'taller_actualizar', $empresaId, null);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
      * Libera en el servidor una mesa que se libero offline en Turion.
      * A diferencia de taller/hotel, una orden de mesa no tiene su propio
      * servidor_id -- se identifica por mesa_id (mesas SI vienen en el
