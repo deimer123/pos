@@ -75,6 +75,12 @@ beforeEach(function () {
             $table->unsignedBigInteger('servidor_id')->nullable()->after('id');
         });
     }
+
+    // Todo el DDL de arriba (Schema::table()->addColumn) hace commit
+    // implicito en MySQL -- el User (y todo lo que UserObserver siembra
+    // para el) que cada test crea despues sobrevive al rollback automatico
+    // de RefreshDatabase. Se limpia a mano en afterEach (ver tests/Pest.php).
+    $this->marcaLimpieza = marcarAltaLimpiezaManual();
 });
 
 afterEach(function () {
@@ -92,6 +98,8 @@ afterEach(function () {
             $table->dropColumn('servidor_id');
         });
     }
+
+    limpiarTrasCommitImplicito($this->marcaLimpieza);
 });
 
 function crearEmpresaPosPushTest(): User

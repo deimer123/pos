@@ -62,3 +62,44 @@ function something()
 {
     // ..
 }
+
+/*
+|--------------------------------------------------------------------------
+| Limpieza manual tras commit implicito (Schema::create/dropIfExists/
+| Schema::table()->addColumn/dropColumn)
+|--------------------------------------------------------------------------
+|
+| Varios tests de Turion/LocalLicense corren DDL a mano contra la BD de
+| pruebas (mysql) para simular tablas/columnas exclusivas de sqlite. En
+| MySQL/InnoDB, cualquier DDL hace COMMIT IMPLICITO de la transaccion que
+| RefreshDatabase envuelve alrededor de cada test -- asi que todo lo que el
+| test cree DESPUES de ese DDL sobrevive permanentemente en vez de
+| revertirse solo. marcarAltaLimpiezaManual()/limpiarTrasCommitImplicito()
+| son el equivalente reutilizable del afterEach() manual que ya tenia
+| ActivacionLocalTest.php, para los tests que crean una empresa (User
+| tipo_usuario=empresa) y sus datos asociados.
+|
+| Solo hace falta encadenar 'users' donde el modelo lo permite: casi todo lo
+| que UserObserver::created() siembra (actors, products, familias,
+| subfamilias, configuracion_empresas, taller_ordenes, hotel_*, prefacturas)
+| tiene FK con cascadeOnDelete() hacia users, asi que borrar el/los User de
+| id > la marca los arrastra a todos. Las dos excepciones son
+| cuentas_contables (empresa_id sin FK/cascade) y model_has_roles (tabla
+| polimorfica de Spatie sin FK hacia users), que se limpian aparte.
+*/
+function marcarAltaLimpiezaManual(): int
+{
+    return (int) (DB::table('users')->max('id') ?? 0);
+}
+
+function limpiarTrasCommitImplicito(int $marcaUserId): void
+{
+    DB::table('model_has_roles')
+        ->where('model_id', '>', $marcaUserId)
+        ->where('model_type', \App\Models\User::class)
+        ->delete();
+
+    DB::table('cuentas_contables')->where('empresa_id', '>', $marcaUserId)->delete();
+
+    DB::table('users')->where('id', '>', $marcaUserId)->delete();
+}
