@@ -14,6 +14,7 @@
     "core:default",
     "updater:default",
     "process:allow-restart",
-    "allow-detener-servidor-local"
+    "allow-detener-servidor-local",
+    "allow-preparar-restauracion"
   ]
 }
