@@ -2,14 +2,15 @@
 
 namespace App\Services\Turion;
 
+use App\Support\PosEdition;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
  * Encola una operacion pendiente de subir al droplet (boton "Subir" de
- * Turion). Solo hace algo quando corre contra la base de datos LOCAL
- * (SQLite) de una terminal -- en el droplet (MySQL) es un no-op, ya que
- * ahi no existe la tabla pending_sync_operations.
+ * Turion). Solo hace algo en la edicion hibrida -- en el droplet y en la
+ * edicion Local (que nunca sincroniza, ver App\Support\PosEdition) es un
+ * no-op.
  *
  * Se usa desde los mismos servicios de negocio compartidos
  * (AgregarItemMesaService, GuardarOrdenTallerService, GuardarReservaService,
@@ -20,7 +21,7 @@ class ColaSincronizacion
 {
     public static function encolar(string $tipo, array $payload): ?string
     {
-        if (DB::getDriverName() !== 'sqlite' || ! self::tablaDisponible()) {
+        if (! PosEdition::esHibrida() || ! self::tablaDisponible()) {
             return null;
         }
 

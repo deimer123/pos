@@ -2,6 +2,7 @@
 
 namespace App\Services\Turion;
 
+use App\Support\PosEdition;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
@@ -11,9 +12,11 @@ use Illuminate\Support\Str;
  * Punto unico para saber si esta terminal puede hablar con el droplet
  * AHORA MISMO, y para llamar sus endpoints de forma sincronica.
  *
- * En el droplet mismo (MySQL) siempre esta "en linea" -- estas funciones
- * solo tienen sentido para una terminal de Turion (SQLite). Se usa para
- * decidir si el boton "Facturar" puede facturar en el momento (ver
+ * Solo tiene sentido para la edicion hibrida (Turion) -- en el droplet
+ * mismo y en la edicion Local (que nunca habla con el droplet, ni
+ * siquiera para activarse) siempre se reporta "en linea", para que
+ * Facturar nunca quede bloqueado por conectividad. Se usa para decidir si
+ * el boton "Facturar" puede facturar en el momento (ver
  * FacturarEnLineaService) o si debe quedar bloqueado y solo permitir
  * guardar prefactura/orden/reserva para facturar despues.
  */
@@ -21,7 +24,7 @@ class ConectividadDroplet
 {
     public static function estaEnLinea(): bool
     {
-        if (DB::getDriverName() !== 'sqlite') {
+        if (! PosEdition::esHibrida()) {
             return true;
         }
 

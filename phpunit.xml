@@ -28,6 +28,14 @@
              .env.testing local (no se versiona) con DB_DATABASE distinto
              al de produccion. -->
         <env name="MAIL_MAILER" value="array"/>
+        <!-- Los tests de Turion simulan sqlite via DB::swap() (Mockery) sin
+             setear POS_EDITION. Sin este default, App\Support\PosEdition
+             esHibrida() daria false ahi (config('pos.edition') caeria en
+             'online') y todo el codigo gateado por edicion (ColaSincronizacion,
+             BloquearAdminEnTurion, etc.) se comportaria como si nunca fuera
+             Turion. No afecta tests normales: la mayoria corre contra MySQL,
+             donde esHibrida() siempre es false sin importar esta bandera. -->
+        <env name="POS_EDITION" value="hibrida"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>

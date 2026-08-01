@@ -57,7 +57,7 @@ class HotelPanel extends Component
 
     public function mount(): void
     {
-        $this->esTurion = DB::getDriverName() === 'sqlite';
+        $this->esTurion = \App\Support\PosEdition::esHibrida();
         $this->calDesde = now()->toDateString();
         $this->calHasta = now()->addDays(6)->toDateString();
         $this->cancelarReservasNoPresentadas();

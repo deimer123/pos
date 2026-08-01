@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Services\Turion\ConectividadDroplet;
+use App\Support\PosEdition;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
@@ -10,8 +11,8 @@ use Livewire\Component;
 /**
  * Botones "Sincronizar" (baja catalogo/precios/stock del droplet) y
  * "Subir" (sube ventas/mesas/taller/hotel pendientes) que solo aparecen en
- * la base de datos LOCAL de Turion -- en el droplet este componente no
- * renderiza nada.
+ * la edicion hibrida (Turion) -- en el droplet y en la edicion Local (que
+ * nunca sincroniza) este componente no renderiza nada.
  */
 class TurionSyncBar extends Component
 {
@@ -25,7 +26,7 @@ class TurionSyncBar extends Component
 
     public function mount(): void
     {
-        $this->esTurion = DB::getDriverName() === 'sqlite';
+        $this->esTurion = PosEdition::esHibrida();
 
         if ($this->esTurion) {
             $this->enLinea = ConectividadDroplet::estaEnLinea();

@@ -474,7 +474,7 @@ private function limpiarUtf8Array(array $datos): array
 {
     $empresaId = $this->getEmpresaId();
 
-    $this->esTurion = DB::getDriverName() === 'sqlite';
+    $this->esTurion = \App\Support\PosEdition::esHibrida();
     $this->puedeFacturarTurion = ! $this->esTurion || ConectividadDroplet::estaEnLinea();
 
     $config = ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();

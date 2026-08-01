@@ -102,7 +102,7 @@ class TallerPanel extends Component
 
     public function mount(): void
     {
-        $this->esTurion = DB::getDriverName() === 'sqlite';
+        $this->esTurion = \App\Support\PosEdition::esHibrida();
     }
 
     private function empresaId(): int

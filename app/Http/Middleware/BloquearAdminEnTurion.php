@@ -2,15 +2,16 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\PosEdition;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Una terminal de Turion (base de datos LOCAL, SQLite) es solo para el
- * punto de venta -- no debe cargar nada de /admin. En el droplet (MySQL)
- * es un no-op.
+ * Una terminal de Turion (edicion hibrida) es solo para el punto de venta
+ * -- no debe cargar nada de /admin. En el droplet y en la edicion Local
+ * (que SI necesita /admin completo, ver App\Support\PosEdition) es un
+ * no-op.
  *
  * Se registra en el authMiddleware() del panel de Filament (ver
  * AdminPanelProvider), NO en el grupo 'web' de Kernel.php: Filament corre
@@ -28,7 +29,7 @@ class BloquearAdminEnTurion
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (DB::getDriverName() !== 'sqlite') {
+        if (! PosEdition::esHibrida()) {
             return $next($request);
         }
 
