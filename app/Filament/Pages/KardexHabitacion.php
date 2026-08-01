@@ -83,7 +83,7 @@ class KardexHabitacion extends Page
             ->where(function ($q) use ($desde) {
                 $q->whereNull('fecha_checkout')->orWhereDate('fecha_checkout', '>=', $desde);
             })
-            ->with(['consumos' => fn ($q) => $q->orderBy('created_at')])
+            ->with(['consumos' => fn ($q) => $q->orderBy('created_at'), 'factura'])
             ->orderByDesc('fecha_checkin')
             ->get();
     }
