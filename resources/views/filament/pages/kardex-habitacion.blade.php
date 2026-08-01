@@ -73,6 +73,16 @@
                         // y quedaría mostrando "pendiente" una cuenta ya cerrada.
                         $totalReal = $reserva->factura ? (float) $reserva->factura->total : $reserva->saldo_pendiente;
                         $etiquetaTotal = $reserva->factura ? 'Total facturado' : 'Saldo pendiente';
+
+                        // fecha_checkout es la fecha PLANEADA al reservar (puede quedar
+                        // en blanco si el huesped no sabia cuando se iba); una vez
+                        // facturada, lo que realmente paso es checkout_real_at (se llena
+                        // al momento de facturar, ver FacturarVentaService) -- mostrar la
+                        // planeada ahi seguia diciendo "Sin definir" en estadias ya
+                        // cerradas y pagadas.
+                        $checkoutMostrado = $reserva->estado === 'checkout' && $reserva->checkout_real_at
+                            ? $reserva->checkout_real_at->format('d/m/Y')
+                            : ($reserva->fecha_checkout?->format('d/m/Y') ?? 'Sin definir');
                     @endphp
                     <details>
                         <summary class="kh-fila-grid kh-resumen">
@@ -83,7 +93,7 @@
                                 {{ $labelEstado[$reserva->estado] ?? $reserva->estado }}
                             </span>
                             <span style="font-size:12px; color:#6b7280;">
-                                {{ $reserva->fecha_checkin->format('d/m/Y') }} → {{ $reserva->fecha_checkout?->format('d/m/Y') ?? 'Sin definir' }}
+                                {{ $reserva->fecha_checkin->format('d/m/Y') }} → {{ $checkoutMostrado }}
                             </span>
                             <span style="text-align:right; font-size:14px; font-weight:700;">{{ $money($totalReal) }}</span>
                         </summary>

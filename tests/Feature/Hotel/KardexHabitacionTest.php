@@ -104,3 +104,27 @@ test('una habitacion sin estadias en el rango muestra el mensaje vacio', functio
         ->assertOk()
         ->assertSee('no tuvo estadías en el rango seleccionado');
 });
+
+test('una reserva facturada sin fecha de salida planeada muestra el checkout real, no "Sin definir"', function () {
+    $empresa = crearEmpresaConHotelKardexTest();
+    $this->actingAs($empresa);
+
+    $habitacion = HotelHabitacion::create(['empresa_id' => $empresa->id, 'numero' => '401']);
+
+    $checkoutReal = now()->subDay();
+
+    $reserva = HotelReserva::create([
+        'empresa_id' => $empresa->id, 'habitacion_id' => $habitacion->id, 'numero_reserva' => 1,
+        'huesped_nombre' => 'Consumidor Final', 'fecha_checkin' => now()->subDays(2)->toDateString(),
+        'fecha_checkout' => null, 'precio_noche' => 50000, 'estado' => 'checkout',
+        'checkout_real_at' => $checkoutReal,
+    ]);
+
+    Livewire::test(KardexHabitacion::class)
+        ->set('habitacionId', $habitacion->id)
+        ->set('desde', now()->subDays(5)->toDateString())
+        ->set('hasta', now()->addDays(5)->toDateString())
+        ->assertOk()
+        ->assertSee($checkoutReal->format('d/m/Y'))
+        ->assertDontSee('Sin definir');
+});
