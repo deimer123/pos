@@ -37,6 +37,7 @@ class Kernel extends HttpKernel
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\EnsureTerminalEmparejada::class,
+            \App\Http\Middleware\EnsureLicenciaLocalActiva::class,
             \App\Http\Middleware\EnsureEmpresaActiva::class,
             \App\Http\Middleware\EnforceSessionUniqueness::class,
         ],

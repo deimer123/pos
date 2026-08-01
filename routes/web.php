@@ -12,6 +12,7 @@ use App\Http\Controllers\KardexController;
 use App\Http\Controllers\PosCatalogoController;
 use App\Http\Controllers\PosSyncController;
 use App\Http\Controllers\EmparejarTerminalController;
+use App\Http\Controllers\ActivarLicenciaController;
 
 
 
@@ -36,6 +37,13 @@ Route::post('/emparejar', [EmparejarTerminalController::class, 'emparejar']);
 // Olvidar emparejamiento desde el login (sin necesitar sesion activa) -- ver
 // App\Http\Controllers\EmparejarTerminalController::olvidar.
 Route::post('/turion/olvidar-emparejamiento', [EmparejarTerminalController::class, 'olvidar'])->name('turion.olvidar-emparejamiento');
+
+// Activacion de la edicion Local (solo relevante en esa edicion -- ver
+// App\Http\Middleware\EnsureLicenciaLocalActiva). Codigo firmado, se
+// valida 100% offline, nunca llama al droplet.
+Route::get('/activar', [ActivarLicenciaController::class, 'mostrar'])->name('activar');
+Route::post('/activar', [ActivarLicenciaController::class, 'activar']);
+Route::post('/activar/empresa', [ActivarLicenciaController::class, 'guardarEmpresa'])->name('activar.empresa');
 
 // Link estable para descargar el instalador de Turion mas reciente -- lee
 // el mismo latest.json que ya usa el auto-actualizador (ver
