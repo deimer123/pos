@@ -25,7 +25,7 @@ return [
         // activación en el cliente (Turion/droplet no la necesitan). Es
         // pública -- se puede commitear como default una vez generada con
         // "php artisan pos:licencia:generar-llaves".
-        'public_key' => env('POS_LOCAL_LICENSE_PUBLIC_KEY', ''),
+        'public_key' => env('POS_LOCAL_LICENSE_PUBLIC_KEY', 'Z7FFs+NLH1nyHXFJVZrjBT8d0+1Sc160+QMkjtixvX4='),
 
         // Llave privada Ed25519 (base64), usada para FIRMAR códigos de
         // activación. Solo debe existir como secret en el droplet -- nunca
