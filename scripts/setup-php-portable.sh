@@ -25,6 +25,9 @@ ZIP_PATH="${PHP_DIR}/${ZIP_NAME}"
 #  - fileinfo: deteccion de tipo de archivo (subir fotos de ordenes de taller)
 #  - gd: manejo de imagenes (fotos de producto/taller)
 #  - zip: exportacion de reportes/plantillas
+#  - sodium: firma/verificacion de codigos de activacion de la edicion Local
+#    (Ed25519, ver app/Services/LocalLicense) -- Turion no la usa, pero se
+#    mantiene en este mismo runtime compartido para no mantener dos scripts.
 KEEP_EXTENSIONS=(
     php_curl.dll
     php_fileinfo.dll
@@ -34,6 +37,7 @@ KEEP_EXTENSIONS=(
     php_opcache.dll
     php_openssl.dll
     php_pdo_sqlite.dll
+    php_sodium.dll
     php_sqlite3.dll
     php_zip.dll
 )
@@ -63,8 +67,8 @@ rm -f php-cgi.exe php-win.exe phpdbg.exe php8phpdbg.dll deplister.exe \
       phar.phar.bat pharcommand.phar news.txt php8embed.lib \
       README.md readme-redist-bins.txt snapshot.txt \
       php.ini-development php.ini-production
-# Dependencias de extensiones que NO se incluyen (enchant/pgsql/ldap/sodium):
-rm -f libenchant2.dll libpq.dll libsasl.dll libsodium.dll glib-2.dll gmodule-2.dll gobject-2.dll
+# Dependencias de extensiones que NO se incluyen (enchant/pgsql/ldap):
+rm -f libenchant2.dll libpq.dll libsasl.dll glib-2.dll gmodule-2.dll gobject-2.dll
 
 cd "${PHP_DIR}"
 mv extracted runtime
