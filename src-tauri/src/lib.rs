@@ -5,6 +5,7 @@ use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
+use sha2::{Digest, Sha256};
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 
 #[cfg(windows)]
@@ -77,6 +78,68 @@ fn nueva_llave_app(php_exe: &PathBuf) -> String {
         .expect("no se pudo generar la llave de la aplicacion (APP_KEY)");
 
     String::from_utf8_lossy(&output.stdout).trim().to_string()
+}
+
+/// Lee el MachineGuid del registro de Windows (estable por instalacion de
+/// Windows -- sobrevive a reinstalar la app, solo cambia si se reinstala
+/// el SO). Es la base del fingerprint de maquina que exige la edicion
+/// Local para activarse (ver machine_id() mas abajo y App\Services\
+/// LocalLicense del lado PHP). None si por algun motivo no se pudo leer
+/// (permisos, versiones raras de Windows, etc.) -- machine_id() cae a un
+/// valor fijo en ese caso en vez de fallar el arranque de la app.
+fn machine_guid_crudo() -> Option<String> {
+    let mut cmd = Command::new("reg");
+    cmd.args([
+        "query",
+        r"HKLM\SOFTWARE\Microsoft\Cryptography",
+        "/v",
+        "MachineGuid",
+    ]);
+
+    #[cfg(windows)]
+    cmd.creation_flags(CREATE_NO_WINDOW);
+
+    let output = cmd.output().ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    let texto = String::from_utf8_lossy(&output.stdout).to_string();
+
+    texto
+        .lines()
+        .find(|linea| linea.contains("MachineGuid"))
+        .and_then(|linea| linea.split_whitespace().last())
+        .map(|s| s.to_string())
+}
+
+/// Fingerprint corto y legible de esta maquina, para que el cliente lo
+/// pueda dictar/copiar al pedir una licencia de la edicion Local (ver
+/// app/Filament/Pages/EmitirLicenciaLocal.php) y para que el codigo de
+/// activacion quede atado a este equipo especifico (App\Services\
+/// LocalLicense\ValidadorLicencia lo compara tal cual, sin reinterpretar
+/// el hash -- por eso el mismo formato tiene que ser estable entre
+/// corridas). No se guarda a disco: se recalcula en cada arranque para
+/// que el valor siempre refleje la maquina real, incluso si alguien copia
+/// app_data_dir a otro equipo por error.
+fn machine_id() -> String {
+    let crudo = machine_guid_crudo().unwrap_or_else(|| "SIN-MACHINEGUID".to_string());
+
+    let mut hasher = Sha256::new();
+    hasher.update(crudo.as_bytes());
+    let hash = hasher.finalize();
+
+    let hex: String = hash.iter().map(|b| format!("{:02X}", b)).collect();
+    let corto = &hex[..16];
+
+    format!(
+        "MID-{}-{}-{}-{}",
+        &corto[0..4],
+        &corto[4..8],
+        &corto[8..12],
+        &corto[12..16]
+    )
 }
 
 /// Deja constancia de que version del bundle corrio por ultima vez en esta
@@ -183,6 +246,17 @@ fn preparar_entorno_local(app: &tauri::App) -> LocalEnv {
         ("FILESYSTEM_DISK".into(), "local".into()),
         ("LOG_CHANNEL".into(), "single".into()),
         ("LOG_LEVEL".into(), "error".into()),
+        // Distingue esta edicion (hibrida, sincroniza con el droplet) de
+        // la edicion Local (standalone, nunca sincroniza -- ver
+        // App\Support\PosEdition del lado PHP). Sin esto, todo el codigo
+        // gateado por edicion tomaria el default 'online' de config/pos.php
+        // y dejaria de comportarse como Turion.
+        ("POS_EDITION".into(), "hibrida".into()),
+        // Fingerprint de esta maquina -- Turion no lo usa hoy (no exige
+        // activacion), pero se deja seteado porque preparar_entorno_local()
+        // es codigo compartido con la edicion Local (ver src-tauri-local),
+        // donde si es obligatorio.
+        ("POS_MACHINE_ID".into(), machine_id()),
     ];
 
     LocalEnv {
@@ -525,4 +599,29 @@ pub fn run() {
                 }
             }
         });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn machine_id_es_estable_entre_llamadas() {
+        assert_eq!(machine_id(), machine_id());
+    }
+
+    #[test]
+    fn machine_id_tiene_el_formato_esperado() {
+        let id = machine_id();
+
+        // MID-XXXX-XXXX-XXXX-XXXX (hex mayusculas), el mismo formato que
+        // App\Services\LocalLicense\ValidadorLicencia compara tal cual.
+        let partes: Vec<&str> = id.split('-').collect();
+        assert_eq!(partes.len(), 5);
+        assert_eq!(partes[0], "MID");
+        for parte in &partes[1..] {
+            assert_eq!(parte.len(), 4);
+            assert!(parte.chars().all(|c| c.is_ascii_hexdigit() && (c.is_ascii_digit() || c.is_uppercase())));
+        }
+    }
 }

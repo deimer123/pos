@@ -45,3 +45,7 @@ tauri-plugin-process = "2"
 # STATUS_ACCESS_VIOLATION al arrancar (visto en la practica) -- dunce le
 # quita ese prefijo cuando no hace falta.
 dunce = "1.0"
+# Hash del fingerprint de maquina (MachineGuid de Windows) para la
+# edicion Local -- ver machine_id() en lib.rs. Crate puro en Rust, sin
+# proc-macros, no deberia disparar la regresion de opt-level de arriba.
+sha2 = "0.10"
