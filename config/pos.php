@@ -12,6 +12,12 @@ return [
     // inyectado por Rust igual que POS_EDITION). Ver App\Services\LocalLicense.
     'machine_id' => env('POS_MACHINE_ID'),
 
+    // Version del bundle actual (misma env var que ya inyecta Rust para
+    // TurionSyncBar) -- se guarda en el manifest.json de cada respaldo
+    // (ver App\Filament\Pages\RespaldoLocal) para poder diagnosticar con
+    // que version se genero.
+    'version' => env('TURION_VERSION', 'dev'),
+
     'license' => [
         'format_version' => 1,
 

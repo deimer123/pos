@@ -503,10 +503,97 @@ fn detener_servidor_local(
     }
 }
 
+/// Copia recursiva simple (sin dependencias nuevas): crea los directorios
+/// que hagan falta y sobreescribe archivos existentes. Usada por
+/// preparar_restauracion() para reemplazar storage/app/public completo.
+fn copiar_directorio_recursivo(origen: &std::path::Path, destino: &std::path::Path) -> std::io::Result<()> {
+    fs::create_dir_all(destino)?;
+
+    for entrada in fs::read_dir(origen)? {
+        let entrada = entrada?;
+        let ruta_origen = entrada.path();
+        let ruta_destino = destino.join(entrada.file_name());
+
+        if entrada.file_type()?.is_dir() {
+            copiar_directorio_recursivo(&ruta_origen, &ruta_destino)?;
+        } else {
+            fs::copy(&ruta_origen, &ruta_destino)?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Completa una restauracion de respaldo que el lado PHP ya dejo lista
+/// (ver App\Filament\Pages\RespaldoLocal::prepararRestauracion(), que
+/// valida el ZIP subido y extrae su contenido en storage/app/pending-
+/// restore/ + un marcador storage/app/pending-restore.json) -- solo
+/// aplica a la edicion Local. Apaga el servidor PHP local primero (mismo
+/// motivo que detener_servidor_local: no es seguro reemplazar
+/// database.sqlite con una conexion abierta contra ese archivo), copia lo
+/// nuevo encima de lo viejo, y borra los -wal/-shm sueltos que hayan
+/// quedado del sqlite ANTERIOR (si no, podrian aplicarse por error sobre
+/// el sqlite nuevo en el proximo arranque). El JS que invoca este comando
+/// (ver resources/views/filament/pages/respaldo-local.blade.php) relanza
+/// la app con @tauri-apps/plugin-process DESPUES de que esto termine.
+#[tauri::command]
+fn preparar_restauracion(
+    app: tauri::AppHandle,
+    servidor: tauri::State<PhpServerHandle>,
+    sincronizacion: tauri::State<Arc<SincronizacionEnCurso>>,
+) -> Result<(), String> {
+    detener_servidor_local(servidor, sincronizacion);
+
+    let data_dir = dunce::simplified(
+        &app.path()
+            .app_data_dir()
+            .map_err(|e| format!("no se pudo resolver el directorio de datos: {e}"))?,
+    )
+    .to_path_buf();
+
+    let pendiente_dir = data_dir.join("storage").join("app").join("pending-restore");
+    let marcador = data_dir.join("storage").join("app").join("pending-restore.json");
+
+    if !marcador.exists() {
+        return Err("No hay ninguna restauracion preparada.".into());
+    }
+
+    let db_nueva = pendiente_dir.join("database.sqlite");
+    let db_destino = data_dir.join("database.sqlite");
+
+    if db_nueva.exists() {
+        fs::copy(&db_nueva, &db_destino).map_err(|e| format!("no se pudo reemplazar la base de datos: {e}"))?;
+
+        // Restos de WAL/SHM de la base de datos ANTERIOR -- si quedan, en
+        // el proximo arranque SQLite podria intentar aplicarlos sobre el
+        // archivo nuevo (que no tiene relacion con ellos) y corromperlo.
+        for sufijo in ["-wal", "-shm"] {
+            let residuo = data_dir.join(format!("database.sqlite{sufijo}"));
+            let _ = fs::remove_file(residuo);
+        }
+    }
+
+    let public_nuevo = pendiente_dir.join("storage_public");
+    let public_destino = data_dir.join("storage").join("app").join("public");
+
+    if public_nuevo.exists() {
+        let _ = fs::remove_dir_all(&public_destino);
+        copiar_directorio_recursivo(&public_nuevo, &public_destino)
+            .map_err(|e| format!("no se pudieron restaurar los archivos: {e}"))?;
+    }
+
+    let _ = fs::remove_dir_all(&pendiente_dir);
+    let _ = fs::remove_file(&marcador);
+
+    log::info!("Restauracion de respaldo completada.");
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![detener_servidor_local])
+        .invoke_handler(tauri::generate_handler![detener_servidor_local, preparar_restauracion])
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -623,5 +710,29 @@ mod tests {
             assert_eq!(parte.len(), 4);
             assert!(parte.chars().all(|c| c.is_ascii_hexdigit() && (c.is_ascii_digit() || c.is_uppercase())));
         }
+    }
+
+    #[test]
+    fn copiar_directorio_recursivo_copia_subcarpetas_y_sobreescribe() {
+        let base = std::env::temp_dir().join(format!("pos-test-copiar-{}", std::process::id()));
+        let origen = base.join("origen");
+        let destino = base.join("destino");
+
+        let _ = fs::remove_dir_all(&base);
+        fs::create_dir_all(origen.join("sub")).unwrap();
+        fs::write(origen.join("archivo.txt"), b"nuevo").unwrap();
+        fs::write(origen.join("sub").join("otro.txt"), b"anidado").unwrap();
+
+        // El destino ya tiene un archivo con el mismo nombre y contenido
+        // viejo -- la copia debe sobreescribirlo.
+        fs::create_dir_all(&destino).unwrap();
+        fs::write(destino.join("archivo.txt"), b"viejo").unwrap();
+
+        copiar_directorio_recursivo(&origen, &destino).unwrap();
+
+        assert_eq!(fs::read_to_string(destino.join("archivo.txt")).unwrap(), "nuevo");
+        assert_eq!(fs::read_to_string(destino.join("sub").join("otro.txt")).unwrap(), "anidado");
+
+        let _ = fs::remove_dir_all(&base);
     }
 }
