@@ -31,13 +31,40 @@
         </div>
     </div>
 
+    <style>
+        .kh-fila-grid {
+            display: grid;
+            grid-template-columns: 20px 70px 1fr 170px 190px 140px;
+            align-items: center;
+            gap: 8px;
+        }
+        .kh-resumen {
+            cursor: pointer;
+            padding: 10px 8px;
+            border-bottom: 1px solid #e5e7eb;
+            list-style: none;
+        }
+        .kh-resumen::-webkit-details-marker { display: none; }
+        .kh-resumen:hover { background: #f9fafb; }
+        .kh-flecha { transition: transform .15s ease; color: #6b7280; }
+        details[open] > .kh-resumen .kh-flecha { transform: rotate(90deg); }
+    </style>
+
     <x-filament::section class="combo-franja-azul">
         @if($habitaciones->isEmpty())
             <p style="font-size:13px; color:#6b7280; text-align:center; padding:20px;">No hay habitaciones configuradas.</p>
         @elseif($reservas->isEmpty())
             <p style="font-size:13px; color:#6b7280; text-align:center; padding:20px;">📭 Esta habitación no tuvo estadías en el rango seleccionado.</p>
         @else
-            <div style="display:flex; flex-direction:column;">
+            <div class="kh-fila-grid" style="background:#2f3542; color:#fff; font-size:12px; font-weight:600; padding:10px 8px; border-radius:6px 6px 0 0;">
+                <div></div>
+                <div>Reserva</div>
+                <div>Huésped</div>
+                <div>Estado</div>
+                <div>Check-in → Check-out</div>
+                <div style="text-align:right;">Total</div>
+            </div>
+            <div style="display:flex; flex-direction:column; border:1px solid #e5e7eb; border-top:none;">
                 @foreach($reservas as $reserva)
                     @php
                         // Si ya se facturó, el total real es el de la factura (lo que
@@ -47,23 +74,21 @@
                         $totalReal = $reserva->factura ? (float) $reserva->factura->total : $reserva->saldo_pendiente;
                         $etiquetaTotal = $reserva->factura ? 'Total facturado' : 'Saldo pendiente';
                     @endphp
-                    <details style="border-bottom:1px solid #e5e7eb;">
-                        <summary style="cursor:pointer; padding:14px 8px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px;">
-                            <div>
-                                <strong style="font-size:13px;">Reserva #{{ $reserva->numero_reserva }} — {{ $reserva->huesped_nombre }}</strong>
-                                <span style="display:inline-block; margin-left:8px; padding:2px 10px; border-radius:5px; background:{{ $colorEstado[$reserva->estado] ?? '#6b7280' }}; color:#fff; font-size:11px; font-weight:600;">
-                                    {{ $labelEstado[$reserva->estado] ?? $reserva->estado }}
-                                </span>
-                                <span style="color:#6b7280; font-size:12px; margin-left:8px;">
-                                    {{ $reserva->fecha_checkin->format('d/m/Y') }} → {{ $reserva->fecha_checkout?->format('d/m/Y') ?? 'Sin definir' }}
-                                </span>
-                            </div>
-                            <div style="font-size:13px; white-space:nowrap;">
-                                {{ $etiquetaTotal }}: <strong style="font-size:15px;">{{ $money($totalReal) }}</strong>
-                            </div>
+                    <details>
+                        <summary class="kh-fila-grid kh-resumen">
+                            <span class="kh-flecha">▶</span>
+                            <span style="font-size:13px; font-weight:600;">#{{ $reserva->numero_reserva }}</span>
+                            <span style="font-size:13px;">{{ $reserva->huesped_nombre }}</span>
+                            <span style="display:inline-block; padding:2px 10px; border-radius:5px; background:{{ $colorEstado[$reserva->estado] ?? '#6b7280' }}; color:#fff; font-size:11px; font-weight:600; text-align:center; width:fit-content;">
+                                {{ $labelEstado[$reserva->estado] ?? $reserva->estado }}
+                            </span>
+                            <span style="font-size:12px; color:#6b7280;">
+                                {{ $reserva->fecha_checkin->format('d/m/Y') }} → {{ $reserva->fecha_checkout?->format('d/m/Y') ?? 'Sin definir' }}
+                            </span>
+                            <span style="text-align:right; font-size:14px; font-weight:700;">{{ $money($totalReal) }}</span>
                         </summary>
 
-                        <div style="padding:4px 8px 20px 24px;">
+                        <div style="padding:4px 8px 20px 44px; border-bottom:1px solid #e5e7eb;">
                             <div style="display:flex; flex-wrap:wrap; gap:24px; margin-bottom:14px; font-size:12px; color:#374151;">
                                 <div>🌙 Noches: <strong>{{ $reserva->numero_noches }}</strong></div>
                                 <div>👥 Personas: <strong>{{ $reserva->numero_personas ?? '—' }}</strong></div>
