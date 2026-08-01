@@ -6,7 +6,9 @@
         "build": "node -e \"try{require('fs').unlinkSync('public/hot')}catch(e){}\" && vite build",
         "tauri": "tauri",
         "clean:tauri-resources": "node -e \"const fs=require('fs'); for (const d of ['src-tauri/target/release/laravel','src-tauri/target/release/php']) fs.rmSync(d,{recursive:true,force:true});\"",
-        "tauri:build:prod": "npm run clean:tauri-resources && tauri build --config src-tauri/tauri.prod.conf.json"
+        "tauri:build:prod": "npm run clean:tauri-resources && tauri build --config src-tauri/tauri.prod.conf.json",
+        "clean:tauri-local-resources": "node -e \"const fs=require('fs'); for (const d of ['src-tauri-local/target/release/laravel','src-tauri-local/target/release/php']) fs.rmSync(d,{recursive:true,force:true});\"",
+        "tauri:build:local:prod": "npm run clean:tauri-local-resources && cd src-tauri-local && tauri build --config tauri.prod.conf.json"
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.2",

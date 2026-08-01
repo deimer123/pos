@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-preparar-restauracion"
+description = "Permite completar una restauracion de respaldo ya preparada (edicion Local): apaga el servidor PHP local y reemplaza la base de datos y los archivos."
+commands.allow = ["preparar_restauracion"]

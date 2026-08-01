@@ -1,0 +1,59 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "Sistema POS Local",
+  "version": "0.1.0",
+  "identifier": "com.deimer.sistemaposlocal",
+  "build": {
+    "frontendDist": "splash",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [],
+    "security": {
+      "csp": null,
+      "capabilities": ["default"]
+    }
+  },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://www.sistemapo.com/local/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI3RTg2QUMxQjgzOTJBNTUKUldSVktqbTR3V3JvSjRtL1IzY3ZwbTNiTHpLTUxrL1dHSWtUY1VwazVBTC9JWVM4WGdhY2x5T0cK"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "createUpdaterArtifacts": true,
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "../src-tauri/binaries/php/runtime": "php",
+      "../app": "laravel/app",
+      "../bootstrap": "laravel/bootstrap",
+      "../config": "laravel/config",
+      "../database": "laravel/database",
+      "../public": "laravel/public",
+      "../resources": "laravel/resources",
+      "../routes": "laravel/routes",
+      "../vendor": "laravel/vendor",
+      "../artisan": "laravel/artisan",
+      "../composer.json": "laravel/composer.json"
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    },
+    "android": {
+      "debugApplicationIdSuffix": ".debug"
+    }
+  }
+}

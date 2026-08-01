@@ -1,0 +1,147 @@
+name: Local Release
+
+# Se dispara al crear un tag local-vX.Y.Z (ej: local-v1.0.0).
+# Compila el instalador de Windows de la edicion "Sistema POS Local"
+# (standalone, nunca sincroniza -- ver src-tauri-local/), lo firma con la
+# clave de actualizaciones automaticas, genera el manifiesto latest.json y
+# lo sube al droplet para que las instalaciones existentes lo detecten.
+# Calcado de turion-release.yml -- ver ese archivo para el detalle de cada
+# paso, aca solo se anota lo que cambia entre ediciones.
+on:
+  push:
+    tags:
+      - 'local-v*'
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extraer version del tag
+        id: version
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF#refs/tags/local-v}"
+          echo "version=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Fijar version en tauri.conf.json
+        shell: pwsh
+        run: |
+          $path = "src-tauri-local/tauri.conf.json"
+          $json = Get-Content $path -Raw | ConvertFrom-Json
+          $json.version = "${{ steps.version.outputs.version }}"
+          $json | ConvertTo-Json -Depth 20 | Set-Content $path -Encoding utf8
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, fileinfo, mysql, pdo_mysql, bcmath, intl, zip, gd
+          coverage: none
+
+      - name: Instalar dependencias de Composer (produccion)
+        run: composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Instalar dependencias npm y compilar assets
+        run: |
+          npm ci
+          npm run build
+
+      # src-tauri-local/tauri.conf.json apunta a ../src-tauri/binaries/php/
+      # runtime (el mismo runtime que usa Turion) para no duplicar esta
+      # descarga de ~75MB en cada edicion -- el script sigue escribiendo
+      # ahi, no en src-tauri-local/.
+      - name: Preparar runtime de PHP portable (compartido con Turion)
+        shell: bash
+        run: bash scripts/setup-php-portable.sh
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache de Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri-local
+
+      - name: Compilar y firmar Sistema POS Local
+        shell: pwsh
+        env:
+          # Reutiliza la misma llave de firma que Turion (mismo secret) --
+          # si en el futuro se prefiere rotar a una llave separada por
+          # edicion, cambiar aca a un secret nuevo (ej.
+          # TAURI_SIGNING_PRIVATE_KEY_LOCAL) y regenerar el par de llaves
+          # con "npx tauri signer generate", actualizando tambien el
+          # "pubkey" en src-tauri-local/tauri.conf.json.
+          TAURI_SIGNING_PRIVATE_KEY_B64: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          $bytes = [Convert]::FromBase64String($env:TAURI_SIGNING_PRIVATE_KEY_B64)
+          $env:TAURI_SIGNING_PRIVATE_KEY = [System.Text.Encoding]::UTF8.GetString($bytes)
+          npm run tauri:build:local:prod
+
+      - name: Generar manifiesto latest.json
+        id: manifest
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $bundleDir = "src-tauri-local/target/release/bundle/nsis"
+          $installer = Get-ChildItem -Path $bundleDir -Filter "*-setup.exe" | Select-Object -First 1
+          $sigFile = "$($installer.FullName).sig"
+          $signature = (Get-Content $sigFile -Raw).Trim()
+          $pubDate = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+
+          $manifest = [ordered]@{
+            version   = $version
+            notes     = "Actualizacion de Sistema POS Local $version"
+            pub_date  = $pubDate
+            platforms = [ordered]@{
+              "windows-x86_64" = [ordered]@{
+                signature = $signature
+                url       = "https://www.sistemapo.com/local/$($installer.Name)"
+              }
+            }
+          }
+          $manifest | ConvertTo-Json -Depth 10 | Set-Content "latest.json" -Encoding utf8
+
+          echo "installer_path=$($installer.FullName)" >> $env:GITHUB_OUTPUT
+          echo "installer_name=$($installer.Name)" >> $env:GITHUB_OUTPUT
+
+      - name: Guardar instalador y manifiesto como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sistema-pos-local-${{ steps.version.outputs.version }}
+          path: |
+            ${{ steps.manifest.outputs.installer_path }}
+            latest.json
+
+      - name: Subir instalador y manifiesto al droplet
+        shell: bash
+        env:
+          DROPLET_HOST: ${{ secrets.DROPLET_HOST }}
+          DROPLET_USER: ${{ secrets.DROPLET_USER }}
+          DROPLET_SSH_KEY_B64: ${{ secrets.DROPLET_SSH_KEY }}
+          # Secret NUEVO (no existe todavia, hay que crearlo en el repo):
+          # carpeta publica del droplet donde sirve /local/latest.json y el
+          # instalador (ej: /var/www/pos/public/local). Mismo mecanismo que
+          # DROPLET_TURION_DIR, pero en una carpeta separada para no
+          # mezclar los instaladores de las dos ediciones.
+          DROPLET_LOCAL_DIR: ${{ secrets.DROPLET_LOCAL_DIR }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DROPLET_SSH_KEY_B64" | base64 -d > ~/.ssh/local_deploy_key
+          chmod 600 ~/.ssh/local_deploy_key
+          ssh-keyscan -H "$DROPLET_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          scp -i ~/.ssh/local_deploy_key "${{ steps.manifest.outputs.installer_path }}" \
+            "$DROPLET_USER@$DROPLET_HOST:$DROPLET_LOCAL_DIR/"
+          scp -i ~/.ssh/local_deploy_key latest.json \
+            "$DROPLET_USER@$DROPLET_HOST:$DROPLET_LOCAL_DIR/"

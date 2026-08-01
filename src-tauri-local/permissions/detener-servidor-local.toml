@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-detener-servidor-local"
+description = "Permite detener el servidor PHP local antes de instalar una actualizacion, para que no quede huerfano bloqueando sus propios archivos."
+commands.allow = ["detener_servidor_local"]
