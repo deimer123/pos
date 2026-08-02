@@ -23,7 +23,7 @@ class ListEmpresas extends ListRecords
                 ->label('Configurar datos de facturación')
                 ->icon('heroicon-o-cog-6-tooth')
                 ->color('gray')
-                ->url(fn () => \App\Filament\Resources\ConfiguracionEmpresaResource::getUrl('create')),
+                ->url(fn () => \App\Filament\Pages\ConfigurarFacturacionEmisor::getUrl()),
 
             Actions\CreateAction::make()
                 ->label('Crear Empresa'),
