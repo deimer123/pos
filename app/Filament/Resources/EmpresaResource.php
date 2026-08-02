@@ -185,6 +185,11 @@ class EmpresaResource extends Resource
 
                 Forms\Components\Section::make('Limites de usuarios')
                     ->description('Estos cupos controlan cuantos empleados puede crear cada empresa. Si necesita mas, debe solicitarlo al super admin.')
+                    // La edicion Local no tiene "cupos" configurables aca: una
+                    // licencia es para una maquina y un usuario -- el limite
+                    // real lo pone la cantidad de licencias que la empresa
+                    // compre (ver EmitirLicenciaLocal), no un numero aca.
+                    ->hidden(fn (Get $get) => $get('tipo_edicion') === 'local')
                     ->schema([
                         Forms\Components\TextInput::make('max_vendedores')
                             ->label('Max. vendedores')

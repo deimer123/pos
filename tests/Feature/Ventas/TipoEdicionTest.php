@@ -136,6 +136,26 @@ test('una empresa Local no lleva plan (cobro unico por licencia, no suscripcion)
     expect($empresa->valor_plan_total)->toBeNull();
 });
 
+test('una empresa Local tampoco muestra limites de usuarios (el limite lo pone la cantidad de licencias)', function () {
+    $superAdmin = crearSuperAdminEdicionTest();
+
+    Livewire::actingAs($superAdmin)
+        ->test(CreateEmpresa::class)
+        ->assertFormFieldIsVisible('max_vendedores')
+        ->set('data.tipo_edicion', 'local')
+        ->assertFormFieldIsHidden('max_vendedores')
+        ->fillForm([
+            'name' => 'Empresa Local Sin Cupos',
+            'email' => 'empresalocalsincupos@example.com',
+            'password' => 'password123',
+            'passwordConfirmation' => 'password123',
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(User::where('email', 'empresalocalsincupos@example.com')->exists())->toBeTrue();
+});
+
 test('online e hibrida si muestran la seccion de plan comercial', function () {
     $superAdmin = crearSuperAdminEdicionTest();
 
