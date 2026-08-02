@@ -39,7 +39,7 @@ class User extends Authenticatable implements FilamentUser
         'paquete_usuarios_id',
         'valor_plan_total',
         'es_empresa_emisora',
-        'puede_usar_hibrida',
+        'tipo_edicion',
         'max_vendedores',
         'max_cajeros',
         'max_digitadores',
@@ -68,7 +68,6 @@ class User extends Authenticatable implements FilamentUser
         'plan_started_at' => 'date',
         'plan_ends_at' => 'date',
         'es_empresa_emisora' => 'boolean',
-        'puede_usar_hibrida' => 'boolean',
     ];
 
     public function puedeVerBotonPos(string $boton): bool
@@ -285,7 +284,28 @@ class User extends Authenticatable implements FilamentUser
 
         $empresa = $this->empresaPrincipal();
 
+        // Un cliente Local no tiene cuenta usable en el droplet: su unica
+        // interfaz es la app de escritorio activada con codigo (ver
+        // App\Services\LocalLicense). Esta fila solo existe como ancla
+        // para emitirle licencias, no para que inicie sesion aca.
+        if ($empresa->tipo_edicion === 'local') {
+            return false;
+        }
+
         return (bool) $empresa->activo && ! $empresa->planVencido();
+    }
+
+    // Hibrida = Online + Turion (puede emparejar/descargar Sistema POS
+    // Offline, ver EditConfiguracionEmpresa). Se controla desde
+    // EmpresaResource, solo super_admin.
+    public function puedeUsarHibrida(): bool
+    {
+        return $this->empresaPrincipal()->tipo_edicion === 'hibrida';
+    }
+
+    public function esClienteLocal(): bool
+    {
+        return $this->empresaPrincipal()->tipo_edicion === 'local';
     }
 
     public function puedeFacturar(): bool

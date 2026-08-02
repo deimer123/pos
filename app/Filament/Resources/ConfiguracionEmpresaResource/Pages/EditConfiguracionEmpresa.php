@@ -14,10 +14,10 @@ class EditConfiguracionEmpresa extends EditRecord
     protected function getHeaderActions(): array
     {
         // La edicion Hibrida (Turion) es opcional por empresa -- la
-        // habilita el super_admin desde EmpresaResource (puede_usar_hibrida).
+        // habilita el super_admin desde EmpresaResource (tipo_edicion).
         // Sin esto, cualquier admin_empresa veia estos botones sin importar
         // si esa edicion le fue vendida/activada.
-        if (! auth()->user()?->puede_usar_hibrida) {
+        if (! auth()->user()?->puedeUsarHibrida()) {
             return [];
         }
 

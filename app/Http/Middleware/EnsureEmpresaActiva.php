@@ -18,15 +18,21 @@ class EnsureEmpresaActiva
         }
 
         if (! $user->puedeIngresarPorPlan()) {
+            // Mensaje especifico para clientes Local: no es un problema de
+            // plan vencido, esa cuenta simplemente no tiene acceso al
+            // droplet -- su interfaz es la app de escritorio activada con
+            // codigo, no este panel.
+            $mensaje = $user->esClienteLocal()
+                ? 'Esta cuenta no tiene acceso al panel del droplet: es un cliente de la edicion Local. Ingresa desde la aplicacion de escritorio activada con tu codigo de licencia.'
+                : 'La empresa esta inactiva o el plan se encuentra vencido. Contacta al administrador del sistema.';
+
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
             return redirect()
                 ->route('filament.admin.auth.login')
-                ->withErrors([
-                    'email' => 'La empresa esta inactiva o el plan se encuentra vencido. Contacta al administrador del sistema.',
-                ]);
+                ->withErrors(['email' => $mensaje]);
         }
 
         return $next($request);

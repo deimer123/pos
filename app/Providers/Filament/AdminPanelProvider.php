@@ -68,6 +68,7 @@ class AdminPanelProvider extends PanelProvider
         ->authMiddleware([
             Authenticate::class,
             \App\Http\Middleware\BloquearAdminEnTurion::class, // ✔️ Una terminal de Turion (SQLite) es solo para el POS, no carga nada de /admin
+            \App\Http\Middleware\BloquearClienteLocalDeAdmin::class, // ✔️ Un cliente de la edición Local no tiene cuenta usable en el droplet
             \App\Http\Middleware\EnforceSessionUniqueness::class, // ✔️ Cierra la sesión si el usuario entra desde otro lugar
             \App\Http\Middleware\RestrictVendedorFromPanel::class, // ✔️ Bloquea acceso a vendedores
             \App\Http\Middleware\RequireConfiguracionEmpresa::class, // ✔️ Bloquea todo el panel hasta completar el wizard de configuración

@@ -65,6 +65,24 @@ class EmpresaResource extends Resource
                     ])
                     ->columns(2),
 
+                Forms\Components\Section::make('Tipo de edición')
+                    ->description('Como va a funcionar el sistema para esta empresa.')
+                    ->schema([
+                        Forms\Components\Radio::make('tipo_edicion')
+                            ->label('Edición contratada')
+                            ->options([
+                                'online' => 'Online -- solo panel/POS desde el navegador, en el droplet.',
+                                'hibrida' => 'Híbrida -- Online + Turion (Sistema POS Offline, sincroniza con el droplet).',
+                                'local' => 'Local -- app de escritorio standalone, activada por código, nunca se conecta al droplet.',
+                            ])
+                            ->descriptions([
+                                'local' => 'Esta cuenta NO va a poder iniciar sesión en este panel: su única interfaz es la app de escritorio. Después de crearla, emití su código desde "Emitir licencia Local".',
+                            ])
+                            ->default('online')
+                            ->required()
+                            ->live(),
+                    ]),
+
                 Forms\Components\Section::make('Acceso del Administrador')
                     ->schema([
                         Forms\Components\TextInput::make('password')
@@ -86,11 +104,6 @@ class EmpresaResource extends Resource
                         Forms\Components\Toggle::make('activo')
                             ->label('Empresa Activa')
                             ->default(true),
-
-                        Forms\Components\Toggle::make('puede_usar_hibrida')
-                            ->label('Puede usar edición Híbrida (Turion)')
-                            ->helperText('Habilita los botones "Emparejar equipo offline" y "Descargar Sistema POS Offline" en la ficha de esta empresa. La edición Local se gestiona aparte, emitiendo licencias con codigo.')
-                            ->default(false),
 
                         Forms\Components\Toggle::make('es_empresa_emisora')
                             ->label('Empresa emisora de facturas de planes')
@@ -367,9 +380,19 @@ class EmpresaResource extends Resource
                     ->trueColor('success')
                     ->falseColor('danger'),
 
-                Tables\Columns\ToggleColumn::make('puede_usar_hibrida')
-                    ->label('Híbrida')
-                    ->toggleable(),
+                Tables\Columns\TextColumn::make('tipo_edicion')
+                    ->label('Edición')
+                    ->badge()
+                    ->formatStateUsing(fn (string $state) => match ($state) {
+                        'hibrida' => 'Híbrida',
+                        'local' => 'Local',
+                        default => 'Online',
+                    })
+                    ->color(fn (string $state) => match ($state) {
+                        'hibrida' => 'warning',
+                        'local' => 'info',
+                        default => 'success',
+                    }),
 
                 Tables\Columns\TextColumn::make('valor_plan_total')
                     ->label('Total plan')
