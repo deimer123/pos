@@ -12,6 +12,13 @@ return [
     // inyectado por Rust igual que POS_EDITION). Ver App\Services\LocalLicense.
     'machine_id' => env('POS_MACHINE_ID'),
 
+    // "ip:puerto" donde otros equipos de la red local pueden encontrar
+    // este servidor (edición Local, varios terminales contra un servidor
+    // -- ver App\Filament\Pages\ConectarTerminalesLocal). Vacío si Rust no
+    // pudo detectar una IP de LAN real (ver direccion_lan() en
+    // src-tauri-local/src/lib.rs).
+    'lan_address' => env('POS_LAN_ADDRESS'),
+
     // Version del bundle actual (misma env var que ya inyecta Rust para
     // TurionSyncBar) -- se guarda en el manifest.json de cada respaldo
     // (ver App\Filament\Pages\RespaldoLocal) para poder diagnosticar con

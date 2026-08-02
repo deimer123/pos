@@ -46,6 +46,17 @@ class ActivarLicenciaController extends Controller
             return back()->withInput()->withErrors(['codigo' => $e->getMessage()]);
         }
 
+        // Esta pantalla arranca una instalacion NUEVA (crea la empresa y su
+        // primer usuario) -- un codigo de rol 'cliente' es para sumar un
+        // terminal a un servidor que YA existe (ver
+        // EmparejarTerminalLocalController::mostrar()), no tiene sentido
+        // aca.
+        if ($activacion->rol !== 'servidor') {
+            return back()->withInput()->withErrors([
+                'codigo' => 'Este código es de un terminal (cliente), no de un equipo servidor. Para emparejar un terminal, hacelo desde la pantalla "Conectar Terminales" del equipo servidor.',
+            ]);
+        }
+
         // Paso 2 (wizard minimo): solo pide el usuario administrador. El
         // resto de la configuracion del negocio (tipo_negocio, NIT,
         // representante legal, toggles usa_*) lo completa el wizard que
@@ -86,6 +97,12 @@ class ActivarLicenciaController extends Controller
             return redirect()->route('activar')->withErrors(['codigo' => $e->getMessage()]);
         }
 
+        if ($activacion->rol !== 'servidor') {
+            return redirect()->route('activar')->withErrors([
+                'codigo' => 'Este código es de un terminal (cliente), no de un equipo servidor.',
+            ]);
+        }
+
         $empresa = User::create([
             'name' => $data['admin_nombre'],
             'email' => $data['admin_email'],
@@ -102,6 +119,7 @@ class ActivarLicenciaController extends Controller
             'empresa_id' => $activacion->empresaId,
             'empresa_nombre' => $activacion->empresaNombre,
             'machine_id' => $activacion->machineId,
+            'rol' => $activacion->rol,
             'codigo_raw' => $data['codigo_raw'],
             'activada_at' => now(),
         ]);

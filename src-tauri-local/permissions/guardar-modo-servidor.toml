@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-guardar-modo-servidor"
+description = "Permite elegir 'este equipo es el servidor' en la pantalla de configuracion inicial y arrancar el servidor local."
+commands.allow = ["guardar_modo_servidor"]

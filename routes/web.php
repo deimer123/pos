@@ -13,6 +13,7 @@ use App\Http\Controllers\PosCatalogoController;
 use App\Http\Controllers\PosSyncController;
 use App\Http\Controllers\EmparejarTerminalController;
 use App\Http\Controllers\ActivarLicenciaController;
+use App\Http\Controllers\EmparejarTerminalLocalController;
 
 
 
@@ -44,6 +45,13 @@ Route::post('/turion/olvidar-emparejamiento', [EmparejarTerminalController::clas
 Route::get('/activar', [ActivarLicenciaController::class, 'mostrar'])->name('activar');
 Route::post('/activar', [ActivarLicenciaController::class, 'activar']);
 Route::post('/activar/empresa', [ActivarLicenciaController::class, 'guardarEmpresa'])->name('activar.empresa');
+
+// Sumar un terminal adicional a un servidor Local ya activado (varios
+// equipos contra un mismo servidor, todo dentro de la red local -- ver
+// App\Http\Controllers\EmparejarTerminalLocalController). No confundir con
+// /emparejar (eso es el emparejamiento de Turion contra el droplet).
+Route::get('/emparejar-terminal', [EmparejarTerminalLocalController::class, 'mostrar'])->name('emparejar-terminal-local');
+Route::post('/emparejar-terminal', [EmparejarTerminalLocalController::class, 'emparejar']);
 
 // Link estable para descargar el instalador de Turion mas reciente -- lee
 // el mismo latest.json que ya usa el auto-actualizador (ver

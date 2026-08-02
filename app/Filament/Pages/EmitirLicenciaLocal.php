@@ -74,6 +74,16 @@ class EmitirLicenciaLocal extends Page implements HasForms
                 TextInput::make('machine_label')
                     ->label('Etiqueta de la máquina (opcional)')
                     ->placeholder('Ej: Caja principal - Tienda Norte'),
+
+                Select::make('rol')
+                    ->label('Rol de esta licencia')
+                    ->options([
+                        'servidor' => 'Servidor (arranca la instalación, corre PHP+base de datos)',
+                        'cliente' => 'Terminal / cliente (se conecta a un servidor que ya existe)',
+                    ])
+                    ->default('servidor')
+                    ->required()
+                    ->helperText('Cada equipo adicional (servidor o terminal) necesita su propia licencia -- ver "Conectar Terminales" en el equipo servidor para emparejar un terminal.'),
             ])
             ->statePath('data');
     }
@@ -104,12 +114,15 @@ class EmitirLicenciaLocal extends Page implements HasForms
 
         $licenciaId = (string) Str::uuid();
 
+        $rol = $data['rol'] ?? 'servidor';
+
         $codigo = new CodigoActivacion(
             licenciaId: $licenciaId,
             empresaId: $empresa->id,
             empresaNombre: $empresa->name,
             machineId: $machineId,
             issuedAt: new DateTimeImmutable(),
+            rol: $rol,
         );
 
         try {
@@ -125,6 +138,7 @@ class EmitirLicenciaLocal extends Page implements HasForms
             'empresa_id' => $empresa->id,
             'machine_id' => $machineId,
             'machine_label' => $data['machine_label'] ?? null,
+            'rol' => $rol,
             'creado_por' => auth()->id(),
             'codigo_emitido' => $codigoFirmado,
             'issued_at' => $codigo->issuedAt,

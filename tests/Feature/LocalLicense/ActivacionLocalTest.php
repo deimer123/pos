@@ -65,6 +65,7 @@ function prepararTablaActivacionLocal(): void
         $table->unsignedBigInteger('empresa_id');
         $table->string('empresa_nombre');
         $table->string('machine_id');
+        $table->string('rol', 20)->default('servidor');
         $table->text('codigo_raw');
         $table->timestamp('activada_at');
         $table->timestamps();
@@ -186,6 +187,63 @@ test('un intento de guardarEmpresa con un codigo manipulado se rechaza sin crear
     ])->assertRedirect(route('activar'));
 
     expect(User::where('email', 'juan2@ferreteria.test')->exists())->toBeFalse();
+    expect(ActivacionLocal::activa())->toBeFalse();
+});
+
+test('un codigo de rol cliente se rechaza en /activar (paso 1) con un mensaje claro', function () {
+    prepararTablaActivacionLocal();
+    simularEdicionLocal();
+    prepararLlavesActivacionTest();
+    Config::set('pos.machine_id', 'MID-TEST-0001');
+
+    $codigo = new CodigoActivacion(
+        licenciaId: (string) Str::uuid(),
+        empresaId: 42,
+        empresaNombre: 'Ferreteria La Llave',
+        machineId: 'MID-TEST-0001',
+        issuedAt: new DateTimeImmutable(),
+        rol: 'cliente',
+    );
+    $codigoFirmado = (new FirmadorLicencia())->firmar($codigo);
+
+    $this->post('/activar', ['codigo' => $codigoFirmado])
+        ->assertRedirect()
+        ->assertSessionHasErrors('codigo');
+
+    expect(ActivacionLocal::activa())->toBeFalse();
+});
+
+test('un codigo de rol cliente se rechaza en /activar/empresa (paso 2) sin crear nada', function () {
+    \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'admin_empresa', 'guard_name' => 'web']);
+
+    prepararTablaActivacionLocal();
+    simularEdicionLocal();
+    prepararLlavesActivacionTest();
+    Config::set('pos.machine_id', 'MID-TEST-0001');
+
+    $codigo = new CodigoActivacion(
+        licenciaId: (string) Str::uuid(),
+        empresaId: 42,
+        empresaNombre: 'Ferreteria La Llave',
+        machineId: 'MID-TEST-0001',
+        issuedAt: new DateTimeImmutable(),
+        rol: 'cliente',
+    );
+    $codigoFirmado = (new FirmadorLicencia())->firmar($codigo);
+
+    $this->post('/activar/empresa', [
+        'licencia_id' => $codigo->licenciaId,
+        'empresa_id' => 42,
+        'empresa_nombre' => 'Ferreteria La Llave',
+        'machine_id' => 'MID-TEST-0001',
+        'codigo_raw' => $codigoFirmado,
+        'admin_nombre' => 'Juan Perez',
+        'admin_email' => 'juan@ferreteria.test',
+        'admin_password' => 'password123',
+        'admin_password_confirmation' => 'password123',
+    ])->assertRedirect(route('activar'));
+
+    expect(User::where('email', 'juan@ferreteria.test')->exists())->toBeFalse();
     expect(ActivacionLocal::activa())->toBeFalse();
 });
 

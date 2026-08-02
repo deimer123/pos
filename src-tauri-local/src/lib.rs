@@ -49,6 +49,45 @@ fn find_free_port() -> u16 {
     listener.local_addr().expect("puerto local invalido").port()
 }
 
+/// IPv4 de este equipo en la red local (para que otros equipos -- ver
+/// "varios terminales contra un servidor local" -- puedan encontrar este
+/// servidor). Sigue el mismo estilo que machine_guid_crudo(): correr un
+/// comando de Windows y parsear texto, en vez de sumar una dependencia de
+/// Rust nueva solo para esto. Busca "IPv4" en el texto (cubre tanto
+/// "IPv4 Address" en Windows en ingles como "Direccion IPv4" en espanol) y
+/// descarta loopback/APIPA. None si no hay ninguna interfaz de red real
+/// (ej. sin cable/wifi conectado) -- en ese caso el equipo sigue
+/// funcionando como POS local normal, solo no es alcanzable desde otros
+/// equipos todavia.
+fn direccion_lan() -> Option<String> {
+    let mut cmd = Command::new("ipconfig");
+
+    #[cfg(windows)]
+    cmd.creation_flags(CREATE_NO_WINDOW);
+
+    let output = cmd.output().ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    let texto = String::from_utf8_lossy(&output.stdout).to_string();
+
+    parsear_ipv4_lan(&texto)
+}
+
+/// Parte pura (sin invocar ningun comando) de direccion_lan(), separada
+/// para poder probarla con texto de ejemplo en vez de depender de que el
+/// entorno de pruebas tenga una red real.
+fn parsear_ipv4_lan(texto: &str) -> Option<String> {
+    texto
+        .lines()
+        .filter(|linea| linea.contains("IPv4"))
+        .filter_map(|linea| linea.split(':').nth(1))
+        .map(|valor| valor.trim().to_string())
+        .find(|ip| !ip.is_empty() && !ip.starts_with("127.") && !ip.starts_with("169.254."))
+}
+
 fn wait_for_port(port: u16, timeout: Duration) -> bool {
     let deadline = Instant::now() + timeout;
     while Instant::now() < deadline {
@@ -136,12 +175,51 @@ fn machine_id() -> String {
     )
 }
 
+/// Rol elegido por este equipo la primera vez que se abre la app (ver
+/// splash/modo.html) -- 'servidor' arranca PHP+SQLite igual que siempre;
+/// 'cliente' es un terminal sin base propia, solo abre un webview contra
+/// el servidor de la red local (ver App\Http\Controllers\
+/// EmparejarTerminalLocalController del lado PHP). Se guarda en
+/// modo.json, en app_data_dir, y se relee en cada arranque.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(tag = "rol", rename_all = "lowercase")]
+enum ModoInstalacion {
+    Servidor,
+    Cliente { servidor_url: String },
+}
+
+fn ruta_modo(app: &tauri::AppHandle) -> PathBuf {
+    dunce::simplified(
+        &app.path()
+            .app_data_dir()
+            .expect("no se pudo resolver el directorio de datos local del usuario"),
+    )
+    .join("modo.json")
+}
+
+fn leer_modo(app: &tauri::AppHandle) -> Option<ModoInstalacion> {
+    let contenido = fs::read_to_string(ruta_modo(app)).ok()?;
+    serde_json::from_str(&contenido).ok()
+}
+
+fn escribir_modo(app: &tauri::AppHandle, modo: &ModoInstalacion) -> Result<(), String> {
+    let ruta = ruta_modo(app);
+
+    if let Some(padre) = ruta.parent() {
+        fs::create_dir_all(padre).map_err(|e| format!("no se pudo crear el directorio de datos: {e}"))?;
+    }
+
+    let json = serde_json::to_string(modo).map_err(|e| format!("no se pudo guardar el modo de instalacion: {e}"))?;
+
+    fs::write(&ruta, json).map_err(|e| format!("no se pudo guardar el modo de instalacion: {e}"))
+}
+
 /// Deja constancia de que version del bundle corrio por ultima vez en esta
 /// instalacion (app_data_dir, no el directorio de recursos reemplazable).
 /// Confirma ademas que la base de datos/storage locales sobreviven a una
 /// reinstalacion, ya que viven fuera del directorio que el instalador
 /// reemplaza.
-fn registrar_version_bundle(app: &tauri::App, data_dir: &std::path::Path) {
+fn registrar_version_bundle(app: &tauri::AppHandle, data_dir: &std::path::Path) {
     let version_actual = app.package_info().version.to_string();
     let version_path = data_dir.join("version.txt");
 
@@ -154,7 +232,7 @@ fn registrar_version_bundle(app: &tauri::App, data_dir: &std::path::Path) {
     let _ = fs::write(&version_path, &version_actual);
 }
 
-fn preparar_entorno_local(app: &tauri::App) -> LocalEnv {
+fn preparar_entorno_local(app: &tauri::AppHandle, port: u16) -> LocalEnv {
     let resource_dir = dunce::simplified(
         &app.path()
             .resource_dir()
@@ -241,6 +319,15 @@ fn preparar_entorno_local(app: &tauri::App) -> LocalEnv {
         // App\Support\PosEdition del lado PHP.
         ("POS_EDITION".into(), "local".into()),
         ("POS_MACHINE_ID".into(), machine_id()),
+        // Direccion:puerto donde otros equipos de la red local pueden
+        // encontrar este servidor (ver "Conectar Terminales" del lado
+        // PHP) -- vacio si no se pudo detectar una IP de LAN real.
+        (
+            "POS_LAN_ADDRESS".into(),
+            direccion_lan()
+                .map(|ip| format!("{ip}:{port}"))
+                .unwrap_or_default(),
+        ),
     ];
 
     LocalEnv {
@@ -297,7 +384,11 @@ fn lanzar_servidor_php(env: &LocalEnv, port: u16, app_url: &str) -> Child {
         .arg("-d")
         .arg(format!("openssl.cafile={}", env.cacert_path.display()))
         .arg("-S")
-        .arg(format!("127.0.0.1:{port}"))
+        // 0.0.0.0 (no 127.0.0.1): para que otros equipos de la red local
+        // puedan llegar a este servidor -- ver direccion_lan(). La propia
+        // ventana de este equipo sigue navegando por 127.0.0.1 (mas abajo
+        // en run()), eso no cambia.
+        .arg(format!("0.0.0.0:{port}"))
         .arg(&env.router_script)
         .envs(env.vars.iter().map(|(k, v)| (k.as_str(), v.as_str())))
         .env("APP_URL", app_url)
@@ -405,10 +496,101 @@ fn preparar_restauracion(app: tauri::AppHandle, servidor: tauri::State<PhpServer
     Ok(())
 }
 
+/// Arranca el servidor PHP+SQLite local (migraciones, seed si es la
+/// primera vez, "php -S") y devuelve la URL local ("http://127.0.0.1:puerto")
+/// para navegar la ventana. Extraido de run() para poder llamarlo tanto al
+/// arrancar normalmente (modo servidor ya elegido en corridas anteriores)
+/// como recien elegido "Servidor" en splash/modo.html (guardar_modo_servidor).
+fn arrancar_servidor(app: &tauri::AppHandle) -> String {
+    let port = find_free_port();
+    let env = preparar_entorno_local(app, port);
+    let app_url = format!("http://127.0.0.1:{port}");
+
+    correr_artisan(&env, &["migrate", "--force"], &app_url);
+
+    if env.is_first_run {
+        correr_artisan(
+            &env,
+            &["db:seed", "--class=Database\\Seeders\\TurionLocalSeeder", "--force"],
+            &app_url,
+        );
+    }
+
+    let child = lanzar_servidor_php(&env, port, &app_url);
+
+    if !wait_for_port(port, Duration::from_secs(20)) {
+        log::error!("El servidor local de PHP no respondio a tiempo en el puerto {port}");
+    }
+
+    app.manage(PhpServerHandle(Mutex::new(Some(child))));
+
+    app_url
+}
+
+/// Comando invocado desde splash/modo.html cuando se elige "Servidor" en
+/// el primer arranque: guarda la eleccion, arranca PHP+SQLite (igual que
+/// hoy hace run() directo) y navega la ventana ya abierta hacia el login.
+#[tauri::command]
+fn guardar_modo_servidor(app: tauri::AppHandle) -> Result<(), String> {
+    escribir_modo(&app, &ModoInstalacion::Servidor)?;
+
+    let app_url = arrancar_servidor(&app);
+    let destino = format!("{app_url}/login");
+
+    if let Some(ventana) = app.get_webview_window("main") {
+        ventana
+            .navigate(destino.parse().map_err(|e| format!("URL invalida: {e}"))?)
+            .map_err(|e| format!("no se pudo abrir la app: {e}"))?;
+    }
+
+    Ok(())
+}
+
+/// Comando invocado desde splash/modo.html cuando se elige "Terminal /
+/// Caja adicional": este equipo NUNCA arranca PHP ni SQLite propios --
+/// solo guarda la direccion del servidor y navega la ventana directo a
+/// /emparejar-terminal (ver App\Http\Controllers\
+/// EmparejarTerminalLocalController), que resuelve sola si hay que pedir
+/// el codigo o si ya se puede pasar al login.
+#[tauri::command]
+fn guardar_modo_cliente(app: tauri::AppHandle, servidor_url: String) -> Result<(), String> {
+    let servidor_url = servidor_url.trim().trim_end_matches('/').to_string();
+
+    if servidor_url.is_empty() {
+        return Err("Escribí la dirección del servidor.".into());
+    }
+
+    let url_completa = if servidor_url.starts_with("http://") || servidor_url.starts_with("https://") {
+        servidor_url
+    } else {
+        format!("http://{servidor_url}")
+    };
+
+    escribir_modo(
+        &app,
+        &ModoInstalacion::Cliente { servidor_url: url_completa.clone() },
+    )?;
+
+    let destino = format!("{url_completa}/emparejar-terminal?machine_id={}", machine_id());
+
+    if let Some(ventana) = app.get_webview_window("main") {
+        ventana
+            .navigate(destino.parse().map_err(|e| format!("Dirección de servidor inválida: {e}"))?)
+            .map_err(|e| format!("no se pudo conectar al servidor: {e}"))?;
+    }
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![detener_servidor_local, preparar_restauracion])
+        .invoke_handler(tauri::generate_handler![
+            detener_servidor_local,
+            preparar_restauracion,
+            guardar_modo_servidor,
+            guardar_modo_cliente,
+        ])
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -428,52 +610,56 @@ pub fn run() {
             // respaldo-local.blade.php).
             app.handle().plugin(tauri_plugin_process::init())?;
 
-            let env = preparar_entorno_local(app);
-            let port = find_free_port();
-            let app_url = format!("http://127.0.0.1:{port}");
+            let handle = app.handle().clone();
+            let titulo_base = format!("Sistema POS Local v{}", app.package_info().version);
 
-            // Siempre (no solo en el primer arranque): "migrate" es
-            // idempotente y rapido cuando no hay nada pendiente, y asi una
-            // actualizacion del bundle que trae migraciones nuevas las
-            // aplica sola en el siguiente arranque, sin depender de que el
-            // usuario reinstale sobre una base de datos vacia.
-            correr_artisan(&env, &["migrate", "--force"], &app_url);
+            // "Varios terminales contra un servidor local": el primer
+            // arranque de cualquier instalacion (servidor O terminal)
+            // pregunta el rol antes de hacer nada mas -- un terminal NUNCA
+            // arranca PHP/SQLite propios, asi que esta decision tiene que
+            // pasar ANTES de preparar_entorno_local(), no despues.
+            match leer_modo(&handle) {
+                None => {
+                    WebviewWindowBuilder::new(app, "main", WebviewUrl::App("modo.html".into()))
+                        .title(format!("{titulo_base} — Configuración inicial"))
+                        .inner_size(520.0, 560.0)
+                        .resizable(false)
+                        .center()
+                        .build()?;
+                }
+                Some(ModoInstalacion::Servidor) => {
+                    let app_url = arrancar_servidor(&handle);
 
-            // Datos de referencia (tipos de documento, roles, departamentos/
-            // ciudades, plan de cuentas) que hacen falta para operar -- no
-            // son parte del catalogo de una empresa (no hay catalogo que
-            // bajar en esta edicion, se crean solos localmente). Solo una
-            // vez: correrlo de nuevo fallaria por llaves duplicadas.
-            if env.is_first_run {
-                correr_artisan(
-                    &env,
-                    &["db:seed", "--class=Database\\Seeders\\TurionLocalSeeder", "--force"],
-                    &app_url,
-                );
+                    // "/" es la pagina de aterrizaje (marketing) del sitio --
+                    // no tiene sentido aca, se entra directo al login. Si la
+                    // instalacion todavia no se activo con un codigo,
+                    // EnsureLicenciaLocalActiva (lado PHP) redirige sola a
+                    // /activar.
+                    let ventana_url = format!("{app_url}/login");
+
+                    WebviewWindowBuilder::new(app, "main", WebviewUrl::External(ventana_url.parse().unwrap()))
+                        .title(titulo_base)
+                        .inner_size(1280.0, 800.0)
+                        .min_inner_size(1024.0, 640.0)
+                        .maximized(true)
+                        .build()?;
+                }
+                Some(ModoInstalacion::Cliente { servidor_url }) => {
+                    // Sin PHP, sin SQLite: solo un webview contra el
+                    // servidor de la red local. /emparejar-terminal resuelve
+                    // sola si hace falta pedir el codigo o si ya se puede
+                    // pasar directo al login (ver
+                    // EmparejarTerminalLocalController del lado PHP).
+                    let ventana_url = format!("{servidor_url}/emparejar-terminal?machine_id={}", machine_id());
+
+                    WebviewWindowBuilder::new(app, "main", WebviewUrl::External(ventana_url.parse().unwrap()))
+                        .title(format!("{titulo_base} (Terminal)"))
+                        .inner_size(1280.0, 800.0)
+                        .min_inner_size(1024.0, 640.0)
+                        .maximized(true)
+                        .build()?;
+                }
             }
-
-            let child = lanzar_servidor_php(&env, port, &app_url);
-
-            if !wait_for_port(port, Duration::from_secs(20)) {
-                log::error!("El servidor local de PHP no respondio a tiempo en el puerto {port}");
-            }
-
-            app.manage(PhpServerHandle(Mutex::new(Some(child))));
-
-            // "/" es la pagina de aterrizaje (marketing) del sitio -- no
-            // tiene sentido aca, se entra directo al login. Si la
-            // instalacion todavia no se activo con un codigo,
-            // EnsureLicenciaLocalActiva (lado PHP) redirige sola a /activar.
-            let ventana_url = format!("{app_url}/login");
-
-            let titulo_ventana = format!("Sistema POS Local v{}", app.package_info().version);
-
-            WebviewWindowBuilder::new(app, "main", WebviewUrl::External(ventana_url.parse().unwrap()))
-                .title(titulo_ventana)
-                .inner_size(1280.0, 800.0)
-                .min_inner_size(1024.0, 640.0)
-                .maximized(true)
-                .build()?;
 
             Ok(())
         })
@@ -497,6 +683,82 @@ mod tests {
     #[test]
     fn machine_id_es_estable_entre_llamadas() {
         assert_eq!(machine_id(), machine_id());
+    }
+
+    #[test]
+    fn modo_instalacion_servidor_serializa_como_espera_splash_modo_html() {
+        let json = serde_json::to_string(&ModoInstalacion::Servidor).unwrap();
+        assert_eq!(json, r#"{"rol":"servidor"}"#);
+
+        let de: ModoInstalacion = serde_json::from_str(&json).unwrap();
+        assert!(matches!(de, ModoInstalacion::Servidor));
+    }
+
+    #[test]
+    fn modo_instalacion_cliente_serializa_con_servidor_url() {
+        let modo = ModoInstalacion::Cliente {
+            servidor_url: "http://192.168.1.5:8734".to_string(),
+        };
+        let json = serde_json::to_string(&modo).unwrap();
+        assert_eq!(json, r#"{"rol":"cliente","servidor_url":"http://192.168.1.5:8734"}"#);
+
+        let de: ModoInstalacion = serde_json::from_str(&json).unwrap();
+        match de {
+            ModoInstalacion::Cliente { servidor_url } => assert_eq!(servidor_url, "http://192.168.1.5:8734"),
+            ModoInstalacion::Servidor => panic!("se esperaba Cliente"),
+        }
+    }
+
+    #[test]
+    fn parsear_ipv4_lan_toma_la_primera_ip_real_ingles() {
+        let texto = "\
+Ethernet adapter Ethernet:
+
+   Connection-specific DNS Suffix  . :
+   Link-local IPv6 Address . . . . . : fe80::1234
+   IPv4 Address. . . . . . . . . . . : 192.168.1.5
+   Subnet Mask . . . . . . . . . . . : 255.255.255.0
+";
+
+        assert_eq!(parsear_ipv4_lan(texto), Some("192.168.1.5".to_string()));
+    }
+
+    #[test]
+    fn parsear_ipv4_lan_toma_la_primera_ip_real_espanol() {
+        let texto = "\
+Adaptador de Ethernet Ethernet:
+
+   Direccion IPv4. . . . . . . . . . : 10.0.0.42
+   Mascara de subred . . . . . . . . : 255.255.255.0
+";
+
+        assert_eq!(parsear_ipv4_lan(texto), Some("10.0.0.42".to_string()));
+    }
+
+    #[test]
+    fn parsear_ipv4_lan_descarta_loopback_y_apipa() {
+        let texto = "\
+Adaptador de loopback:
+   Direccion IPv4. . . . . . . . . . : 127.0.0.1
+
+Adaptador desconectado:
+   Direccion IPv4. . . . . . . . . . : 169.254.10.20
+
+Ethernet:
+   Direccion IPv4. . . . . . . . . . : 192.168.0.9
+";
+
+        assert_eq!(parsear_ipv4_lan(texto), Some("192.168.0.9".to_string()));
+    }
+
+    #[test]
+    fn parsear_ipv4_lan_sin_ninguna_ip_real_devuelve_none() {
+        let texto = "\
+Adaptador de loopback:
+   Direccion IPv4. . . . . . . . . . : 127.0.0.1
+";
+
+        assert_eq!(parsear_ipv4_lan(texto), None);
     }
 
     #[test]

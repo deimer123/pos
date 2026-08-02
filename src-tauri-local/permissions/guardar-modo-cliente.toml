@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-guardar-modo-cliente"
+description = "Permite elegir 'este equipo es un terminal' en la pantalla de configuracion inicial y guardar la direccion del servidor de la red local."
+commands.allow = ["guardar_modo_cliente"]

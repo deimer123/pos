@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Configuración inicial</title>
+<style>
+  html, body {
+    margin: 0; min-height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    background: #0f172a; color: #e2e8f0;
+    font-family: system-ui, sans-serif;
+    padding: 2rem 0;
+  }
+  .card {
+    background: #1e293b; border-radius: 12px; padding: 2rem;
+    width: 100%; max-width: 460px; box-sizing: border-box;
+  }
+  h1 { font-size: 1.2rem; margin: 0 0 .25rem; }
+  p.sub { color: #94a3b8; margin: 0 0 1.5rem; font-size: .9rem; }
+  .opcion {
+    display: block; width: 100%; text-align: left; box-sizing: border-box;
+    padding: 1rem; margin-bottom: .75rem; border-radius: 10px;
+    border: 1px solid #334155; background: #0f172a; color: #e2e8f0;
+    cursor: pointer; font-size: .95rem;
+  }
+  .opcion:hover { border-color: #16a34a; }
+  .opcion strong { display: block; margin-bottom: .2rem; }
+  .opcion span { color: #94a3b8; font-size: .8rem; }
+  .paso-cliente { display: none; }
+  .paso-cliente.activo { display: block; }
+  label { display: block; font-size: .85rem; margin-bottom: .35rem; color: #cbd5e1; }
+  input {
+    width: 100%; box-sizing: border-box; padding: .6rem .75rem;
+    border-radius: 8px; border: 1px solid #334155; background: #0f172a;
+    color: #e2e8f0; font-size: .95rem; margin-bottom: 1rem;
+  }
+  button.confirmar {
+    width: 100%; padding: .7rem; border-radius: 8px; border: none;
+    background: #16a34a; color: white; font-size: 1rem; cursor: pointer;
+  }
+  button.confirmar:hover { background: #15803d; }
+  button.confirmar:disabled { opacity: .6; cursor: default; }
+  .volver { background: none; border: none; color: #94a3b8; font-size: .8rem; cursor: pointer; margin-bottom: 1rem; padding: 0; }
+  .error { background: #7f1d1d; color: #fecaca; padding: .6rem .75rem; border-radius: 8px; margin-bottom: 1rem; font-size: .85rem; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div id="paso-elegir">
+      <h1>Configuración inicial</h1>
+      <p class="sub">¿Cómo funciona este equipo?</p>
+
+      <button type="button" class="opcion" id="btn-servidor">
+        <strong>Servidor</strong>
+        <span>Este equipo guarda toda la información (ventas, inventario). Los demás puestos se conectan a él.</span>
+      </button>
+
+      <button type="button" class="opcion" id="btn-cliente">
+        <strong>Terminal / Caja adicional</strong>
+        <span>Este equipo se conecta al servidor que ya está funcionando en la red local.</span>
+      </button>
+    </div>
+
+    <div class="paso-cliente" id="paso-cliente">
+      <button type="button" class="volver" id="btn-volver">&larr; Volver</button>
+      <h1>Conectar al servidor</h1>
+      <p class="sub">Escribí la dirección que muestra el equipo servidor en "Conectar Terminales" (ej: 192.168.1.5:8734).</p>
+
+      <div id="error-cliente"></div>
+
+      <label for="servidor_url">Dirección del servidor</label>
+      <input type="text" id="servidor_url" placeholder="192.168.1.5:8734" autofocus>
+
+      <button type="button" class="confirmar" id="btn-confirmar-cliente">Conectar</button>
+    </div>
+  </div>
+
+  <script>
+    function invocar(comando, args) {
+      return window.__TAURI_INTERNALS__.invoke(comando, args);
+    }
+
+    document.getElementById('btn-servidor').addEventListener('click', async (evento) => {
+      const boton = evento.currentTarget;
+      boton.disabled = true;
+      boton.querySelector('span').textContent = 'Iniciando...';
+      try {
+        await invocar('guardar_modo_servidor');
+      } catch (error) {
+        console.warn('Sistema POS Local: fallo al iniciar como servidor', error);
+        boton.disabled = false;
+      }
+    });
+
+    document.getElementById('btn-cliente').addEventListener('click', () => {
+      document.getElementById('paso-elegir').style.display = 'none';
+      document.getElementById('paso-cliente').classList.add('activo');
+    });
+
+    document.getElementById('btn-volver').addEventListener('click', () => {
+      document.getElementById('paso-cliente').classList.remove('activo');
+      document.getElementById('paso-elegir').style.display = 'block';
+    });
+
+    document.getElementById('btn-confirmar-cliente').addEventListener('click', async (evento) => {
+      const boton = evento.currentTarget;
+      const input = document.getElementById('servidor_url');
+      const errorBox = document.getElementById('error-cliente');
+      errorBox.innerHTML = '';
+
+      boton.disabled = true;
+      boton.textContent = 'Conectando...';
+
+      try {
+        await invocar('guardar_modo_cliente', { servidorUrl: input.value });
+      } catch (error) {
+        errorBox.innerHTML = '<div class="error">' + String(error) + '</div>';
+        boton.disabled = false;
+        boton.textContent = 'Conectar';
+      }
+    });
+  </script>
+</body>
+</html>

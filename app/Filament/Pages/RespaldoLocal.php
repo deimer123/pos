@@ -95,7 +95,7 @@ class RespaldoLocal extends Page implements HasForms
             $this->agregarDirectorioAlZip($zip, $publicDir, 'storage_public');
         }
 
-        $activacion = ActivacionLocal::first();
+        $activacion = ActivacionLocal::where('rol', 'servidor')->first();
 
         $zip->addFromString('manifest.json', json_encode([
             'app' => 'Sistema POS Local',
@@ -146,7 +146,7 @@ class RespaldoLocal extends Page implements HasForms
             return;
         }
 
-        $activacion = ActivacionLocal::first();
+        $activacion = ActivacionLocal::where('rol', 'servidor')->first();
 
         if ($activacion && (int) ($manifest['empresa_id'] ?? 0) !== (int) $activacion->empresa_id) {
             $zip->close();

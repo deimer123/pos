@@ -14,6 +14,8 @@
     "core:default",
     "process:allow-restart",
     "allow-detener-servidor-local",
-    "allow-preparar-restauracion"
+    "allow-preparar-restauracion",
+    "allow-guardar-modo-servidor",
+    "allow-guardar-modo-cliente"
   ]
 }

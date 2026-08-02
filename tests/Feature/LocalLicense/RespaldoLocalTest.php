@@ -40,6 +40,7 @@ function conConexionSqliteDeTest(Closure $callback)
         $table->unsignedBigInteger('empresa_id');
         $table->string('empresa_nombre');
         $table->string('machine_id');
+        $table->string('rol', 20)->default('servidor');
         $table->text('codigo_raw');
         $table->timestamp('activada_at');
         $table->timestamps();
@@ -63,6 +64,7 @@ function prepararTablaActivacionLocalRespaldo(): void
         $table->unsignedBigInteger('empresa_id');
         $table->string('empresa_nombre');
         $table->string('machine_id');
+        $table->string('rol', 20)->default('servidor');
         $table->text('codigo_raw');
         $table->timestamp('activada_at');
         $table->timestamps();

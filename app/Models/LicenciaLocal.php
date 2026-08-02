@@ -21,6 +21,7 @@ class LicenciaLocal extends Model
         'empresa_id',
         'machine_id',
         'machine_label',
+        'rol',
         'creado_por',
         'codigo_emitido',
         'issued_at',

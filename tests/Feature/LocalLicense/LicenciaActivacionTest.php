@@ -113,3 +113,59 @@ test('parsear() no exige machine_id -- solo valida forma y firma', function () {
 
     expect($resultado->machineId)->toBe('MID-AAAA-0001');
 });
+
+test('sin especificar rol, el codigo firmado es de rol servidor por defecto', function () {
+    prepararLlavesLicenciaTest();
+
+    $codigoFirmado = (new FirmadorLicencia())->firmar(codigoActivacionDeTest());
+    $resultado = (new ValidadorLicencia())->verificar($codigoFirmado, 'MID-TEST-0001');
+
+    expect($resultado->rol)->toBe('servidor');
+});
+
+test('un codigo firmado explicitamente con rol cliente lo conserva al verificar', function () {
+    prepararLlavesLicenciaTest();
+
+    $codigo = new CodigoActivacion(
+        licenciaId: (string) Str::uuid(),
+        empresaId: 1,
+        empresaNombre: 'Empresa de prueba',
+        machineId: 'MID-TEST-0001',
+        issuedAt: new DateTimeImmutable(),
+        rol: 'cliente',
+    );
+    $codigoFirmado = (new FirmadorLicencia())->firmar($codigo);
+    $resultado = (new ValidadorLicencia())->verificar($codigoFirmado, 'MID-TEST-0001');
+
+    expect($resultado->rol)->toBe('cliente');
+});
+
+test('un codigo viejo emitido antes de que existiera el campo rol se sigue verificando como servidor', function () {
+    prepararLlavesLicenciaTest();
+
+    // Simula un codigo firmado ANTES de que CodigoActivacion tuviera 'rol'
+    // en el payload -- construido a mano en vez de con el value object
+    // actual, para probar la compatibilidad hacia atras de verdad.
+    $payloadSinRol = [
+        'v' => 1,
+        'licencia_id' => (string) Str::uuid(),
+        'empresa_id' => 1,
+        'empresa_nombre' => 'Empresa vieja',
+        'machine_id' => 'MID-TEST-0001',
+        'issued_at' => (new DateTimeImmutable())->format(DATE_ATOM),
+    ];
+    $payloadJson = json_encode($payloadSinRol, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+    $privateKey = base64_decode(config('pos.license.private_key'), true);
+    $firma = sodium_crypto_sign_detached($payloadJson, $privateKey);
+
+    $codigoFirmado = sprintf(
+        'POSLOC%d-%s.%s',
+        1,
+        \App\Services\LocalLicense\Base64Url::encode($payloadJson),
+        \App\Services\LocalLicense\Base64Url::encode($firma)
+    );
+
+    $resultado = (new ValidadorLicencia())->verificar($codigoFirmado, 'MID-TEST-0001');
+
+    expect($resultado->rol)->toBe('servidor');
+});

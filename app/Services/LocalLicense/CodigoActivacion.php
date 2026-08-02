@@ -19,6 +19,12 @@ final class CodigoActivacion
         public readonly string $machineId,
         public readonly DateTimeImmutable $issuedAt,
         public readonly int $formatVersion = 1,
+        // 'servidor' (corre PHP+SQLite, como toda instalacion Local hasta
+        // ahora) o 'cliente' (terminal sin base propia, ver
+        // EmparejarTerminalLocalController). Opcional A PROPOSITO: los
+        // codigos ya emitidos antes de este campo no lo traen, y deben
+        // seguir siendo validos como 'servidor' (ver fromPayloadArray()).
+        public readonly string $rol = 'servidor',
     ) {
     }
 
@@ -38,6 +44,7 @@ final class CodigoActivacion
             'empresa_nombre' => $this->empresaNombre,
             'machine_id' => $this->machineId,
             'issued_at' => $this->issuedAt->format(DATE_ATOM),
+            'rol' => $this->rol,
         ];
     }
 
@@ -62,6 +69,7 @@ final class CodigoActivacion
             machineId: (string) $payload['machine_id'],
             issuedAt: $issuedAt,
             formatVersion: (int) $payload['v'],
+            rol: (string) ($payload['rol'] ?? 'servidor'),
         );
     }
 }

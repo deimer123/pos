@@ -29,6 +29,14 @@ class EnsureLicenciaLocalActiva
             return $next($request);
         }
 
+        // Un terminal cliente que se conecta por primera vez todavia no
+        // tiene fila propia en activacion_local -- si no se dejara pasar
+        // esto, quedaria atrapado en un redirect a /activar (que ademas es
+        // para activar un SERVIDOR nuevo, no un terminal).
+        if (str_starts_with($request->path(), 'emparejar-terminal')) {
+            return $next($request);
+        }
+
         if (! ActivacionLocal::activa()) {
             return redirect()->route('activar');
         }
