@@ -1505,6 +1505,17 @@ body:has(.fi-simple-layout) {
     margin: 0 auto !important;
 }
 
+/* El logo del cliente puede no ser cuadrado (banners con texto, etc.) --
+   con "cover" (regla base de .brand-logo-image mas arriba) se recortaba
+   mostrando solo un fragmento irreconocible. "contain" siempre muestra el
+   logo completo dentro del cuadro, con relleno blanco si hace falta. */
+.fi-sidebar-header img.brand-logo-image {
+    object-fit: contain !important;
+    background: #ffffff !important;
+    padding: 4px !important;
+    box-sizing: border-box !important;
+}
+
 .fi-simple-layout::before {
     width: min(50vw, 680px) !important;
     background:
