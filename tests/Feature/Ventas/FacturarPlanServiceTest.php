@@ -7,30 +7,53 @@ use App\Services\Ventas\FacturarPlanService;
 use Spatie\Permission\Models\Role;
 
 // Cobro de plan: el super_admin le genera a una empresa una factura por
-// lo que le corresponde pagar segun su plan, a nombre de la "empresa
-// emisora" (la del super_admin), reusando la misma tabla facturas/
+// lo que le corresponde pagar segun su plan. La "empresa emisora" es la
+// MISMA cuenta con la que el super_admin inicia sesion (no una empresa
+// aparte que hay que crear y marcar) -- sus propios datos de facturacion
+// (NIT, representante legal) se configuran en su ConfiguracionEmpresa,
+// igual que cualquier otra empresa. Reusa la misma tabla facturas/
 // factura_detalles que usa cualquier empresa para sus propias ventas.
 
-test('facturar sin empresa emisora configurada lanza un error claro', function () {
+function crearSuperAdminFacturarPlanTest(bool $conConfiguracion = true): User
+{
     Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
-    $superAdmin = User::factory()->create(['tipo_usuario' => 'empresa']);
+    $superAdmin = User::factory()->create(['tipo_usuario' => 'empresa', 'name' => 'Mi Empresa SAS']);
     $superAdmin->assignRole('super_admin');
+
+    if ($conConfiguracion) {
+        ConfiguracionEmpresa::create([
+            'empresa_id' => $superAdmin->id,
+            'nombre_empresa' => 'Mi Empresa SAS',
+            'representante_legal' => 'Yo Mismo',
+            'tipo_negocio' => 'tienda',
+        ]);
+    }
+
+    return $superAdmin;
+}
+
+test('facturar sin haber configurado los datos de facturacion del super_admin lanza un error claro', function () {
+    $superAdmin = crearSuperAdminFacturarPlanTest(conConfiguracion: false);
     $this->actingAs($superAdmin);
 
     $plan = Plan::create(['nombre' => 'Plan de prueba', 'meses' => 3, 'precio' => 330000, 'usuarios_incluidos' => 1, 'activo' => true]);
     $empresaCliente = User::factory()->create(['tipo_usuario' => 'empresa', 'plan_id' => $plan->id, 'valor_plan_total' => 330000]);
 
     expect(fn () => app(FacturarPlanService::class)->facturar($empresaCliente, 'salida', 'efectivo'))
-        ->toThrow(RuntimeException::class, 'No hay ninguna empresa marcada como "Empresa emisora"');
+        ->toThrow(RuntimeException::class, 'Todavía no configuraste tus datos de facturación');
 });
 
-test('facturar el plan como salida de mercancia crea la factura a nombre de la empresa emisora', function () {
-    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
-    $superAdmin = User::factory()->create(['tipo_usuario' => 'empresa']);
-    $superAdmin->assignRole('super_admin');
-    $this->actingAs($superAdmin);
+test('un no super_admin no puede facturar el plan de una empresa', function () {
+    $empresaCliente = User::factory()->create(['tipo_usuario' => 'empresa', 'valor_plan_total' => 330000]);
+    $this->actingAs($empresaCliente);
 
-    $emisora = User::factory()->create(['tipo_usuario' => 'empresa', 'name' => 'Mi Empresa SAS', 'es_empresa_emisora' => true]);
+    expect(fn () => app(FacturarPlanService::class)->facturar($empresaCliente, 'salida', 'efectivo'))
+        ->toThrow(RuntimeException::class, 'Solo un super_admin');
+});
+
+test('facturar el plan como salida de mercancia crea la factura a nombre de la cuenta del super_admin', function () {
+    $superAdmin = crearSuperAdminFacturarPlanTest();
+    $this->actingAs($superAdmin);
 
     $plan = Plan::create(['nombre' => 'Plan Emprende', 'meses' => 3, 'precio' => 330000, 'usuarios_incluidos' => 1, 'activo' => true]);
     $empresaCliente = User::factory()->create([
@@ -43,7 +66,7 @@ test('facturar el plan como salida de mercancia crea la factura a nombre de la e
 
     $factura = app(FacturarPlanService::class)->facturar($empresaCliente, 'salida', 'efectivo');
 
-    expect($factura->empresa_id)->toBe($emisora->id);
+    expect($factura->empresa_id)->toBe($superAdmin->id);
     expect((float) $factura->total)->toBe(330000.0);
     expect((float) $factura->saldo)->toBe(0.0);
     expect($factura->estado_pago)->toBe('pagada');
@@ -59,12 +82,8 @@ test('facturar el plan como salida de mercancia crea la factura a nombre de la e
 });
 
 test('facturar electronicamente sin NIT de la empresa cliente lanza un error claro', function () {
-    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
-    $superAdmin = User::factory()->create(['tipo_usuario' => 'empresa']);
-    $superAdmin->assignRole('super_admin');
+    $superAdmin = crearSuperAdminFacturarPlanTest();
     $this->actingAs($superAdmin);
-
-    User::factory()->create(['tipo_usuario' => 'empresa', 'es_empresa_emisora' => true]);
 
     $plan = Plan::create(['nombre' => 'Plan de prueba', 'meses' => 3, 'precio' => 330000, 'usuarios_incluidos' => 1, 'activo' => true]);
     $empresaCliente = User::factory()->create(['tipo_usuario' => 'empresa', 'plan_id' => $plan->id, 'valor_plan_total' => 330000]);
@@ -72,18 +91,4 @@ test('facturar electronicamente sin NIT de la empresa cliente lanza un error cla
 
     expect(fn () => app(FacturarPlanService::class)->facturar($empresaCliente, 'electronica', 'efectivo'))
         ->toThrow(RuntimeException::class, 'primero completa el NIT');
-});
-
-test('marcar una empresa como emisora desmarca cualquier otra que ya lo fuera', function () {
-    $emisoraVieja = User::factory()->create(['tipo_usuario' => 'empresa', 'es_empresa_emisora' => true]);
-    $emisoraNueva = User::factory()->create(['tipo_usuario' => 'empresa', 'es_empresa_emisora' => false]);
-
-    // Simula lo que hace el afterStateUpdated() del toggle en el formulario.
-    User::where('es_empresa_emisora', true)
-        ->whereKeyNot($emisoraNueva->id)
-        ->update(['es_empresa_emisora' => false]);
-    $emisoraNueva->update(['es_empresa_emisora' => true]);
-
-    expect($emisoraVieja->fresh()->es_empresa_emisora)->toBeFalse();
-    expect($emisoraNueva->fresh()->es_empresa_emisora)->toBeTrue();
 });

@@ -11,21 +11,28 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Genera la factura del COBRO DE PLAN de una empresa cliente (lo que el
- * super_admin/dueno del sistema le cobra a esa empresa por su suscripcion),
- * a nombre de la "empresa emisora" marcada en EmpresaResource -- reusa la
- * misma tabla facturas/factura_detalles y el mismo ticket de impresion que
- * ya usa cada empresa para sus propias ventas, no es un sistema aparte.
+ * super_admin/dueno del sistema le cobra a esa empresa por su
+ * suscripcion). La emisora es la MISMA cuenta con la que el super_admin
+ * inicia sesion (no una empresa aparte que hay que crear y marcar) -- sus
+ * datos de facturacion (NIT, representante legal, Factus) se configuran
+ * en su propia ConfiguracionEmpresa, igual que cualquier otra empresa (ver
+ * boton "Configurar datos de facturación" en el listado de empresas).
+ * Reusa la misma tabla facturas/factura_detalles y el mismo ticket de
+ * impresion que ya usa cada empresa para sus propias ventas, no es un
+ * sistema aparte.
  */
 class FacturarPlanService
 {
     public function facturar(User $empresaCliente, string $tipoFactura, string $medioPago): Factura
     {
-        $emisora = User::where('tipo_usuario', 'empresa')
-            ->where('es_empresa_emisora', true)
-            ->first();
+        $emisora = auth()->user();
 
-        if (! $emisora) {
-            throw new \RuntimeException('No hay ninguna empresa marcada como "Empresa emisora". Configúrala primero en una empresa.');
+        if (! $emisora || ! $emisora->hasRole('super_admin')) {
+            throw new \RuntimeException('Solo un super_admin puede facturar el plan de una empresa.');
+        }
+
+        if (! ConfiguracionEmpresa::where('empresa_id', $emisora->id)->exists()) {
+            throw new \RuntimeException('Todavía no configuraste tus datos de facturación. Usá el botón "Configurar datos de facturación" en el listado de empresas.');
         }
 
         if (blank($empresaCliente->valor_plan_total) || (float) $empresaCliente->valor_plan_total <= 0) {

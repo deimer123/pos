@@ -105,19 +105,6 @@ class EmpresaResource extends Resource
                             ->label('Empresa Activa')
                             ->default(true),
 
-                        Forms\Components\Toggle::make('es_empresa_emisora')
-                            ->label('Empresa emisora de facturas de planes')
-                            ->helperText('Marca UNA sola empresa (la tuya propia, con su NIT real) como emisora -- las facturas de cobro de plan de las demas empresas saldran a nombre de esta. Al activarla se desmarca de cualquier otra.')
-                            ->default(false)
-                            ->live()
-                            ->afterStateUpdated(function ($state, ?\App\Models\User $record): void {
-                                if ($state) {
-                                    \App\Models\User::where('es_empresa_emisora', true)
-                                        ->when($record, fn ($q) => $q->whereKeyNot($record->id))
-                                        ->update(['es_empresa_emisora' => false]);
-                                }
-                            }),
-
                         Forms\Components\Hidden::make('tipo_usuario')
                             ->default('empresa'),
                     ])
@@ -477,6 +464,63 @@ class EmpresaResource extends Resource
                     ->requiresConfirmation()
                     ->visible(fn (User $record) => (bool) $record->activo)
                     ->action(fn (User $record) => $record->update(['activo' => false])),
+
+                Tables\Actions\Action::make('facturar')
+                    ->label('Facturar')
+                    ->icon('heroicon-o-document-currency-dollar')
+                    ->color('success')
+                    ->visible(fn (User $record) => (float) ($record->valor_plan_total ?? 0) > 0)
+                    ->form([
+                        Forms\Components\Select::make('tipo_factura')
+                            ->label('Tipo de documento')
+                            ->options([
+                                'salida' => 'Salida de mercancía (no fiscal)',
+                                'electronica' => 'Factura electrónica (DIAN)',
+                            ])
+                            ->default('salida')
+                            ->required(),
+
+                        Forms\Components\Select::make('medio_pago')
+                            ->label('Medio de pago')
+                            ->options([
+                                'efectivo' => 'Efectivo',
+                                'transferencia' => 'Transferencia',
+                            ])
+                            ->default('efectivo')
+                            ->required(),
+                    ])
+                    ->modalDescription(fn (User $record) => 'Se facturará $'.number_format((float) $record->valor_plan_total, 0, ',', '.').' solo por el plan que esta empresa adquirió (no se facturan productos).')
+                    ->action(function (User $record, array $data): void {
+                        try {
+                            $factura = app(\App\Services\Ventas\FacturarPlanService::class)->facturar(
+                                $record,
+                                $data['tipo_factura'],
+                                $data['medio_pago'],
+                            );
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('Factura del plan generada')
+                                ->success()
+                                ->actions([
+                                    \Filament\Notifications\Actions\Action::make('verTira')
+                                        ->label('Ver / imprimir (tira POS)')
+                                        ->url(route('factura.imprimir', $factura->id), shouldOpenInNewTab: true)
+                                        ->button(),
+                                    \Filament\Notifications\Actions\Action::make('verCarta')
+                                        ->label('Ver / imprimir (carta)')
+                                        ->url(route('factura.imprimir', ['id' => $factura->id, 'formato' => 'carta']), shouldOpenInNewTab: true)
+                                        ->button()
+                                        ->color('gray'),
+                                ])
+                                ->send();
+                        } catch (\Throwable $exception) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('No se pudo generar la factura')
+                                ->body($exception->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
 
                 Tables\Actions\Action::make('eliminar_todo')
                     ->label('Eliminar todo')
