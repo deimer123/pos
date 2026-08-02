@@ -39,6 +39,7 @@ class User extends Authenticatable implements FilamentUser
         'paquete_usuarios_id',
         'valor_plan_total',
         'es_empresa_emisora',
+        'puede_usar_hibrida',
         'max_vendedores',
         'max_cajeros',
         'max_digitadores',
@@ -67,6 +68,7 @@ class User extends Authenticatable implements FilamentUser
         'plan_started_at' => 'date',
         'plan_ends_at' => 'date',
         'es_empresa_emisora' => 'boolean',
+        'puede_usar_hibrida' => 'boolean',
     ];
 
     public function puedeVerBotonPos(string $boton): bool

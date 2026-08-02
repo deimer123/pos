@@ -87,6 +87,11 @@ class EmpresaResource extends Resource
                             ->label('Empresa Activa')
                             ->default(true),
 
+                        Forms\Components\Toggle::make('puede_usar_hibrida')
+                            ->label('Puede usar edición Híbrida (Turion)')
+                            ->helperText('Habilita los botones "Emparejar equipo offline" y "Descargar Sistema POS Offline" en la ficha de esta empresa. La edición Local se gestiona aparte, emitiendo licencias con codigo.')
+                            ->default(false),
+
                         Forms\Components\Toggle::make('es_empresa_emisora')
                             ->label('Empresa emisora de facturas de planes')
                             ->helperText('Marca UNA sola empresa (la tuya propia, con su NIT real) como emisora -- las facturas de cobro de plan de las demas empresas saldran a nombre de esta. Al activarla se desmarca de cualquier otra.')
@@ -361,6 +366,10 @@ class EmpresaResource extends Resource
                     ->falseIcon('heroicon-o-x-circle')
                     ->trueColor('success')
                     ->falseColor('danger'),
+
+                Tables\Columns\ToggleColumn::make('puede_usar_hibrida')
+                    ->label('Híbrida')
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('valor_plan_total')
                     ->label('Total plan')
