@@ -418,14 +418,14 @@ pub fn run() {
                 )?;
             }
 
-            // Actualizaciones automaticas: revisa el manifiesto configurado en
-            // tauri.conf.json (plugins.updater.endpoints) y, si hay una
-            // version nueva firmada correctamente, la descarga e instala.
-            // tauri-plugin-process habilita relaunch() para reiniciar la app
-            // ya con la version nueva instalada (tambien lo usa la
-            // restauracion de respaldos, ver resources/views/filament/pages/
+            // A proposito SIN tauri-plugin-updater: la edicion Local no
+            // tiene actualizaciones automaticas -- cada actualizacion se
+            // cobra aparte y el super_admin la entrega a mano (ver
+            // App\Support\PosEdition::esLocal() y el gate del render hook
+            // en AdminPanelProvider). tauri-plugin-process se mantiene solo
+            // porque relaunch() lo sigue usando la restauracion de
+            // respaldos (ver resources/views/filament/pages/
             // respaldo-local.blade.php).
-            app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
             app.handle().plugin(tauri_plugin_process::init())?;
 
             let env = preparar_entorno_local(app);

@@ -14,19 +14,9 @@
       "capabilities": ["default"]
     }
   },
-  "plugins": {
-    "updater": {
-      "active": true,
-      "endpoints": [
-        "https://www.sistemapo.com/local/latest.json"
-      ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI3RTg2QUMxQjgzOTJBNTUKUldSVktqbTR3V3JvSjRtL1IzY3ZwbTNiTHpLTUxrL1dHSWtUY1VwazVBTC9JWVM4WGdhY2x5T0cK"
-    }
-  },
   "bundle": {
     "active": true,
     "targets": "all",
-    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

@@ -94,7 +94,11 @@ class AdminPanelProvider extends PanelProvider
         )
         ->renderHook(
             PanelsRenderHook::AUTH_LOGIN_FORM_AFTER,
-            fn () => view('filament.turion-updater-script')
+            // Solo Turion (hibrida) tiene actualizaciones automaticas -- la
+            // edicion Local las saco (ver App\Support\PosEdition::esLocal())
+            // porque cada actualizacion se cobra aparte y se entrega a mano
+            // por el super_admin, nunca por un manifiesto publico.
+            fn () => \App\Support\PosEdition::esHibrida() ? view('filament.turion-updater-script') : ''
         )
         ->renderHook(
     'panels::head.end',

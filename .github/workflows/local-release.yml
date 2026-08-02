@@ -2,9 +2,12 @@ name: Local Release
 
 # Se dispara al crear un tag local-vX.Y.Z (ej: local-v1.0.0).
 # Compila el instalador de Windows de la edicion "Sistema POS Local"
-# (standalone, nunca sincroniza -- ver src-tauri-local/), lo firma con la
-# clave de actualizaciones automaticas, genera el manifiesto latest.json y
-# lo sube al droplet para que las instalaciones existentes lo detecten.
+# (standalone, nunca sincroniza -- ver src-tauri-local/) y lo deja como
+# artifact del workflow para que el super_admin lo descargue y se lo
+# entregue A MANO al cliente que pagó esa actualización -- esta edicion
+# a proposito NO tiene actualizaciones automaticas (sin tauri-plugin-
+# updater, ver src-tauri-local/src/lib.rs), asi que no hay manifiesto ni
+# firma que generar ni publicar en el droplet.
 # Calcado de turion-release.yml -- ver ese archivo para el detalle de cada
 # paso, aca solo se anota lo que cambia entre ediciones.
 on:
@@ -72,76 +75,20 @@ jobs:
         with:
           workspaces: src-tauri-local
 
-      - name: Compilar y firmar Sistema POS Local
+      - name: Compilar Sistema POS Local
         shell: pwsh
-        env:
-          # Reutiliza la misma llave de firma que Turion (mismo secret) --
-          # si en el futuro se prefiere rotar a una llave separada por
-          # edicion, cambiar aca a un secret nuevo (ej.
-          # TAURI_SIGNING_PRIVATE_KEY_LOCAL) y regenerar el par de llaves
-          # con "npx tauri signer generate", actualizando tambien el
-          # "pubkey" en src-tauri-local/tauri.conf.json.
-          TAURI_SIGNING_PRIVATE_KEY_B64: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: |
-          $bytes = [Convert]::FromBase64String($env:TAURI_SIGNING_PRIVATE_KEY_B64)
-          $env:TAURI_SIGNING_PRIVATE_KEY = [System.Text.Encoding]::UTF8.GetString($bytes)
-          npm run tauri:build:local:prod
+        run: npm run tauri:build:local:prod
 
-      - name: Generar manifiesto latest.json
-        id: manifest
+      - name: Ubicar el instalador generado
+        id: instalador
         shell: pwsh
         run: |
-          $version = "${{ steps.version.outputs.version }}"
           $bundleDir = "src-tauri-local/target/release/bundle/nsis"
-          $installer = Get-ChildItem -Path $bundleDir -Filter "*-setup.exe" | Select-Object -First 1
-          $sigFile = "$($installer.FullName).sig"
-          $signature = (Get-Content $sigFile -Raw).Trim()
-          $pubDate = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+          $instalador = Get-ChildItem -Path $bundleDir -Filter "*-setup.exe" | Select-Object -First 1
+          echo "installer_path=$($instalador.FullName)" >> $env:GITHUB_OUTPUT
 
-          $manifest = [ordered]@{
-            version   = $version
-            notes     = "Actualizacion de Sistema POS Local $version"
-            pub_date  = $pubDate
-            platforms = [ordered]@{
-              "windows-x86_64" = [ordered]@{
-                signature = $signature
-                url       = "https://www.sistemapo.com/local/$($installer.Name)"
-              }
-            }
-          }
-          $manifest | ConvertTo-Json -Depth 10 | Set-Content "latest.json" -Encoding utf8
-
-          echo "installer_path=$($installer.FullName)" >> $env:GITHUB_OUTPUT
-          echo "installer_name=$($installer.Name)" >> $env:GITHUB_OUTPUT
-
-      - name: Guardar instalador y manifiesto como artifact
+      - name: Guardar instalador como artifact (entrega manual al cliente)
         uses: actions/upload-artifact@v4
         with:
           name: sistema-pos-local-${{ steps.version.outputs.version }}
-          path: |
-            ${{ steps.manifest.outputs.installer_path }}
-            latest.json
-
-      - name: Subir instalador y manifiesto al droplet
-        shell: bash
-        env:
-          DROPLET_HOST: ${{ secrets.DROPLET_HOST }}
-          DROPLET_USER: ${{ secrets.DROPLET_USER }}
-          DROPLET_SSH_KEY_B64: ${{ secrets.DROPLET_SSH_KEY }}
-          # Secret NUEVO (no existe todavia, hay que crearlo en el repo):
-          # carpeta publica del droplet donde sirve /local/latest.json y el
-          # instalador (ej: /var/www/pos/public/local). Mismo mecanismo que
-          # DROPLET_TURION_DIR, pero en una carpeta separada para no
-          # mezclar los instaladores de las dos ediciones.
-          DROPLET_LOCAL_DIR: ${{ secrets.DROPLET_LOCAL_DIR }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$DROPLET_SSH_KEY_B64" | base64 -d > ~/.ssh/local_deploy_key
-          chmod 600 ~/.ssh/local_deploy_key
-          ssh-keyscan -H "$DROPLET_HOST" >> ~/.ssh/known_hosts 2>/dev/null
-
-          scp -i ~/.ssh/local_deploy_key "${{ steps.manifest.outputs.installer_path }}" \
-            "$DROPLET_USER@$DROPLET_HOST:$DROPLET_LOCAL_DIR/"
-          scp -i ~/.ssh/local_deploy_key latest.json \
-            "$DROPLET_USER@$DROPLET_HOST:$DROPLET_LOCAL_DIR/"
+          path: ${{ steps.instalador.outputs.installer_path }}
