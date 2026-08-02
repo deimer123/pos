@@ -110,6 +110,42 @@ test('elegir local bloquea el ingreso normal al droplet para esa empresa', funct
     expect($empresa->puedeIngresarPorPlan())->toBeFalse();
 });
 
+test('una empresa Local no lleva plan (cobro unico por licencia, no suscripcion)', function () {
+    $superAdmin = crearSuperAdminEdicionTest();
+
+    Livewire::actingAs($superAdmin)
+        ->test(CreateEmpresa::class)
+        ->fillForm([
+            'name' => 'Empresa Local Sin Plan',
+            'email' => 'empresalocalsinplan@example.com',
+            'password' => 'password123',
+            'passwordConfirmation' => 'password123',
+            'tipo_edicion' => 'local',
+            'plan_id' => null,
+        ])
+        ->assertFormFieldIsHidden('plan_id')
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $empresa = User::where('email', 'empresalocalsinplan@example.com')->first();
+
+    expect($empresa->plan_id)->toBeNull();
+    expect($empresa->plan_meses)->toBeNull();
+    expect($empresa->plan_started_at)->toBeNull();
+    expect($empresa->plan_ends_at)->toBeNull();
+    expect($empresa->valor_plan_total)->toBeNull();
+});
+
+test('online e hibrida si muestran la seccion de plan comercial', function () {
+    $superAdmin = crearSuperAdminEdicionTest();
+
+    Livewire::actingAs($superAdmin)
+        ->test(CreateEmpresa::class)
+        ->assertFormFieldIsVisible('plan_id')
+        ->set('data.tipo_edicion', 'hibrida')
+        ->assertFormFieldIsVisible('plan_id');
+});
+
 test('un empleado de una empresa Local tambien queda bloqueado (hereda de empresaPrincipal)', function () {
     Role::firstOrCreate(['name' => 'cajero', 'guard_name' => 'web']);
 

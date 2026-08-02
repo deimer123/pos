@@ -125,6 +125,10 @@ class EmpresaResource extends Resource
 
                 Forms\Components\Section::make('Plan comercial')
                     ->description('Los planes, complementos y paquetes de usuarios se administran en los menus "Planes", "Complementos" y "Paquetes de usuarios". Al elegir un plan se autocompletan la duracion y los usuarios incluidos abajo (se pueden ajustar despues si hace falta).')
+                    // La edicion Local es cobro unico por licencia (vitalicia),
+                    // no lleva plan/suscripcion -- lo que se cobra ahi son las
+                    // actualizaciones, por fuera de este mecanismo.
+                    ->hidden(fn (Get $get) => $get('tipo_edicion') === 'local')
                     ->schema([
                         Forms\Components\Select::make('plan_id')
                             ->label('Plan')
@@ -594,6 +598,29 @@ class EmpresaResource extends Resource
     public static function calculatePlanEndDate(mixed $startDate, int $months): string
     {
         return Carbon::parse($startDate ?: today())->addMonths($months ?: 3)->toDateString();
+    }
+
+    // La edicion Local es cobro unico por licencia (vitalicia) -- no lleva
+    // plan/suscripcion como Online e Hibrida, lo que se cobra ahi son las
+    // actualizaciones, por fuera de este mecanismo. Se llama desde
+    // CreateEmpresa/EditEmpresa antes de guardar para que ningun campo de
+    // plan quede seteado por accidente (los campos ocultos de plan_meses/
+    // plan_started_at/plan_ends_at igual calculan un valor por defecto
+    // aunque la seccion este oculta en el formulario).
+    public static function sinPlanParaLocal(array $data): array
+    {
+        if (($data['tipo_edicion'] ?? null) !== 'local') {
+            return $data;
+        }
+
+        $data['plan_id'] = null;
+        $data['paquete_usuarios_id'] = null;
+        $data['plan_meses'] = null;
+        $data['plan_started_at'] = null;
+        $data['plan_ends_at'] = null;
+        $data['valor_plan_total'] = null;
+
+        return $data;
     }
 
     // Al elegir un plan o un paquete de usuarios adicionales, autocompleta

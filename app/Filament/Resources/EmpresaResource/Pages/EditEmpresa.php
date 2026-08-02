@@ -223,6 +223,12 @@ class EditEmpresa extends EditRecord
             $data['paquete_usuarios_id'] ?? null,
         );
 
+        $data = EmpresaResource::sinPlanParaLocal($data);
+
+        if (($data['tipo_edicion'] ?? null) === 'local') {
+            $this->complementosSeleccionados = [];
+        }
+
         return $data;
     }
 
