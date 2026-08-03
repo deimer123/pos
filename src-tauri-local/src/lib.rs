@@ -552,19 +552,41 @@ fn guardar_modo_servidor(app: tauri::AppHandle) -> Result<(), String> {
 /// /emparejar-terminal (ver App\Http\Controllers\
 /// EmparejarTerminalLocalController), que resuelve sola si hay que pedir
 /// el codigo o si ya se puede pasar al login.
-#[tauri::command]
-fn guardar_modo_cliente(app: tauri::AppHandle, servidor_url: String) -> Result<(), String> {
-    let servidor_url = servidor_url.trim().trim_end_matches('/').to_string();
+/// Normaliza lo que haya escrito/pegado la persona en el campo "Dirección
+/// del servidor" de splash/modo.html a una URL base limpia (sin barra
+/// final, sin /emparejar-terminal). Tolera dos formatos validos: solo
+/// "ip:puerto" (lo que se le pide que escriba) o la URL completa que
+/// muestra la pagina "Conectar Terminales" del servidor (pensada para
+/// pegarla en un navegador cualquiera, con /emparejar-terminal incluido)
+/// -- sin esto ultimo, pegar tal cual esa direccion duplicaba la ruta
+/// (.../emparejar-terminal/emparejar-terminal) y el terminal nunca
+/// llegaba a conectar. None si quedo vacio.
+fn normalizar_url_servidor(input: &str) -> Option<String> {
+    let recortado = input.trim().trim_end_matches('/');
 
-    if servidor_url.is_empty() {
-        return Err("Escribí la dirección del servidor.".into());
+    if recortado.is_empty() {
+        return None;
     }
 
-    let url_completa = if servidor_url.starts_with("http://") || servidor_url.starts_with("https://") {
-        servidor_url
+    let con_esquema = if recortado.starts_with("http://") || recortado.starts_with("https://") {
+        recortado.to_string()
     } else {
-        format!("http://{servidor_url}")
+        format!("http://{recortado}")
     };
+
+    Some(
+        con_esquema
+            .trim_end_matches('/')
+            .strip_suffix("/emparejar-terminal")
+            .unwrap_or(&con_esquema)
+            .to_string(),
+    )
+}
+
+#[tauri::command]
+fn guardar_modo_cliente(app: tauri::AppHandle, servidor_url: String) -> Result<(), String> {
+    let url_completa = normalizar_url_servidor(&servidor_url)
+        .ok_or_else(|| "Escribí la dirección del servidor.".to_string())?;
 
     escribir_modo(
         &app,
@@ -683,6 +705,43 @@ mod tests {
     #[test]
     fn machine_id_es_estable_entre_llamadas() {
         assert_eq!(machine_id(), machine_id());
+    }
+
+    #[test]
+    fn normalizar_url_servidor_agrega_esquema_a_ip_puerto_solo() {
+        assert_eq!(
+            normalizar_url_servidor("192.168.1.5:8734"),
+            Some("http://192.168.1.5:8734".to_string())
+        );
+    }
+
+    #[test]
+    fn normalizar_url_servidor_quita_emparejar_terminal_si_lo_pegaron_completo() {
+        assert_eq!(
+            normalizar_url_servidor("http://192.168.18.35:62543/emparejar-terminal"),
+            Some("http://192.168.18.35:62543".to_string())
+        );
+    }
+
+    #[test]
+    fn normalizar_url_servidor_tolera_espacios_y_barra_final() {
+        assert_eq!(
+            normalizar_url_servidor("  192.168.1.5:8734/  "),
+            Some("http://192.168.1.5:8734".to_string())
+        );
+    }
+
+    #[test]
+    fn normalizar_url_servidor_respeta_https_si_lo_escriben() {
+        assert_eq!(
+            normalizar_url_servidor("https://192.168.1.5:8734"),
+            Some("https://192.168.1.5:8734".to_string())
+        );
+    }
+
+    #[test]
+    fn normalizar_url_servidor_vacio_devuelve_none() {
+        assert_eq!(normalizar_url_servidor("   "), None);
     }
 
     #[test]

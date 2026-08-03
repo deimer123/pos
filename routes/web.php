@@ -73,6 +73,21 @@ Route::get('/turion/descargar', function () {
 // Catálogo público de productos por empresa (sin login, para compartir con clientes)
 Route::get('/catalogo/{slug}', \App\Livewire\CatalogoPublico::class)->name('catalogo.publico');
 
+// Fallback para servir el disco "public" (logos, fotos de productos, etc.)
+// cuando no existe el symlink real public/storage -- en el droplet ese
+// symlink se crea a mano en el deploy y el servidor web sirve esos
+// archivos directo, sin pasar nunca por aca. En Turion/Local (instalados
+// sin privilegios de administrador, "php -S" como unico servidor) crear
+// un symlink en Windows no es confiable, asi que esta ruta hace de
+// symlink "virtual": Storage::disk('public')->url() ya arma URLs tipo
+// /storage/xxx, esta ruta simplemente las resuelve leyendo el archivo
+// real de storage/app/public.
+Route::get('/storage/{path}', function (string $path) {
+    abort_unless(\Illuminate\Support\Facades\Storage::disk('public')->exists($path), 404);
+
+    return \Illuminate\Support\Facades\Storage::disk('public')->response($path);
+})->where('path', '.*')->name('storage.local');
+
 /*
 |--------------------------------------------------------------------------
 | Redirección después del login

@@ -140,7 +140,12 @@
 
 <div class="pos-actions-list flex gap-2" :class="{ 'is-open': menuOpen }">
 
-    @unless(\Illuminate\Support\Facades\DB::getDriverName() === 'sqlite')
+    {{-- Turion (hibrida) SI debe ocultarlo -- BloquearAdminEnTurion bloquea
+         /admin por completo ahi, el boton solo llevaria a un error. Local
+         y Online si tienen /admin disponible. Antes esto chequeaba
+         "driver === sqlite", que tambien es cierto para Local (tambien
+         corre sobre SQLite) y por eso ocultaba el boton ahi por error. --}}
+    @unless(\App\Support\PosEdition::esHibrida())
     <a href="/admin"
         class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-sm rounded shadow inline-block">
         Administracion
