@@ -35,6 +35,7 @@
                                 <th style="padding:8px 16px 8px 0;">Emitida</th>
                                 <th style="padding:8px 16px 8px 0;">Emitida por</th>
                                 <th style="padding:8px 16px 8px 0;">Estado</th>
+                                <th style="padding:8px 16px 8px 0;"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -58,6 +59,14 @@
                                         @else
                                             <span style="padding:2px 8px; border-radius:5px; background:#22c55e; color:#fff; font-size:11px; font-weight:600;">Activa</span>
                                         @endif
+                                    </td>
+                                    <td style="padding:8px 16px 8px 0; text-align:right;">
+                                        <button type="button"
+                                            data-codigo="{{ $licencia->codigo_emitido }}"
+                                            onclick="navigator.clipboard.writeText(this.dataset.codigo); const t=this.textContent; this.textContent='Copiado ✓'; setTimeout(() => this.textContent=t, 1500);"
+                                            style="padding:4px 10px; border-radius:6px; border:1px solid #6366f1; background:#fff; color:#6366f1; font-size:11px; font-weight:600; cursor:pointer; white-space:nowrap;">
+                                            Copiar código
+                                        </button>
                                     </td>
                                 </tr>
                             @endforeach

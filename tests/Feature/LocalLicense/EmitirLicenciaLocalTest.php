@@ -95,3 +95,24 @@ test('no permite emitir dos licencias para la misma empresa y la misma maquina',
         LicenciaLocal::where('empresa_id', $empresaCliente->id)->where('machine_id', 'MID-DUP-0001')->count()
     )->toBe(1);
 });
+
+test('el historial de licencias trae el codigo emitido para poder copiarlo de nuevo', function () {
+    $superAdmin = crearSuperAdminLicenciaTest();
+
+    LicenciaLocal::create([
+        'licencia_id' => (string) Str::uuid(),
+        'empresa_id' => User::factory()->create(['tipo_usuario' => 'empresa'])->id,
+        'machine_id' => 'MID-HIST-0001',
+        'creado_por' => $superAdmin->id,
+        'codigo_emitido' => 'POSLOC1-codigoDeHistorial.firmaDeHistorial',
+        'issued_at' => now(),
+    ]);
+
+    // La notificacion de "ya existe una licencia" le dice al super_admin que
+    // puede copiarla de nuevo desde este historial -- el codigo tiene que
+    // estar realmente disponible ahi (no solo el resto de las columnas),
+    // sin importar donde termine expuesto en el HTML.
+    Livewire::actingAs($superAdmin)
+        ->test(EmitirLicenciaLocal::class)
+        ->assertSee('POSLOC1-codigoDeHistorial.firmaDeHistorial', false);
+});
