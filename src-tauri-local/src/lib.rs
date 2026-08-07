@@ -49,6 +49,29 @@ fn find_free_port() -> u16 {
     listener.local_addr().expect("puerto local invalido").port()
 }
 
+/// True si nada esta escuchando en ese puerto en 0.0.0.0 todavia (mismo
+/// bind que usa lanzar_servidor_php). Se usa para decidir si el puerto
+/// guardado en modo.json de un arranque anterior se puede reutilizar.
+fn puerto_libre(port: u16) -> bool {
+    TcpListener::bind(("0.0.0.0", port)).is_ok()
+}
+
+/// Puerto para este arranque del servidor: reutiliza el guardado en
+/// modo.json de la vez anterior si sigue libre (asi los terminales ya
+/// emparejados no pierden la conexion con solo reiniciar el servidor), o
+/// elige uno nuevo y lo persiste para el proximo arranque.
+fn resolver_puerto_servidor(app: &tauri::AppHandle) -> u16 {
+    if let Some(ModoInstalacion::Servidor { puerto: Some(guardado) }) = leer_modo(app) {
+        if puerto_libre(guardado) {
+            return guardado;
+        }
+    }
+
+    let nuevo = find_free_port();
+    let _ = escribir_modo(app, &ModoInstalacion::Servidor { puerto: Some(nuevo) });
+    nuevo
+}
+
 /// IPv4 de este equipo en la red local (para que otros equipos -- ver
 /// "varios terminales contra un servidor local" -- puedan encontrar este
 /// servidor). Sigue el mismo estilo que machine_guid_crudo(): correr un
@@ -181,10 +204,22 @@ fn machine_id() -> String {
 /// el servidor de la red local (ver App\Http\Controllers\
 /// EmparejarTerminalLocalController del lado PHP). Se guarda en
 /// modo.json, en app_data_dir, y se relee en cada arranque.
+///
+/// 'servidor' guarda ademas el puerto en el que quedo escuchando php -S la
+/// ultima vez (ver resolver_puerto_servidor) -- antes se elegia un puerto
+/// libre al azar en CADA arranque y no se guardaba, asi que con solo
+/// reiniciar el equipo servidor (IP fija o no) la direccion guardada en
+/// todos los terminales quedaba invalida, ademas de por el cambio de IP
+/// que ya cubre servidor_alcanzable. None cuando todavia no se sabe (recien
+/// elegido "Servidor" en modo.html, o instalaciones viejas migradas en
+/// leer_modo) -- resolver_puerto_servidor elige uno y lo persiste.
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(tag = "rol", rename_all = "lowercase")]
 enum ModoInstalacion {
-    Servidor,
+    Servidor {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        puerto: Option<u16>,
+    },
     Cliente { servidor_url: String },
 }
 
@@ -217,8 +252,9 @@ fn leer_modo(app: &tauri::AppHandle) -> Option<ModoInstalacion> {
     let data_dir = dunce::simplified(&app.path().app_data_dir().ok()?).to_path_buf();
 
     if data_dir.join("database.sqlite").exists() {
-        let _ = escribir_modo(app, &ModoInstalacion::Servidor);
-        return Some(ModoInstalacion::Servidor);
+        let modo = ModoInstalacion::Servidor { puerto: None };
+        let _ = escribir_modo(app, &modo);
+        return Some(modo);
     }
 
     None
@@ -524,7 +560,7 @@ fn preparar_restauracion(app: tauri::AppHandle, servidor: tauri::State<PhpServer
 /// arrancar normalmente (modo servidor ya elegido en corridas anteriores)
 /// como recien elegido "Servidor" en splash/modo.html (guardar_modo_servidor).
 fn arrancar_servidor(app: &tauri::AppHandle) -> String {
-    let port = find_free_port();
+    let port = resolver_puerto_servidor(app);
     let env = preparar_entorno_local(app, port);
     let app_url = format!("http://127.0.0.1:{port}");
 
@@ -554,7 +590,7 @@ fn arrancar_servidor(app: &tauri::AppHandle) -> String {
 /// hoy hace run() directo) y navega la ventana ya abierta hacia el login.
 #[tauri::command]
 fn guardar_modo_servidor(app: tauri::AppHandle) -> Result<(), String> {
-    escribir_modo(&app, &ModoInstalacion::Servidor)?;
+    escribir_modo(&app, &ModoInstalacion::Servidor { puerto: None })?;
 
     let app_url = arrancar_servidor(&app);
     let destino = format!("{app_url}/login");
@@ -696,7 +732,7 @@ pub fn run() {
                         .center()
                         .build()?;
                 }
-                Some(ModoInstalacion::Servidor) => {
+                Some(ModoInstalacion::Servidor { .. }) => {
                     let app_url = arrancar_servidor(&handle);
 
                     // "/" es la pagina de aterrizaje (marketing) del sitio --
@@ -832,11 +868,47 @@ mod tests {
 
     #[test]
     fn modo_instalacion_servidor_serializa_como_espera_splash_modo_html() {
-        let json = serde_json::to_string(&ModoInstalacion::Servidor).unwrap();
+        let json = serde_json::to_string(&ModoInstalacion::Servidor { puerto: None }).unwrap();
         assert_eq!(json, r#"{"rol":"servidor"}"#);
 
         let de: ModoInstalacion = serde_json::from_str(&json).unwrap();
-        assert!(matches!(de, ModoInstalacion::Servidor));
+        assert!(matches!(de, ModoInstalacion::Servidor { puerto: None }));
+    }
+
+    #[test]
+    fn modo_instalacion_servidor_con_puerto_serializa_y_deserializa() {
+        let json = serde_json::to_string(&ModoInstalacion::Servidor { puerto: Some(8734) }).unwrap();
+        assert_eq!(json, r#"{"rol":"servidor","puerto":8734}"#);
+
+        let de: ModoInstalacion = serde_json::from_str(&json).unwrap();
+        assert!(matches!(de, ModoInstalacion::Servidor { puerto: Some(8734) }));
+    }
+
+    #[test]
+    fn modo_instalacion_servidor_de_una_instalacion_vieja_sin_puerto_no_revienta() {
+        let de: ModoInstalacion = serde_json::from_str(r#"{"rol":"servidor"}"#).unwrap();
+        assert!(matches!(de, ModoInstalacion::Servidor { puerto: None }));
+    }
+
+    #[test]
+    fn puerto_libre_detecta_un_puerto_que_si_esta_libre() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let puerto = listener.local_addr().unwrap().port();
+        drop(listener);
+
+        assert!(puerto_libre(puerto));
+    }
+
+    #[test]
+    fn puerto_libre_detecta_un_puerto_ocupado() {
+        // Mismo bind que usa puerto_libre (0.0.0.0): en Windows, bindear
+        // 0.0.0.0:puerto mientras solo 127.0.0.1:puerto esta ocupado NO
+        // siempre choca, asi que hay que ocupar exactamente esa direccion
+        // para que el test sea confiable.
+        let listener = TcpListener::bind(("0.0.0.0", 0)).unwrap();
+        let puerto = listener.local_addr().unwrap().port();
+
+        assert!(!puerto_libre(puerto));
     }
 
     #[test]
@@ -850,7 +922,7 @@ mod tests {
         let de: ModoInstalacion = serde_json::from_str(&json).unwrap();
         match de {
             ModoInstalacion::Cliente { servidor_url } => assert_eq!(servidor_url, "http://192.168.1.5:8734"),
-            ModoInstalacion::Servidor => panic!("se esperaba Cliente"),
+            ModoInstalacion::Servidor { .. } => panic!("se esperaba Cliente"),
         }
     }
 
