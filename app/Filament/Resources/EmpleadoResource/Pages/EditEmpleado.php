@@ -37,6 +37,14 @@ class EditEmpleado extends EditRecord
     {
         $record = $this->record;
         $empresa = $record->empresaPrincipal();
+
+        // Ver el mismo corte en CreateEmpleado::validateRoleLimits() -- la
+        // edicion Local no usa este limite, lo controla la cantidad de
+        // licencias de terminal compradas.
+        if ($empresa->tipo_edicion === 'local') {
+            return;
+        }
+
         $limits = [
             'vendedor' => (int) $empresa->max_vendedores,
             'cajero' => (int) $empresa->max_cajeros,

@@ -57,6 +57,18 @@ class CreateEmpleado extends CreateRecord
     protected function validateRoleLimits(array $roles, int $empresaId): void
     {
         $empresa = auth()->user()->empresaPrincipal();
+
+        // La edicion Local no usa este limite -- ahi el tope lo pone la
+        // cantidad de licencias de terminal que se compraron (ver
+        // App\Filament\Pages\EmitirLicenciaLocal), no un numero configurado
+        // por rol. max_vendedores/max_cajeros/max_digitadores quedan NULL
+        // para estas empresas a proposito (el formulario ni los pide, ver
+        // EmpresaResource); sin este corte, (int) null = 0 y NINGUN
+        // vendedor/cajero/digitador se podria crear jamas.
+        if ($empresa->tipo_edicion === 'local') {
+            return;
+        }
+
         $labels = [
             'vendedor' => 'vendedores',
             'cajero' => 'cajeros',
