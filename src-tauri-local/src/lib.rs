@@ -198,8 +198,30 @@ fn ruta_modo(app: &tauri::AppHandle) -> PathBuf {
 }
 
 fn leer_modo(app: &tauri::AppHandle) -> Option<ModoInstalacion> {
-    let contenido = fs::read_to_string(ruta_modo(app)).ok()?;
-    serde_json::from_str(&contenido).ok()
+    if let Ok(contenido) = fs::read_to_string(ruta_modo(app)) {
+        if let Ok(modo) = serde_json::from_str(&contenido) {
+            return Some(modo);
+        }
+    }
+
+    // Instalaciones de antes de que existiera "varios terminales" (antes
+    // de que modo.json existiera) no tienen este archivo -- pero YA
+    // tienen su base de datos armada. Si se le mostrara la pantalla de
+    // "Servidor o Terminal" a un servidor de toda la vida que se esta
+    // actualizando, quedaria pidiendo elegir de nuevo (y de paso, un
+    // "Servidor" mal elegido ahi terminaba arrancando una segunda vez
+    // sobre datos ya en uso, con el navegador cacheando la sesion vieja
+    // -- eso fue el "419 Page Expired" que se vio al probarlo). Si la
+    // base de datos ya existe, esto es sin dudas un servidor existente:
+    // se asume Servidor una sola vez y se deja guardado.
+    let data_dir = dunce::simplified(&app.path().app_data_dir().ok()?).to_path_buf();
+
+    if data_dir.join("database.sqlite").exists() {
+        let _ = escribir_modo(app, &ModoInstalacion::Servidor);
+        return Some(ModoInstalacion::Servidor);
+    }
+
+    None
 }
 
 fn escribir_modo(app: &tauri::AppHandle, modo: &ModoInstalacion) -> Result<(), String> {
