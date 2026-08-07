@@ -30,7 +30,7 @@
 <div class="brand-mark">
     @if($config && $config->logo)
         <img
-            src="{{ Storage::url($config->logo) }}"
+            src="{{ Storage::disk('public')->url($config->logo) }}"
             alt="{{ $nombreEmpresa }}"
             class="brand-logo-image"
         >

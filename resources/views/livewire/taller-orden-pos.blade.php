@@ -166,9 +166,9 @@
                 <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
                     @forelse($orden->fotos ?? [] as $i => $foto)
                     <div style="position:relative;">
-                        <img src="{{ Storage::url($foto) }}" alt="Foto"
+                        <img src="{{ Storage::disk('public')->url($foto) }}" alt="Foto"
                             style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:2px solid #d1fae5;cursor:pointer;"
-                            onclick="window.open('{{ Storage::url($foto) }}','_blank')">
+                            onclick="window.open('{{ Storage::disk('public')->url($foto) }}','_blank')">
                         <button wire:click="eliminarFoto({{ $i }})"
                             style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:white;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">✕</button>
                     </div>

@@ -495,7 +495,7 @@
             <div style="width:100%;display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
                 @foreach($tallerOrden->fotos as $fi => $foto)
                 <div style="position:relative;">
-                    <img src="{{ Storage::url($foto) }}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:2px solid rgba(255,255,255,.4);">
+                    <img src="{{ Storage::disk('public')->url($foto) }}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:2px solid rgba(255,255,255,.4);">
                     <button wire:click="eliminarFotoTaller({{ $fi }})"
                         style="position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border:none;border-radius:50%;width:16px;height:16px;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
                 </div>
