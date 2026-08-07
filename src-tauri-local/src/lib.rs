@@ -1,5 +1,5 @@
 use std::fs;
-use std::net::{TcpListener, TcpStream};
+use std::net::{TcpListener, TcpStream, ToSocketAddrs};
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
@@ -583,10 +583,35 @@ fn normalizar_url_servidor(input: &str) -> Option<String> {
     )
 }
 
+/// Prueba una conexion TCP corta contra "host:puerto" (extraido de una URL
+/// tipo "http://192.168.1.5:8734") -- se usa antes de confiar en la
+/// direccion guardada de un terminal, porque la IP del servidor puede
+/// cambiar sola (DHCP) cada vez que se reinicia. Sin este chequeo, un
+/// terminal con la IP vieja se quedaba pegado contra la pantalla de error
+/// cruda del navegador ("tardo demasiado en responder"), sin ninguna
+/// forma de volver a configurar la direccion salvo borrando modo.json a
+/// mano.
+fn servidor_alcanzable(url: &str) -> bool {
+    let sin_esquema = url.trim_start_matches("https://").trim_start_matches("http://");
+    let host_puerto = sin_esquema.split('/').next().unwrap_or(sin_esquema);
+
+    let Some(direccion) = host_puerto.to_socket_addrs().ok().and_then(|mut it| it.next()) else {
+        return false;
+    };
+
+    TcpStream::connect_timeout(&direccion, Duration::from_secs(3)).is_ok()
+}
+
 #[tauri::command]
 fn guardar_modo_cliente(app: tauri::AppHandle, servidor_url: String) -> Result<(), String> {
     let url_completa = normalizar_url_servidor(&servidor_url)
         .ok_or_else(|| "Escribí la dirección del servidor.".to_string())?;
+
+    if !servidor_alcanzable(&url_completa) {
+        return Err(
+            "No se pudo conectar a esa dirección. Verificá que esté bien escrita y que el equipo servidor esté encendido.".to_string(),
+        );
+    }
 
     escribir_modo(
         &app,
@@ -667,19 +692,36 @@ pub fn run() {
                         .build()?;
                 }
                 Some(ModoInstalacion::Cliente { servidor_url }) => {
-                    // Sin PHP, sin SQLite: solo un webview contra el
-                    // servidor de la red local. /emparejar-terminal resuelve
-                    // sola si hace falta pedir el codigo o si ya se puede
-                    // pasar directo al login (ver
-                    // EmparejarTerminalLocalController del lado PHP).
-                    let ventana_url = format!("{servidor_url}/emparejar-terminal?machine_id={}", machine_id());
+                    if servidor_alcanzable(&servidor_url) {
+                        // Sin PHP, sin SQLite: solo un webview contra el
+                        // servidor de la red local. /emparejar-terminal
+                        // resuelve sola si hace falta pedir el codigo o si
+                        // ya se puede pasar directo al login (ver
+                        // EmparejarTerminalLocalController del lado PHP).
+                        let ventana_url = format!("{servidor_url}/emparejar-terminal?machine_id={}", machine_id());
 
-                    WebviewWindowBuilder::new(app, "main", WebviewUrl::External(ventana_url.parse().unwrap()))
-                        .title(format!("{titulo_base} (Terminal)"))
-                        .inner_size(1280.0, 800.0)
-                        .min_inner_size(1024.0, 640.0)
-                        .maximized(true)
-                        .build()?;
+                        WebviewWindowBuilder::new(app, "main", WebviewUrl::External(ventana_url.parse().unwrap()))
+                            .title(format!("{titulo_base} (Terminal)"))
+                            .inner_size(1280.0, 800.0)
+                            .min_inner_size(1024.0, 640.0)
+                            .maximized(true)
+                            .build()?;
+                    } else {
+                        // La direccion guardada ya no responde -- tipico
+                        // cuando el router le asigna otra IP al servidor
+                        // al reiniciar (DHCP). En vez de la pantalla de
+                        // error cruda del navegador, se vuelve a
+                        // splash/modo.html para que puedan escribir la
+                        // direccion nueva sin tener que borrar archivos a
+                        // mano (ver guardar_modo_cliente, que vuelve a
+                        // probar la conexion antes de guardar).
+                        WebviewWindowBuilder::new(app, "main", WebviewUrl::App("modo.html".into()))
+                            .title(format!("{titulo_base} — No se pudo conectar al servidor"))
+                            .inner_size(520.0, 560.0)
+                            .resizable(false)
+                            .center()
+                            .build()?;
+                    }
                 }
             }
 
@@ -705,6 +747,28 @@ mod tests {
     #[test]
     fn machine_id_es_estable_entre_llamadas() {
         assert_eq!(machine_id(), machine_id());
+    }
+
+    #[test]
+    fn servidor_alcanzable_detecta_un_puerto_que_si_escucha() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let puerto = listener.local_addr().unwrap().port();
+
+        assert!(servidor_alcanzable(&format!("http://127.0.0.1:{puerto}")));
+    }
+
+    #[test]
+    fn servidor_alcanzable_detecta_un_puerto_que_no_responde() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let puerto = listener.local_addr().unwrap().port();
+        drop(listener);
+
+        assert!(!servidor_alcanzable(&format!("http://127.0.0.1:{puerto}")));
+    }
+
+    #[test]
+    fn servidor_alcanzable_con_direccion_invalida_no_revienta() {
+        assert!(!servidor_alcanzable("no-es-una-direccion-valida"));
     }
 
     #[test]
