@@ -17,6 +17,7 @@ class Mecanico extends Model
     public const ROL_MECANICO = 'mecanico';
     public const ROL_VENDEDOR = 'vendedor';
     public const ROL_MESERO = 'mesero';
+    public const ROL_TECNICO = 'tecnico';
 
     protected $fillable = [
         'empresa_id', 'nombre', 'cedula', 'telefono', 'activo',

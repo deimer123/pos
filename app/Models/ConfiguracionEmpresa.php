@@ -35,6 +35,7 @@ class ConfiguracionEmpresa extends Model
         'usa_servicios',
         'usa_domicilios',
         'usa_taller',
+        'usa_servicio_tecnico',
         'usa_hotel',
         'hotel_hora_inicio_dia',
         'permite_stock_negativo',
@@ -92,6 +93,7 @@ class ConfiguracionEmpresa extends Model
         'usa_servicios' => 'boolean',
         'usa_domicilios' => 'boolean',
         'usa_taller' => 'boolean',
+        'usa_servicio_tecnico' => 'boolean',
         'usa_hotel' => 'boolean',
         'permite_stock_negativo' => 'boolean',
         'imprime_ticket' => 'boolean',
@@ -120,6 +122,13 @@ class ConfiguracionEmpresa extends Model
                 'usa_taller' => true, 'usa_servicios' => true, 'usa_hotel' => false,
                 'usa_mesas' => false, 'usa_cocina' => false, 'usa_domicilios' => false, 'usa_recetas' => false,
             ],
+            'servicio_tecnico' => [
+                'usa_servicio_tecnico' => true, 'usa_servicios' => true, 'usa_hotel' => false, 'usa_taller' => false,
+                'usa_mesas' => false, 'usa_cocina' => false, 'usa_domicilios' => false, 'usa_recetas' => false,
+            ],
+            // Drogueria queda en el bucket "default" de abajo (igual que
+            // tienda): no fuerza ningun modulo, solo habilita lote/
+            // vencimiento/registro INVIMA en Producto (ver ProductResource).
             // Bar y Restaurante quedaron unificados en un solo tipo (ver
             // ConfiguracionEmpresaResource): usa_mesas/usa_cocina/
             // usa_domicilios/usa_recetas no se fuerzan aqui porque el

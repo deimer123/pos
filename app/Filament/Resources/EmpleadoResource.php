@@ -100,6 +100,7 @@ class EmpleadoResource extends Resource
                                 $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();
                                 $usaMesas  = $config?->usa_mesas;
                                 $usaTaller = $config?->usa_taller;
+                                $usaServicioTecnico = $config?->usa_servicio_tecnico;
                                 $usaHotel  = $config?->usa_hotel;
 
                                 // Un hotel maneja reservas, check-in/check-out, clientes y caja
@@ -127,6 +128,10 @@ class EmpleadoResource extends Resource
                                     $opciones['taller'] = 'Taller';
                                 }
 
+                                if ($usaServicioTecnico) {
+                                    $opciones['servicio_tecnico'] = 'Servicio Técnico';
+                                }
+
                                 return $opciones;
                             })
                             ->descriptions(function () {
@@ -134,6 +139,7 @@ class EmpleadoResource extends Resource
                                 $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();
                                 $usaMesas  = $config?->usa_mesas;
                                 $usaTaller = $config?->usa_taller;
+                                $usaServicioTecnico = $config?->usa_servicio_tecnico;
                                 $usaHotel  = $config?->usa_hotel;
 
                                 if ($usaHotel) {
@@ -156,6 +162,10 @@ class EmpleadoResource extends Resource
 
                                 if ($usaTaller) {
                                     $desc['taller'] = 'Entra directo al panel de taller (órdenes de trabajo y mecánicos)';
+                                }
+
+                                if ($usaServicioTecnico) {
+                                    $desc['servicio_tecnico'] = 'Entra directo al panel de servicio técnico (órdenes de trabajo y técnicos)';
                                 }
 
                                 return $desc;
@@ -297,6 +307,7 @@ class EmpleadoResource extends Resource
                             'mesero' => 'Mesero',
                             'cocina' => 'Cocina',
                             'taller' => 'Taller',
+                            'servicio_tecnico' => 'Servicio Técnico',
                             'recepcion' => 'Recepcionista',
                         ];
 
@@ -340,6 +351,7 @@ class EmpleadoResource extends Resource
                         $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();
                         $usaMesas  = $config?->usa_mesas;
                         $usaTaller = $config?->usa_taller;
+                        $usaServicioTecnico = $config?->usa_servicio_tecnico;
                         $usaHotel  = $config?->usa_hotel;
 
                         if ($usaHotel) {
@@ -358,6 +370,9 @@ class EmpleadoResource extends Resource
                         }
                         if ($usaTaller) {
                             $opciones['taller'] = 'Taller';
+                        }
+                        if ($usaServicioTecnico) {
+                            $opciones['servicio_tecnico'] = 'Servicio Técnico';
                         }
                         return $opciones;
                     })
@@ -397,7 +412,7 @@ class EmpleadoResource extends Resource
         return parent::getEloquentQuery()
             ->where('tipo_usuario', 'empleado')
             ->where('empresa_id', auth()->user()->getEmpresaActualId())
-            ->role(['vendedor', 'digitador', 'cajero', 'mesero', 'cocina', 'taller', 'recepcion']);
+            ->role(['vendedor', 'digitador', 'cajero', 'mesero', 'cocina', 'taller', 'servicio_tecnico', 'recepcion']);
     }
 
     // Solo ADMIN_EMPRESA puede acceder

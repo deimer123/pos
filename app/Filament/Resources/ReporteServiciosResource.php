@@ -53,13 +53,27 @@ class ReporteServiciosResource extends Resource
         }
 
         $empresaId = auth()->user()->getEmpresaActualId();
+        $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();
 
-        return (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_taller');
+        return (bool) ($config?->usa_taller || $config?->usa_servicio_tecnico);
+    }
+
+    // "Servicios" (Product tipo_producto=servicio) es generico entre
+    // taller y servicio tecnico -- ambos reutilizan Mecanico/comisiones,
+    // solo cambia que "rol" corresponde al tipo de negocio de la empresa
+    // actual. Una empresa nunca tiene los dos flags a la vez.
+    protected static function rolMecanicoActual(int $empresaId): string
+    {
+        $usaServicioTecnico = (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_servicio_tecnico');
+
+        return $usaServicioTecnico ? Mecanico::ROL_TECNICO : Mecanico::ROL_MECANICO;
     }
 
     public static function table(Table $table): Table
     {
         $empresaId = auth()->user()->getEmpresaActualId();
+        $rolActual = static::rolMecanicoActual($empresaId);
+        $etiquetaColaborador = $rolActual === Mecanico::ROL_TECNICO ? 'Técnico' : 'Mecánico';
         $money = fn ($state): string => '$ ' . number_format((float) $state, 0, ',', '.');
         $percent = fn ($state): string => $state === null ? '-' : number_format((float) $state, 2, ',', '.') . ' %';
 
@@ -98,15 +112,15 @@ class ReporteServiciosResource extends Resource
             ])
             ->actions([
                 Tables\Actions\Action::make('asignar_mecanico')
-                    ->label('Asignar mecánico')
+                    ->label('Asignar ' . mb_strtolower($etiquetaColaborador))
                     ->icon('heroicon-o-wrench-screwdriver')
                     ->color('warning')
                     ->visible(fn (FacturaDetalle $record) => $record->tipo_servicio === 'propio' && $record->mecanico_id === null)
                     ->form([
                         Select::make('mecanico_id')
-                            ->label('Mecánico')
+                            ->label($etiquetaColaborador)
                             ->options(fn () => Mecanico::where('empresa_id', $empresaId)
-                                ->where('rol', Mecanico::ROL_MECANICO)
+                                ->where('rol', $rolActual)
                                 ->where('activo', true)
                                 ->orderBy('nombre')
                                 ->pluck('nombre', 'id'))
@@ -118,8 +132,10 @@ class ReporteServiciosResource extends Resource
                     })
                     ->successNotification(
                         Notification::make()
-                            ->title('Mecánico asignado')
-                            ->body('Ya puedes liquidar este servicio desde Taller → Mecánicos.')
+                            ->title($etiquetaColaborador . ' asignado')
+                            ->body($rolActual === Mecanico::ROL_TECNICO
+                                ? 'Ya puedes liquidar este servicio desde Servicio Técnico → Técnicos.'
+                                : 'Ya puedes liquidar este servicio desde Taller → Mecánicos.')
                             ->success()
                     ),
             ])
@@ -158,7 +174,7 @@ class ReporteServiciosResource extends Resource
                     ->color(fn ($state) => $state === 'propio' ? 'success' : 'warning'),
 
                 Tables\Columns\TextColumn::make('mecanico.nombre')
-                    ->label('Mecánico')
+                    ->label($etiquetaColaborador)
                     ->size('xs')
                     ->formatStateUsing(fn ($state, FacturaDetalle $record) => $record->tipo_servicio === 'propio' ? ($state ?? 'Sin asignar') : '-')
                     ->badge()

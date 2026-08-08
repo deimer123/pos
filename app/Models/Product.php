@@ -69,10 +69,14 @@ class Product extends Model
         'precio_con_descuento',
         'precio_costo_anterior',
         'precio_venta_anterior',
+        'lote',
+        'fecha_vencimiento',
+        'registro_invima',
     ];
 
     protected $casts = [
         'foto' => 'string',
+        'fecha_vencimiento' => 'date',
         'existencias' => 'decimal:2',
         'maneja_inventario' => 'boolean',
         'permite_fraccion' => 'boolean',

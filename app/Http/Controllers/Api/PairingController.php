@@ -146,6 +146,46 @@ class PairingController extends Controller
     }
 
     /**
+     * Ordenes de servicio tecnico activas (no entregadas ni canceladas) de
+     * la empresa, con sus items -- calco de ordenesTaller() (ver ese
+     * comentario), para que Turion las baje al sincronizar (ver
+     * ServicioTecnicoSyncPull).
+     */
+    public function ordenesServicioTecnico(Request $request): JsonResponse
+    {
+        $empresaId = $request->user()->getEmpresaActualId();
+
+        $ordenes = \App\Models\ServicioTecnicoOrden::with('items')
+            ->where('empresa_id', $empresaId)
+            ->whereNotIn('estado', ['entregado', 'cancelado'])
+            ->get();
+
+        return response()->json([
+            'ordenes' => $ordenes->map(fn (\App\Models\ServicioTecnicoOrden $o) => [
+                'id' => $o->id,
+                'cliente_id' => $o->cliente_id,
+                'cliente_nombre' => $o->cliente_nombre,
+                'cliente_telefono' => $o->cliente_telefono,
+                'marca' => $o->marca,
+                'modelo' => $o->modelo,
+                'imei_serial' => $o->imei_serial,
+                'color' => $o->color,
+                'clave_desbloqueo' => $o->clave_desbloqueo,
+                'diagnostico' => $o->diagnostico,
+                'observaciones' => $o->observaciones,
+                'estado' => $o->estado,
+                'fecha_entrega_estimada' => $o->fecha_entrega_estimada?->toDateTimeString(),
+                'items' => $o->items->map(fn ($item) => [
+                    'producto_id' => $item->producto_id,
+                    'nombre' => $item->descripcion,
+                    'cantidad' => (float) $item->cantidad,
+                    'precio' => (float) $item->precio_unitario,
+                ])->values(),
+            ])->values(),
+        ]);
+    }
+
+    /**
      * Reservas de hotel activas (no checkout ni canceladas) de la empresa,
      * con sus consumos -- para que Turion las baje al sincronizar (ver
      * HotelSyncPull). Mismo problema y misma solucion que ordenesTaller().

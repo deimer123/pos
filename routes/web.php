@@ -156,6 +156,13 @@ Route::middleware(['auth', 'no.cocina.en.pos'])->get('/eleccion', function () {
 
     }
 
+    // SERVICIO TECNICO PURO
+    if ($user->hasRole('servicio_tecnico')) {
+
+        return redirect()->route('servicio-tecnico');
+
+    }
+
     // RECEPCIÓN (HOTEL) PURO
     if ($user->hasRole('recepcion')) {
 
@@ -234,6 +241,75 @@ Route::middleware(['auth'])->get('/taller/pdf/reporte', function (\Illuminate\Ht
         ->setPaper('letter', 'portrait');
     return $pdf->stream('reporte-taller-' . now()->format('Ymd') . '.pdf');
 })->name('taller.reporte.pdf');
+
+// ─── Servicio Tecnico de Celulares: calco de las rutas de Taller de arriba,
+// tablas/modelo propios (ver ServicioTecnicoOrden) ──────────────────────────
+
+Route::middleware(['auth'])->get('/servicio-tecnico', function () {
+    return view('servicio-tecnico');
+})->name('servicio-tecnico');
+
+Route::middleware(['auth'])->get('/servicio-tecnico/orden/{ordenId}', function ($ordenId) {
+    return view('servicio-tecnico-orden', ['ordenId' => (int) $ordenId]);
+})->name('servicio-tecnico.orden');
+
+// Ticket con codigo de barras del numero de orden, para pegar al equipo --
+// se imprime solo al crear (ver ServicioTecnicoPanel::guardarOrden()) y hay
+// boton para reimprimir. Impresion directa por navegador (window.print()),
+// no BarTender -- ver decision en el plan.
+Route::middleware(['auth'])->get('/servicio-tecnico/orden/{id}/ticket', function ($id) {
+    $empresaId = auth()->user()->getEmpresaActualId();
+    $orden = \App\Models\ServicioTecnicoOrden::where('empresa_id', $empresaId)->findOrFail($id);
+    $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();
+    return view('tickets.servicio-tecnico-etiqueta', compact('orden', 'config'));
+})->name('servicio-tecnico.orden.ticket');
+
+// PDF de una sola orden
+Route::middleware(['auth'])->get('/servicio-tecnico/pdf/orden/{id}', function ($id) {
+    $empresaId = auth()->user()->getEmpresaActualId();
+    $orden  = \App\Models\ServicioTecnicoOrden::where('empresa_id', $empresaId)->with('items')->findOrFail($id);
+    $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();
+    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.servicio-tecnico-orden', compact('orden', 'config'))
+        ->setPaper([0, 0, 612, 792]);
+    return $pdf->stream('orden-' . str_pad($orden->numero_orden, 4, '0', STR_PAD_LEFT) . '.pdf');
+})->name('servicio-tecnico.orden.pdf');
+
+// PDF público de una orden (para compartir por WhatsApp): sin login, protegido
+// por firma criptográfica de Laravel (no por el id, que sí es adivinable).
+Route::middleware(['signed'])->get('/servicio-tecnico/pdf/publico/{id}', function ($id) {
+    $orden  = \App\Models\ServicioTecnicoOrden::with('items')->findOrFail($id);
+    $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $orden->empresa_id)->first();
+    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.servicio-tecnico-orden', compact('orden', 'config'))
+        ->setPaper([0, 0, 612, 792]);
+    return $pdf->stream('orden-' . str_pad($orden->numero_orden, 4, '0', STR_PAD_LEFT) . '.pdf');
+})->name('servicio-tecnico.orden.pdf.publico');
+
+// PDF del listado (reporte)
+Route::middleware(['auth'])->get('/servicio-tecnico/pdf/reporte', function (\Illuminate\Http\Request $request) {
+    $empresaId = auth()->user()->getEmpresaActualId();
+    $estado   = $request->get('estado', 'todos');
+    $desde    = $request->get('desde');
+    $hasta    = $request->get('hasta');
+    $busqueda = $request->get('busqueda');
+
+    $query = \App\Models\ServicioTecnicoOrden::where('empresa_id', $empresaId)->with('items')
+        ->when($estado === 'activas', fn($q) => $q->where('estado', '!=', 'entregado'))
+        ->when($estado !== 'todos' && $estado !== 'activas', fn($q) => $q->where('estado', $estado))
+        ->when($desde,    fn($q) => $q->whereDate('created_at', '>=', $desde))
+        ->when($hasta,    fn($q) => $q->whereDate('created_at', '<=', $hasta))
+        ->when($busqueda, fn($q) => $q->where(fn($q2) =>
+            $q2->where('imei_serial', 'like', "%$busqueda%")
+               ->orWhere('marca', 'like', "%$busqueda%")
+               ->orWhere('cliente_nombre', 'like', "%$busqueda%")
+        ))
+        ->orderByDesc('created_at')
+        ->get();
+
+    $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();
+    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.servicio-tecnico-reporte', compact('query', 'config', 'estado', 'desde', 'hasta'))
+        ->setPaper('letter', 'portrait');
+    return $pdf->stream('reporte-servicio-tecnico-' . now()->format('Ymd') . '.pdf');
+})->name('servicio-tecnico.reporte.pdf');
 
 
 Route::middleware(['auth'])->get('/prefactura/imprimir/{id}', [\App\Http\Controllers\PrefacturaController::class, 'imprimir'])->name('prefactura.imprimir');

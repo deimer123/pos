@@ -754,6 +754,28 @@ return \App\Models\Familia::create($data)->id;
                 }),
         ]),
 
+    Forms\Components\Tabs\Tab::make('Droguería')
+        ->visible(fn () => static::empresaEsDrogueria())
+        ->schema([
+            Section::make('Datos regulatorios')
+                ->extraAttributes(['class' => 'producto-linea-1'])
+                ->schema([
+                    Grid::make(2)->schema([
+                        TextInput::make('lote')
+                            ->label('Lote')
+                            ->maxLength(60),
+
+                        Forms\Components\DatePicker::make('fecha_vencimiento')
+                            ->label('Fecha de vencimiento')
+                            ->native(false),
+                    ]),
+
+                    TextInput::make('registro_invima')
+                        ->label('Registro INVIMA')
+                        ->maxLength(60),
+                ]),
+        ]),
+
     ]),
             ]);
 
@@ -1069,6 +1091,11 @@ protected static function calcularValores(Get $get, Set $set, bool $forzarUtilid
 protected static function empresaUsaVariantes(): bool
 {
     return (bool) (\App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_variantes'));
+}
+
+protected static function empresaEsDrogueria(): bool
+{
+    return \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('tipo_negocio') === 'drogueria';
 }
 
 // Autocompleta el codigo de la variante (producto + talla + color) en

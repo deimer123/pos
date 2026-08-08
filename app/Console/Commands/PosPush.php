@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Actor;
 use App\Models\HotelReserva;
 use App\Models\Prefactura;
+use App\Models\ServicioTecnicoOrden;
 use App\Models\TallerOrden;
 use App\Services\Turion\ConectividadDroplet;
 use Illuminate\Console\Command;
@@ -78,6 +79,10 @@ class PosPush extends Command
                     DB::table('taller_ordenes')->where('id', $payload['local_id'])->update(['servidor_id' => $resultado['id']]);
                 }
 
+                if ($operacion->tipo === 'servicio_tecnico_crear' && isset($payload['local_id'], $resultado['id'])) {
+                    DB::table('servicio_tecnico_ordenes')->where('id', $payload['local_id'])->update(['servidor_id' => $resultado['id']]);
+                }
+
                 if ($operacion->tipo === 'hotel_crear' && isset($payload['local_id'], $resultado['id'])) {
                     DB::table('hotel_reservas')->where('id', $payload['local_id'])->update(['servidor_id' => $resultado['id']]);
                 }
@@ -146,6 +151,10 @@ class PosPush extends Command
             'hotel_cancelar' => ['/api/pairing/subir/hotel/cancelar', $payload],
             'hotel_actualizar' => ['/api/pairing/subir/hotel/actualizar', $payload],
             'taller_actualizar' => ['/api/pairing/subir/taller/actualizar', $payload],
+            'servicio_tecnico_crear' => ['/api/pairing/subir/servicio-tecnico/crear', $payload],
+            'servicio_tecnico_item' => ['/api/pairing/subir/servicio-tecnico/item', $this->conServicioTecnicoOrdenIdResuelto($payload)],
+            'servicio_tecnico_borrar' => ['/api/pairing/subir/servicio-tecnico/borrar', $payload],
+            'servicio_tecnico_actualizar' => ['/api/pairing/subir/servicio-tecnico/actualizar', $payload],
             'mesa_liberar' => ['/api/pairing/subir/mesa/liberar', $payload],
             'mesa_en_espera' => ['/api/pairing/subir/mesa/en-espera', $payload],
             'mesa_actualizar' => ['/api/pairing/subir/mesa/actualizar', $payload],
@@ -166,6 +175,20 @@ class PosPush extends Command
         }
 
         $payload['taller_orden_id'] = $servidorId;
+
+        return $payload;
+    }
+
+    private function conServicioTecnicoOrdenIdResuelto(array $payload): array
+    {
+        $localId = $payload['servicio_tecnico_orden_id'];
+        $servidorId = ServicioTecnicoOrden::find($localId)?->servidor_id;
+
+        if (! $servidorId) {
+            throw new \RuntimeException("Todavia no se ha subido la orden de servicio tecnico local #{$localId}.");
+        }
+
+        $payload['servicio_tecnico_orden_id'] = $servidorId;
 
         return $payload;
     }

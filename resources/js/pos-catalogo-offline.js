@@ -338,6 +338,17 @@ function etiquetaServicio(producto) {
     return '';
 }
 
+function etiquetaDrogueria(producto, empresaContexto) {
+    if (empresaContexto?.tipo_negocio !== 'drogueria') return '';
+    if (!producto.lote && !producto.fecha_vencimiento) return '';
+
+    const partes = [];
+    if (producto.lote) partes.push('Lote ' + escapeHtml(producto.lote));
+    if (producto.fecha_vencimiento) partes.push('Vence ' + escapeHtml(producto.fecha_vencimiento));
+
+    return '<div style="font-size:10px; color:#b45309; font-weight:700; margin-top:3px;">💊 ' + partes.join(' · ') + '</div>';
+}
+
 function valoresUnicosAtributo(producto, campo) {
     if (!Array.isArray(producto.variantes)) return [];
 
@@ -410,6 +421,7 @@ function tarjetaHTML(producto, empresaContexto) {
                     <div title="${nombre}" style="font-size:11px; font-weight:600; line-height:1.3; color:#334155; word-break:break-word; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${nombre}</div>
                     ${etiquetaServicio(producto)}
                     ${etiquetaVariantes(producto)}
+                    ${etiquetaDrogueria(producto, empresaContexto)}
                 </div>
             </div>
             <div style="display:flex; flex-direction:row; align-items:flex-end; gap:8px; padding:0 14px 10px 0; flex-shrink:0;">
@@ -434,6 +446,7 @@ function tarjetaHTML(producto, empresaContexto) {
                     <button type="button" data-ver-nombre-mobile="${nombre}" data-stock-mobile="${puedeVerStock ? escapeHtml(stock.texto) : ''}" title="${nombre}" style="width:100%; text-align:left; font-size:9px; font-weight:600; line-height:1.2; color:#334155; word-break:break-word; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; background:none; border:none; padding:0; cursor:pointer;">${nombre}</button>
                     ${etiquetaServicio(producto)}
                     ${etiquetaVariantes(producto)}
+                    ${etiquetaDrogueria(producto, empresaContexto)}
                 </div>
             </div>
             <div style="display:flex; flex-direction:row; align-items:flex-end; gap:6px; padding:0 10px 8px 0; flex-shrink:0;">

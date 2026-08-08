@@ -6,6 +6,7 @@ use App\Services\Turion\CatalogoImportador;
 use App\Services\Turion\HotelSyncPull;
 use App\Services\Turion\OrdenMesaSyncPull;
 use App\Services\Turion\PrefacturaSyncPull;
+use App\Services\Turion\ServicioTecnicoSyncPull;
 use App\Services\Turion\TallerSyncPull;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -81,6 +82,14 @@ class PosSyncCatalog extends Command
 
             if ($respuestaTaller->successful()) {
                 TallerSyncPull::fusionar($respuestaTaller->json('ordenes') ?? [], (int) $syncState->empresa_id);
+            }
+
+            $respuestaServicioTecnico = Http::withToken($syncState->terminal_token)
+                ->timeout(30)
+                ->get(rtrim($syncState->servidor_url, '/').'/api/pairing/ordenes-servicio-tecnico');
+
+            if ($respuestaServicioTecnico->successful()) {
+                ServicioTecnicoSyncPull::fusionar($respuestaServicioTecnico->json('ordenes') ?? [], (int) $syncState->empresa_id);
             }
 
             $respuestaHotel = Http::withToken($syncState->terminal_token)

@@ -8,6 +8,8 @@ use App\Models\HotelReserva;
 use App\Models\Mesa;
 use App\Models\OperacionOfflineSincronizada;
 use App\Models\Prefactura;
+use App\Models\ServicioTecnicoItem;
+use App\Models\ServicioTecnicoOrden;
 use App\Models\TallerOrden;
 use App\Services\Hotel\GuardarReservaService;
 use App\Services\Mesas\AgregarItemMesaService;
@@ -239,6 +241,31 @@ class PosSyncController extends Controller
     }
 
     /**
+     * Calco de tallerBorrar() para Servicio Tecnico -- ver ese comentario.
+     */
+    public function servicioTecnicoBorrar(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'uuid' => 'required|uuid',
+            'servidor_id' => 'required|integer',
+        ]);
+
+        $empresaId = auth()->user()->getEmpresaActualId();
+
+        if ($this->buscarSincronizada($data['uuid'])) {
+            return response()->json(['ok' => true]);
+        }
+
+        ServicioTecnicoOrden::where('id', $data['servidor_id'])->where('empresa_id', $empresaId)
+            ->whereNull('factura_id')
+            ->delete();
+
+        $this->registrarSincronizada($data['uuid'], 'servicio_tecnico_borrar', $empresaId, null);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
      * Cancela en el servidor una reserva de hotel que se cancelo offline en
      * Turion -- mismo motivo que prefacturaBorrar(). No se borra (una
      * reserva cancelada sigue siendo historial util), se marca 'cancelada'
@@ -357,6 +384,47 @@ class PosSyncController extends Controller
             ->update($cambios);
 
         $this->registrarSincronizada($data['uuid'], 'taller_actualizar', $empresaId, null);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Calco de tallerActualizar() para Servicio Tecnico -- ver ese
+     * comentario. Cubre ServicioTecnicoPanel::guardarOrden() (modo edicion),
+     * cambiarEstado() y guardarNotaTrabajo().
+     */
+    public function servicioTecnicoActualizar(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'uuid' => 'required|uuid',
+            'servidor_id' => 'required|integer',
+            'cliente_nombre' => 'nullable|string|max:200',
+            'cliente_telefono' => 'nullable|string|max:30',
+            'marca' => 'nullable|string|max:80',
+            'modelo' => 'nullable|string|max:80',
+            'imei_serial' => 'nullable|string|max:60',
+            'color' => 'nullable|string|max:50',
+            'clave_desbloqueo' => 'nullable|string|max:50',
+            'diagnostico' => 'nullable|string',
+            'observaciones' => 'nullable|string',
+            'estado' => 'nullable|string|in:pendiente,en_proceso,listo,entregado,cancelado',
+            'entregado_at' => 'nullable|date',
+            'nota_trabajo' => 'nullable|string',
+        ]);
+
+        $empresaId = auth()->user()->getEmpresaActualId();
+
+        if ($this->buscarSincronizada($data['uuid'])) {
+            return response()->json(['ok' => true]);
+        }
+
+        $cambios = collect($data)->except(['uuid', 'servidor_id'])->all();
+
+        ServicioTecnicoOrden::where('id', $data['servidor_id'])->where('empresa_id', $empresaId)
+            ->whereNull('factura_id')
+            ->update($cambios);
+
+        $this->registrarSincronizada($data['uuid'], 'servicio_tecnico_actualizar', $empresaId, null);
 
         return response()->json(['ok' => true]);
     }
@@ -699,6 +767,102 @@ class PosSyncController extends Controller
         }
 
         $this->registrarSincronizada($data['uuid'], 'taller_item', $empresaId, $orden->id);
+
+        return response()->json(['id' => $orden->id]);
+    }
+
+    /**
+     * Calco de tallerCrear() para Servicio Tecnico -- ver ese comentario.
+     */
+    public function servicioTecnicoCrear(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'uuid' => 'required|uuid',
+            'cliente_nombre' => 'required|string|max:200',
+            'cliente_telefono' => 'nullable|string|max:30',
+            'marca' => 'nullable|string|max:80',
+            'modelo' => 'nullable|string|max:80',
+            'imei_serial' => 'nullable|string|max:60',
+            'color' => 'nullable|string|max:50',
+            'clave_desbloqueo' => 'nullable|string|max:50',
+            'diagnostico' => 'nullable|string',
+            'observaciones' => 'nullable|string',
+            'fecha_entrega_estimada' => 'nullable|date',
+        ]);
+
+        $empresaId = auth()->user()->getEmpresaActualId();
+
+        if ($existente = $this->buscarSincronizada($data['uuid'])) {
+            return response()->json(['id' => $existente->resultado_id]);
+        }
+
+        $orden = ServicioTecnicoOrden::create([
+            'empresa_id' => $empresaId,
+            'cliente_nombre' => $data['cliente_nombre'],
+            'cliente_telefono' => $data['cliente_telefono'] ?? null,
+            'marca' => $data['marca'] ?? null,
+            'modelo' => $data['modelo'] ?? null,
+            'imei_serial' => $data['imei_serial'] ?? null,
+            'color' => $data['color'] ?? null,
+            'clave_desbloqueo' => $data['clave_desbloqueo'] ?? null,
+            'diagnostico' => $data['diagnostico'] ?? null,
+            'observaciones' => $data['observaciones'] ?? null,
+            'fecha_entrega_estimada' => $data['fecha_entrega_estimada'] ?? null,
+            'estado' => 'pendiente',
+            'creado_por' => auth()->id(),
+        ]);
+
+        $this->registrarSincronizada($data['uuid'], 'servicio_tecnico_crear', $empresaId, $orden->id);
+
+        return response()->json(['id' => $orden->id, 'numero_orden' => $orden->numero_orden]);
+    }
+
+    /**
+     * Calco de tallerItem() para Servicio Tecnico -- ver ese comentario.
+     * Reescribe siempre TODOS los items de la orden desde el carrito
+     * completo (no incremental), mismo criterio que
+     * GuardarOrdenTallerService::sincronizarItems().
+     */
+    public function servicioTecnicoItem(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'uuid' => 'required|uuid',
+            'servicio_tecnico_orden_id' => 'required|integer',
+            'items' => 'required|array',
+            'items.*.id_producto' => 'required',
+            'items.*.nombre' => 'required|string',
+            'items.*.cantidad' => 'required|numeric|min:0.01',
+            'items.*.precio' => 'required|numeric|min:0',
+        ]);
+
+        $empresaId = auth()->user()->getEmpresaActualId();
+
+        if ($existente = $this->buscarSincronizada($data['uuid'])) {
+            return response()->json(['id' => $existente->resultado_id]);
+        }
+
+        $orden = ServicioTecnicoOrden::where('id', $data['servicio_tecnico_orden_id'])->where('empresa_id', $empresaId)->first();
+        if (! $orden) {
+            return response()->json(['message' => 'La orden de servicio técnico no existe.'], 422);
+        }
+
+        ServicioTecnicoItem::where('orden_id', $orden->id)->delete();
+
+        foreach ($data['items'] as $item) {
+            $precio = (float) $item['precio'];
+            $cantidad = (float) $item['cantidad'];
+
+            ServicioTecnicoItem::create([
+                'orden_id' => $orden->id,
+                'producto_id' => is_numeric($item['id_producto']) ? (int) $item['id_producto'] : null,
+                'descripcion' => $item['nombre'],
+                'cantidad' => $cantidad,
+                'precio_unitario' => $precio,
+                'subtotal' => round($precio * $cantidad, 2),
+            ]);
+        }
+
+        $this->registrarSincronizada($data['uuid'], 'servicio_tecnico_item', $empresaId, $orden->id);
 
         return response()->json(['id' => $orden->id]);
     }

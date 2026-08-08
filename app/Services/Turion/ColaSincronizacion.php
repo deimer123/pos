@@ -83,6 +83,11 @@ class ColaSincronizacion
         self::encolar('taller_borrar', ['servidor_id' => $servidorId]);
     }
 
+    public static function encolarServicioTecnicoBorrado(int $servidorId): void
+    {
+        self::encolar('servicio_tecnico_borrar', ['servidor_id' => $servidorId]);
+    }
+
     public static function encolarHotelCancelado(int $servidorId): void
     {
         self::encolar('hotel_cancelar', ['servidor_id' => $servidorId]);

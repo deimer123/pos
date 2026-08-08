@@ -50,6 +50,9 @@ Route::prefix('pairing')->group(function () {
         Route::get('/ordenes-taller', [PairingController::class, 'ordenesTaller'])
             ->name('api.pairing.ordenes-taller');
 
+        Route::get('/ordenes-servicio-tecnico', [PairingController::class, 'ordenesServicioTecnico'])
+            ->name('api.pairing.ordenes-servicio-tecnico');
+
         Route::get('/reservas-hotel', [PairingController::class, 'reservasHotel'])
             ->name('api.pairing.reservas-hotel');
 
@@ -76,6 +79,14 @@ Route::prefix('pairing')->group(function () {
             Route::post('/hotel/cancelar', [PosSyncController::class, 'hotelCancelar'])->name('api.pairing.subir.hotel-cancelar');
             Route::post('/hotel/actualizar', [PosSyncController::class, 'hotelActualizar'])->name('api.pairing.subir.hotel-actualizar');
             Route::post('/taller/actualizar', [PosSyncController::class, 'tallerActualizar'])->name('api.pairing.subir.taller-actualizar');
+            // No hay "/servicio-tecnico/facturar": a diferencia de taller,
+            // ServicioTecnicoOrdenPos::facturar() no encola nada para Turion
+            // (mismo comportamiento que se copio de TallerOrdenPos), asi que
+            // no hace falta ese endpoint.
+            Route::post('/servicio-tecnico/crear', [PosSyncController::class, 'servicioTecnicoCrear'])->name('api.pairing.subir.servicio-tecnico-crear');
+            Route::post('/servicio-tecnico/item', [PosSyncController::class, 'servicioTecnicoItem'])->name('api.pairing.subir.servicio-tecnico-item');
+            Route::post('/servicio-tecnico/borrar', [PosSyncController::class, 'servicioTecnicoBorrar'])->name('api.pairing.subir.servicio-tecnico-borrar');
+            Route::post('/servicio-tecnico/actualizar', [PosSyncController::class, 'servicioTecnicoActualizar'])->name('api.pairing.subir.servicio-tecnico-actualizar');
             Route::post('/mesa/liberar', [PosSyncController::class, 'mesaLiberar'])->name('api.pairing.subir.mesa-liberar');
             Route::post('/mesa/en-espera', [PosSyncController::class, 'mesaEnEspera'])->name('api.pairing.subir.mesa-en-espera');
             Route::post('/mesa/actualizar', [PosSyncController::class, 'mesaActualizar'])->name('api.pairing.subir.mesa-actualizar');

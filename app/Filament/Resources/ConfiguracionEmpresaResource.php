@@ -102,7 +102,9 @@ class ConfiguracionEmpresaResource extends Resource
                                     'ropa_calzado' => 'Almacén de ropa y calzado',
                                     'bar_restaurante' => 'Bar y Restaurante',
                                     'carniceria' => 'Carnicería',
+                                    'drogueria' => 'Droguería',
                                     'taller' => 'Taller / Mecánica',
+                                    'servicio_tecnico' => 'Servicio Técnico de Celulares',
                                     'hotel' => 'Hotel',
                                 ])
                                 ->live()
@@ -207,8 +209,20 @@ class ConfiguracionEmpresaResource extends Resource
                         ]),
                 ]),
 
+            Forms\Components\Wizard\Step::make('Servicio Técnico')
+                ->visible(fn (Forms\Get $get) => $get('tipo_negocio') === 'servicio_tecnico')
+                ->schema([
+                    Forms\Components\Grid::make(1)
+                        ->extraAttributes(['class' => 'producto-linea-1'])
+                        ->schema([
+                            Forms\Components\Placeholder::make('servicio_tecnico_info')
+                                ->label('')
+                                ->content('Los técnicos, servicios y órdenes de trabajo se configuran luego en los menús "Técnicos" y "Servicios" del panel de administración.'),
+                        ]),
+                ]),
+
             Forms\Components\Wizard\Step::make('Producto')
-                ->visible(fn (Forms\Get $get) => in_array($get('tipo_negocio'), ['tienda', 'ropa_calzado', 'carniceria']))
+                ->visible(fn (Forms\Get $get) => in_array($get('tipo_negocio'), ['tienda', 'ropa_calzado', 'carniceria', 'drogueria']))
                 ->schema([
                     Forms\Components\Grid::make(2)
                         ->extraAttributes(['class' => 'producto-linea-1'])

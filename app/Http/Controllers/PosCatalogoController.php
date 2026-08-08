@@ -119,6 +119,8 @@ class PosCatalogoController extends Controller
                     'tiene_combo' => $productosConCombo->contains($producto->id),
                     'tiene_variantes' => $variantes->isNotEmpty(),
                     'variantes' => $variantes,
+                    'lote' => $producto->lote,
+                    'fecha_vencimiento' => optional($producto->fecha_vencimiento)->format('Y-m-d'),
                 ];
             })
             ->values();
