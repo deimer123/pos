@@ -218,6 +218,7 @@ public function saveDraft(): void
                 'ajuste_inventario_id' => $ajuste->id,
                 'producto_id'          => $item['producto_id'], // SIEMPRE ID REAL
                 'producto_variante_id' => $item['producto_variante_id'] ?? null,
+                'producto_lote_id'     => $item['producto_lote_id'] ?? null,
                 'cantidad_anterior'    => $item['cantidad_anterior'] ?? 0,
                 'cantidad_nueva'       => $item['cantidad_nueva'],
                 'diferencia'           => $item['diferencia'] ?? 0,
@@ -295,6 +296,7 @@ public function mount(): void
                 // 🔑 CLAVE: ID REAL
                  'producto_id'           => $producto->id_producto,
                  'producto_variante_id'  => $d->producto_variante_id,
+                 'producto_lote_id'      => $d->producto_lote_id,
 
                 // cantidades
                 'cantidad_nueva'        => $d->cantidad_nueva,

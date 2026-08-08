@@ -85,6 +85,7 @@ class AjusteInventarioResource extends Resource
             $set('producto_id', null);
             $set('existencias_actuales', null);
             $set('producto_variante_id', null);
+            $set('producto_lote_id', null);
             return;
         }
 
@@ -93,6 +94,7 @@ class AjusteInventarioResource extends Resource
         $set('nombre_producto', $producto->descripcion_larga);
         $set('existencias_actuales', (float) $producto->existencias);
         $set('producto_variante_id', null);
+        $set('producto_lote_id', null);
     }),
 
                         // 📝 PRODUCTO
@@ -127,6 +129,17 @@ class AjusteInventarioResource extends Resource
                                 ->options(fn (Get $get) => static::opcionesVariantes($get))
                                 ->required(fn (Get $get) => static::productoTieneVariantes($get))
                                 ->validationMessages(['required' => 'Selecciona la variante (talla/color).'])
+                                ->columnSpan(12),
+                        ]),
+
+                    Grid::make(12)
+                        ->visible(fn (Get $get) => static::productoTieneLotes($get))
+                        ->schema([
+                            Select::make('producto_lote_id')
+                                ->label('Lote')
+                                ->options(fn (Get $get) => static::opcionesLotes($get))
+                                ->required(fn (Get $get) => static::productoTieneLotes($get))
+                                ->validationMessages(['required' => 'Selecciona el lote.'])
                                 ->columnSpan(12),
                         ]),
 
@@ -174,6 +187,48 @@ class AjusteInventarioResource extends Resource
             ->where('activo', true)
             ->orderBy('nombre')
             ->pluck('nombre', 'id')
+            ->toArray();
+    }
+
+    /* ----------------- Lotes ----------------- */
+    protected static function productoTieneLotes(Get $get): bool
+    {
+        $codigo = (string) ($get('producto_id') ?? '');
+        if ($codigo === '') {
+            return false;
+        }
+
+        $producto = Product::where('empresa_id', auth()->user()->getEmpresaActualId())
+            ->where('id_producto', $codigo)
+            ->first();
+
+        if (! $producto) {
+            return false;
+        }
+
+        return \App\Models\ProductoLote::where('product_id', $producto->id)->where('activo', true)->exists();
+    }
+
+    protected static function opcionesLotes(Get $get): array
+    {
+        $codigo = (string) ($get('producto_id') ?? '');
+        if ($codigo === '') {
+            return [];
+        }
+
+        $producto = Product::where('empresa_id', auth()->user()->getEmpresaActualId())
+            ->where('id_producto', $codigo)
+            ->first();
+
+        if (! $producto) {
+            return [];
+        }
+
+        return \App\Models\ProductoLote::where('product_id', $producto->id)
+            ->where('activo', true)
+            ->orderByDesc('fecha_vencimiento')
+            ->get()
+            ->mapWithKeys(fn (\App\Models\ProductoLote $l) => [$l->id => $l->lote . ' · vence ' . $l->fecha_vencimiento->format('d/m/Y') . ' · stock ' . $l->stock])
             ->toArray();
     }
 

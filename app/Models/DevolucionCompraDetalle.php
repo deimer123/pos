@@ -16,6 +16,7 @@ class DevolucionCompraDetalle extends Model
         'compra_detalle_id',
         'product_id',               // se maneja como string para multiempresa
         'producto_variante_id',
+        'producto_lote_id',
         'cantidad',
         'costo_unitario',
         'porcentaje_impuesto',
@@ -40,6 +41,12 @@ class DevolucionCompraDetalle extends Model
     public function variante()
     {
         return $this->belongsTo(ProductoVariante::class, 'producto_variante_id');
+    }
+
+    // 📦 Relación con el lote devuelto, si aplica
+    public function lote()
+    {
+        return $this->belongsTo(ProductoLote::class, 'producto_lote_id');
     }
 
     // 🏷️ Relación con el producto (sin FK rígida, usando empresa + product_id)

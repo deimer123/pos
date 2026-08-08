@@ -175,7 +175,7 @@ Actions\Action::make('registrarDevolucion')
     ->visible(fn() => !$this->record->devuelta_total && $this->record->estado !== 'anulada')
     ->form(function () {
     $compra = $this->record;
-    $detalles = $compra->detalles()->with(['producto', 'variante'])->get();
+    $detalles = $compra->detalles()->with(['producto', 'variante', 'lote'])->get();
 
     return [
 
@@ -267,13 +267,19 @@ $total = $compra->detalles->sum(function ($d) {
                     $restante = max(0, $d->cantidad - $devueltoAntes);
 
                     $nombreBase = $d->nombre_producto ?? $d->producto->descripcion_larga;
+                    $nombreConVarianteOLote = match (true) {
+                        (bool) $d->variante => $nombreBase . ' — ' . $d->variante->nombre,
+                        (bool) $d->lote => $nombreBase . ' — lote ' . $d->lote->lote,
+                        default => $nombreBase,
+                    };
 
                     return [
                         'compra_detalle_id' => $d->id,
                         'product_id' => $d->product_id,
                         'producto_variante_id' => $d->producto_variante_id,
+                        'producto_lote_id' => $d->producto_lote_id,
                         'codigo_ingresado' => $d->codigo_ingresado,
-                        'nombre_producto' => $d->variante ? $nombreBase . ' — ' . $d->variante->nombre : $nombreBase,
+                        'nombre_producto' => $nombreConVarianteOLote,
                         'cantidad_original' => $restante,
                         'cantidad' => 0,
                         'costo_unitario' => $d->costo_unitario,
@@ -377,6 +383,7 @@ foreach ($compra->detalles as $detalle) {
         'compra_detalle_id' => $detalle->id,
         'product_id' => (string) $detalle->product_id,
         'producto_variante_id' => $detalle->producto_variante_id,
+        'producto_lote_id' => $detalle->producto_lote_id,
         'cantidad' => $cantidadRestante,
         'costo_unitario' => $totales['costo_unitario'],
         'porcentaje_impuesto' => $totales['iva'],
@@ -418,6 +425,14 @@ foreach ($compra->detalles as $detalle) {
             ->where('empresa_id', $compra->empresa_id)
             ->decrement('stock', $cantidadRestante);
     }
+
+    // 📦 si la linea era de un lote puntual, tambien se descuenta el
+    // stock de ESE lote, no solo el del producto
+    if (! empty($detalle->producto_lote_id)) {
+        \App\Models\ProductoLote::where('id', $detalle->producto_lote_id)
+            ->where('empresa_id', $compra->empresa_id)
+            ->decrement('stock', $cantidadRestante);
+    }
 }
     }
 }
@@ -450,6 +465,7 @@ foreach ($compra->detalles as $detalle) {
                     'compra_detalle_id' => $detalle->id,
                     'product_id' => (string) $detalle->product_id,
                     'producto_variante_id' => $detalle->producto_variante_id,
+                    'producto_lote_id' => $detalle->producto_lote_id,
                     'cantidad' => $cantidad,
                     'costo_unitario' => $totales['costo_unitario'],
                     'porcentaje_impuesto' => $totales['iva'],
@@ -487,6 +503,14 @@ foreach ($compra->detalles as $detalle) {
     // se descuenta el stock de ESA variante, no solo el del producto
     if (! empty($detalle->producto_variante_id)) {
         \App\Models\ProductoVariante::where('id', $detalle->producto_variante_id)
+            ->where('empresa_id', $compra->empresa_id)
+            ->decrement('stock', $cantidad);
+    }
+
+    // 📦 si la linea era de un lote puntual, tambien se descuenta el
+    // stock de ESE lote, no solo el del producto
+    if (! empty($detalle->producto_lote_id)) {
+        \App\Models\ProductoLote::where('id', $detalle->producto_lote_id)
             ->where('empresa_id', $compra->empresa_id)
             ->decrement('stock', $cantidad);
     }
