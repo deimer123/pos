@@ -185,7 +185,7 @@ class ImprimirEtiquetas extends Page implements HasForms
             ->toArray();
     }
 
-    /* ----------------- Lotes (droguería) ----------------- */
+    /* ----------------- Lotes (usa_lotes) ----------------- */
     protected static function productoTieneLotes(Get $get): bool
     {
         $codigo = (string) ($get('product_id') ?? '');
@@ -201,7 +201,7 @@ class ImprimirEtiquetas extends Page implements HasForms
             return false;
         }
 
-        return ProductoLote::where('product_id', $producto->id)->where('activo', true)->exists();
+        return ProductoLote::where('product_id', $producto->id)->where('activo', true)->where('stock', '>', 0)->exists();
     }
 
     protected static function opcionesLotes(Get $get): array
@@ -221,6 +221,7 @@ class ImprimirEtiquetas extends Page implements HasForms
 
         return ProductoLote::where('product_id', $producto->id)
             ->where('activo', true)
+            ->where('stock', '>', 0)
             ->orderByDesc('fecha_vencimiento')
             ->get()
             ->mapWithKeys(fn (ProductoLote $l) => [$l->id => $l->lote . ' · vence ' . $l->fecha_vencimiento->format('d/m/Y') . ' · stock ' . $l->stock])

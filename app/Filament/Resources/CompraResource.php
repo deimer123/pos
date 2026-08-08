@@ -709,18 +709,18 @@ Placeholder::make('existencias_inline')
              ver resolverLoteId(), cada compra trae un lote fisicamente
              nuevo con su propia fecha de vencimiento. - */
         Forms\Components\Grid::make(6)->extraAttributes(['class' => 'compra-linea-lote'])
-            ->visible(fn () => static::empresaEsDrogueria())
+            ->visible(fn () => static::empresaUsaLotes())
             ->schema([
                 TextInput::make('lote_texto')
                     ->label('Lote')
-                    ->required(fn () => static::empresaEsDrogueria())
+                    ->required(fn () => static::empresaUsaLotes())
                     ->validationMessages(['required' => 'Escribe el número de lote de esta entrada.'])
                     ->columnSpan(3),
 
                 Forms\Components\DatePicker::make('lote_fecha_vencimiento')
                     ->label('Fecha de vencimiento')
                     ->native(false)
-                    ->required(fn () => static::empresaEsDrogueria())
+                    ->required(fn () => static::empresaUsaLotes())
                     ->validationMessages(['required' => 'Escribe la fecha de vencimiento de este lote.'])
                     ->columnSpan(3),
             ]),
@@ -1078,11 +1078,11 @@ TextInput::make('precio_venta')
      * find-or-create por (product_id, lote) -- ver plan "Drogueria: lotes
      * con stock y vencimiento propios".
      */
-    public static function empresaEsDrogueria(): bool
+    public static function empresaUsaLotes(): bool
     {
         $empresaId = auth()->user()->getEmpresaActualId();
 
-        return \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('tipo_negocio') === 'drogueria';
+        return (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_lotes');
     }
 
     /**

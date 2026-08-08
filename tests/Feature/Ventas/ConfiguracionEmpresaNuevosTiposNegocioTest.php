@@ -61,3 +61,31 @@ test('crear la configuracion con tipo_negocio servicio_tecnico activa usa_servic
     expect($config->usa_hotel)->toBeFalsy();
     expect($config->usa_mesas)->toBeFalsy();
 });
+
+// usa_lotes ya no esta amarrado a tipo_negocio=drogueria (ver
+// ProductResource::empresaUsaLotes() / CompraResource::empresaUsaLotes()):
+// es un toggle universal, igual que usa_variantes, para que viveres/tienda
+// tambien puedan manejar lotes con fecha de vencimiento sin ser "drogueria".
+test('una tienda puede activar usa_lotes aunque no sea drogueria', function () {
+    Role::firstOrCreate(['name' => 'admin_empresa', 'guard_name' => 'web']);
+
+    $empresa = User::factory()->create(['tipo_usuario' => 'empresa']);
+    $empresa->assignRole('admin_empresa');
+
+    Livewire::actingAs($empresa)
+        ->test(CreateConfiguracionEmpresa::class)
+        ->fillForm([
+            'nombre_empresa' => 'Tienda de víveres de prueba',
+            'representante_legal' => 'Rep Legal',
+            'nit' => '900123459',
+            'tipo_negocio' => 'tienda',
+            'usa_lotes' => true,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $config = ConfiguracionEmpresa::where('empresa_id', $empresa->id)->first();
+
+    expect($config->tipo_negocio)->toBe('tienda');
+    expect($config->usa_lotes)->toBeTrue();
+});

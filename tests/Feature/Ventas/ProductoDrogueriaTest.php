@@ -7,8 +7,9 @@ use Carbon\Carbon;
 // Campos nuevos de Producto para Drogueria (lote/fecha_vencimiento/
 // registro_invima): campo simple por producto, sin manejo de stock por
 // lote (decision tomada con el usuario) -- esta prueba solo confirma que
-// persisten y castean bien, ver ProductResource::empresaEsDrogueria() para
-// el gate de visibilidad en el formulario.
+// persisten y castean bien, ver ProductResource::empresaUsaLotes() para
+// el gate de visibilidad en el formulario (ahora toggle usa_lotes, no
+// amarrado a tipo_negocio=drogueria).
 
 test('lote, fecha_vencimiento y registro_invima se guardan y castean en Product', function () {
     $empresa = User::factory()->create(['tipo_usuario' => 'empresa']);

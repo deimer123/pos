@@ -754,8 +754,8 @@ return \App\Models\Familia::create($data)->id;
                 }),
         ]),
 
-    Forms\Components\Tabs\Tab::make('Droguería')
-        ->visible(fn () => static::empresaEsDrogueria())
+    Forms\Components\Tabs\Tab::make('Lotes y vencimiento')
+        ->visible(fn () => static::empresaUsaLotes())
         ->schema([
             Section::make('Datos regulatorios')
                 ->extraAttributes(['class' => 'producto-linea-1'])
@@ -772,7 +772,8 @@ return \App\Models\Familia::create($data)->id;
                     ]),
 
                     TextInput::make('registro_invima')
-                        ->label('Registro INVIMA')
+                        ->label('Registro sanitario (INVIMA u otro)')
+                        ->helperText('Aplica a droguería (INVIMA) y también a víveres/alimentos con su propio registro sanitario.')
                         ->maxLength(60),
                 ]),
 
@@ -787,8 +788,10 @@ return \App\Models\Familia::create($data)->id;
                     }
 
                     $stockTotal = $lotes->sum(fn ($l) => (float) ($l['stock'] ?? 0));
+                    $agotados = $lotes->filter(fn ($l) => (float) ($l['stock'] ?? 0) <= 0)->count();
+                    $sufijoAgotados = $agotados > 0 ? " · {$agotados} agotado(s)" : '';
 
-                    return "{$total} lote(s) · {$stockTotal} en stock (suma de todos)";
+                    return "{$total} lote(s) · {$stockTotal} en stock (suma de todos){$sufijoAgotados}";
                 }),
 
             Repeater::make('lotes')
@@ -797,7 +800,8 @@ return \App\Models\Familia::create($data)->id;
                 ->defaultItems(0)
                 ->createItemButtonLabel('Agregar lote')
                 ->extraAttributes(['class' => 'lotes-repeater'])
-                ->helperText('El alta normal es desde Compras -- esto es para corregir un lote mal cargado.')
+                ->helperText('El alta normal es desde Compras -- esto es para corregir un lote mal cargado. Los lotes agotados no se borran (quedan para historial/kardex) y no aparecen para imprimir etiquetas nuevas.')
+                ->itemLabel(fn (array $state): ?string => ($state['lote'] ?? 'Lote sin nombre') . ((float) ($state['stock'] ?? 0) <= 0 ? ' — AGOTADO' : ''))
                 ->schema([
                     Hidden::make('id'),
 
@@ -1165,9 +1169,9 @@ protected static function empresaUsaVariantes(): bool
     return (bool) (\App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_variantes'));
 }
 
-protected static function empresaEsDrogueria(): bool
+protected static function empresaUsaLotes(): bool
 {
-    return \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('tipo_negocio') === 'drogueria';
+    return (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_lotes');
 }
 
 // Autocompleta el codigo de la variante (producto + talla + color) en

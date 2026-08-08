@@ -136,6 +136,9 @@ class ConfiguracionEmpresaResource extends Resource
                                     if ($state === 'ropa_calzado') {
                                         $set('usa_variantes', true);
                                     }
+                                    if ($state === 'drogueria') {
+                                        $set('usa_lotes', true);
+                                    }
                                 })
                                 ->helperText(fn (?ConfiguracionEmpresa $record) => $record !== null && filled($record->tipo_negocio)
                                     ? 'El tipo de negocio ya quedó definido y no se puede cambiar. Si necesitas otro tipo, debes eliminar esta configuración y crearla de nuevo.'
@@ -243,6 +246,10 @@ class ConfiguracionEmpresaResource extends Resource
                             Forms\Components\Toggle::make('usa_variantes')
                                 ->label('Vende por variantes (talla, color)')
                                 ->helperText('Ideal para ropa y zapatos: cada producto puede tener varias combinaciones de talla/color, cada una con su propio stock. Se configuran luego en cada producto.'),
+
+                            Forms\Components\Toggle::make('usa_lotes')
+                                ->label('Maneja lotes y fecha de vencimiento')
+                                ->helperText('Ideal para droguería, víveres o cualquier producto perecedero: cada producto puede tener varios lotes en stock a la vez, cada uno con su propia fecha de vencimiento y código de barras. Se dan de alta desde Compras.'),
                         ]),
                 ]),
 
