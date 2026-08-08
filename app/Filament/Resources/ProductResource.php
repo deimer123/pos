@@ -810,6 +810,10 @@ return \App\Models\Familia::create($data)->id;
                             ->label('Lote')
                             ->required()
                             ->maxLength(100)
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(function (Set $set, Get $get) {
+                                static::sugerirCodigoLoteSiFalta($get, $set);
+                            })
                             ->columnSpan(['default' => 12, 'sm' => 3]),
 
                         Forms\Components\DatePicker::make('fecha_vencimiento')
@@ -822,7 +826,7 @@ return \App\Models\Familia::create($data)->id;
                             ->label('Código de barras')
                             ->maxLength(150)
                             ->hintIcon('heroicon-o-information-circle')
-                            ->hintIconTooltip('El que se escanea en el POS para vender puntualmente de este lote. Se sugiere solo al crearlo desde Compras.')
+                            ->hintIconTooltip('El que se escanea en el POS para vender puntualmente de este lote. Se sugiere solo al escribir el lote (igual que las variantes), pero se puede corregir a mano.')
                             ->columnSpan(['default' => 12, 'sm' => 3]),
 
                         TextInput::make('stock')
@@ -1205,6 +1209,37 @@ protected static function sugerirCodigoVarianteSiFalta(Get $get, Set $set): void
         ->all();
 
     $set('codigo', \App\Support\VariantCodeGenerator::sugerir($idProducto, $talla, $color, $codigosEnUso));
+}
+
+// Mismo mecanismo que sugerirCodigoVarianteSiFalta() mas arriba, pero para
+// lotes: en cuanto se escribe el numero de lote, se sugiere un codigo de
+// barras propio (producto + lote) si el usuario todavia no escribio uno a
+// mano -- asi todo lote nuevo queda listo para imprimir su etiqueta sin
+// obligar a digitar el codigo.
+protected static function sugerirCodigoLoteSiFalta(Get $get, Set $set): void
+{
+    if (filled($get('codigo'))) {
+        return;
+    }
+
+    $lote = trim((string) $get('lote'));
+
+    if ($lote === '') {
+        return;
+    }
+
+    $idProducto = trim((string) ($get('../../id_producto') ?? ''));
+
+    if ($idProducto === '') {
+        return;
+    }
+
+    $codigosEnUso = collect($get('../../lotes') ?? [])
+        ->pluck('codigo')
+        ->filter()
+        ->all();
+
+    $set('codigo', \App\Support\VariantCodeGenerator::sugerir($idProducto, $lote, '', $codigosEnUso));
 }
 
 protected static function generarCombinacionesVariantes(Get $get, Set $set): void
