@@ -705,6 +705,26 @@ Placeholder::make('existencias_inline')
                     ->columnSpan(6),
             ]),
 
+        /* - Lote (solo empresas de droguería): texto libre, no un Select --
+             ver resolverLoteId(), cada compra trae un lote fisicamente
+             nuevo con su propia fecha de vencimiento. - */
+        Forms\Components\Grid::make(6)->extraAttributes(['class' => 'compra-linea-lote'])
+            ->visible(fn () => static::empresaEsDrogueria())
+            ->schema([
+                TextInput::make('lote_texto')
+                    ->label('Lote')
+                    ->required(fn () => static::empresaEsDrogueria())
+                    ->validationMessages(['required' => 'Escribe el número de lote de esta entrada.'])
+                    ->columnSpan(3),
+
+                Forms\Components\DatePicker::make('lote_fecha_vencimiento')
+                    ->label('Fecha de vencimiento')
+                    ->native(false)
+                    ->required(fn () => static::empresaEsDrogueria())
+                    ->validationMessages(['required' => 'Escribe la fecha de vencimiento de este lote.'])
+                    ->columnSpan(3),
+            ]),
+
 
 
         /* - Línea 2: Costo + D% + Costo c/desc + IVA + Costo+IVA - */
@@ -1047,6 +1067,61 @@ TextInput::make('precio_venta')
             ->orderBy('nombre')
             ->pluck('nombre', 'id')
             ->toArray();
+    }
+
+    /* ----------------- Lotes (droguería) -----------------
+     * A diferencia de variantes (que ya existen de antemano y aca solo se
+     * elige una), un lote no tiene sentido crearlo por adelantado: cada
+     * compra trae fisicamente un lote nuevo con su propia fecha de
+     * vencimiento. Por eso la linea de compra pide texto libre (lote +
+     * vencimiento) en vez de un Select, y resolverLoteId() hace
+     * find-or-create por (product_id, lote) -- ver plan "Drogueria: lotes
+     * con stock y vencimiento propios".
+     */
+    public static function empresaEsDrogueria(): bool
+    {
+        $empresaId = auth()->user()->getEmpresaActualId();
+
+        return \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('tipo_negocio') === 'drogueria';
+    }
+
+    /**
+     * Devuelve el id del ProductoLote para (productId, lote), creandolo
+     * (con stock 0 y codigo auto-sugerido) si todavia no existia. El
+     * incremento real de stock lo hace Compra::confirmar() (mismo momento
+     * en que hoy se incrementa el stock de una variante), no aca -- aca
+     * solo se resuelve CUAL lote es, para que quede guardado en el
+     * detalle de la compra.
+     */
+    public static function resolverLoteId(int $productId, int $empresaId, ?string $loteTexto, ?string $fechaVencimiento): ?int
+    {
+        $lote = trim((string) $loteTexto);
+        if ($lote === '' || ! $fechaVencimiento) {
+            return null;
+        }
+
+        $existente = \App\Models\ProductoLote::where('product_id', $productId)->where('lote', $lote)->first();
+        if ($existente) {
+            return $existente->id;
+        }
+
+        $producto = \App\Models\Product::find($productId);
+        $codigosEnUso = \App\Models\ProductoLote::where('product_id', $productId)
+            ->pluck('codigo')
+            ->filter()
+            ->all();
+
+        $codigo = \App\Support\VariantCodeGenerator::sugerir((string) ($producto?->id_producto ?? $productId), $lote, '', $codigosEnUso);
+
+        return \App\Models\ProductoLote::create([
+            'empresa_id' => $empresaId,
+            'product_id' => $productId,
+            'codigo' => $codigo,
+            'lote' => $lote,
+            'fecha_vencimiento' => $fechaVencimiento,
+            'stock' => 0,
+            'activo' => true,
+        ])->id;
     }
 
     /* ================== Cálculo de una fila (cliente) ================== */

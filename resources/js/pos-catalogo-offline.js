@@ -194,11 +194,23 @@ function coincideFiltroTipo(producto, filtroTipo) {
  * por su cuenta y ese campo puede quedar desactualizado.
  */
 function totalVariantes(producto) {
-    if (!producto.tiene_variantes || !Array.isArray(producto.variantes)) {
-        return producto;
+    let stockTotal = null;
+
+    if (producto.tiene_variantes && Array.isArray(producto.variantes)) {
+        stockTotal = producto.variantes.reduce((acc, v) => acc + (Number(v.stock) || 0), 0);
     }
 
-    const stockTotal = producto.variantes.reduce((acc, v) => acc + (Number(v.stock) || 0), 0);
+    // Droguería: mismo criterio que variantes -- la tarjeta agrupada
+    // muestra la suma de todos los lotes activos, no products.existencias
+    // (que compras/ajustes no tocan directo cuando hay lotes de por medio).
+    if (producto.tiene_lotes && Array.isArray(producto.lotes)) {
+        const stockLotes = producto.lotes.reduce((acc, l) => acc + (Number(l.stock) || 0), 0);
+        stockTotal = (stockTotal ?? 0) + stockLotes;
+    }
+
+    if (stockTotal === null) {
+        return producto;
+    }
 
     return { ...producto, existencias: stockTotal };
 }
@@ -248,6 +260,19 @@ function buscarCoincidenciaExacta(codigo) {
         ));
         if (variante) {
             return { ...producto, _varianteId: variante.id };
+        }
+    }
+
+    // Droguería: mismo mecanismo que variantes -- el codigo propio de un
+    // lote (etiqueta pegada a esa caja/frasco especifico) agrega
+    // directamente ese lote, sin preguntar nada (ver ProductoLote::
+    // setCodigoAttribute en el backend).
+    for (const producto of catalogoEnMemoria) {
+        const lote = (producto.lotes || []).find((l) => (
+            l.codigo && String(l.codigo).split(',').map((c) => c.trim()).includes(valor)
+        ));
+        if (lote) {
+            return { ...producto, _loteId: lote.id };
         }
     }
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ConfiguracionEmpresa;
 use App\Models\Product;
 use App\Models\ProductCombo;
+use App\Models\ProductoLote;
 use App\Models\ProductoVariante;
 use App\Models\Receta;
 use Illuminate\Http\JsonResponse;
@@ -38,12 +39,17 @@ class PosCatalogoController extends Controller
             ->get()
             ->groupBy('product_id');
 
+        $lotesPorProducto = ProductoLote::where('empresa_id', $empresaId)
+            ->where('activo', true)
+            ->get()
+            ->groupBy('product_id');
+
         $productos = Product::query()
             ->where('empresa_id', $empresaId)
             ->where('id_producto', '!=', '10001')
             ->with(['alternateCodes', 'mecanico'])
             ->get()
-            ->map(function (Product $producto) use ($recetasActivas, $productosConCombo, $variantesPorProducto) {
+            ->map(function (Product $producto) use ($recetasActivas, $productosConCombo, $variantesPorProducto, $lotesPorProducto) {
                 $vendePor = $producto->vende_por ?? 'unidad';
 
                 $sufijoVenta = match ($vendePor) {
@@ -97,6 +103,16 @@ class PosCatalogoController extends Controller
                     ])
                     ->values();
 
+                $lotes = $lotesPorProducto->get($producto->id, collect())
+                    ->map(fn (ProductoLote $lote) => [
+                        'id' => $lote->id,
+                        'codigo' => $lote->codigo,
+                        'lote' => $lote->lote,
+                        'fecha_vencimiento' => optional($lote->fecha_vencimiento)->format('Y-m-d'),
+                        'stock' => (float) $lote->stock,
+                    ])
+                    ->values();
+
                 return [
                     'id_producto' => $producto->id_producto,
                     'descripcion_larga' => $producto->descripcion_larga,
@@ -119,6 +135,8 @@ class PosCatalogoController extends Controller
                     'tiene_combo' => $productosConCombo->contains($producto->id),
                     'tiene_variantes' => $variantes->isNotEmpty(),
                     'variantes' => $variantes,
+                    'tiene_lotes' => $lotes->isNotEmpty(),
+                    'lotes' => $lotes,
                     'lote' => $producto->lote,
                     'fecha_vencimiento' => optional($producto->fecha_vencimiento)->format('Y-m-d'),
                 ];

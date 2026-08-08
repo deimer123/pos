@@ -475,6 +475,24 @@ if ($tipoPago === 'credito') {
                 }
             }
 
+            // Droguería: resuelve/crea el lote de esta entrada -- ver
+            // CompraResource::resolverLoteId() y el mismo bloque en
+            // CreateCompra.
+            if (!empty($detalle['lote_texto'])) {
+                $productoLote = Product::where('empresa_id', $data['empresa_id'])
+                    ->where('id_producto', $detalle['product_id'])
+                    ->first();
+
+                if ($productoLote) {
+                    $detalle['producto_lote_id'] = CompraResource::resolverLoteId(
+                        $productoLote->id,
+                        $data['empresa_id'],
+                        $detalle['lote_texto'],
+                        $detalle['lote_fecha_vencimiento'] ?? null
+                    );
+                }
+            }
+
             // ✅ Crear detalle con product_id ya normalizado
             $nuevoDetalle = CompraDetalle::create($detalle);
 
@@ -487,6 +505,14 @@ if ($tipoPago === 'credito') {
                 if ($producto) {
                     // Aumentar existencias
                     $producto->existencias += $detalle['cantidad'] ?? 0;
+
+                    // Lote puntual de esta linea (droguería): mismo criterio
+                    // que Compra::confirmar() ya aplica para variantes.
+                    if (! empty($detalle['producto_lote_id'])) {
+                        \App\Models\ProductoLote::where('id', $detalle['producto_lote_id'])
+                            ->where('empresa_id', $data['empresa_id'])
+                            ->increment('stock', $detalle['cantidad'] ?? 0);
+                    }
 
                     // 🔹 Actualizar precios igual que en confirmar()
                     $producto->precio_costo_anterior = $producto->precio_costo;

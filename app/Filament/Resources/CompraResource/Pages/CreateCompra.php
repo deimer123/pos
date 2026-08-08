@@ -174,6 +174,31 @@ Actions\Action::make('confirmar')
         }
     }
 
+    // Droguería: resuelve/crea el lote de esta entrada (find-or-create por
+    // numero de lote, ver CompraResource::resolverLoteId()) -- product_id
+    // ya es el id_producto (codigo) en este punto, se necesita el id
+    // interno real para la FK de producto_lotes. $data['empresa_id']
+    // todavia no esta poblado aca (se asigna mas abajo), se resuelve
+    // aparte con el mismo criterio.
+    if (!empty($detalle['lote_texto'])) {
+        $empresaIdLote = auth()->user()->tipo_usuario === 'empresa'
+            ? auth()->id()
+            : (auth()->user()->empresa_id ?? null);
+
+        $productoLote = Product::where('empresa_id', $empresaIdLote)
+            ->where('id_producto', $detalle['product_id'])
+            ->first();
+
+        if ($productoLote) {
+            $detalle['producto_lote_id'] = CompraResource::resolverLoteId(
+                $productoLote->id,
+                $empresaIdLote,
+                $detalle['lote_texto'],
+                $detalle['lote_fecha_vencimiento'] ?? null
+            );
+        }
+    }
+
     // 3️⃣ Cálculo de totales del ítem
     $cantidad = (float)($detalle['cantidad'] ?? 0);
     $costo = (float)($detalle['costo_unitario'] ?? 0);
@@ -523,6 +548,23 @@ foreach ($data['detalles'] ?? [] as $detalle) {
 
         if ($codigo) {
             $detalle['product_id'] = $codigo;
+        }
+    }
+
+    // Droguería: resuelve/crea el lote de esta entrada -- ver el mismo
+    // bloque en la accion "confirmar" de arriba.
+    if (!empty($detalle['lote_texto'])) {
+        $productoLote = Product::where('empresa_id', $data['empresa_id'])
+            ->where('id_producto', $detalle['product_id'])
+            ->first();
+
+        if ($productoLote) {
+            $detalle['producto_lote_id'] = CompraResource::resolverLoteId(
+                $productoLote->id,
+                $data['empresa_id'],
+                $detalle['lote_texto'],
+                $detalle['lote_fecha_vencimiento'] ?? null
+            );
         }
     }
 

@@ -14,6 +14,7 @@ class CompraDetalle extends Model
         'compra_id',
         'product_id',
         'producto_variante_id',
+        'producto_lote_id',
         'codigo_ingresado',
         'nombre_producto',
         'cantidad',
@@ -44,6 +45,11 @@ class CompraDetalle extends Model
     public function variante()
     {
         return $this->belongsTo(ProductoVariante::class, 'producto_variante_id');
+    }
+
+    public function lote()
+    {
+        return $this->belongsTo(ProductoLote::class, 'producto_lote_id');
     }
 
     public function getCostoConDescuentoAttribute(): float

@@ -962,7 +962,7 @@ public function guardarEdicionCliente()
 }
 
 
-  public function agregarProducto($idProducto, $varianteId = null)
+  public function agregarProducto($idProducto, $varianteId = null, $loteId = null)
 {
     $empresaId = $this->getEmpresaId();
 
@@ -1001,10 +1001,27 @@ public function guardarEdicionCliente()
         }
     }
 
+    // Droguería: lote puntual (con su propio codigo de barras y
+    // vencimiento) -- mismo mecanismo que variante arriba, pero un
+    // producto no tiene las dos cosas a la vez en la practica.
+    $lote = null;
+    if ($loteId) {
+        $lote = \App\Models\ProductoLote::where('id', $loteId)
+            ->where('product_id', $producto->id)
+            ->where('empresa_id', $empresaId)
+            ->where('activo', true)
+            ->first();
+
+        if (!$lote) {
+            $this->dispatch('error', 'Lote no encontrado o no autorizado.');
+            return;
+        }
+    }
+
     $esNoAcumulable = in_array((int)$producto->id_producto, $this->noAcumulables, true);
     $key = $esNoAcumulable
         ? (string) Str::uuid()
-        : ($variante ? $producto->id_producto.'-v'.$variante->id : (string) $producto->id_producto);
+        : ($variante ? $producto->id_producto.'-v'.$variante->id : ($lote ? $producto->id_producto.'-l'.$lote->id : (string) $producto->id_producto));
 
     if (!$esNoAcumulable && isset($this->carrito[$key])) {
         $this->carrito[$key]['cantidad'] += 1;
@@ -1019,12 +1036,12 @@ public function guardarEdicionCliente()
         // costo distinto (ej. talla mas grande) salga correcta.
         $costoConIva = $this->costoConIvaProducto($producto) + round($costoExtra * (1 + $ivaVenta / 100), 2);
         $utilidad1   = $this->utilidadSobreVenta($precioVenta, $costoConIva);
-        $existencias = $variante ? (float) $variante->stock : (float) ($producto->existencias ?? 0);
+        $existencias = $variante ? (float) $variante->stock : ($lote ? (float) $lote->stock : (float) ($producto->existencias ?? 0));
         
         $this->carrito[$key] = [
             'uuid'          => $key, // clave propia para diferenciar instancias
             'id_producto'   => $producto->id_producto,
-            'nombre'        => $this->textoUtf8($producto->descripcion_larga).($variante ? ' ('.$this->textoUtf8($variante->nombre).')' : ''),
+            'nombre'        => $this->textoUtf8($producto->descripcion_larga).($variante ? ' ('.$this->textoUtf8($variante->nombre).')' : '').($lote ? ' (Lote '.$this->textoUtf8($lote->lote).')' : ''),
             'cantidad'      => 1,
             'precio'        => $precioVenta,
             'nuevo_precio'  => $precioVenta,
@@ -1052,6 +1069,8 @@ public function guardarEdicionCliente()
             'precio_editado_manual' => false,
             'producto_variante_id' => $variante?->id,
             'variante_nombre' => $variante ? $this->textoUtf8($variante->nombre) : null,
+            'producto_lote_id' => $lote?->id,
+            'lote_nombre' => $lote ? $this->textoUtf8($lote->lote) : null,
         ];
     }
     $this->actualizarTotales();
@@ -2688,6 +2707,7 @@ public function facturarConfirmada(array $data = [])
                 'id_producto' => $item['id_producto'],
                 'cantidad' => (float) ($item['cantidad'] ?? 1),
                 'producto_variante_id' => $item['producto_variante_id'] ?? null,
+                'producto_lote_id' => $item['producto_lote_id'] ?? null,
             ])
             ->values()
             ->all();
@@ -2843,6 +2863,7 @@ public function seleccionarFactura(int $id)
             'id' => $d->id,
             'producto_id' => $d->producto_id,
             'producto_variante_id' => $d->producto_variante_id,
+            'producto_lote_id' => $d->producto_lote_id,
             'descripcion_larga' => $d->descripcion_larga,
             'cantidad' => (float)$d->cantidad,
             'devuelto_cantidad' => (float)$d->devuelto_cantidad,
@@ -2880,6 +2901,12 @@ public function devolverFacturaCompleta()
 
                 if (! empty($d->producto_variante_id)) {
                     \App\Models\ProductoVariante::where('id', $d->producto_variante_id)
+                        ->where('empresa_id', $f->empresa_id)
+                        ->increment('stock', $pend);
+                }
+
+                if (! empty($d->producto_lote_id)) {
+                    \App\Models\ProductoLote::where('id', $d->producto_lote_id)
                         ->where('empresa_id', $f->empresa_id)
                         ->increment('stock', $pend);
                 }
@@ -2922,6 +2949,12 @@ public function devolverItemFactura(int $detalleId, $cantidad)
 
         if (! empty($det->producto_variante_id)) {
             \App\Models\ProductoVariante::where('id', $det->producto_variante_id)
+                ->where('empresa_id', $this->facturaSeleccionada->empresa_id)
+                ->increment('stock', $cantidad);
+        }
+
+        if (! empty($det->producto_lote_id)) {
+            \App\Models\ProductoLote::where('id', $det->producto_lote_id)
                 ->where('empresa_id', $this->facturaSeleccionada->empresa_id)
                 ->increment('stock', $cantidad);
         }
@@ -3031,6 +3064,7 @@ public function facturarEImprimir(array $data = [])
                 'id_producto' => $item['id_producto'],
                 'cantidad' => (float) ($item['cantidad'] ?? 1),
                 'producto_variante_id' => $item['producto_variante_id'] ?? null,
+                'producto_lote_id' => $item['producto_lote_id'] ?? null,
             ])
             ->values()
             ->all();
@@ -3185,6 +3219,7 @@ public function prepararDevolucion(string $tipo = 'completa')
             'factura_detalle_id'=> (int)$d['id'],
             'producto_id'       => (int)$d['producto_id'],
             'producto_variante_id' => $d['producto_variante_id'] ?? null,
+            'producto_lote_id' => $d['producto_lote_id'] ?? null,
             'descripcion'       => (string)$d['descripcion_larga'],
             'pendiente'         => $pend,
             'cantidad'          => $cant,
@@ -3314,6 +3349,12 @@ if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->
 
     if (! empty($row['producto_variante_id'])) {
         \App\Models\ProductoVariante::where('id', $row['producto_variante_id'])
+            ->where('empresa_id', $empresaId)
+            ->increment('stock', $cant);
+    }
+
+    if (! empty($row['producto_lote_id'])) {
+        \App\Models\ProductoLote::where('id', $row['producto_lote_id'])
             ->where('empresa_id', $empresaId)
             ->increment('stock', $cant);
     }

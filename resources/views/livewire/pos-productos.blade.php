@@ -164,7 +164,7 @@
                     return el ? window.Livewire.find(el.getAttribute('wire:id')) : null;
                 }
 
-                function ejecutarAgregar(idProducto, varianteId) {
+                function ejecutarAgregar(idProducto, varianteId, loteId) {
                     if (navigator.onLine === false) {
                         if (window.posMesaId || window.posTallerOrdenId || window.posHotelReservaId) {
                             window.Swal?.fire('Sin conexion', 'Mesas, taller y hotel necesitan internet.', 'warning');
@@ -181,7 +181,7 @@
                     }
 
                     const wire = wireComponent();
-                    if (wire) wire.call('agregarAlCarrito', idProducto, varianteId || null);
+                    if (wire) wire.call('agregarAlCarrito', idProducto, varianteId || null, loteId || null);
                 }
 
                 function formatoPrecioVariante(valor) {
@@ -333,6 +333,15 @@
                         return;
                     }
 
+                    // Droguería: el codigo escaneado era el de UN lote
+                    // puntual -- se agrega directo ese lote, sin selector
+                    // (a proposito: la identificacion es por codigo
+                    // escaneado, no por elegir de una lista, ver el plan).
+                    if (producto && producto._loteId) {
+                        ejecutarAgregar(producto.id_producto, null, producto._loteId);
+                        return;
+                    }
+
                     if (producto && producto.tiene_variantes) {
                         abrirSelectorVariante(producto);
                         return;
@@ -368,7 +377,11 @@
 
                         const exacto = Catalogo.buscarCoincidenciaExacta(valor);
                         if (exacto) {
-                            agregarAlCarrito(exacto.id_producto, exacto._varianteId || null);
+                            if (exacto._loteId) {
+                                ejecutarAgregar(exacto.id_producto, null, exacto._loteId);
+                            } else {
+                                agregarAlCarrito(exacto.id_producto, exacto._varianteId || null);
+                            }
                             inputBusqueda.value = '';
                             renderizar();
                             return;

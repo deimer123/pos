@@ -762,11 +762,12 @@ return \App\Models\Familia::create($data)->id;
                 ->schema([
                     Grid::make(2)->schema([
                         TextInput::make('lote')
-                            ->label('Lote')
+                            ->label('Lote (dato suelto, histórico)')
+                            ->helperText('Antes de manejar varios lotes con stock propio. Se deja para no perder lo ya cargado, el listado real está abajo en "Lotes".')
                             ->maxLength(60),
 
                         Forms\Components\DatePicker::make('fecha_vencimiento')
-                            ->label('Fecha de vencimiento')
+                            ->label('Fecha de vencimiento (dato suelto, histórico)')
                             ->native(false),
                     ]),
 
@@ -774,6 +775,77 @@ return \App\Models\Familia::create($data)->id;
                         ->label('Registro INVIMA')
                         ->maxLength(60),
                 ]),
+
+            Forms\Components\Placeholder::make('resumen_lotes')
+                ->label('')
+                ->content(function (Get $get) {
+                    $lotes = collect($get('lotes') ?? []);
+                    $total = $lotes->count();
+
+                    if ($total === 0) {
+                        return 'Todavía no hay lotes creados. Se agregan solos al registrar una Compra de este producto.';
+                    }
+
+                    $stockTotal = $lotes->sum(fn ($l) => (float) ($l['stock'] ?? 0));
+
+                    return "{$total} lote(s) · {$stockTotal} en stock (suma de todos)";
+                }),
+
+            Repeater::make('lotes')
+                ->relationship('lotes')
+                ->label('Lotes')
+                ->defaultItems(0)
+                ->createItemButtonLabel('Agregar lote')
+                ->extraAttributes(['class' => 'lotes-repeater'])
+                ->helperText('El alta normal es desde Compras -- esto es para corregir un lote mal cargado.')
+                ->schema([
+                    Hidden::make('id'),
+
+                    Grid::make(12)->schema([
+                        TextInput::make('lote')
+                            ->label('Lote')
+                            ->required()
+                            ->maxLength(100)
+                            ->columnSpan(['default' => 12, 'sm' => 3]),
+
+                        Forms\Components\DatePicker::make('fecha_vencimiento')
+                            ->label('Vence')
+                            ->required()
+                            ->native(false)
+                            ->columnSpan(['default' => 12, 'sm' => 3]),
+
+                        TextInput::make('codigo')
+                            ->label('Código de barras')
+                            ->maxLength(150)
+                            ->hintIcon('heroicon-o-information-circle')
+                            ->hintIconTooltip('El que se escanea en el POS para vender puntualmente de este lote. Se sugiere solo al crearlo desde Compras.')
+                            ->columnSpan(['default' => 12, 'sm' => 3]),
+
+                        TextInput::make('stock')
+                            ->label('Stock')
+                            ->numeric()
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->hintIcon('heroicon-o-information-circle')
+                            ->hintIconTooltip('Se ingresa por Compras, no aquí.')
+                            ->columnSpan(['default' => 10, 'sm' => 2]),
+
+                        Forms\Components\Toggle::make('activo')
+                            ->label('Activo')
+                            ->default(true)
+                            ->columnSpan(['default' => 2, 'sm' => 1]),
+                    ]),
+                ])
+                ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
+                    $data['empresa_id'] = auth()->user()->getEmpresaActualId();
+
+                    return $data;
+                })
+                ->mutateRelationshipDataBeforeSaveUsing(function (array $data): array {
+                    $data['empresa_id'] = auth()->user()->getEmpresaActualId();
+
+                    return $data;
+                }),
         ]),
 
     ]),

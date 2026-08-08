@@ -10,7 +10,7 @@ class FacturaDetalle extends Model
     protected $table = 'factura_detalles';
 
     protected $fillable = [
-        'factura_id','producto_id','producto_variante_id','descripcion_larga',
+        'factura_id','producto_id','producto_variante_id','producto_lote_id','descripcion_larga',
         'cantidad','precio','subtotal','descuento','devuelto_cantidad','mecanico_id','tipo_servicio','porcentaje_empresa',
         'tipo_servicio','porcentaje_empresa',
     ];
@@ -53,5 +53,10 @@ class FacturaDetalle extends Model
     public function mecanico(): BelongsTo
     {
         return $this->belongsTo(Mecanico::class);
+    }
+
+    public function lote(): BelongsTo
+    {
+        return $this->belongsTo(ProductoLote::class, 'producto_lote_id');
     }
 }

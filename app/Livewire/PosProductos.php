@@ -81,7 +81,7 @@ class PosProductos extends Component
         $this->mostrarModalProductoManual = true;
     }
 
-    public function agregarAlCarrito($idProducto, $varianteId = null)
+    public function agregarAlCarrito($idProducto, $varianteId = null, $loteId = null)
 {
     $user = auth()->user();
     $empresaId = $this->getEmpresaId($user);
@@ -113,7 +113,25 @@ class PosProductos extends Component
         }
     }
 
-    $this->dispatch('productoAgregado', $producto->id_producto, $varianteId);
+    if ($loteId) {
+        $lote = \App\Models\ProductoLote::where('id', $loteId)
+            ->where('product_id', $producto->id)
+            ->where('empresa_id', $empresaId)
+            ->where('activo', true)
+            ->first();
+
+        if (!$lote) {
+            $this->dispatch('error', 'Lote no encontrado o no autorizado.');
+            return;
+        }
+
+        if ($lote->stock <= 0 && ! $this->empresaContexto['permite_stock_negativo']) {
+            $this->dispatch('error', 'Ese lote no tiene stock disponible.');
+            return;
+        }
+    }
+
+    $this->dispatch('productoAgregado', $producto->id_producto, $varianteId, $loteId);
 }
 
     public function agregarProductoTemporal()

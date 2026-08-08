@@ -200,6 +200,12 @@ public function confirmar(): void
                         ->increment('stock', $cantidad);
                 }
 
+                if (! empty($detalle->producto_lote_id)) {
+                    \App\Models\ProductoLote::where('id', $detalle->producto_lote_id)
+                        ->where('empresa_id', $this->empresa_id)
+                        ->increment('stock', $cantidad);
+                }
+
                 // 🔥 4. ACTUALIZAR PRECIOS
                 $producto->precio_costo_anterior = $producto->precio_costo;
                 $producto->precio_venta_anterior = $producto->precio_venta1;
@@ -289,6 +295,12 @@ public function confirmar(): void
 
                 if (! empty($detalle->producto_variante_id)) {
                     ProductoVariante::where('id', $detalle->producto_variante_id)
+                        ->where('empresa_id', $this->empresa_id)
+                        ->decrement('stock', $cantidad);
+                }
+
+                if (! empty($detalle->producto_lote_id)) {
+                    \App\Models\ProductoLote::where('id', $detalle->producto_lote_id)
                         ->where('empresa_id', $this->empresa_id)
                         ->decrement('stock', $cantidad);
                 }

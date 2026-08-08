@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\ConfiguracionEmpresa;
 use App\Models\Product;
+use App\Models\ProductoLote;
 use App\Models\ProductoVariante;
 use App\Support\BarTenderExport;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -96,9 +97,12 @@ class ImprimirEtiquetas extends Page implements HasForms
                                     return $producto ? "{$producto->id_producto} - {$producto->descripcion_larga}" : $value;
                                 })
                                 ->live()
-                                ->afterStateUpdated(fn (Set $set) => $set('producto_variante_id', null))
+                                ->afterStateUpdated(function (Set $set) {
+                                    $set('producto_variante_id', null);
+                                    $set('producto_lote_id', null);
+                                })
                                 ->required()
-                                ->columnSpan(fn (Get $get) => static::productoTieneVariantes($get) ? 6 : 10),
+                                ->columnSpan(fn (Get $get) => static::productoTieneVariantes($get) || static::productoTieneLotes($get) ? 6 : 10),
 
                             Select::make('producto_variante_id')
                                 ->label('Variante (talla/color)')
@@ -106,6 +110,14 @@ class ImprimirEtiquetas extends Page implements HasForms
                                 ->options(fn (Get $get) => static::opcionesVariantes($get))
                                 ->required(fn (Get $get) => static::productoTieneVariantes($get))
                                 ->validationMessages(['required' => 'Selecciona la variante (talla/color).'])
+                                ->columnSpan(4),
+
+                            Select::make('producto_lote_id')
+                                ->label('Lote')
+                                ->visible(fn (Get $get) => static::productoTieneLotes($get))
+                                ->options(fn (Get $get) => static::opcionesLotes($get))
+                                ->required(fn (Get $get) => static::productoTieneLotes($get))
+                                ->validationMessages(['required' => 'Selecciona el lote.'])
                                 ->columnSpan(4),
 
                             TextInput::make('cantidad')
@@ -173,6 +185,48 @@ class ImprimirEtiquetas extends Page implements HasForms
             ->toArray();
     }
 
+    /* ----------------- Lotes (droguería) ----------------- */
+    protected static function productoTieneLotes(Get $get): bool
+    {
+        $codigo = (string) ($get('product_id') ?? '');
+        if ($codigo === '') {
+            return false;
+        }
+
+        $producto = Product::where('empresa_id', auth()->user()->getEmpresaActualId())
+            ->where('id_producto', $codigo)
+            ->first();
+
+        if (! $producto) {
+            return false;
+        }
+
+        return ProductoLote::where('product_id', $producto->id)->where('activo', true)->exists();
+    }
+
+    protected static function opcionesLotes(Get $get): array
+    {
+        $codigo = (string) ($get('product_id') ?? '');
+        if ($codigo === '') {
+            return [];
+        }
+
+        $producto = Product::where('empresa_id', auth()->user()->getEmpresaActualId())
+            ->where('id_producto', $codigo)
+            ->first();
+
+        if (! $producto) {
+            return [];
+        }
+
+        return ProductoLote::where('product_id', $producto->id)
+            ->where('activo', true)
+            ->orderByDesc('fecha_vencimiento')
+            ->get()
+            ->mapWithKeys(fn (ProductoLote $l) => [$l->id => $l->lote . ' · vence ' . $l->fecha_vencimiento->format('d/m/Y') . ' · stock ' . $l->stock])
+            ->toArray();
+    }
+
     public function generar()
     {
         $data = $this->form->getState();
@@ -201,9 +255,25 @@ class ImprimirEtiquetas extends Page implements HasForms
                     ->first()
                 : null;
 
+            // Droguería: mismo criterio que variante -- el codigo de barras
+            // de un lote puntual es el que va impreso/escaneado.
+            $lote = ! empty($linea['producto_lote_id'])
+                ? ProductoLote::where('id', $linea['producto_lote_id'])
+                    ->where('product_id', $producto->id)
+                    ->first()
+                : null;
+
+            $codigoImpreso = $variante?->codigoPrincipal() ?: ($lote?->codigo ?: $producto->id_producto);
+            $nombreImpreso = $producto->descripcion_larga;
+            if ($variante) {
+                $nombreImpreso .= ' - ' . $variante->nombre;
+            } elseif ($lote) {
+                $nombreImpreso .= ' - Lote ' . $lote->lote;
+            }
+
             $lineas[] = [
-                'product_id'      => $variante?->codigoPrincipal() ?: $producto->id_producto,
-                'nombre_producto' => $variante ? $producto->descripcion_larga . ' - ' . $variante->nombre : $producto->descripcion_larga,
+                'product_id'      => $codigoImpreso,
+                'nombre_producto' => $nombreImpreso,
                 'cantidad'        => $linea['cantidad'] ?? 1,
                 'precio_venta'    => $producto->precio_venta1,
             ];

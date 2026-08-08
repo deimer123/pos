@@ -175,6 +175,12 @@ class FacturarVentaService
                             ->decrement('stock', $cant);
                     }
 
+                    if (! empty($item['producto_lote_id'])) {
+                        \App\Models\ProductoLote::where('id', $item['producto_lote_id'])
+                            ->where('empresa_id', $empresaId)
+                            ->decrement('stock', $cant);
+                    }
+
                     if ($receta && $receta->items->isNotEmpty()) {
                         $rendimiento = (float) $receta->rendimiento ?: 1;
                         foreach ($receta->items as $recetaItem) {
@@ -390,6 +396,23 @@ class FacturarVentaService
                 continue;
             }
 
+            if (! empty($item['producto_lote_id'])) {
+                $lote = \App\Models\ProductoLote::where('id', $item['producto_lote_id'])
+                    ->where('empresa_id', $empresaId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $lote) {
+                    throw new \Exception("El lote seleccionado para \"{$item['nombre']}\" ya no existe.");
+                }
+
+                if (! $permiteNegativo && $cant > (float) $lote->stock) {
+                    throw new \Exception("Stock insuficiente para el lote \"{$lote->lote}\": disponible {$lote->stock}, solicitado {$cant}.");
+                }
+
+                continue;
+            }
+
             if (! $permiteNegativo && $prod && $prod->tipo_producto !== 'servicio' && $cant > (float) $prod->existencias) {
                 throw new \Exception("Stock insuficiente para \"{$prod->descripcion_larga}\": disponible {$prod->existencias}, solicitado {$cant}.");
             }
@@ -485,6 +508,7 @@ class FacturarVentaService
         $factura->detalles()->create([
             'producto_id' => $idFacturable,
             'producto_variante_id' => $item['producto_variante_id'] ?? null,
+            'producto_lote_id' => $item['producto_lote_id'] ?? null,
             'descripcion_larga' => $item['nombre'],
             'cantidad' => $cant,
             'subtotal' => $sub,
