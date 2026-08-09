@@ -22,7 +22,7 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
 {
     private const ULTIMA_FILA_FORMULAS = 500;
 
-    public function __construct(protected array $productosExistentes = [], protected bool $conVariantes = false)
+    public function __construct(protected array $productosExistentes = [], protected bool $conVariantes = false, protected bool $conLotes = false)
     {
     }
 
@@ -32,11 +32,12 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
     }
 
     /**
-     * Orden logico de columnas. Talla/Color van entre Producto y Cantidad
-     * (para empresas con variantes) porque hay que saber la variante ANTES
-     * de la cantidad, no al final -- el importador (CompraBulkImport) lee
-     * por nombre de encabezado, no por posicion, asi que el orden aqui es
-     * libre.
+     * Orden logico de columnas. Talla/Color (o Lote/Fecha de vencimiento)
+     * van entre Producto y Cantidad porque hay que saber la variante/lote
+     * ANTES de la cantidad, no al final -- el importador (CompraBulkImport)
+     * lee por nombre de encabezado, no por posicion, asi que el orden aqui
+     * es libre. Un producto no tiene variantes Y lotes a la vez en la
+     * practica, pero por si acaso, variantes gana prioridad.
      */
     private function columnas(): array
     {
@@ -45,6 +46,9 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
         if ($this->conVariantes) {
             $columnas[] = 'Talla';
             $columnas[] = 'Color';
+        } elseif ($this->conLotes) {
+            $columnas[] = 'Lote';
+            $columnas[] = 'Fecha de vencimiento';
         }
 
         return array_merge($columnas, [
@@ -78,6 +82,8 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
             'Producto' => 'Ejemplo: Aceite 20W50 x Galon',
             'Talla' => '',
             'Color' => '',
+            'Lote' => '',
+            'Fecha de vencimiento' => '',
             'Cantidad' => 10,
             'Costo Unitario' => 25000,
             'Descuento Comercial' => 0,
@@ -98,6 +104,8 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
             'Producto' => 34,
             'Talla' => 10,
             'Color' => 14,
+            'Lote' => 14,
+            'Fecha de vencimiento' => 18,
             'Cantidad' => 12,
             'Costo Unitario' => 15,
             'Descuento Comercial' => 18,
@@ -154,6 +162,10 @@ class CompraBulkTemplateItemsSheet implements FromArray, WithHeadings, WithTitle
         $sheet->getStyle($this->letra('Cantidad') . '2:' . $this->letra('IVA') . '20')->getNumberFormat()->setFormatCode('#,##0');
         $sheet->getStyle($this->letra('Utilidad') . '2:' . $this->letra('Utilidad') . '500')->getNumberFormat()->setFormatCode('#,##0.00');
         $sheet->getStyle($this->letra('Precio de Venta') . '2:' . $this->letra('Precio de Venta') . '20')->getNumberFormat()->setFormatCode('#,##0');
+
+        if ($this->conLotes) {
+            $sheet->getStyle($this->letra('Fecha de vencimiento') . '2:' . $this->letra('Fecha de vencimiento') . '500')->getNumberFormat()->setFormatCode('yyyy-mm-dd');
+        }
 
         $sheet->freezePane('A2');
 

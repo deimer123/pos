@@ -2,11 +2,13 @@
 
 namespace App\Imports;
 
+use App\Filament\Resources\CompraResource;
 use App\Models\AlternateCode;
 use App\Models\Compra;
 use App\Models\CompraDetalle;
 use App\Models\Familia;
 use App\Models\Product;
+use App\Models\ProductoLote;
 use App\Models\ProductoVariante;
 use App\Models\Subfamilia;
 use Illuminate\Support\Collection;
@@ -44,6 +46,7 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
         protected string $tipoPago,        // contado | credito
         protected string $fecha,
         protected string $fechaVencimiento,
+        protected bool $conLotes = false,
     ) {
     }
 
@@ -125,6 +128,35 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
             $varianteTalla = trim((string) ($row['talla'] ?? ''));
             $varianteColor = trim((string) ($row['color'] ?? ''));
 
+            // Columnas opcionales "Lote"/"Fecha de vencimiento" (solo en la
+            // plantilla de empresas con usa_lotes activo): igual que
+            // Talla/Color, no se busca/crea el lote aqui todavia (esto es
+            // el pase de solo lectura) -- CompraResource::resolverLoteId()
+            // hace el find-or-create en confirmar() (pase 2), mismo
+            // mecanismo que ya usa la carga manual de una Compra.
+            $lote = '';
+            $loteFechaVencimiento = null;
+
+            if ($this->conLotes) {
+                $lote = trim((string) ($row['lote'] ?? ''));
+                $loteFechaVencimiento = $this->fechaCelda($row['fecha_de_vencimiento'] ?? null);
+
+                if ($lote !== '' && $loteFechaVencimiento === null) {
+                    $this->errores[] = "Fila {$numeroFila} ({$nombre}): falta la Fecha de vencimiento del lote \"{$lote}\" (o no se pudo leer).";
+                    continue;
+                }
+
+                if ($lote === '' && $loteFechaVencimiento !== null) {
+                    $this->errores[] = "Fila {$numeroFila} ({$nombre}): hay Fecha de vencimiento pero falta el número de Lote.";
+                    continue;
+                }
+
+                if ($lote === '') {
+                    $this->errores[] = "Fila {$numeroFila} ({$nombre}): falta el Lote y la Fecha de vencimiento.";
+                    continue;
+                }
+            }
+
             // Costo Unitario se autollena en Excel con una formula VLOOKUP
             // contra la hoja 'Productos existentes'. A veces esa formula no
             // se puede leer al importar (depende de otra hoja del mismo
@@ -169,6 +201,8 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
                 'es_nuevo' => $esNuevo,
                 'variante_talla' => $varianteTalla,
                 'variante_color' => $varianteColor,
+                'lote' => $lote,
+                'lote_fecha_vencimiento' => $loteFechaVencimiento,
                 'departamento' => trim((string) ($row['departamento'] ?? '')),
                 'subfamilia' => trim((string) ($row['subfamilia'] ?? '')),
                 'unidad_texto' => trim((string) ($row['unidad_de_medida'] ?? '')),
@@ -234,6 +268,15 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
                         ->increment('stock', $p['cantidad']);
                 }
 
+                $loteId = null;
+                if ($p['lote'] !== '') {
+                    $loteId = CompraResource::resolverLoteId($producto->id, $this->empresaId, $p['lote'], $p['lote_fecha_vencimiento']);
+
+                    ProductoLote::where('id', $loteId)
+                        ->where('empresa_id', $this->empresaId)
+                        ->increment('stock', $p['cantidad']);
+                }
+
                 $producto->precio_costo_anterior = $producto->precio_costo;
                 $producto->precio_venta_anterior = $producto->precio_venta1;
                 $producto->precio_costo = $p['costo'];
@@ -249,6 +292,7 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
                 $lineas[] = [
                     'product_id' => (string) $producto->id_producto,
                     'producto_variante_id' => $varianteId,
+                    'producto_lote_id' => $loteId,
                     'codigo_ingresado' => (string) $producto->id_producto,
                     'nombre_producto' => $producto->descripcion_larga,
                     'cantidad' => $p['cantidad'],
@@ -317,6 +361,35 @@ class CompraBulkImport implements ToCollection, WithHeadingRow, WithMultipleShee
         $value = str_replace(',', '.', (string) $value);
 
         return is_numeric($value) ? (float) $value : null;
+    }
+
+    // Acepta la Fecha de vencimiento venga como objeto fecha (si el lector
+    // de Excel ya la convirtio), numero de serie de Excel (celda con
+    // formato fecha) o texto plano -- devuelve siempre "Y-m-d" o null si no
+    // se pudo interpretar. Mismo mecanismo que ProductoLoteBulkImport::fecha().
+    private function fechaCelda($value): ?string
+    {
+        if ($value === null || trim((string) $value) === '') {
+            return null;
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y-m-d');
+        }
+
+        if (is_numeric($value)) {
+            try {
+                return \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((float) $value)->format('Y-m-d');
+            } catch (\Throwable $e) {
+                return null;
+            }
+        }
+
+        try {
+            return \Carbon\Carbon::parse((string) $value)->format('Y-m-d');
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     // Solo lectura: busca el producto por nombre, primero con ESTE

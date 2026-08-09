@@ -332,7 +332,7 @@
                     });
 
                     const opciones = lotes.map((lote) => ({
-                        etiqueta: 'Lote ' + lote.lote + (lote.fecha_vencimiento ? ' · vence ' + lote.fecha_vencimiento : ''),
+                        etiqueta: 'Lote ' + lote.lote,
                         stock: lote.stock,
                         valorTexto: formatoStockVariante(lote.stock),
                         onElegir: () => ejecutarAgregar(producto.id_producto, null, lote.id),

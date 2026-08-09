@@ -27,7 +27,7 @@ class CompraBulkTemplateProductosExistentesSheet implements FromArray, WithHeadi
         5 => 'Horas',
     ];
 
-    public function __construct(protected Collection $productos, protected bool $conVariantes = false)
+    public function __construct(protected Collection $productos, protected bool $conVariantes = false, protected bool $conLotes = false)
     {
     }
 
@@ -52,6 +52,8 @@ class CompraBulkTemplateProductosExistentesSheet implements FromArray, WithHeadi
 
         if ($this->conVariantes) {
             $columnas[] = 'Variantes (talla/color: stock)';
+        } elseif ($this->conLotes) {
+            $columnas[] = 'Lotes (numero: stock, vence)';
         }
 
         return $columnas;
@@ -90,6 +92,12 @@ class CompraBulkTemplateProductosExistentesSheet implements FromArray, WithHeadi
                     : $p->variantes
                         ->map(fn ($v) => trim(($v->atributos['talla'] ?? '') . ' ' . ($v->atributos['color'] ?? '')) . ': ' . (float) $v->stock)
                         ->implode(' · ');
+            } elseif ($this->conLotes) {
+                $fila[] = $p->lotes->isEmpty()
+                    ? ''
+                    : $p->lotes
+                        ->map(fn ($l) => $l->lote . ': ' . (float) $l->stock . ', vence ' . optional($l->fecha_vencimiento)->format('Y-m-d'))
+                        ->implode(' · ');
             }
 
             return $fila;
@@ -98,7 +106,7 @@ class CompraBulkTemplateProductosExistentesSheet implements FromArray, WithHeadi
 
     private function ultimaColumna(): string
     {
-        return $this->conVariantes ? 'J' : 'I';
+        return ($this->conVariantes || $this->conLotes) ? 'J' : 'I';
     }
 
     public function columnWidths(): array
@@ -115,7 +123,7 @@ class CompraBulkTemplateProductosExistentesSheet implements FromArray, WithHeadi
             'I' => 16,
         ];
 
-        if ($this->conVariantes) {
+        if ($this->conVariantes || $this->conLotes) {
             $anchos['J'] = 40;
         }
 

@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Exports\ProductBulkTemplateExport;
 use App\Imports\ProductBulkImport;
+use App\Imports\ProductoLoteBulkImport;
 use App\Imports\ProductoRopaBulkImport;
 use App\Models\ConfiguracionEmpresa;
 use Filament\Notifications\Notification;
@@ -43,12 +44,21 @@ class ImportarProductos extends Page
         return ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('tipo_negocio') === 'ropa_calzado';
     }
 
+    // Un producto no maneja variantes Y lotes a la vez en la practica, pero
+    // por si acaso, variantes gana prioridad si ambas cosas estuvieran
+    // activas (mismo orden que ya se usa en CompraResource).
+    private function empresaUsaLotes(int $empresaId): bool
+    {
+        return (bool) ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_lotes');
+    }
+
     public function descargarPlantilla()
     {
         $empresaId = auth()->user()->getEmpresaActualId();
         $conVariantes = $this->empresaVendePorVariantes($empresaId);
+        $conLotes = ! $conVariantes && $this->empresaUsaLotes($empresaId);
 
-        return Excel::download(new ProductBulkTemplateExport($empresaId, $conVariantes), 'plantilla-productos.xlsx');
+        return Excel::download(new ProductBulkTemplateExport($empresaId, $conVariantes, $conLotes), 'plantilla-productos.xlsx');
     }
 
     public function importar()
@@ -61,9 +71,14 @@ class ImportarProductos extends Page
         @ini_set('max_execution_time', '0');
 
         $empresaId = auth()->user()->getEmpresaActualId();
-        $import = $this->empresaVendePorVariantes($empresaId)
-            ? new ProductoRopaBulkImport($empresaId)
-            : new ProductBulkImport($empresaId);
+        $conVariantes = $this->empresaVendePorVariantes($empresaId);
+        $conLotes = ! $conVariantes && $this->empresaUsaLotes($empresaId);
+
+        $import = match (true) {
+            $conVariantes => new ProductoRopaBulkImport($empresaId),
+            $conLotes => new ProductoLoteBulkImport($empresaId),
+            default => new ProductBulkImport($empresaId),
+        };
 
         try {
             Excel::import($import, $this->archivo);

@@ -102,13 +102,14 @@ class ImportarCompras extends Page
         $productos = Product::query()
             ->where('empresa_id', $empresaId)
             ->where('id_proveedor', (int) $proveedor->id_clip_pro)
-            ->with(['familia1', 'subfamilia', 'variantes'])
+            ->with(['familia1', 'subfamilia', 'variantes', 'lotes'])
             ->orderBy('descripcion_larga')
             ->get();
 
         $conVariantes = ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('tipo_negocio') === 'ropa_calzado';
+        $conLotes = ! $conVariantes && (bool) ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_lotes');
 
-        return Excel::download(new CompraBulkTemplateExport($empresaId, $productos, $conVariantes), 'plantilla-compras.xlsx');
+        return Excel::download(new CompraBulkTemplateExport($empresaId, $productos, $conVariantes, $conLotes), 'plantilla-compras.xlsx');
     }
 
     private function facturaDuplicada(int $empresaId, int $proveedorId): bool
@@ -160,6 +161,9 @@ class ImportarCompras extends Page
 
         $fechaVencimiento = $this->tipo_pago === 'credito' ? $this->fecha_vencimiento : $this->fecha;
 
+        $conVariantes = ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('tipo_negocio') === 'ropa_calzado';
+        $conLotes = ! $conVariantes && (bool) ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_lotes');
+
         $import = new CompraBulkImport(
             empresaId: $empresaId,
             userId: auth()->id(),
@@ -169,6 +173,7 @@ class ImportarCompras extends Page
             tipoPago: $this->tipo_pago,
             fecha: $this->fecha,
             fechaVencimiento: $fechaVencimiento,
+            conLotes: $conLotes,
         );
 
         try {
