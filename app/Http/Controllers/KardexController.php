@@ -175,6 +175,9 @@ public function documento(Request $request)
         // 🎨 UNIR VARIANTE (talla/color), si la venta fue de una puntual
         ->leftJoin('producto_variantes as pv', 'pv.id', '=', 'd.producto_variante_id')
 
+        // 📦 UNIR LOTE, si la venta fue de un lote puntual
+        ->leftJoin('producto_lotes as pl', 'pl.id', '=', 'd.producto_lote_id')
+
         ->where('d.factura_id', $ref)
         ->where('f.empresa_id', $empresaId)
 
@@ -182,6 +185,7 @@ public function documento(Request $request)
             'd.producto_id',
             'p.descripcion_larga as nombre',
             'pv.nombre as variante_nombre',
+            'pl.lote as lote_nombre',
             'd.cantidad',
             'p.precio_costo as costo',
             'd.precio',
@@ -218,6 +222,9 @@ if ($tipo == 'compra') {
         // 🎨 unir variante (talla/color), si la compra fue de una puntual
         ->leftJoin('producto_variantes as pv', 'pv.id', '=', 'd.producto_variante_id')
 
+        // 📦 unir lote, si la compra fue de un lote puntual
+        ->leftJoin('producto_lotes as pl', 'pl.id', '=', 'd.producto_lote_id')
+
         ->where('d.compra_id', $ref)
         ->where('c.empresa_id', $empresaId)
 
@@ -225,6 +232,7 @@ if ($tipo == 'compra') {
             'd.product_id as producto_id',
             'p.descripcion_larga as nombre',
             'pv.nombre as variante_nombre',
+            'pl.lote as lote_nombre',
             'd.cantidad',
 
             'd.costo_unitario as costo',
@@ -257,6 +265,9 @@ if ($tipo == 'devolucion_compra') {
         // 🎨 unir variante (talla/color), si la devolucion fue de una puntual
         ->leftJoin('producto_variantes as pv', 'pv.id', '=', 'd.producto_variante_id')
 
+        // 📦 unir lote, si la devolucion fue de un lote puntual
+        ->leftJoin('producto_lotes as pl', 'pl.id', '=', 'd.producto_lote_id')
+
         ->where('d.devolucion_compra_id', $ref)
         ->where('dc.empresa_id', $empresaId)
 
@@ -264,6 +275,7 @@ if ($tipo == 'devolucion_compra') {
             'd.product_id as producto_id',
             'p.descripcion_larga as nombre',
             'pv.nombre as variante_nombre',
+            'pl.lote as lote_nombre',
             'd.cantidad',
 
             // 🔥 COSTO REAL DEVUELTO
@@ -300,6 +312,9 @@ if ($tipo == 'anulacion_compra') {
 
         ->leftJoin('producto_variantes as pv', 'pv.id', '=', 'd.producto_variante_id')
 
+        // 📦 unir lote, si la compra anulada fue de un lote puntual
+        ->leftJoin('producto_lotes as pl', 'pl.id', '=', 'd.producto_lote_id')
+
         ->where('d.compra_id', $ref)
         ->where('c.empresa_id', $empresaId)
 
@@ -307,6 +322,7 @@ if ($tipo == 'anulacion_compra') {
             'd.product_id as producto_id',
             'p.descripcion_larga as nombre',
             'pv.nombre as variante_nombre',
+            'pl.lote as lote_nombre',
             'd.cantidad',
             'd.costo_unitario as costo',
             DB::raw('0 as precio'),
@@ -379,6 +395,9 @@ if ($tipo == 'inventario_nuevo') {
         // 🎨 unir variante (talla/color), si el ajuste fue de una puntual
         ->leftJoin('producto_variantes as pv', 'pv.id', '=', 'd.producto_variante_id')
 
+        // 📦 unir lote, si el ajuste fue de un lote puntual
+        ->leftJoin('producto_lotes as pl', 'pl.id', '=', 'd.producto_lote_id')
+
         ->where('d.ajuste_inventario_id', $ref)
         ->where('a.empresa_id', $empresaId)
 
@@ -386,6 +405,7 @@ if ($tipo == 'inventario_nuevo') {
             'd.producto_id',
             'p.descripcion_larga as nombre',
             'pv.nombre as variante_nombre',
+            'pl.lote as lote_nombre',
 
             DB::raw('d.cantidad_nueva as cantidad'),
 
@@ -419,6 +439,9 @@ if ($tipo == 'ajuste_entrada' || $tipo == 'ajuste_salida') {
         // 🎨 unir variante (talla/color), si el ajuste fue de una puntual
         ->leftJoin('producto_variantes as pv', 'pv.id', '=', 'd.producto_variante_id')
 
+        // 📦 unir lote, si el ajuste fue de un lote puntual
+        ->leftJoin('producto_lotes as pl', 'pl.id', '=', 'd.producto_lote_id')
+
         ->where('d.ajuste_inventario_id', $ref)
         ->where('a.empresa_id', $empresaId)
 
@@ -426,6 +449,7 @@ if ($tipo == 'ajuste_entrada' || $tipo == 'ajuste_salida') {
             'd.producto_id',
             'p.descripcion_larga as nombre',
             'pv.nombre as variante_nombre',
+            'pl.lote as lote_nombre',
 
             // 🔥 diferencia real
             DB::raw('d.diferencia as cantidad'),

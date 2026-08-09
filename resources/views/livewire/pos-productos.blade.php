@@ -311,6 +311,36 @@
                     mostrarListaVariantes('Elige la talla', opciones);
                 }
 
+                // Producto con lotes: si llego hasta aca es porque NO se
+                // escaneo/escribio el codigo puntual de un lote (eso ya se
+                // resuelve directo en buscarCoincidenciaExacta via
+                // _loteId) -- por ejemplo, se busco el producto por nombre
+                // y se hizo clic en "Agregar" desde la grilla. En ese caso
+                // no hay forma de saber de cual lote descontar, asi que se
+                // pregunta con el mismo selector que usan las variantes.
+                // Se ordena por fecha de vencimiento (el que vence primero
+                // arriba) como sugerencia visual, sin forzar FEFO: el
+                // cajero sigue eligiendo a mano.
+                function abrirSelectorLote(producto) {
+                    if (!window.Swal) {
+                        ejecutarAgregar(producto.id_producto, null);
+                        return;
+                    }
+
+                    const lotes = (producto.lotes || []).slice().sort((a, b) => {
+                        return String(a.fecha_vencimiento || '').localeCompare(String(b.fecha_vencimiento || ''));
+                    });
+
+                    const opciones = lotes.map((lote) => ({
+                        etiqueta: 'Lote ' + lote.lote + (lote.fecha_vencimiento ? ' · vence ' + lote.fecha_vencimiento : ''),
+                        stock: lote.stock,
+                        valorTexto: formatoStockVariante(lote.stock),
+                        onElegir: () => ejecutarAgregar(producto.id_producto, null, lote.id),
+                    }));
+
+                    mostrarListaVariantes('Elige el lote', opciones);
+                }
+
                 function agregarAlCarrito(idProducto, varianteId) {
                     // Viene de un clic directo en la grilla (una tarjeta por
                     // variante, ver pos-catalogo-offline.js): ya se sabe cual
@@ -320,8 +350,10 @@
                         return;
                     }
 
-                    // Viene de escanear/escribir un codigo exacto. Si ese
-                    // codigo era el de UNA variante puntual (ver
+                    // Viene de escanear/escribir un codigo exacto, o de un
+                    // clic en la grilla (una sola tarjeta agregada por
+                    // producto, aunque tenga varios lotes). Si ese codigo
+                    // era el de UNA variante puntual (ver
                     // buscarCoincidenciaExacta), ya se sabe cual es, se
                     // agrega directo. Si es el codigo del producto y tiene
                     // variantes, no hay forma de saber cual por el codigo
@@ -344,6 +376,15 @@
 
                     if (producto && producto.tiene_variantes) {
                         abrirSelectorVariante(producto);
+                        return;
+                    }
+
+                    // No se escaneo un lote puntual pero el producto SI
+                    // maneja lotes: hay que preguntar cual, si no la venta
+                    // quedaria sin lote asociado y el stock por lote se
+                    // desincroniza del total del producto.
+                    if (producto && producto.tiene_lotes) {
+                        abrirSelectorLote(producto);
                         return;
                     }
 

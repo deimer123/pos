@@ -705,9 +705,10 @@ Placeholder::make('existencias_inline')
                     ->columnSpan(6),
             ]),
 
-        /* - Lote (solo empresas de droguería): texto libre, no un Select --
-             ver resolverLoteId(), cada compra trae un lote fisicamente
-             nuevo con su propia fecha de vencimiento. - */
+        /* - Lote (empresas con el flag usa_lotes activo, cualquier tipo de
+             negocio): texto libre, no un Select -- ver resolverLoteId(),
+             cada compra trae un lote fisicamente nuevo con su propia
+             fecha de vencimiento. - */
         Forms\Components\Grid::make(6)->extraAttributes(['class' => 'compra-linea-lote'])
             ->visible(fn () => static::empresaUsaLotes())
             ->schema([

@@ -366,6 +366,9 @@ async function verDocumento(tipo, referencia) {
             if (d.variante_nombre) {
                 nombreCelda += `<br><span style="font-size:11px; color:#4338ca; font-weight:600;">🎨 ${escapeHtml(d.variante_nombre)}</span>`;
             }
+            if (d.lote_nombre) {
+                nombreCelda += `<br><span style="font-size:11px; color:#4338ca; font-weight:600;">📦 Lote ${escapeHtml(d.lote_nombre)}</span>`;
+            }
 
             html += `
                 <tr>
