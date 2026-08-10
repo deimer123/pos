@@ -3717,12 +3717,23 @@ function abrirIngresoServicioTecnico(nombreCliente, telefonoCliente) {
             svg.appendChild(line);
         }
         Object.entries(svcTecPatronPuntos).forEach(([id, p]) => {
+            const activo = svcTecPatronSeleccionados.includes(Number(id));
             const c = document.createElementNS(ns, 'circle');
             c.setAttribute('cx', p.x); c.setAttribute('cy', p.y); c.setAttribute('r', 11);
-            c.setAttribute('fill', svcTecPatronSeleccionados.includes(Number(id)) ? '#0f766e' : '#ffffff');
+            c.setAttribute('fill', activo ? '#0f766e' : '#ffffff');
             c.setAttribute('stroke', '#94a3b8');
             c.setAttribute('stroke-width', '1.5');
             svg.appendChild(c);
+
+            const t = document.createElementNS(ns, 'text');
+            t.setAttribute('x', p.x); t.setAttribute('y', p.y + 4);
+            t.setAttribute('text-anchor', 'middle');
+            t.setAttribute('font-size', '10');
+            t.setAttribute('font-weight', '700');
+            t.setAttribute('fill', activo ? '#ffffff' : '#94a3b8');
+            t.setAttribute('style', 'pointer-events:none;');
+            t.textContent = id;
+            svg.appendChild(t);
         });
         const texto = document.getElementById('st_patron_texto');
         if (texto) texto.textContent = svcTecPatronSeleccionados.length ? svcTecPatronSeleccionados.join(' - ') : '—';

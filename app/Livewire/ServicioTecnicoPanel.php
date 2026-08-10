@@ -167,15 +167,6 @@ class ServicioTecnicoPanel extends Component
         $this->fechaHasta = '';
     }
 
-    public function nuevaOrden(): void
-    {
-        $this->reset(['ordenId','clienteNombre','clienteTelefono','marca','modelo','imeiSerial',
-                      'color','claveDesbloqueo','diagnostico','observaciones','repuestos','buscarProducto',
-                      'fotoTemp','videoTemp','fotos','videos']);
-        $this->estado     = 'pendiente';
-        $this->modalOrden = true;
-    }
-
     public function editarOrden(int $id): void
     {
         $orden = ServicioTecnicoOrden::where('empresa_id', $this->empresaId())->with('items')->findOrFail($id);
@@ -262,13 +253,18 @@ class ServicioTecnicoPanel extends Component
 
     public function guardarOrden(): void
     {
+        // Las ordenes nuevas se crean solo desde el POS (boton "Ingresar",
+        // que exige buscar el cliente primero) -- este modal ya no crea
+        // ordenes, solo edita las que ya existen.
+        if (! $this->ordenId) {
+            return;
+        }
+
         $this->validate([
             'clienteNombre' => 'required|string|max:200',
         ], [
             'clienteNombre.required' => 'El nombre del cliente es obligatorio.',
         ]);
-
-        $esOrdenNueva = ! $this->ordenId;
 
         $data = [
             'empresa_id'       => $this->empresaId(),
@@ -285,18 +281,14 @@ class ServicioTecnicoPanel extends Component
             'creado_por'       => auth()->id(),
         ];
 
-        if ($this->ordenId) {
-            $orden = ServicioTecnicoOrden::where('empresa_id', $this->empresaId())->findOrFail($this->ordenId);
-            $orden->update($data);
+        $orden = ServicioTecnicoOrden::where('empresa_id', $this->empresaId())->findOrFail($this->ordenId);
+        $orden->update($data);
 
-            if ($this->esTurion && $orden->servidor_id) {
-                \App\Services\Turion\ColaSincronizacion::encolar('servicio_tecnico_actualizar', array_merge(
-                    collect($data)->except(['empresa_id', 'creado_por'])->all(),
-                    ['servidor_id' => $orden->servidor_id]
-                ));
-            }
-        } else {
-            $orden = ServicioTecnicoOrden::create($data);
+        if ($this->esTurion && $orden->servidor_id) {
+            \App\Services\Turion\ColaSincronizacion::encolar('servicio_tecnico_actualizar', array_merge(
+                collect($data)->except(['empresa_id', 'creado_por'])->all(),
+                ['servidor_id' => $orden->servidor_id]
+            ));
         }
 
         $idsExistentes = [];
@@ -345,12 +337,6 @@ class ServicioTecnicoPanel extends Component
 
         $this->modalOrden = false;
         $this->dispatch('success', 'Orden #' . $orden->numero_orden . ' guardada.');
-
-        // Ticket con codigo de barras: se imprime solo al crear la orden
-        // (para pegar al equipo), no cuando solo se edita una ya existente.
-        if ($esOrdenNueva) {
-            $this->dispatch('open-print', ['url' => route('servicio-tecnico.orden.ticket', $orden->id)]);
-        }
     }
 
     // ── Evidencia (fotos/video) ───────────────────────────────────────────────

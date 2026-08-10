@@ -2065,6 +2065,12 @@ public function guardarPrefacturaConfirmada()
 
         $this->servicioTecnicoOrdenId = $orden->id;
         $this->dispatch('success', 'Orden de servicio técnico #'.str_pad($orden->numero_orden,4,'0',STR_PAD_LEFT).' creada. Ahora agrega los productos.');
+
+        // Ticket con codigo de barras, para pegar en el equipo -- se
+        // imprimia solo al crear la orden desde el panel (ver
+        // ServicioTecnicoPanel::guardarOrden(), ahora esa ruta ya no crea
+        // ordenes nuevas). El evento 'open-print' lo maneja layouts/pos.blade.php.
+        $this->dispatch('open-print', ['url' => route('servicio-tecnico.orden.ticket', $orden->id)]);
     }
 
     public function limpiarServicioTecnico(): void

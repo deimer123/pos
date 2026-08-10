@@ -50,14 +50,6 @@
             <span class="taller-separador" style="width:1px; height:20px; background:rgba(255,255,255,.3); display:inline-block;"></span>
 
             <div class="taller-extra-group" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                {{-- Nueva orden: a diferencia de Taller (que se crea desde el
-                     POS con "Ingresar"), Servicio Tecnico es un modulo
-                     autonomo -- se crea directo aqui. --}}
-                <button wire:click="nuevaOrden"
-                    style="border:none; border-radius:20px; padding:5px 14px; font-size:11px; font-weight:700; cursor:pointer; background:white; color:#0f766e; white-space:nowrap;">
-                    ➕ Nueva orden
-                </button>
-
                 {{-- Reporte PDF del listado actual --}}
                 <a href="{{ route('servicio-tecnico.reporte.pdf', ['estado' => $filtroEstado ?: 'todos', 'desde' => $fechaDesde, 'hasta' => $fechaHasta, 'busqueda' => $busqueda]) }}"
                    target="_blank"
@@ -289,7 +281,7 @@
                     @else No hay órdenes de servicio técnico.
                     @endif
                 </div>
-                <div style="font-size:12px; color:#cbd5e1; margin-top:6px;">Crea una con el botón "➕ Nueva orden" de arriba.</div>
+                <div style="font-size:12px; color:#cbd5e1; margin-top:6px;">Crea una desde el botón "📱 Ingresar" del POS (busca primero el cliente).</div>
             </div>
         @else
         <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:10px;">
@@ -1084,6 +1076,11 @@
                                         <circle :cx="p.x" :cy="p.y" r="11"
                                             :fill="seleccionados.includes(Number(id)) ? '#0f766e' : '#ffffff'"
                                             stroke="#94a3b8" stroke-width="1.5"></circle>
+                                    </template>
+                                    <template x-for="(p, id) in puntos" :key="'n'+id">
+                                        <text :x="p.x" :y="p.y + 4" text-anchor="middle" font-size="10" font-weight="700"
+                                            :fill="seleccionados.includes(Number(id)) ? '#ffffff' : '#94a3b8'"
+                                            style="pointer-events:none;" x-text="id"></text>
                                     </template>
                                 </svg>
                                 <div style="min-width:140px;">
