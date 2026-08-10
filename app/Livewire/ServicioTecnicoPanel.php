@@ -141,9 +141,14 @@ class ServicioTecnicoPanel extends Component
             ->when($this->filtroEstado === 'activas', fn($q) => $q->where('estado', '!=', 'entregado'))
             ->when($this->filtroEstado && $this->filtroEstado !== 'activas', fn($q) => $q->where('estado', $this->filtroEstado))
             ->when($this->busqueda, fn($q) => $q->where(function($q2) {
+                // numero_orden es el mismo valor que trae el codigo de barras
+                // del ticket (ver tickets/servicio-tecnico-etiqueta.blade.php),
+                // asi que escanearlo aca con el lector USB tambien encuentra
+                // la orden.
                 $q2->where('imei_serial', 'like', '%'.$this->busqueda.'%')
                    ->orWhere('cliente_nombre', 'like', '%'.$this->busqueda.'%')
-                   ->orWhere('marca', 'like', '%'.$this->busqueda.'%');
+                   ->orWhere('marca', 'like', '%'.$this->busqueda.'%')
+                   ->orWhere('numero_orden', 'like', '%'.$this->busqueda.'%');
             }))
             ->with('items')
             ->orderByDesc('created_at')

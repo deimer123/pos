@@ -7,9 +7,9 @@
             <span style="font-size:16px; font-weight:700; white-space:nowrap;">📱 Servicio Técnico</span>
 
             {{-- Búsqueda --}}
-            <input wire:model.live.debounce.300ms="busqueda" type="text" placeholder="Buscar IMEI, cliente o marca..."
+            <input wire:model.live.debounce.300ms="busqueda" type="text" placeholder="Buscar IMEI, cliente, marca o # de orden..."
                 class="taller-search"
-                style="border:none; border-radius:20px; padding:5px 14px; font-size:12px; width:190px; outline:none; color:#1f2937;">
+                style="border:none; border-radius:20px; padding:5px 14px; font-size:12px; width:230px; outline:none; color:#1f2937;">
         </div>
 
         <div class="taller-header-row taller-header-filtros" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:8px;">
