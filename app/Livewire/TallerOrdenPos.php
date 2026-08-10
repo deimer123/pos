@@ -225,21 +225,27 @@ class TallerOrdenPos extends Component
 
         $total = $itemsFacturables->sum('subtotal');
 
+        // facturas.medio_pago solo acepta efectivo/transferencia/otro --
+        // tarjeta y nequi (opciones del select, mas claras para quien
+        // factura) se guardan como "otro", igual que ya hace el resto del
+        // POS (ver CarritoVenta) con cualquier medio que no sea esos dos.
+        $medioPago = in_array($this->medioPago, ['efectivo', 'transferencia'], true) ? $this->medioPago : 'otro';
+
         $factura = Factura::create([
             'empresa_id'    => $empresaId,
             'cliente_id'    => $orden->cliente_id,
             'user_id'       => auth()->id(),
             'vendedor_id'   => auth()->id(),
             'cajero_id'     => auth()->id(),
-            'tipo_factura'  => 'venta',
+            'tipo_factura'  => 'salida',
             'tipo_pago'     => $this->tipoPago,
-            'medio_pago'    => $this->medioPago,
+            'medio_pago'    => $medioPago,
             'fecha'         => now(),
             'fecha_compra'  => now(),
             'fecha_pago'    => $this->tipoPago === 'contado' ? now() : null,
             'total'         => $total,
             'saldo'         => $this->tipoPago === 'credito' ? $total : 0,
-            'estado_pago'   => $this->tipoPago === 'contado' ? 'pagado' : 'pendiente',
+            'estado_pago'   => $this->tipoPago === 'contado' ? 'pagada' : 'pendiente',
             'observaciones' => $this->obsFactura ?: 'Taller #'.str_pad($orden->numero_orden, 4, '0', STR_PAD_LEFT).' · '.$orden->placa.' · '.$orden->cliente_nombre,
             'tipo_pedido'   => 'local',
             'costo_empaque' => 0,
@@ -247,7 +253,11 @@ class TallerOrdenPos extends Component
 
         foreach ($itemsFacturables as $r) {
             $factura->detalles()->create([
-                'producto_id'       => $r->producto?->id_producto,
+                // factura_detalles.producto_id es NOT NULL -- items
+                // manuales (mano de obra, tercero) no tienen Product real,
+                // mismo 0 centinela que usa FacturarVentaService para ese
+                // caso.
+                'producto_id'       => $r->producto?->id_producto ?? 0,
                 'descripcion_larga' => $r->descripcion,
                 'cantidad'          => $r->cantidad,
                 'precio'            => $r->precio_unitario,

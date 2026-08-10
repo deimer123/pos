@@ -11,6 +11,8 @@ class PrefacturaProducto extends Model
     protected $fillable = [
         'prefactura_id',
         'producto_id',
+        'producto_variante_id',
+        'producto_lote_id',
         'descripcion_larga',
         'cantidad',
         'precio_unitario',
@@ -27,5 +29,15 @@ class PrefacturaProducto extends Model
     public function producto()
     {
         return $this->belongsTo(Product::class, 'producto_id', 'id_producto');
+    }
+
+    public function variante()
+    {
+        return $this->belongsTo(ProductoVariante::class, 'producto_variante_id');
+    }
+
+    public function lote()
+    {
+        return $this->belongsTo(ProductoLote::class, 'producto_lote_id');
     }
 }

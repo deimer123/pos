@@ -1731,6 +1731,8 @@ public function guardarPrefacturaConfirmada()
 
                     $prefactura->productos()->create([
                         'producto_id'       => $item['id_producto'],
+                        'producto_variante_id' => $item['producto_variante_id'] ?? null,
+                        'producto_lote_id'  => $item['producto_lote_id'] ?? null,
                         'cantidad'          => $cantidad,
                         'precio_unitario'   => $precioUnitario,
                         'subtotal'          => $subtotal,
@@ -1780,6 +1782,8 @@ public function guardarPrefacturaConfirmada()
 
             $prefactura->productos()->create([
                 'producto_id'       => $item['id_producto'],
+                'producto_variante_id' => $item['producto_variante_id'] ?? null,
+                'producto_lote_id'  => $item['producto_lote_id'] ?? null,
                 'cantidad'          => $cantidad,
                 'precio_unitario'   => $precioUnitario,
                 'subtotal'          => $subtotal,
@@ -2552,11 +2556,25 @@ $prefactura = $query->first();
 
     if (! $producto) continue;
 
+    // Si el item se habia guardado con una variante/lote puntual, se
+    // restaura esa misma asociacion -- si no, al facturar la prefactura
+    // se descontaria del stock total del producto en vez del de esa
+    // variante/lote especifico (bug real encontrado en auditoria).
+    $variante = $item->producto_variante_id
+        ? \App\Models\ProductoVariante::where('id', $item->producto_variante_id)
+            ->where('empresa_id', $empresaId)->first()
+        : null;
+    $lote = $item->producto_lote_id
+        ? \App\Models\ProductoLote::where('id', $item->producto_lote_id)
+            ->where('empresa_id', $empresaId)->first()
+        : null;
+
     $esNoAcumulable = in_array((int)$item->producto_id, $this->noAcumulables, true);
     $key = $esNoAcumulable ? (string) Str::uuid() : (string) $item->producto_id;
     $precioVenta = (float) $item->precio_unitario;
     $costoConIva = $this->costoConIvaProducto($producto);
     $utilidad = $this->utilidadSobreVenta($precioVenta, $costoConIva);
+    $existencias = $variante ? (float) $variante->stock : ($lote ? (float) $lote->stock : (float) ($producto->existencias ?? 0));
 
     $this->carrito[$key] = [
         'uuid'          => $key,
@@ -2572,11 +2590,15 @@ $prefactura = $query->first();
         'costo_iva'     => $costoConIva,
         'utilidad_nueva'=> $utilidad,
         'total'         => $item->subtotal,
-        'existencias'   => $producto->existencias ?? 0,
+        'existencias'   => $existencias,
         'id_unidad_de_medida' => (int) ($producto->id_unidad_de_medida ?? 1),
         'vende_por'     => (string) ($producto->vende_por ?? 'unidad'),
         'permite_fraccion' => (bool) ($producto->permite_fraccion ?? false),
         'permite_decimal' => $producto->permiteCantidadDecimal(),
+        'producto_variante_id' => $variante?->id,
+        'variante_nombre' => $variante?->nombre,
+        'producto_lote_id' => $lote?->id,
+        'lote_nombre' => $lote?->lote,
     ];
 }
 
