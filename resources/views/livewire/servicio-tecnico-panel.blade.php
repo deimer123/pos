@@ -1086,9 +1086,11 @@
                         </div>
                     </div>
                 </div>
-                <textarea wire:model="diagnostico" rows="2" placeholder="Diagnóstico..."
+                <label style="font-size:10px; font-weight:700; color:#4b5563; display:block; margin-bottom:3px;">Diagnóstico</label>
+                <textarea wire:model="diagnostico" rows="2" placeholder="Describe el problema, síntomas, trabajo a realizar..."
                     style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:8px 10px; font-size:13px; resize:none; margin-bottom:8px;"></textarea>
-                <textarea wire:model="observaciones" rows="2" placeholder="Observaciones..."
+                <label style="font-size:10px; font-weight:700; color:#4b5563; display:block; margin-bottom:3px;">Observaciones</label>
+                <textarea wire:model="observaciones" rows="2" placeholder="Accesorios, estado de entrega, golpes..."
                     style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:8px 10px; font-size:13px; resize:none; margin-bottom:14px;"></textarea>
 
                 @if($ordenId)
