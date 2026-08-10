@@ -53,11 +53,12 @@
                 @auth
                 @php
                     $u = auth()->user();
-                    $roleLabels = ['admin_empresa'=>'Admin','cajero'=>'Cajero','vendedor'=>'Vendedor','mesero'=>'Mesero','digitador'=>'Digitador','taller'=>'Taller','cocina'=>'Cocina','recepcion'=>'Recepción'];
+                    $roleLabels = ['admin_empresa'=>'Admin','cajero'=>'Cajero','vendedor'=>'Vendedor','mesero'=>'Mesero','digitador'=>'Digitador','taller'=>'Taller','servicio_tecnico'=>'Técnico','cocina'=>'Cocina','recepcion'=>'Recepción'];
                     $rolActual = collect($roleLabels)->first(fn($l,$r) => $u->hasRole($r));
+                    $nombreConRol = $u->name . ($rolActual ? ' · ' . $rolActual : '');
                 @endphp
-                <span style="background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.3); border-radius:20px; padding:3px 12px; font-size:12px; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px;">
-                    👤 {{ $u->name }}@if($rolActual) · {{ $rolActual }}@endif
+                <span title="{{ $nombreConRol }}" style="background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.3); border-radius:20px; padding:3px 12px; font-size:12px; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:260px;">
+                    👤 {{ $nombreConRol }}
                 </span>
                 @php
                     // ?modo=normal (boton "Punto de Venta" en /eleccion) fuerza el
@@ -68,6 +69,7 @@
                     $modoNormal = request()->get('modo') === 'normal';
                     $cfgEmpresa = \App\Models\ConfiguracionEmpresa::where('empresa_id', $u->getEmpresaActualId())->first();
                     $usaTallerLayout = ! $modoNormal && (bool) ($cfgEmpresa?->usa_taller ?? false) && $u->hasAnyRole(['taller', 'admin_empresa']);
+                    $usaServicioTecnicoLayout = ! $modoNormal && (bool) ($cfgEmpresa?->usa_servicio_tecnico ?? false) && $u->hasAnyRole(['servicio_tecnico', 'admin_empresa']);
                     $usaMesasLayout  = (bool) ($cfgEmpresa?->usa_mesas ?? false);
                     $usaHotelLayout  = ! $modoNormal && (bool) ($cfgEmpresa?->usa_hotel ?? false);
                 @endphp
@@ -88,6 +90,35 @@
                             🔧 Taller
                             @if($ordenesActivasTaller > 0)
                                 <span style="background:#ef4444; border-radius:99px; padding:1px 6px; font-size:10px;">{{ $ordenesActivasTaller }}</span>
+                            @endif
+                        </a>
+                        @else
+                        <a href="{{ route('pos') }}"
+                           style="border:none; border-radius:20px; padding:5px 14px; font-size:12px; font-weight:700; cursor:pointer;
+                               background:rgba(255,255,255,.2); color:white; text-decoration:none;">
+                            🛒 POS
+                        </a>
+                        @endif
+                    @endif
+                @endif
+                @if($usaServicioTecnicoLayout)
+                    @if($usaMesasLayout)
+                        {{-- En modo mesas: el toggle está dentro de panel-mesas --}}
+                    @else
+                        {{-- Calco exacto del bloque "🔧 Taller" de arriba, para
+                             Servicio Tecnico: boton directo al panel de ordenes. --}}
+                        @php
+                            $ordenesActivasServicioTecnico = \App\Models\ServicioTecnicoOrden::where('empresa_id', $u->getEmpresaActualId())
+                                ->whereIn('estado', ['pendiente','en_proceso','listo'])->count();
+                        @endphp
+                        @if(!request()->routeIs('servicio-tecnico'))
+                        <a href="{{ route('servicio-tecnico') }}" id="btn-ir-servicio-tecnico"
+                           onclick="irAlServicioTecnicoConGuardado(event, '{{ route('servicio-tecnico') }}')"
+                           style="border:none; border-radius:20px; padding:5px 14px; font-size:12px; font-weight:700; cursor:pointer;
+                               background:rgba(255,255,255,.2); color:white; display:flex; align-items:center; gap:5px; text-decoration:none;">
+                            📱 Servicio Técnico
+                            @if($ordenesActivasServicioTecnico > 0)
+                                <span style="background:#ef4444; border-radius:99px; padding:1px 6px; font-size:10px;">{{ $ordenesActivasServicioTecnico }}</span>
                             @endif
                         </a>
                         @else
@@ -229,6 +260,36 @@
         }).then(r => {
             if (r.isConfirmed) {
                 wire.call('salirALobbyTaller');
+            }
+        });
+    }
+
+    function irAlServicioTecnicoConGuardado(event, urlServicioTecnico) {
+        const carritoEl = document.querySelector('[wire\\:id]');
+        if (!carritoEl) { window.location.href = urlServicioTecnico; return; }
+
+        const wire = Livewire.find(carritoEl.getAttribute('wire:id'));
+        if (!wire) { window.location.href = urlServicioTecnico; return; }
+
+        const servicioTecnicoOrdenId = wire.get('servicioTecnicoOrdenId');
+        if (!servicioTecnicoOrdenId) {
+            window.location.href = urlServicioTecnico;
+            return;
+        }
+
+        event.preventDefault();
+        Swal.fire({
+            title: '¿Ir al lobby?',
+            text: 'Los productos del carrito se guardarán en la orden antes de salir.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: '💾 Guardar y salir',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#0f766e',
+            cancelButtonColor: '#6b7280',
+        }).then(r => {
+            if (r.isConfirmed) {
+                wire.call('salirALobbyServicioTecnico');
             }
         });
     }

@@ -3686,6 +3686,73 @@ function abrirIngresoServicioTecnico(nombreCliente, telefonoCliente) {
         return;
     }
 
+    // Patron de desbloqueo tipo Android (grid 3x3), vanilla JS: este modal
+    // es un SweetAlert2 puro (sin Alpine/Livewire en su html), asi que se
+    // maneja con addEventListener directo en vez del componente Alpine que
+    // usa el panel de Servicio Tecnico (misma codificacion "PATRON:1-2-3"
+    // en el campo, para que el PDF de la orden lo reconozca igual).
+    let svcTecModoPatron = false;
+    let svcTecPatronSeleccionados = [];
+    let svcTecPatronDibujando = false;
+    const svcTecPatronPuntos = {
+        1: { x: 25, y: 25 },  2: { x: 75, y: 25 },  3: { x: 125, y: 25 },
+        4: { x: 25, y: 75 },  5: { x: 75, y: 75 },  6: { x: 125, y: 75 },
+        7: { x: 25, y: 125 }, 8: { x: 75, y: 125 }, 9: { x: 125, y: 125 },
+    };
+
+    function svcTecRenderPatron() {
+        const svg = document.getElementById('st_patron_svg');
+        if (!svg) return;
+        svg.innerHTML = '';
+        const ns = 'http://www.w3.org/2000/svg';
+        for (let i = 0; i < svcTecPatronSeleccionados.length - 1; i++) {
+            const a = svcTecPatronPuntos[svcTecPatronSeleccionados[i]];
+            const b = svcTecPatronPuntos[svcTecPatronSeleccionados[i + 1]];
+            const line = document.createElementNS(ns, 'line');
+            line.setAttribute('x1', a.x); line.setAttribute('y1', a.y);
+            line.setAttribute('x2', b.x); line.setAttribute('y2', b.y);
+            line.setAttribute('stroke', '#0f766e');
+            line.setAttribute('stroke-width', '4');
+            line.setAttribute('stroke-linecap', 'round');
+            svg.appendChild(line);
+        }
+        Object.entries(svcTecPatronPuntos).forEach(([id, p]) => {
+            const c = document.createElementNS(ns, 'circle');
+            c.setAttribute('cx', p.x); c.setAttribute('cy', p.y); c.setAttribute('r', 11);
+            c.setAttribute('fill', svcTecPatronSeleccionados.includes(Number(id)) ? '#0f766e' : '#ffffff');
+            c.setAttribute('stroke', '#94a3b8');
+            c.setAttribute('stroke-width', '1.5');
+            svg.appendChild(c);
+        });
+        const texto = document.getElementById('st_patron_texto');
+        if (texto) texto.textContent = svcTecPatronSeleccionados.length ? svcTecPatronSeleccionados.join(' - ') : '—';
+    }
+
+    function svcTecCoordsDesdeEvento(e, svg) {
+        const rect = svg.getBoundingClientRect();
+        const punto = e.touches && e.touches.length ? e.touches[0] : e;
+        return {
+            x: ((punto.clientX - rect.left) / rect.width) * 150,
+            y: ((punto.clientY - rect.top) / rect.height) * 150,
+        };
+    }
+
+    function svcTecPuntoCercano(x, y) {
+        let mejor = null;
+        let mejorDist = 20;
+        for (const [id, p] of Object.entries(svcTecPatronPuntos)) {
+            const d = Math.hypot(p.x - x, p.y - y);
+            if (d < mejorDist) { mejor = Number(id); mejorDist = d; }
+        }
+        return mejor;
+    }
+
+    function svcTecAgregarSiNuevo(id) {
+        if (id && !svcTecPatronSeleccionados.includes(id)) {
+            svcTecPatronSeleccionados.push(id);
+        }
+    }
+
     Swal.fire({
         title: '📱 Ingreso a servicio técnico',
         width: '600px',
@@ -3736,8 +3803,30 @@ function abrirIngresoServicioTecnico(nombreCliente, telefonoCliente) {
   </div>
   <div style="margin-bottom:14px;">
     <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">Clave / patrón de desbloqueo (opcional)</label>
+    <div style="display:flex;gap:6px;margin-bottom:6px;">
+      <button type="button" id="st_modo_clave_btn"
+        style="border:1px solid #0f766e;background:#0f766e;color:#fff;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;">
+        🔑 Clave / PIN
+      </button>
+      <button type="button" id="st_modo_patron_btn"
+        style="border:1px solid #d1d5db;background:#fff;color:#374151;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;">
+        🔒 Patrón
+      </button>
+    </div>
     <input id="st_clave" type="text" placeholder="Solo si el cliente autoriza dejarla anotada"
       style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box;">
+    <div id="st_patron_wrap" style="display:none;align-items:flex-start;gap:14px;flex-wrap:wrap;">
+      <svg id="st_patron_svg" width="150" height="150" viewBox="0 0 150 150"
+        style="touch-action:none;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;cursor:crosshair;user-select:none;"></svg>
+      <div style="min-width:140px;">
+        <div style="font-size:11px;color:#6b7280;margin-bottom:4px;">Patrón dibujado:</div>
+        <div id="st_patron_texto" style="font-size:14px;font-weight:800;color:#0f766e;letter-spacing:.05em;">—</div>
+        <button type="button" id="st_patron_borrar"
+          style="margin-top:8px;border:1px solid #d1d5db;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;background:white;color:#374151;">
+          Borrar
+        </button>
+      </div>
+    </div>
   </div>
 
   <div style="font-size:11px;font-weight:700;color:#0f766e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;border-bottom:2px solid #ccfbf1;padding-bottom:4px;">🔍 Diagnóstico / trabajo solicitado</div>
@@ -3754,13 +3843,68 @@ function abrirIngresoServicioTecnico(nombreCliente, telefonoCliente) {
         cancelButtonColor: '#6b7280',
         reverseButtons: true,
         focusConfirm: false,
-        didOpen: () => { document.getElementById('st_marca')?.focus(); },
+        didOpen: () => {
+            document.getElementById('st_marca')?.focus();
+            svcTecRenderPatron();
+
+            const svg = document.getElementById('st_patron_svg');
+            const inputClave = document.getElementById('st_clave');
+            const wrapPatron = document.getElementById('st_patron_wrap');
+            const btnClave = document.getElementById('st_modo_clave_btn');
+            const btnPatron = document.getElementById('st_modo_patron_btn');
+            const btnBorrar = document.getElementById('st_patron_borrar');
+            if (!svg || !inputClave || !wrapPatron || !btnClave || !btnPatron || !btnBorrar) return;
+
+            const activarModoClave = () => {
+                svcTecModoPatron = false;
+                inputClave.style.display = '';
+                wrapPatron.style.display = 'none';
+                btnClave.style.background = '#0f766e'; btnClave.style.color = '#fff'; btnClave.style.borderColor = '#0f766e';
+                btnPatron.style.background = '#fff'; btnPatron.style.color = '#374151'; btnPatron.style.borderColor = '#d1d5db';
+            };
+            const activarModoPatron = () => {
+                svcTecModoPatron = true;
+                inputClave.style.display = 'none';
+                wrapPatron.style.display = 'flex';
+                btnPatron.style.background = '#0f766e'; btnPatron.style.color = '#fff'; btnPatron.style.borderColor = '#0f766e';
+                btnClave.style.background = '#fff'; btnClave.style.color = '#374151'; btnClave.style.borderColor = '#d1d5db';
+            };
+
+            btnClave.addEventListener('click', activarModoClave);
+            btnPatron.addEventListener('click', activarModoPatron);
+            btnBorrar.addEventListener('click', () => { svcTecPatronSeleccionados = []; svcTecRenderPatron(); });
+
+            const onStart = (e) => {
+                svcTecPatronDibujando = true;
+                svcTecPatronSeleccionados = [];
+                const { x, y } = svcTecCoordsDesdeEvento(e, svg);
+                svcTecAgregarSiNuevo(svcTecPuntoCercano(x, y));
+                svcTecRenderPatron();
+            };
+            const onMove = (e) => {
+                if (!svcTecPatronDibujando) return;
+                const { x, y } = svcTecCoordsDesdeEvento(e, svg);
+                svcTecAgregarSiNuevo(svcTecPuntoCercano(x, y));
+                svcTecRenderPatron();
+            };
+            const onEnd = () => { svcTecPatronDibujando = false; };
+
+            svg.addEventListener('mousedown', onStart);
+            svg.addEventListener('mousemove', onMove);
+            svg.addEventListener('mouseup', onEnd);
+            svg.addEventListener('mouseleave', onEnd);
+            svg.addEventListener('touchstart', (e) => { e.preventDefault(); onStart(e); });
+            svg.addEventListener('touchmove', (e) => { e.preventDefault(); onMove(e); });
+            svg.addEventListener('touchend', (e) => { e.preventDefault(); onEnd(); });
+        },
         preConfirm: () => ({
             marca:         (document.getElementById('st_marca').value  || '').trim(),
             modelo:        (document.getElementById('st_modelo').value || '').trim(),
             imei:          (document.getElementById('st_imei').value   || '').trim(),
             color:         (document.getElementById('st_color').value  || '').trim(),
-            clave:         (document.getElementById('st_clave').value  || '').trim(),
+            clave:         svcTecModoPatron
+                ? (svcTecPatronSeleccionados.length ? 'PATRON:' + svcTecPatronSeleccionados.join('-') : '')
+                : (document.getElementById('st_clave').value || '').trim(),
             diagnostico:   (document.getElementById('st_diag').value   || '').trim(),
             observaciones: (document.getElementById('st_obs').value    || '').trim(),
         }),
