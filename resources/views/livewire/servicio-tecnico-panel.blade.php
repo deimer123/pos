@@ -1050,7 +1050,7 @@
                                 style="border:1px solid; border-radius:20px; padding:4px 12px; font-size:11px; font-weight:700; cursor:pointer;">
                                 🔑 Clave / PIN
                             </button>
-                            <button type="button" @click="modo = 'patron'"
+                            <button type="button" @click="modo = 'patron'; $nextTick(() => render())"
                                 :style="modo === 'patron' ? 'background:#0f766e;color:#fff;border-color:#0f766e;' : 'background:#fff;color:#374151;border-color:#d1d5db;'"
                                 style="border:1px solid; border-radius:20px; padding:4px 12px; font-size:11px; font-weight:700; cursor:pointer;">
                                 🔒 Patrón
@@ -1065,24 +1065,9 @@
 
                         <template x-if="modo === 'patron'">
                             <div style="display:flex; align-items:flex-start; gap:14px; flex-wrap:wrap;">
-                                <svg :width="tam" :height="tam" viewBox="0 0 150 150" style="touch-action:none; background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; cursor:crosshair; user-select:none;"
+                                <svg x-ref="svg" width="150" height="150" viewBox="0 0 150 150" style="touch-action:none; background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; cursor:crosshair; user-select:none;"
                                     @mousedown="onStart($event)" @mousemove="onMove($event)" @mouseup="onEnd()" @mouseleave="onEnd()"
-                                    @touchstart.prevent="onStart($event)" @touchmove.prevent="onMove($event)" @touchend.prevent="onEnd()">
-                                    <template x-for="linea in lineas" :key="linea[0] + '-' + linea[1]">
-                                        <line :x1="puntos[linea[0]].x" :y1="puntos[linea[0]].y" :x2="puntos[linea[1]].x" :y2="puntos[linea[1]].y"
-                                            stroke="#0f766e" stroke-width="4" stroke-linecap="round"></line>
-                                    </template>
-                                    <template x-for="(p, id) in puntos" :key="id">
-                                        <circle :cx="p.x" :cy="p.y" r="11"
-                                            :fill="seleccionados.includes(Number(id)) ? '#0f766e' : '#ffffff'"
-                                            stroke="#94a3b8" stroke-width="1.5"></circle>
-                                    </template>
-                                    <template x-for="(p, id) in puntos" :key="'n'+id">
-                                        <text :x="p.x" :y="p.y + 4" text-anchor="middle" font-size="10" font-weight="700"
-                                            :fill="seleccionados.includes(Number(id)) ? '#ffffff' : '#94a3b8'"
-                                            style="pointer-events:none;" x-text="id"></text>
-                                    </template>
-                                </svg>
+                                    @touchstart.prevent="onStart($event)" @touchmove.prevent="onMove($event)" @touchend.prevent="onEnd()"></svg>
                                 <div style="min-width:140px;">
                                     <div style="font-size:11px; color:#6b7280; margin-bottom:4px;">Patrón dibujado:</div>
                                     <div style="font-size:14px; font-weight:800; color:#0f766e; letter-spacing:.05em;" x-text="seleccionados.join(' - ') || '—'"></div>
@@ -1201,17 +1186,63 @@
             puntos,
             seleccionados: seleccionadosIniciales,
             dibujando: false,
-            tam: 150,
 
-            get lineas() {
-                const l = [];
-                for (let i = 0; i < this.seleccionados.length - 1; i++) {
-                    l.push([this.seleccionados[i], this.seleccionados[i + 1]]);
+            init() {
+                // El svg solo existe en el DOM si modo ya arranca en
+                // 'patron' (editando una orden que ya tenia un patron
+                // dibujado) -- si arranca en 'clave', el boton "Patrón"
+                // llama a render() el (ver @click mas arriba).
+                if (this.modo === 'patron') {
+                    this.render();
                 }
-                return l;
             },
 
-            init() {},
+            // Alpine x-for dentro de <svg> no siempre respeta el namespace
+            // SVG al clonar los <template> (los circulos/lineas quedaban
+            // invisibles al editar una orden con patron ya guardado, aunque
+            // el texto "seleccionados" si se leia bien) -- se arma el grid
+            // a mano con createElementNS, igual que el widget gemelo del
+            // modal "Ingreso a servicio técnico" del POS.
+            render() {
+                const svg = this.$refs.svg;
+                if (!svg) return;
+
+                svg.innerHTML = '';
+                const ns = 'http://www.w3.org/2000/svg';
+
+                for (let i = 0; i < this.seleccionados.length - 1; i++) {
+                    const a = this.puntos[this.seleccionados[i]];
+                    const b = this.puntos[this.seleccionados[i + 1]];
+                    const line = document.createElementNS(ns, 'line');
+                    line.setAttribute('x1', a.x); line.setAttribute('y1', a.y);
+                    line.setAttribute('x2', b.x); line.setAttribute('y2', b.y);
+                    line.setAttribute('stroke', '#0f766e');
+                    line.setAttribute('stroke-width', '4');
+                    line.setAttribute('stroke-linecap', 'round');
+                    svg.appendChild(line);
+                }
+
+                Object.entries(this.puntos).forEach(([id, p]) => {
+                    const activo = this.seleccionados.includes(Number(id));
+
+                    const c = document.createElementNS(ns, 'circle');
+                    c.setAttribute('cx', p.x); c.setAttribute('cy', p.y); c.setAttribute('r', 11);
+                    c.setAttribute('fill', activo ? '#0f766e' : '#ffffff');
+                    c.setAttribute('stroke', '#94a3b8');
+                    c.setAttribute('stroke-width', '1.5');
+                    svg.appendChild(c);
+
+                    const t = document.createElementNS(ns, 'text');
+                    t.setAttribute('x', p.x); t.setAttribute('y', p.y + 4);
+                    t.setAttribute('text-anchor', 'middle');
+                    t.setAttribute('font-size', '10');
+                    t.setAttribute('font-weight', '700');
+                    t.setAttribute('fill', activo ? '#ffffff' : '#94a3b8');
+                    t.setAttribute('style', 'pointer-events:none;');
+                    t.textContent = id;
+                    svg.appendChild(t);
+                });
+            },
 
             coordsDesdeEvento(e) {
                 const rect = e.currentTarget.getBoundingClientRect();
@@ -1243,12 +1274,14 @@
                 this.seleccionados = [];
                 const { x, y } = this.coordsDesdeEvento(e);
                 this.agregarSiNuevo(this.puntoCercano(x, y));
+                this.render();
             },
 
             onMove(e) {
                 if (!this.dibujando) return;
                 const { x, y } = this.coordsDesdeEvento(e);
                 this.agregarSiNuevo(this.puntoCercano(x, y));
+                this.render();
             },
 
             onEnd() {
@@ -1259,6 +1292,7 @@
 
             limpiarPatron() {
                 this.seleccionados = [];
+                this.render();
                 this.guardarPatron();
             },
 
