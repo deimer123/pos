@@ -1050,34 +1050,40 @@
                                 style="border:1px solid; border-radius:20px; padding:4px 12px; font-size:11px; font-weight:700; cursor:pointer;">
                                 🔑 Clave / PIN
                             </button>
-                            <button type="button" @click="modo = 'patron'; $nextTick(() => render())"
+                            <button type="button" @click="modo = 'patron'"
                                 :style="modo === 'patron' ? 'background:#0f766e;color:#fff;border-color:#0f766e;' : 'background:#fff;color:#374151;border-color:#d1d5db;'"
                                 style="border:1px solid; border-radius:20px; padding:4px 12px; font-size:11px; font-weight:700; cursor:pointer;">
                                 🔒 Patrón
                             </button>
                         </div>
 
-                        <template x-if="modo === 'clave'">
+                        {{-- x-show (no x-if): el svg tiene que existir SIEMPRE
+                             en el DOM desde el primer render para que
+                             $refs.svg este disponible apenas arranca el
+                             componente (con x-if, si el modo inicial ya era
+                             'patron' -- editando una orden que ya tenia uno
+                             dibujado -- el <template> todavia no se habia
+                             instanciado cuando corria init(), y el grid
+                             quedaba en blanco). --}}
+                        <div x-show="modo === 'clave'">
                             <input type="text" x-model="$wire.claveDesbloqueo"
                                 placeholder="Solo si el cliente autoriza dejarla anotada"
                                 style="width:100%; height:34px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px;">
-                        </template>
+                        </div>
 
-                        <template x-if="modo === 'patron'">
-                            <div style="display:flex; align-items:flex-start; gap:14px; flex-wrap:wrap;">
-                                <svg x-ref="svg" width="150" height="150" viewBox="0 0 150 150" style="touch-action:none; background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; cursor:crosshair; user-select:none;"
-                                    @mousedown="onStart($event)" @mousemove="onMove($event)" @mouseup="onEnd()" @mouseleave="onEnd()"
-                                    @touchstart.prevent="onStart($event)" @touchmove.prevent="onMove($event)" @touchend.prevent="onEnd()"></svg>
-                                <div style="min-width:140px;">
-                                    <div style="font-size:11px; color:#6b7280; margin-bottom:4px;">Patrón dibujado:</div>
-                                    <div style="font-size:14px; font-weight:800; color:#0f766e; letter-spacing:.05em;" x-text="seleccionados.join(' - ') || '—'"></div>
-                                    <button type="button" @click="limpiarPatron()"
-                                        style="margin-top:8px; border:1px solid #d1d5db; border-radius:8px; padding:5px 12px; font-size:11px; font-weight:600; cursor:pointer; background:white; color:#374151;">
-                                        Borrar
-                                    </button>
-                                </div>
+                        <div x-show="modo === 'patron'" style="display:flex; align-items:flex-start; gap:14px; flex-wrap:wrap;">
+                            <svg x-ref="svg" width="150" height="150" viewBox="0 0 150 150" style="touch-action:none; background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; cursor:crosshair; user-select:none;"
+                                @mousedown="onStart($event)" @mousemove="onMove($event)" @mouseup="onEnd()" @mouseleave="onEnd()"
+                                @touchstart.prevent="onStart($event)" @touchmove.prevent="onMove($event)" @touchend.prevent="onEnd()"></svg>
+                            <div style="min-width:140px;">
+                                <div style="font-size:11px; color:#6b7280; margin-bottom:4px;">Patrón dibujado:</div>
+                                <div style="font-size:14px; font-weight:800; color:#0f766e; letter-spacing:.05em;" x-text="seleccionados.join(' - ') || '—'"></div>
+                                <button type="button" @click="limpiarPatron()"
+                                    style="margin-top:8px; border:1px solid #d1d5db; border-radius:8px; padding:5px 12px; font-size:11px; font-weight:600; cursor:pointer; background:white; color:#374151;">
+                                    Borrar
+                                </button>
                             </div>
-                        </template>
+                        </div>
                     </div>
                 </div>
                 <textarea wire:model="diagnostico" rows="2" placeholder="Diagnóstico..."
@@ -1188,13 +1194,11 @@
             dibujando: false,
 
             init() {
-                // El svg solo existe en el DOM si modo ya arranca en
-                // 'patron' (editando una orden que ya tenia un patron
-                // dibujado) -- si arranca en 'clave', el boton "Patrón"
-                // llama a render() el (ver @click mas arriba).
-                if (this.modo === 'patron') {
-                    this.render();
-                }
+                // El svg vive siempre en el DOM (x-show, no x-if/template),
+                // asi que $refs.svg ya esta disponible aca sin importar el
+                // orden de inicializacion de Alpine -- se dibuja de una vez
+                // si la orden ya traia un patron guardado.
+                this.render();
             },
 
             // Alpine x-for dentro de <svg> no siempre respeta el namespace
