@@ -81,6 +81,14 @@ class CarritoVenta extends Component
     public ?int $tallerOrdenId    = null;
     public $tallerFotoTemp        = null;
 
+    // ── Servicio Tecnico ────────────────────────────────────────────────────
+    // Calco de Taller: la orden se crea desde el POS con "Ingresar" (exige
+    // cliente ya seleccionado por busqueda), despues el POS normal queda
+    // activo para esa orden. A diferencia de Taller, la evidencia (fotos/
+    // video/nota de trabajo) NO vive aca -- se maneja en el panel de ordenes
+    // (ServicioTecnicoPanel), no en el POS.
+    public ?int $servicioTecnicoOrdenId = null;
+
     // ── Hotel ───────────────────────────────────────────────────────────────
     public ?int $hotelReservaId          = null;
     public float $hotelAbonoMonto        = 0;
@@ -399,6 +407,13 @@ private function limpiarUtf8Array(array $datos): array
         $empresaId = $empresaId ?: $this->getEmpresaId();
         return 'pos_taller_orden_' . $empresaId . '_' . auth()->id();
     }
+
+    protected function servicioTecnicoOrdenCacheKey(?int $empresaId = null): string
+    {
+        $empresaId = $empresaId ?: $this->getEmpresaId();
+        return 'pos_servicio_tecnico_orden_' . $empresaId . '_' . auth()->id();
+    }
+
     protected function permiteCantidadDecimal(array $item): bool
     {
         if (array_key_exists('permite_decimal', $item)) {
@@ -456,6 +471,13 @@ private function limpiarUtf8Array(array $datos): array
         } else {
             Cache::forget($this->tallerOrdenCacheKey($empresaId));
         }
+
+        // Guardar/borrar la asociación con orden de servicio técnico
+        if ($this->servicioTecnicoOrdenId) {
+            Cache::put($this->servicioTecnicoOrdenCacheKey($empresaId), $this->servicioTecnicoOrdenId, now()->addDays(7));
+        } else {
+            Cache::forget($this->servicioTecnicoOrdenCacheKey($empresaId));
+        }
     }
 
     protected function olvidarCarritoPersistente(): void
@@ -468,6 +490,7 @@ private function limpiarUtf8Array(array $datos): array
         Cache::forget($this->carritoCacheKey($empresaId));
         Cache::forget($this->observacionesCacheKey($empresaId));
         Cache::forget($this->tallerOrdenCacheKey($empresaId));
+        Cache::forget($this->servicioTecnicoOrdenCacheKey($empresaId));
     }
 
      public function mount()
@@ -541,6 +564,16 @@ private function limpiarUtf8Array(array $datos): array
        $tallerOrdenEnCache = Cache::get($this->tallerOrdenCacheKey($empresaId));
        if ($tallerOrdenEnCache) {
            // El usuario salió sin guardar correctamente; los productos ya están en TallerRepuesto → limpiar cache
+           $this->olvidarCarritoPersistente();
+           session()->forget('carrito_guardado');
+           session()->forget('observaciones_guardadas');
+       }
+   }
+
+   // Mismo criterio que taller, para servicio tecnico
+   if (auth()->check() && !(int) request()->get('servicio_tecnico')) {
+       $servicioTecnicoOrdenEnCache = Cache::get($this->servicioTecnicoOrdenCacheKey($empresaId));
+       if ($servicioTecnicoOrdenEnCache) {
            $this->olvidarCarritoPersistente();
            session()->forget('carrito_guardado');
            session()->forget('observaciones_guardadas');
@@ -697,6 +730,11 @@ if (request()->hasSession() && session()->has('observaciones_guardadas')) {
     // Cargar orden de taller desde query param ?taller={id}
     if (!$this->mesaId && ($tallerQs = (int) request()->get('taller'))) {
         $this->cargarOrdenTaller($tallerQs);
+    }
+
+    // Cargar orden de servicio tecnico desde query param ?servicio_tecnico={id}
+    if (!$this->mesaId && ($servicioTecnicoQs = (int) request()->get('servicio_tecnico'))) {
+        $this->cargarOrdenServicioTecnico($servicioTecnicoQs);
     }
 
     // Cargar reserva de hotel desde query param ?hotel={id}
@@ -979,6 +1017,16 @@ public function guardarEdicionCliente()
         return;
     }
 
+    // Mismo criterio que Taller arriba, para Servicio Tecnico: sin una
+    // orden activa no se puede agregar productos al carrito.
+    $usaServicioTecnico = request()->get('modo') !== 'normal'
+        && (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_servicio_tecnico')
+        && auth()->user()->hasAnyRole(['servicio_tecnico', 'admin_empresa']);
+    if ($usaServicioTecnico && ! $this->servicioTecnicoOrdenId) {
+        $this->dispatch('error', 'Debes crear un ingreso de servicio técnico primero (botón "Ingresar").');
+        return;
+    }
+
     $producto = Product::where('id_producto', $idProducto)
         ->where('empresa_id', $empresaId)
         ->first();
@@ -1086,6 +1134,11 @@ public function guardarEdicionCliente()
         $this->sincronizarCarritoConOrdenTaller();
     }
 
+    // Auto-sync con orden de servicio tecnico activa
+    if ($this->servicioTecnicoOrdenId) {
+        $this->sincronizarCarritoConOrdenServicioTecnico();
+    }
+
     // Auto-sync con reserva de hotel activa
     if ($this->hotelReservaId) {
         $this->sincronizarCarritoConHotelReserva();
@@ -1156,6 +1209,10 @@ public function guardarEdicionCliente()
             $this->sincronizarCarritoConOrdenTaller();
         }
 
+        if ($this->servicioTecnicoOrdenId) {
+            $this->sincronizarCarritoConOrdenServicioTecnico();
+        }
+
         if ($this->hotelReservaId) {
             $this->sincronizarCarritoConHotelReserva();
         }
@@ -1201,6 +1258,10 @@ public function guardarEdicionCliente()
         $this->sincronizarCarritoConOrdenTaller();
     }
 
+    if ($this->servicioTecnicoOrdenId) {
+        $this->sincronizarCarritoConOrdenServicioTecnico();
+    }
+
     if ($this->hotelReservaId) {
         $this->sincronizarCarritoConHotelReserva();
     }
@@ -1226,11 +1287,15 @@ public function updatedCarrito($value, $key)
                 $this->sincronizarCarritoConOrdenTaller();
             }
 
+            if ($this->servicioTecnicoOrdenId) {
+                $this->sincronizarCarritoConOrdenServicioTecnico();
+            }
+
             if ($this->hotelReservaId) {
                 $this->sincronizarCarritoConHotelReserva();
             }
         }
-        
+
         $this->calcularTotalGeneral();
     }
 }
@@ -1258,6 +1323,21 @@ public function limpiarCarrito()
 
         $this->tallerOrdenId  = null;
         $this->tallerFotoTemp = null;
+    }
+
+    // Mismo criterio que taller arriba, para servicio tecnico: "Limpiar"
+    // cancela la orden por completo (se borra junto con sus items).
+    if ($this->servicioTecnicoOrdenId) {
+        $orden = \App\Models\ServicioTecnicoOrden::where('id', $this->servicioTecnicoOrdenId)
+            ->where('empresa_id', $this->getEmpresaId())
+            ->first();
+
+        if ($orden) {
+            \App\Models\ServicioTecnicoItem::where('orden_id', $orden->id)->delete();
+            $orden->delete();
+        }
+
+        $this->servicioTecnicoOrdenId = null;
     }
 
     // Si hay una reserva de hotel activa, "Limpiar" anula la reserva por
@@ -1509,6 +1589,10 @@ public function aplicarCambiosModal($cambios)
     // se pierde.
     if ($this->tallerOrdenId) {
         $this->sincronizarCarritoConOrdenTaller();
+    }
+
+    if ($this->servicioTecnicoOrdenId) {
+        $this->sincronizarCarritoConOrdenServicioTecnico();
     }
 
     // Cerrar modal
@@ -1947,6 +2031,203 @@ public function guardarPrefacturaConfirmada()
         $this->actualizarTotales();
         // Guardar asociación en cache para detectar si el usuario sale sin guardar
         Cache::put($this->tallerOrdenCacheKey(), $this->tallerOrdenId, now()->addDays(7));
+        $this->dispatch('success', 'Orden #' . str_pad($orden->numero_orden, 4, '0', STR_PAD_LEFT) . ' cargada en el POS.');
+    }
+
+    // ── Servicio Tecnico: calco exacto de los metodos de Taller de arriba ──
+
+    #[On('crear-orden-servicio-tecnico')]
+    public function crearOrdenServicioTecnicoDesdePos(
+        string $clienteNombre,
+        string $clienteTelefono = '',
+        string $marca = '',
+        string $modelo = '',
+        string $imeiSerial = '',
+        string $color = '',
+        string $claveDesbloqueo = '',
+        string $diagnostico = '',
+        string $observaciones = ''
+    ): void {
+        $orden = \App\Models\ServicioTecnicoOrden::create([
+            'empresa_id'       => $this->getEmpresaId(),
+            'cliente_nombre'   => trim($clienteNombre),
+            'cliente_telefono' => trim($clienteTelefono) ?: null,
+            'marca'            => trim($marca) ?: null,
+            'modelo'           => trim($modelo) ?: null,
+            'imei_serial'      => trim($imeiSerial) ?: null,
+            'color'            => trim($color) ?: null,
+            'clave_desbloqueo' => trim($claveDesbloqueo) ?: null,
+            'diagnostico'      => trim($diagnostico) ?: null,
+            'observaciones'    => trim($observaciones) ?: null,
+            'estado'           => 'en_proceso',
+            'creado_por'       => auth()->id(),
+        ]);
+
+        $this->servicioTecnicoOrdenId = $orden->id;
+        $this->dispatch('success', 'Orden de servicio técnico #'.str_pad($orden->numero_orden,4,'0',STR_PAD_LEFT).' creada. Ahora agrega los productos.');
+    }
+
+    public function limpiarServicioTecnico(): void
+    {
+        $this->servicioTecnicoOrdenId = null;
+    }
+
+    public function sincronizarCarritoConOrdenServicioTecnico(): void
+    {
+        if (! $this->servicioTecnicoOrdenId) return;
+
+        try {
+            app(\App\Services\ServicioTecnico\GuardarOrdenServicioTecnicoService::class)
+                ->sincronizarItems($this->servicioTecnicoOrdenId, $this->getEmpresaId(), $this->carrito);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
+            // La orden no existe/no es de esta empresa: mismo comportamiento
+            // silencioso que tiene el metodo original de taller.
+        }
+    }
+
+    public function guardarOrdenServicioTecnico(): void
+    {
+        if (! $this->servicioTecnicoOrdenId) return;
+
+        $orden = \App\Models\ServicioTecnicoOrden::where('id', $this->servicioTecnicoOrdenId)
+            ->where('empresa_id', $this->getEmpresaId())
+            ->first();
+
+        if (! $orden) return;
+
+        $this->sincronizarCarritoConOrdenServicioTecnico();
+        $orden->update(['estado' => 'en_proceso']);
+
+        $this->carrito               = [];
+        $this->totalGeneral          = 0;
+        $this->servicioTecnicoOrdenId = null;
+
+        session()->forget('carrito_guardado');
+        session()->forget('observaciones_guardadas');
+        $this->olvidarCarritoPersistente();
+        $this->forzarConsumidorFinal();
+
+        $this->dispatch('success', 'Orden #' . str_pad($orden->numero_orden, 4, '0', STR_PAD_LEFT) . ' guardada. Puedes volver a abrirla desde el panel de Servicio Técnico.');
+    }
+
+    public function salirALobbyServicioTecnico(): void
+    {
+        if ($this->servicioTecnicoOrdenId) {
+            $this->sincronizarCarritoConOrdenServicioTecnico();
+            $orden = \App\Models\ServicioTecnicoOrden::find($this->servicioTecnicoOrdenId);
+            if ($orden) $orden->update(['estado' => 'en_proceso']);
+        }
+
+        $this->carrito                = [];
+        $this->totalGeneral           = 0;
+        $this->servicioTecnicoOrdenId = null;
+        session()->forget('carrito_guardado');
+        session()->forget('observaciones_guardadas');
+        $this->olvidarCarritoPersistente();
+        $this->forzarConsumidorFinal();
+
+        $this->redirect(route('servicio-tecnico'));
+    }
+
+    public function cargarOrdenServicioTecnico(int $ordenId): void
+    {
+        $empresaId = $this->getEmpresaId();
+
+        $orden = \App\Models\ServicioTecnicoOrden::where('id', $ordenId)
+            ->where('empresa_id', $empresaId)
+            ->with('items')
+            ->first();
+
+        if (! $orden) return;
+
+        $this->servicioTecnicoOrdenId = $orden->id;
+        $this->carrito                = [];
+
+        // Asignar el cliente de la orden (en vez de dejar CONSUMIDOR FINAL)
+        if ($orden->cliente_nombre) {
+            $cliente = Actor::where('empresa_id', $empresaId)
+                ->whereRaw('LOWER(TRIM(nombre)) = ?', [mb_strtolower(trim($orden->cliente_nombre))])
+                ->first();
+
+            if ($cliente) {
+                $this->clienteId = $cliente->id;
+                $this->clienteDireccion = $cliente->direccion ?? null;
+                $this->clienteTelefono  = $cliente->telefono ?? $orden->cliente_telefono ?? null;
+            } else {
+                $this->clienteTelefono = $orden->cliente_telefono ?? null;
+            }
+
+            $this->clienteSeleccionadoNombre = $this->textoUtf8($orden->cliente_nombre);
+        }
+
+        foreach ($orden->items as $it) {
+            $precio = (float) $it->precio_unitario;
+            $cant   = (float) $it->cantidad;
+
+            if ($it->producto_id) {
+                $producto = Product::where('id_producto', $it->producto_id)
+                    ->where('empresa_id', $empresaId)
+                    ->first();
+
+                if ($producto) {
+                    $key = (string) $it->producto_id;
+                    $costoConIva = $this->costoConIvaProducto($producto);
+                    $this->carrito[$key] = [
+                        'uuid'               => $key,
+                        'id_producto'        => $producto->id_producto,
+                        'nombre'             => $this->textoUtf8($it->descripcion ?: $producto->descripcion_larga),
+                        'cantidad'           => $cant,
+                        'precio'             => $precio,
+                        'nuevo_precio'       => $precio,
+                        'descuento'          => 0,
+                        'iva_venta'          => (float) ($producto->iva_venta ?? 0),
+                        'utilidad1'          => $this->utilidadSobreVenta($precio, $costoConIva),
+                        'costo'              => (float) ($producto->precio_costo ?? 0),
+                        'costo_iva'          => $costoConIva,
+                        'utilidad_nueva'     => $this->utilidadSobreVenta($precio, $costoConIva),
+                        'total'              => round($precio * $cant, 2),
+                        'existencias'        => (float) ($producto->existencias ?? 0),
+                        'porciones_receta'   => null,
+                        'id_unidad_de_medida'=> (int) ($producto->id_unidad_de_medida ?? 1),
+                        'vende_por'          => (string) ($producto->vende_por ?? 'unidad'),
+                        'permite_fraccion'   => (bool) ($producto->permite_fraccion ?? false),
+                        'permite_decimal'    => $producto->permiteCantidadDecimal(),
+                        'combo_activo'       => null,
+                        'precio_editado_manual' => false,
+                    ];
+                    continue;
+                }
+            }
+
+            // Item manual (sin producto_id o producto no encontrado)
+            $uuid = (string) \Illuminate\Support\Str::uuid();
+            $this->carrito[$uuid] = [
+                'uuid'               => $uuid,
+                'id_producto'        => $uuid,
+                'nombre'             => $it->descripcion ?: 'Sin descripción',
+                'cantidad'           => $cant,
+                'precio'             => $precio,
+                'nuevo_precio'       => $precio,
+                'descuento'          => 0,
+                'iva_venta'          => 0,
+                'utilidad1'          => 0,
+                'costo'              => 0,
+                'costo_iva'          => 0,
+                'utilidad_nueva'     => 0,
+                'total'              => round($precio * $cant, 2),
+                'existencias'        => 0,
+                'porciones_receta'   => null,
+                'id_unidad_de_medida'=> 1,
+                'vende_por'          => 'unidad',
+                'permite_fraccion'   => false,
+                'permite_decimal'    => false,
+                'combo_activo'       => null,
+                'precio_editado_manual' => true,
+            ];
+        }
+
+        $this->actualizarTotales();
+        Cache::put($this->servicioTecnicoOrdenCacheKey(), $this->servicioTecnicoOrdenId, now()->addDays(7));
         $this->dispatch('success', 'Orden #' . str_pad($orden->numero_orden, 4, '0', STR_PAD_LEFT) . ' cargada en el POS.');
     }
 
@@ -2629,6 +2910,7 @@ private function ejecutarFacturar(array $data, int $empresaId): array
         'cliente_credito_info' => $tipoPago === 'credito' ? $this->clienteCreditoInfo : null,
         'mesa_id' => $this->mesaId,
         'taller_orden_id' => $this->tallerOrdenId,
+        'servicio_tecnico_orden_id' => $this->servicioTecnicoOrdenId,
         'hotel_reserva_id' => $this->hotelReservaId,
         'hotel_abono_monto' => $this->hotelAbonoMonto,
         'propina_monto' => $this->agregarPropina ? round($this->totalGeneral * $this->porcentajePropina / 100) : 0,
@@ -2697,6 +2979,7 @@ public function facturarConfirmada(array $data = [])
         $resultado = $this->ejecutarFacturar($data, $empresaId);
 
         $eraOrdenTaller = (bool) $this->tallerOrdenId;
+        $eraOrdenServicioTecnico = (bool) $this->servicioTecnicoOrdenId;
         $eraReservaHotel = (bool) $this->hotelReservaId;
 
         // Se captura antes de limpiar el carrito: el catalogo cacheado en
@@ -2714,6 +2997,7 @@ public function facturarConfirmada(array $data = [])
 
         $this->eliminarPrefacturaCargada();
         $this->tallerOrdenId = null;
+        $this->servicioTecnicoOrdenId = null;
         $this->hotelReservaId = null;
         $this->hotelAbonoMonto = 0;
         $this->hotelAbonoMedioPago = '';
@@ -2735,7 +3019,7 @@ public function facturarConfirmada(array $data = [])
 
         $this->dispatch('success', $resultado['numero_visual'] . ' creada.');
         $this->dispatch('venta-facturada', items: $itemsVendidos);
-        if ($this->mesaId || $eraOrdenTaller) {
+        if ($this->mesaId || $eraOrdenTaller || $eraOrdenServicioTecnico) {
             $this->redirect(route('pos'));
         } elseif ($eraReservaHotel) {
             $this->redirect(route('hotel'));
@@ -3054,6 +3338,7 @@ public function facturarEImprimir(array $data = [])
         $resultado = $this->ejecutarFacturar($data, $empresaId);
 
         $eraOrdenTaller = (bool) $this->tallerOrdenId;
+        $eraOrdenServicioTecnico = (bool) $this->servicioTecnicoOrdenId;
         $eraReservaHotel = (bool) $this->hotelReservaId;
 
         // Se captura antes de limpiar el carrito: el catalogo cacheado en
@@ -3071,6 +3356,7 @@ public function facturarEImprimir(array $data = [])
 
         $this->eliminarPrefacturaCargada();
         $this->tallerOrdenId = null;
+        $this->servicioTecnicoOrdenId = null;
         $this->hotelReservaId = null;
         $this->hotelAbonoMonto = 0;
         $this->hotelAbonoMedioPago = '';
@@ -3097,7 +3383,7 @@ public function facturarEImprimir(array $data = [])
         // carrito ya vacio hasta refrescar manualmente.
         $this->dispatch('success', $resultado['numero_visual'] . ' creada.');
         $this->dispatch('venta-facturada', items: $itemsVendidos);
-        $redirectUrl = $this->mesaId ? route('pos') : ($eraOrdenTaller ? route('pos') : ($eraReservaHotel ? route('hotel') : null));
+        $redirectUrl = $this->mesaId ? route('pos') : (($eraOrdenTaller || $eraOrdenServicioTecnico) ? route('pos') : ($eraReservaHotel ? route('hotel') : null));
         return ['ok' => true, 'factura_id' => $resultado['id'], 'print_url' => $resultado['print_url'], 'redirect_url' => $redirectUrl];
 
     } catch (\Throwable $e) {

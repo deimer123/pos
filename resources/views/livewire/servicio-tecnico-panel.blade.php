@@ -1047,17 +1047,105 @@
                             style="width:100%; height:34px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; margin-top:3px;">
                     </div>
                 </div>
-                <div style="display:grid; grid-template-columns:1fr; gap:10px; margin-bottom:14px;">
+                <div style="display:grid; grid-template-columns:1fr; gap:10px; margin-bottom:14px;"
+                    x-data="patronDesbloqueo(@js($claveDesbloqueo))" x-init="init()">
                     <div>
                         <label style="font-size:10px; font-weight:700; color:#4b5563;">Clave / patrón de desbloqueo (opcional)</label>
-                        <input wire:model="claveDesbloqueo" type="text" placeholder="Solo si el cliente autoriza dejarla anotada"
-                            style="width:100%; height:34px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px; margin-top:3px;">
+
+                        <div style="display:flex; gap:6px; margin-top:5px; margin-bottom:8px;">
+                            <button type="button" @click="modo = 'clave'"
+                                :style="modo === 'clave' ? 'background:#0f766e;color:#fff;border-color:#0f766e;' : 'background:#fff;color:#374151;border-color:#d1d5db;'"
+                                style="border:1px solid; border-radius:20px; padding:4px 12px; font-size:11px; font-weight:700; cursor:pointer;">
+                                🔑 Clave / PIN
+                            </button>
+                            <button type="button" @click="modo = 'patron'"
+                                :style="modo === 'patron' ? 'background:#0f766e;color:#fff;border-color:#0f766e;' : 'background:#fff;color:#374151;border-color:#d1d5db;'"
+                                style="border:1px solid; border-radius:20px; padding:4px 12px; font-size:11px; font-weight:700; cursor:pointer;">
+                                🔒 Patrón
+                            </button>
+                        </div>
+
+                        <template x-if="modo === 'clave'">
+                            <input type="text" x-model="$wire.claveDesbloqueo"
+                                placeholder="Solo si el cliente autoriza dejarla anotada"
+                                style="width:100%; height:34px; border:1px solid #d1d5db; border-radius:8px; padding:4px 10px; font-size:13px;">
+                        </template>
+
+                        <template x-if="modo === 'patron'">
+                            <div style="display:flex; align-items:flex-start; gap:14px; flex-wrap:wrap;">
+                                <svg :width="tam" :height="tam" viewBox="0 0 150 150" style="touch-action:none; background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; cursor:crosshair; user-select:none;"
+                                    @mousedown="onStart($event)" @mousemove="onMove($event)" @mouseup="onEnd()" @mouseleave="onEnd()"
+                                    @touchstart.prevent="onStart($event)" @touchmove.prevent="onMove($event)" @touchend.prevent="onEnd()">
+                                    <template x-for="linea in lineas" :key="linea[0] + '-' + linea[1]">
+                                        <line :x1="puntos[linea[0]].x" :y1="puntos[linea[0]].y" :x2="puntos[linea[1]].x" :y2="puntos[linea[1]].y"
+                                            stroke="#0f766e" stroke-width="4" stroke-linecap="round"></line>
+                                    </template>
+                                    <template x-for="(p, id) in puntos" :key="id">
+                                        <circle :cx="p.x" :cy="p.y" r="11"
+                                            :fill="seleccionados.includes(Number(id)) ? '#0f766e' : '#ffffff'"
+                                            stroke="#94a3b8" stroke-width="1.5"></circle>
+                                    </template>
+                                </svg>
+                                <div style="min-width:140px;">
+                                    <div style="font-size:11px; color:#6b7280; margin-bottom:4px;">Patrón dibujado:</div>
+                                    <div style="font-size:14px; font-weight:800; color:#0f766e; letter-spacing:.05em;" x-text="seleccionados.join(' - ') || '—'"></div>
+                                    <button type="button" @click="limpiarPatron()"
+                                        style="margin-top:8px; border:1px solid #d1d5db; border-radius:8px; padding:5px 12px; font-size:11px; font-weight:600; cursor:pointer; background:white; color:#374151;">
+                                        Borrar
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
                     </div>
                 </div>
                 <textarea wire:model="diagnostico" rows="2" placeholder="Diagnóstico..."
                     style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:8px 10px; font-size:13px; resize:none; margin-bottom:8px;"></textarea>
                 <textarea wire:model="observaciones" rows="2" placeholder="Observaciones..."
                     style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:8px 10px; font-size:13px; resize:none; margin-bottom:14px;"></textarea>
+
+                @if($ordenId)
+                {{-- Evidencia (fotos/video): antes vivia en el POS de la
+                     orden (/servicio-tecnico/orden/{id}), ahora se maneja
+                     aca junto con el resto de datos de la orden. --}}
+                <div style="border-top:1px solid #e5e7eb; padding-top:12px; margin-bottom:14px;">
+                    <div style="font-size:10px; font-weight:700; color:#0f766e; text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px;">📸 Evidencia fotográfica</div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-start; margin-bottom:12px;">
+                        @foreach($fotos as $i => $foto)
+                        <div style="position:relative;">
+                            <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($foto) }}" alt="Foto"
+                                style="width:70px; height:70px; object-fit:cover; border-radius:8px; border:2px solid #d1fae5; cursor:pointer;"
+                                onclick="window.open('{{ \Illuminate\Support\Facades\Storage::disk('public')->url($foto) }}','_blank')">
+                            <button wire:click="eliminarFoto({{ $i }})"
+                                style="position:absolute; top:-6px; right:-6px; background:#ef4444; color:white; border:none; border-radius:50%; width:18px; height:18px; font-size:11px; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1;">✕</button>
+                        </div>
+                        @endforeach
+                        <label style="width:70px; height:70px; background:#e0fce7; border:2px dashed #86efac; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-direction:column; gap:2px;">
+                            <span style="font-size:20px;">📷</span>
+                            <span style="font-size:9px; color:#16a34a; font-weight:600;">Agregar</span>
+                            <input type="file" wire:model="fotoTemp" accept="image/*" style="display:none;" onchange="@this.call('subirFoto')">
+                        </label>
+                    </div>
+                    <div wire:loading wire:target="fotoTemp,subirFoto" style="font-size:10px; color:#6b7280; margin-bottom:8px;">Subiendo foto...</div>
+
+                    <div style="font-size:10px; font-weight:700; color:#0f766e; text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px;">🎥 Video (ej. falla del equipo al ingresar)</div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-start;">
+                        @foreach($videos as $i => $video)
+                        <div style="position:relative;">
+                            <video src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($video) }}" controls preload="metadata"
+                                style="width:140px; height:90px; object-fit:cover; border-radius:8px; border:2px solid #d1fae5; background:black;"></video>
+                            <button wire:click="eliminarVideo({{ $i }})"
+                                style="position:absolute; top:-6px; right:-6px; background:#ef4444; color:white; border:none; border-radius:50%; width:18px; height:18px; font-size:11px; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1;">✕</button>
+                        </div>
+                        @endforeach
+                        <label style="width:70px; height:70px; background:#e0fce7; border:2px dashed #86efac; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-direction:column; gap:2px;">
+                            <span style="font-size:20px;">🎥</span>
+                            <span style="font-size:9px; color:#16a34a; font-weight:600;">Agregar</span>
+                            <input type="file" wire:model="videoTemp" accept="video/mp4,video/quicktime,video/webm" style="display:none;" onchange="@this.call('subirVideo')">
+                        </label>
+                    </div>
+                    <div wire:loading wire:target="videoTemp,subirVideo" style="font-size:10px; color:#6b7280; margin-top:6px;">Subiendo video...</div>
+                </div>
+                @endif
 
                 <div style="display:flex; gap:10px; justify-content:flex-end;">
                     <button wire:click="$set('modalOrden',false)"
@@ -1092,4 +1180,94 @@
             else Swal.fire({ icon: d.type || 'info', title: d.message, confirmButtonColor: '#0f766e' });
         });
     });
+
+    // Patron de desbloqueo tipo Android (grid 3x3): se dibuja arrastrando
+    // sobre los puntos, igual que en un celular. Se guarda en el mismo
+    // campo de texto "claveDesbloqueo" con el prefijo "PATRON:1-2-3..." para
+    // poder distinguirlo de una clave/PIN escrita a mano y volver a
+    // dibujarlo al editar la orden (ver tambien el PDF de la orden, que
+    // detecta el mismo prefijo para mostrar el grid en vez de texto).
+    function patronDesbloqueo(valorInicial) {
+        const puntos = {
+            1: { x: 25, y: 25 },  2: { x: 75, y: 25 },  3: { x: 125, y: 25 },
+            4: { x: 25, y: 75 },  5: { x: 75, y: 75 },  6: { x: 125, y: 75 },
+            7: { x: 25, y: 125 }, 8: { x: 75, y: 125 }, 9: { x: 125, y: 125 },
+        };
+
+        const esPatron = typeof valorInicial === 'string' && valorInicial.startsWith('PATRON:');
+        const seleccionadosIniciales = esPatron
+            ? valorInicial.replace('PATRON:', '').split('-').map(Number).filter((n) => n >= 1 && n <= 9)
+            : [];
+
+        return {
+            modo: esPatron ? 'patron' : 'clave',
+            puntos,
+            seleccionados: seleccionadosIniciales,
+            dibujando: false,
+            tam: 150,
+
+            get lineas() {
+                const l = [];
+                for (let i = 0; i < this.seleccionados.length - 1; i++) {
+                    l.push([this.seleccionados[i], this.seleccionados[i + 1]]);
+                }
+                return l;
+            },
+
+            init() {},
+
+            coordsDesdeEvento(e) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const punto = e.touches && e.touches.length ? e.touches[0] : e;
+                return {
+                    x: ((punto.clientX - rect.left) / rect.width) * 150,
+                    y: ((punto.clientY - rect.top) / rect.height) * 150,
+                };
+            },
+
+            puntoCercano(x, y) {
+                let mejor = null;
+                let mejorDist = 20;
+                for (const [id, p] of Object.entries(this.puntos)) {
+                    const d = Math.hypot(p.x - x, p.y - y);
+                    if (d < mejorDist) { mejor = Number(id); mejorDist = d; }
+                }
+                return mejor;
+            },
+
+            agregarSiNuevo(id) {
+                if (id && !this.seleccionados.includes(id)) {
+                    this.seleccionados.push(id);
+                }
+            },
+
+            onStart(e) {
+                this.dibujando = true;
+                this.seleccionados = [];
+                const { x, y } = this.coordsDesdeEvento(e);
+                this.agregarSiNuevo(this.puntoCercano(x, y));
+            },
+
+            onMove(e) {
+                if (!this.dibujando) return;
+                const { x, y } = this.coordsDesdeEvento(e);
+                this.agregarSiNuevo(this.puntoCercano(x, y));
+            },
+
+            onEnd() {
+                if (!this.dibujando) return;
+                this.dibujando = false;
+                this.guardarPatron();
+            },
+
+            limpiarPatron() {
+                this.seleccionados = [];
+                this.guardarPatron();
+            },
+
+            guardarPatron() {
+                this.$wire.claveDesbloqueo = this.seleccionados.length ? 'PATRON:' + this.seleccionados.join('-') : '';
+            },
+        };
+    }
 </script>

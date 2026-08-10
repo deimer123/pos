@@ -737,7 +737,10 @@
 
     <div class="pos-desktop-cart-actions flex items-center justify-between">
         @if(! $mesaId)
-        @php $usaTallerPos = request()->get('modo') !== 'normal' && (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_taller') && auth()->user()->hasAnyRole(['taller', 'admin_empresa']); @endphp
+        @php
+            $usaTallerPos = request()->get('modo') !== 'normal' && (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_taller') && auth()->user()->hasAnyRole(['taller', 'admin_empresa']);
+            $usaServicioTecnicoPos = request()->get('modo') !== 'normal' && (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_servicio_tecnico') && auth()->user()->hasAnyRole(['servicio_tecnico', 'admin_empresa']);
+        @endphp
         @if($usaTallerPos)
         {{-- POS con Taller: en escritorio, todos los botones en una sola fila
              pareja (sin menu "Más acciones"). En movil esta fila se oculta
@@ -810,6 +813,87 @@
             @endif
 
             @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'taller', 'recepcion']) && $cajaEstado === 'abierta' && auth()->user()->puedeVerBotonPos('entrada_salida') && ! $esTurion)
+            <button type="button" x-on:click="$wire.abrirMovimientoCajaModal('salida');"
+                style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#0891b2;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;">
+                Entrada/Salida
+            </button>
+            @endif
+
+            @if (auth()->user()->puedeVerBotonPos('ver'))
+            <button type="button" x-on:click="$wire.verPrefacturas();"
+                style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#475569;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;">
+                Ver
+            </button>
+            @endif
+
+        </div>
+        @elseif($usaServicioTecnicoPos)
+        {{-- POS con Servicio Tecnico: calco exacto de la fila de Taller de
+             arriba, con sus propios metodos/eventos (servicioTecnicoOrdenId,
+             salirALobbyServicioTecnico, guardarOrdenServicioTecnico). --}}
+        <div class="pos-taller-actions-row" style="display:flex; flex-wrap:nowrap !important; flex-direction:row !important; gap:4px !important; width:100% !important; align-items:center !important;">
+
+            @if($servicioTecnicoOrdenId)
+            <button
+                x-on:click="Swal.fire({title:'¿Ir al lobby?',text:'Se guardarán los productos actuales en la orden antes de salir.',icon:'question',showCancelButton:true,confirmButtonText:'Guardar y salir',cancelButtonText:'Cancelar',confirmButtonColor:'#0f766e'}).then(r=>{if(r.isConfirmed){$wire.salirALobbyServicioTecnico();}})"
+                style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#0d9488;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;">
+                📱 Ver lobby
+            </button>
+            @else
+            <button onclick="abrirIngresoServicioTecnico(@js($clienteSeleccionadoNombre ?? ''), @js($clienteTelefono ?? ''))"
+                style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#0f766e;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;">
+                📱 Ingresar
+            </button>
+            @endif
+
+            @if($servicioTecnicoOrdenId && auth()->user()->puedeVerBotonPos('guardar'))
+            <button
+                x-on:click="Swal.fire({title:'💾 Guardar orden de servicio técnico',text:'Se guardan los productos en la orden. Puedes reabrirla desde el panel de Servicio Técnico.',icon:'question',showCancelButton:true,confirmButtonText:'Guardar',cancelButtonText:'Cancelar',confirmButtonColor:'#0f766e'}).then(r=>{if(r.isConfirmed){$wire.guardarOrdenServicioTecnico();}})"
+                style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#0f766e;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;">
+                💾 Guardar
+            </button>
+            @endif
+
+            @if (auth()->user()->puedeVerBotonPos('limpiar'))
+            <button
+                x-on:click="
+                    const haySvcTec = !! $wire.get('servicioTecnicoOrdenId');
+                    Swal.fire({
+                        title: haySvcTec ? '¿Cancelar orden de servicio técnico?' : '¿Vaciar carrito?',
+                        text: haySvcTec ? 'Se eliminarán los productos Y la orden del lobby.' : 'Se eliminarán todos los productos.',
+                        icon:'warning', showCancelButton:true,
+                        confirmButtonText:'Sí, eliminar', cancelButtonText:'Cancelar',
+                        confirmButtonColor:'#dc2626'
+                    }).then(r=>{ if(r.isConfirmed){ $wire.limpiarCarrito(); } })"
+                style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#dc2626;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;">
+                Limpiar
+            </button>
+            @endif
+
+            @if (auth()->user()->puedeVerBotonPos('editar'))
+            <button type="button"
+                x-on:click="
+                    if(Object.keys($wire.get('carrito') ?? {}).length===0){Swal.fire({icon:'warning',title:'Carrito vacío',text:'Agregue productos primero.'});}else{$wire.abrirModalEditar();}"
+                style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;">
+                Editar
+            </button>
+            @endif
+
+            @if (auth()->user()->puedeVerBotonPos('buscar_cliente'))
+            <button type="button" class="pos-show-mobile-only" x-on:click="$wire.abrirModalBuscarCliente();"
+                style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#2563eb;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;">
+                🔍 Cliente
+            </button>
+            @endif
+
+            @if (auth()->user()->puedeVerBotonPos('mas_cliente'))
+            <button type="button" x-on:click="$wire.abrirModalCrearCliente();"
+                style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#7c3aed;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;">
+                + Cliente
+            </button>
+            @endif
+
+            @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'servicio_tecnico', 'recepcion']) && $cajaEstado === 'abierta' && auth()->user()->puedeVerBotonPos('entrada_salida') && ! $esTurion)
             <button type="button" x-on:click="$wire.abrirMovimientoCajaModal('salida');"
                 style="flex:1 1 0 !important; min-width:0 !important; width:auto !important; background:#0891b2;color:#fff;border:none;border-radius:999px;padding:0 6px !important;height:28px !important;font-size:10px !important;font-weight:700 !important;cursor:pointer;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;">
                 Entrada/Salida
@@ -976,8 +1060,9 @@
     @php
         $esMeseroPuroMenu = auth()->user()->hasRole('mesero') && ! auth()->user()->hasAnyRole(['cajero','admin_empresa','vendedor']);
         $usaTallerPosMobile = (! $mesaId) && request()->get('modo') !== 'normal' && (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_taller') && auth()->user()->hasAnyRole(['taller', 'admin_empresa']);
+        $usaServicioTecnicoPosMobile = (! $mesaId) && request()->get('modo') !== 'normal' && (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', auth()->user()->getEmpresaActualId())->value('usa_servicio_tecnico') && auth()->user()->hasAnyRole(['servicio_tecnico', 'admin_empresa']);
     @endphp
-    @if(! $usaTallerPosMobile)
+    @if(! $usaTallerPosMobile && ! $usaServicioTecnicoPosMobile)
     <div class="pos-cart-mobile-more pos-cart-mobile-more-side" x-data="{ open: false }" wire:key="mobile-actions-root-{{ $cajaEstado }}">
         <button type="button" class="pos-cart-mobile-more-button" @click="open = !open">
                 Acciones
@@ -1032,7 +1117,7 @@
                     @endif
                 @endif
 
-                @if(! $mesaId && ! $tallerOrdenId && ! $hotelReservaId && auth()->user()->puedeVerBotonPos('guardar'))
+                @if(! $mesaId && ! $tallerOrdenId && ! $servicioTecnicoOrdenId && ! $hotelReservaId && auth()->user()->puedeVerBotonPos('guardar'))
                 <button type="button" class="pos-cart-menu-item pos-cart-menu-item-save" wire:key="mobile-action-guardar" @click.prevent.stop="open = false; $wire.confirmarGuardarPrefactura();">
                     Guardar
                 </button>
@@ -1125,6 +1210,90 @@
 
             @if (auth()->user()->puedeVerBotonPos('ver'))
             <button type="button" class="pos-cart-menu-item pos-cart-menu-item-view" wire:key="mobile-action-ver-taller" @click.prevent.stop="open = false; $wire.verPrefacturas();">
+                Ver
+            </button>
+            @endif
+        </div>
+    </div>
+    @endif
+
+    @if($usaServicioTecnicoPosMobile)
+    {{-- POS con Servicio Tecnico en movil: calco exacto del bloque de
+         Taller de arriba. --}}
+    <div class="pos-cart-mobile-more pos-cart-mobile-more-side" x-data="{ open: false }" wire:key="mobile-actions-root-svctec-{{ $cajaEstado }}-{{ $servicioTecnicoOrdenId }}">
+        <button type="button" class="pos-cart-mobile-more-button" @click="open = !open">
+            Acciones
+        </button>
+
+        <div class="pos-cart-mobile-more-menu" x-show="open" x-cloak @click.stop @click.outside="open = false" wire:key="mobile-actions-menu-svctec-{{ $cajaEstado }}-{{ $servicioTecnicoOrdenId }}">
+            @if($servicioTecnicoOrdenId)
+            <button type="button" wire:key="mobile-action-ver-lobby-svctec" style="background:#0d9488 !important; color:#fff !important;"
+                @click.prevent.stop="
+                    open = false;
+                    Swal.fire({title:'¿Ir al lobby?',text:'Se guardarán los productos actuales en la orden antes de salir.',icon:'question',showCancelButton:true,confirmButtonText:'Guardar y salir',cancelButtonText:'Cancelar',confirmButtonColor:'#0f766e'}).then(r=>{if(r.isConfirmed){$wire.salirALobbyServicioTecnico();}})">
+                📱 Ver lobby
+            </button>
+            @else
+            <button type="button" wire:key="mobile-action-ingresar-svctec" style="background:#0f766e !important; color:#fff !important;"
+                @click.prevent.stop="open = false;" onclick="abrirIngresoServicioTecnico(@js($clienteSeleccionadoNombre ?? ''), @js($clienteTelefono ?? ''))">
+                📱 Ingresar
+            </button>
+            @endif
+
+            @if($servicioTecnicoOrdenId && auth()->user()->puedeVerBotonPos('guardar'))
+            <button type="button" wire:key="mobile-action-guardar-orden-svctec" style="background:#0f766e !important; color:#fff !important;"
+                @click.prevent.stop="
+                    open = false;
+                    Swal.fire({title:'💾 Guardar orden de servicio técnico',text:'Se guardan los productos en la orden. Puedes reabrirla desde el panel de Servicio Técnico.',icon:'question',showCancelButton:true,confirmButtonText:'Guardar',cancelButtonText:'Cancelar',confirmButtonColor:'#0f766e'}).then(r=>{if(r.isConfirmed){$wire.guardarOrdenServicioTecnico();}})">
+                💾 Guardar orden
+            </button>
+            @endif
+
+            @if (auth()->user()->puedeVerBotonPos('limpiar'))
+            <button type="button" wire:key="mobile-action-limpiar-svctec" style="background:#dc2626 !important; color:#fff !important;"
+                @click.prevent.stop="
+                    open = false;
+                    const haySvcTec = !! $wire.get('servicioTecnicoOrdenId');
+                    Swal.fire({
+                        title: haySvcTec ? '¿Cancelar orden de servicio técnico?' : '¿Vaciar carrito?',
+                        text: haySvcTec ? 'Se eliminarán los productos Y la orden del lobby.' : 'Se eliminarán todos los productos.',
+                        icon:'warning', showCancelButton:true,
+                        confirmButtonText:'Sí, eliminar', cancelButtonText:'Cancelar',
+                        confirmButtonColor:'#dc2626'
+                    }).then(r=>{ if(r.isConfirmed){ $wire.limpiarCarrito(); } })">
+                Limpiar
+            </button>
+            @endif
+
+            @if (auth()->user()->puedeVerBotonPos('editar'))
+            <button type="button" class="pos-cart-menu-item pos-cart-menu-item-edit" wire:key="mobile-action-editar-svctec"
+                @click.prevent.stop="
+                    open = false;
+                    if(Object.keys($wire.get('carrito') ?? {}).length===0){Swal.fire({icon:'warning',title:'Carrito vacío',text:'Agregue productos primero.'});}else{$wire.abrirModalEditar();}">
+                Editar
+            </button>
+            @endif
+
+            @if (auth()->user()->puedeVerBotonPos('buscar_cliente'))
+            <button type="button" class="pos-cart-menu-item pos-cart-menu-item-search-client" wire:key="mobile-action-buscar-cliente-svctec" @click.prevent.stop="open = false; $wire.abrirModalBuscarCliente();">
+                🔍 Buscar Cliente
+            </button>
+            @endif
+
+            @if (auth()->user()->puedeVerBotonPos('mas_cliente'))
+            <button type="button" class="pos-cart-menu-item pos-cart-menu-item-create-client" wire:key="mobile-action-crear-cliente-svctec" @click.prevent.stop="open = false; $wire.abrirModalCrearCliente();">
+                + Crear Cliente
+            </button>
+            @endif
+
+            @if (auth()->user()->hasAnyRole(['cajero', 'admin_empresa', 'servicio_tecnico', 'recepcion']) && $cajaEstado === 'abierta' && auth()->user()->puedeVerBotonPos('entrada_salida'))
+            <button type="button" class="pos-cart-menu-item pos-cart-menu-item-cash-move" wire:key="mobile-action-entrada-salida-svctec" @click.prevent.stop="open = false; $wire.abrirMovimientoCajaModal('salida');">
+                Entrada / salida
+            </button>
+            @endif
+
+            @if (auth()->user()->puedeVerBotonPos('ver'))
+            <button type="button" class="pos-cart-menu-item pos-cart-menu-item-view" wire:key="mobile-action-ver-svctec" @click.prevent.stop="open = false; $wire.verPrefacturas();">
                 Ver
             </button>
             @endif
@@ -3481,6 +3650,131 @@ function abrirIngresoTaller(nombreCliente, telefonoCliente) {
                 modelo:          d.modelo,
                 color:           d.color,
                 km:              d.km,
+                diagnostico:     d.diagnostico,
+                observaciones:   d.observaciones,
+            });
+        }
+    });
+}
+
+// Calco exacto de abrirIngresoTaller() de arriba, para Servicio Tecnico:
+// exige cliente ya seleccionado por busqueda (no se escribe a mano aca),
+// despues pide solo los datos del equipo -- diagnostico/observaciones se
+// completan/editan despues desde el panel de Servicio Tecnico, igual que
+// las evidencias (fotos/video/nota de trabajo), que NO viven en el POS.
+function abrirIngresoServicioTecnico(nombreCliente, telefonoCliente) {
+    if (!document.getElementById('taller-modal-style')) {
+        const style = document.createElement('style');
+        style.id = 'taller-modal-style';
+        style.textContent = `
+            .swal-taller-popup { display:flex !important; flex-direction:column; max-height:92vh !important; }
+            .swal-taller-html { overflow-y:auto; max-height:calc(92vh - 160px); margin:0 !important; }
+        `;
+        document.head.appendChild(style);
+    }
+
+    nombreCliente = (nombreCliente || '').trim();
+    telefonoCliente = (telefonoCliente || '').trim();
+
+    if (!nombreCliente || nombreCliente.toUpperCase().includes('CONSUMIDOR FINAL')) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Selecciona un cliente primero',
+            text: 'Debes buscar y seleccionar el cliente antes de crear un ingreso de servicio técnico.',
+            confirmButtonColor: '#0f766e',
+        });
+        return;
+    }
+
+    Swal.fire({
+        title: '📱 Ingreso a servicio técnico',
+        width: '600px',
+        heightAuto: false,
+        customClass: { popup: 'swal-taller-popup', htmlContainer: 'swal-taller-html' },
+        html: `
+<div style="text-align:left;padding:4px 0;">
+
+  <div style="font-size:11px;font-weight:700;color:#0f766e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;border-bottom:2px solid #ccfbf1;padding-bottom:4px;">👤 Cliente seleccionado</div>
+  <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;">
+    <span style="font-size:18px;">👤</span>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#166534;">${nombreCliente}</div>
+      <div style="font-size:11px;color:#4b7a5e;">Cliente ya registrado en el sistema</div>
+    </div>
+  </div>
+
+  <datalist id="dl_marcas_svctec">
+    <option value="Samsung"><option value="Apple"><option value="Xiaomi"><option value="Motorola">
+    <option value="Huawei"><option value="Oppo"><option value="Vivo"><option value="Realme">
+    <option value="ZTE"><option value="Nokia"><option value="Tecno"><option value="Infinix"><option value="Honor">
+  </datalist>
+
+  <div style="font-size:11px;font-weight:700;color:#0f766e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;border-bottom:2px solid #ccfbf1;padding-bottom:4px;">📱 Datos del equipo</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+    <div>
+      <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">Marca</label>
+      <input id="st_marca" type="text" list="dl_marcas_svctec" placeholder="Samsung, Apple, Xiaomi..."
+        style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">Modelo</label>
+      <input id="st_modelo" type="text" placeholder="Galaxy A54, iPhone 12..."
+        style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box;">
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+    <div>
+      <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">IMEI / Serial</label>
+      <input id="st_imei" type="text"
+        style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;font-weight:700;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">Color</label>
+      <input id="st_color" type="text"
+        style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box;">
+    </div>
+  </div>
+  <div style="margin-bottom:14px;">
+    <label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px;">Clave / patrón de desbloqueo (opcional)</label>
+    <input id="st_clave" type="text" placeholder="Solo si el cliente autoriza dejarla anotada"
+      style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box;">
+  </div>
+
+  <div style="font-size:11px;font-weight:700;color:#0f766e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;border-bottom:2px solid #ccfbf1;padding-bottom:4px;">🔍 Diagnóstico / trabajo solicitado</div>
+  <textarea id="st_diag" placeholder="Describe la falla, síntomas, trabajo a realizar..." rows="3"
+    style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;resize:vertical;box-sizing:border-box;margin-bottom:8px;"></textarea>
+  <textarea id="st_obs" placeholder="Observaciones: accesorios, estado de entrega, golpes..." rows="2"
+    style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+
+</div>`,
+        showCancelButton: true,
+        confirmButtonText: '✅ Crear ingreso y agregar productos',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#0f766e',
+        cancelButtonColor: '#6b7280',
+        reverseButtons: true,
+        focusConfirm: false,
+        didOpen: () => { document.getElementById('st_marca')?.focus(); },
+        preConfirm: () => ({
+            marca:         (document.getElementById('st_marca').value  || '').trim(),
+            modelo:        (document.getElementById('st_modelo').value || '').trim(),
+            imei:          (document.getElementById('st_imei').value   || '').trim(),
+            color:         (document.getElementById('st_color').value  || '').trim(),
+            clave:         (document.getElementById('st_clave').value  || '').trim(),
+            diagnostico:   (document.getElementById('st_diag').value   || '').trim(),
+            observaciones: (document.getElementById('st_obs').value    || '').trim(),
+        }),
+    }).then(result => {
+        if (result.isConfirmed && result.value) {
+            const d = result.value;
+            Livewire.dispatch('crear-orden-servicio-tecnico', {
+                clienteNombre:   nombreCliente,
+                clienteTelefono: telefonoCliente,
+                marca:           d.marca,
+                modelo:          d.modelo,
+                imeiSerial:      d.imei,
+                color:           d.color,
+                claveDesbloqueo: d.clave,
                 diagnostico:     d.diagnostico,
                 observaciones:   d.observaciones,
             });

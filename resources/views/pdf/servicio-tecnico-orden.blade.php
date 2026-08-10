@@ -31,6 +31,11 @@
     .fotos-grid { width:100%; }
     .foto-item { display:inline-block; width:31%; margin:0 1% 10px 0; vertical-align:top; }
     .foto-item img { width:100%; height:150px; object-fit:cover; border:1px solid #e5e7eb; border-radius:6px; }
+    .patron-tabla { border-collapse:collapse; margin-top:3px; }
+    .patron-tabla td { width:16px; height:16px; padding:2px; border:none; }
+    .patron-punto { width:12px; height:12px; border-radius:50%; border:1.5px solid #9ca3af; background:#ffffff; }
+    .patron-punto-activo { background:#0f766e; border-color:#0f766e; }
+    .patron-secuencia { font-size:10px; color:#0f766e; font-weight:700; margin-top:4px; }
 </style>
 </head>
 <body>
@@ -79,7 +84,30 @@
         </div>
         <div class="col">
             <div class="campo"><div class="label">Color</div><div class="valor">{{ $orden->color ?: '—' }}</div></div>
-            <div class="campo"><div class="label">Clave / patrón</div><div class="valor">{{ $orden->clave_desbloqueo ?: '—' }}</div></div>
+            <div class="campo">
+                <div class="label">Clave / patrón</div>
+                @php
+                    $esPatron = is_string($orden->clave_desbloqueo) && str_starts_with($orden->clave_desbloqueo, 'PATRON:');
+                    $secuenciaPatron = $esPatron
+                        ? array_values(array_filter(array_map('intval', explode('-', substr($orden->clave_desbloqueo, 7))), fn ($n) => $n >= 1 && $n <= 9))
+                        : [];
+                @endphp
+                @if($esPatron && ! empty($secuenciaPatron))
+                    <table class="patron-tabla">
+                        @for($fila = 0; $fila < 3; $fila++)
+                        <tr>
+                            @for($col = 0; $col < 3; $col++)
+                                @php $n = $fila * 3 + $col + 1; @endphp
+                                <td><div class="patron-punto{{ in_array($n, $secuenciaPatron, true) ? ' patron-punto-activo' : '' }}"></div></td>
+                            @endfor
+                        </tr>
+                        @endfor
+                    </table>
+                    <div class="patron-secuencia">{{ implode(' → ', $secuenciaPatron) }}</div>
+                @else
+                    <div class="valor">{{ $orden->clave_desbloqueo ?: '—' }}</div>
+                @endif
+            </div>
         </div>
     </div>
 </div>

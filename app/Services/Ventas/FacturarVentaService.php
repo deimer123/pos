@@ -256,6 +256,10 @@ class FacturarVentaService
             $this->vincularFacturaTaller($opciones['taller_orden_id'], $empresaId, $factura->id);
         }
 
+        if (! empty($opciones['servicio_tecnico_orden_id'])) {
+            $this->vincularFacturaServicioTecnico($opciones['servicio_tecnico_orden_id'], $empresaId, $factura->id);
+        }
+
         if (! empty($opciones['hotel_reserva_id'])) {
             $this->vincularFacturaHotel($opciones['hotel_reserva_id'], $empresaId, $factura->id);
         }
@@ -617,6 +621,17 @@ class FacturarVentaService
     private function vincularFacturaTaller(int $tallerOrdenId, int $empresaId, int $facturaId): void
     {
         TallerOrden::where('id', $tallerOrdenId)
+            ->where('empresa_id', $empresaId)
+            ->update([
+                'factura_id' => $facturaId,
+                'estado' => 'entregado',
+                'entregado_at' => now(),
+            ]);
+    }
+
+    private function vincularFacturaServicioTecnico(int $ordenId, int $empresaId, int $facturaId): void
+    {
+        \App\Models\ServicioTecnicoOrden::where('id', $ordenId)
             ->where('empresa_id', $empresaId)
             ->update([
                 'factura_id' => $facturaId,

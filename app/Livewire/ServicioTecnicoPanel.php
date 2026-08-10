@@ -13,6 +13,7 @@ use App\Models\ServicioTecnicoItem;
 use App\Models\ServicioTecnicoOrden;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 /**
  * Calco de App\Livewire\TallerPanel para el modulo de Servicio Tecnico de
@@ -26,6 +27,8 @@ use Livewire\Component;
  */
 class ServicioTecnicoPanel extends Component
 {
+    use WithFileUploads;
+
     // Lista
     public string $filtroEstado = 'activas';
     public string $busqueda     = '';
@@ -46,6 +49,15 @@ class ServicioTecnicoPanel extends Component
     public string $diagnostico      = '';
     public string $observaciones    = '';
     public string $estado           = 'pendiente';
+
+    // Evidencia (fotos/video): a diferencia de Taller, esto se maneja aca en
+    // el panel de ordenes, no en el POS -- ver decision en el plan de
+    // integracion con el POS real. La nota de trabajo ya se editaba directo
+    // en la tarjeta (ver guardarNotaTrabajo(), no relacionado con esto).
+    public $fotoTemp  = null;
+    public $videoTemp = null;
+    public array $fotos  = [];
+    public array $videos = [];
 
     // Repuestos/servicios dentro del modal de orden
     public array $repuestos = [];
@@ -158,7 +170,8 @@ class ServicioTecnicoPanel extends Component
     public function nuevaOrden(): void
     {
         $this->reset(['ordenId','clienteNombre','clienteTelefono','marca','modelo','imeiSerial',
-                      'color','claveDesbloqueo','diagnostico','observaciones','repuestos','buscarProducto']);
+                      'color','claveDesbloqueo','diagnostico','observaciones','repuestos','buscarProducto',
+                      'fotoTemp','videoTemp','fotos','videos']);
         $this->estado     = 'pendiente';
         $this->modalOrden = true;
     }
@@ -178,6 +191,10 @@ class ServicioTecnicoPanel extends Component
         $this->diagnostico     = $orden->diagnostico ?? '';
         $this->observaciones   = $orden->observaciones ?? '';
         $this->estado          = $orden->estado;
+        $this->fotos           = $orden->fotos ?? [];
+        $this->videos          = $orden->videos ?? [];
+        $this->fotoTemp        = null;
+        $this->videoTemp       = null;
 
         $this->repuestos = $orden->items->map(fn($r) => [
             'id'             => $r->id,
@@ -336,6 +353,78 @@ class ServicioTecnicoPanel extends Component
         }
     }
 
+    // ── Evidencia (fotos/video) ───────────────────────────────────────────────
+    // Calco de App\Livewire\ServicioTecnicoOrdenPos, movido aca: se maneja
+    // desde el panel de ordenes (modal editar), no desde el POS. La nota de
+    // trabajo ya se editaba directo en la tarjeta (ver guardarNotaTrabajo()
+    // mas abajo, que ya existia).
+
+    public function subirFoto(): void
+    {
+        if (! $this->ordenId) return;
+
+        $this->validate(['fotoTemp' => 'image|max:5120']);
+
+        $orden = ServicioTecnicoOrden::where('empresa_id', $this->empresaId())->findOrFail($this->ordenId);
+
+        $path = $this->fotoTemp->store('servicio-tecnico/fotos', 'public');
+        $fotos = $orden->fotos ?? [];
+        $fotos[] = $path;
+        $orden->update(['fotos' => $fotos]);
+
+        $this->fotos = $fotos;
+        $this->fotoTemp = null;
+    }
+
+    public function eliminarFoto(int $index): void
+    {
+        if (! $this->ordenId) return;
+
+        $orden = ServicioTecnicoOrden::where('empresa_id', $this->empresaId())->findOrFail($this->ordenId);
+        $fotos = $orden->fotos ?? [];
+
+        if (isset($fotos[$index])) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($fotos[$index]);
+            array_splice($fotos, $index, 1);
+            $fotos = array_values($fotos);
+            $orden->update(['fotos' => $fotos]);
+            $this->fotos = $fotos;
+        }
+    }
+
+    public function subirVideo(): void
+    {
+        if (! $this->ordenId) return;
+
+        $this->validate(['videoTemp' => 'mimes:mp4,mov,webm|max:51200']);
+
+        $orden = ServicioTecnicoOrden::where('empresa_id', $this->empresaId())->findOrFail($this->ordenId);
+
+        $path = $this->videoTemp->store('servicio-tecnico/videos', 'public');
+        $videos = $orden->videos ?? [];
+        $videos[] = $path;
+        $orden->update(['videos' => $videos]);
+
+        $this->videos = $videos;
+        $this->videoTemp = null;
+    }
+
+    public function eliminarVideo(int $index): void
+    {
+        if (! $this->ordenId) return;
+
+        $orden = ServicioTecnicoOrden::where('empresa_id', $this->empresaId())->findOrFail($this->ordenId);
+        $videos = $orden->videos ?? [];
+
+        if (isset($videos[$index])) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($videos[$index]);
+            array_splice($videos, $index, 1);
+            $videos = array_values($videos);
+            $orden->update(['videos' => $videos]);
+            $this->videos = $videos;
+        }
+    }
+
     public function cambiarEstado(int $id, string $nuevoEstado): void
     {
         $orden = ServicioTecnicoOrden::where('empresa_id', $this->empresaId())->findOrFail($id);
@@ -368,9 +457,13 @@ class ServicioTecnicoPanel extends Component
         }
     }
 
+    // Igual que TallerPanel::abrirOrden(): manda al POS real (con todo el
+    // catalogo, escaneo de codigo de barras, Facturar) con la orden ya
+    // cargada -- no a la pagina simple "/servicio-tecnico/orden/{id}", que
+    // ahora es secundaria (igual que su equivalente de taller).
     public function abrirOrden(int $id): void
     {
-        $this->redirect(route('servicio-tecnico.orden', $id));
+        $this->redirect(route('pos') . '?servicio_tecnico=' . $id);
     }
 
     public function reimprimirTicket(int $id): void
