@@ -3070,22 +3070,7 @@ public function facturarConfirmada(array $data = [])
 
 private function facturacionElectronicaDisponible(int $empresaId): bool
 {
-    return ConfiguracionEmpresa::query()
-        ->where('empresa_id', $empresaId)
-        ->where('factus_enabled', true)
-        ->whereNotNull('factus_numbering_range_id')
-        ->whereNotNull('nit')
-        ->where('nit', '!=', '')
-        ->whereNotNull('prefijo')
-        ->where('prefijo', '!=', '')
-        ->whereNotNull('rango_desde')
-        ->whereNotNull('rango_hasta')
-        ->whereNotNull('rango_actual')
-        ->whereNotNull('numero_resolucion')
-        ->where('numero_resolucion', '!=', '')
-        ->whereNotNull('fecha_inicio')
-        ->whereNotNull('fecha_fin')
-        ->exists();
+    return app(\App\Services\Ventas\FacturarVentaService::class)->facturacionElectronicaDisponible($empresaId);
 }
 public function setTab(string $t)
 {
