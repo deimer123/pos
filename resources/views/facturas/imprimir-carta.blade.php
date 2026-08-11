@@ -41,6 +41,16 @@
     @if($config?->lema) <div class="lema">{{ $config->lema }}</div> @endif
     @if($config?->direccion) <div>{{ $config->direccion }}</div> @endif
     @if($config?->telefono) <div>Tel: {{ $config->telefono }}</div> @endif
+    @if($esElectronica && ($resolucionDianElectronica || $prefijoElectronico))
+      <div style="font-size:11px; color:#555; margin-top:4px;">
+        @if($resolucionDianElectronica)
+          Resolución DIAN {{ $resolucionDianElectronica }}<br>
+        @endif
+        @if($prefijoElectronico || $rangoDesdeElectronico || $rangoHastaElectronico)
+          {{ $prefijoElectronico ? 'Prefijo '.$prefijoElectronico.' - ' : '' }}Rango autorizado {{ $rangoDesdeElectronico ?? '-' }} al {{ $rangoHastaElectronico ?? '-' }}
+        @endif
+      </div>
+    @endif
   </div>
   <div class="doc-info">
     <div class="numero">{{ $factura->numero_visual }}</div>
@@ -121,30 +131,8 @@
 
 @if($esElectronica)
   <div class="factus-box">
-    <div><strong>Número documento:</strong> {{ $numeroDocumentoElectronico ?: 'Pendiente' }}</div>
-    <div><strong>Estado:</strong> {{ strtoupper($estadoDocumentoElectronico ?: 'pendiente') }}</div>
-    @if($resolucionDianElectronica)
-      <div><strong>Resolución DIAN:</strong> {{ $resolucionDianElectronica }}</div>
-    @endif
-    @if($prefijoElectronico || $rangoDesdeElectronico || $rangoHastaElectronico)
-      <div>
-        <strong>Numeración:</strong>
-        {{ $prefijoElectronico ? 'Prefijo '.$prefijoElectronico : '' }}
-        @if($rangoDesdeElectronico || $rangoHastaElectronico)
-          Rango {{ $rangoDesdeElectronico ?? '-' }} al {{ $rangoHastaElectronico ?? '-' }}
-        @endif
-      </div>
-    @endif
-    @if($config?->fecha_inicio || $config?->fecha_fin)
-      <div>
-        <strong>Vigencia:</strong>
-        {{ $config?->fecha_inicio ? \Carbon\Carbon::parse($config->fecha_inicio)->format('Y-m-d') : '-' }}
-        a
-        {{ $config?->fecha_fin ? \Carbon\Carbon::parse($config->fecha_fin)->format('Y-m-d') : '-' }}
-      </div>
-    @endif
-    @if($validadoDocumentoElectronico)
-      <div><strong>Validada:</strong> {{ is_string($validadoDocumentoElectronico) ? $validadoDocumentoElectronico : \Carbon\Carbon::parse($validadoDocumentoElectronico)->format('Y-m-d H:i') }}</div>
+    @if(strtolower((string) $estadoDocumentoElectronico) !== 'validada')
+      <div><strong>Estado:</strong> {{ strtoupper($estadoDocumentoElectronico ?: 'pendiente') }}</div>
     @endif
     @if($cufeDocumentoElectronico)
       <div><strong>CUFE:</strong></div>
@@ -152,13 +140,6 @@
     @endif
     @if($qrImagenDocumentoElectronico)
       <img class="qr" src="{{ trim($qrImagenDocumentoElectronico) }}" alt="QR DIAN">
-    @endif
-    @if($qrTextoDocumentoElectronico)
-      <div><strong>Consulta DIAN:</strong></div>
-      <div class="break">{{ $qrTextoDocumentoElectronico }}</div>
-    @elseif($urlDocumentoElectronico)
-      <div><strong>Documento:</strong></div>
-      <div class="break">{{ $urlDocumentoElectronico }}</div>
     @endif
   </div>
 @endif

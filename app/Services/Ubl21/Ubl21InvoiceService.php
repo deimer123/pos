@@ -2,7 +2,10 @@
 
 namespace App\Services\Ubl21;
 
+use App\Mail\Ubl21FacturaElectronicaMail;
 use App\Models\Factura;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class Ubl21InvoiceService
 {
@@ -43,7 +46,35 @@ class Ubl21InvoiceService
             'ubl21_validated_at' => now(),
         ]);
 
+        if ($isValid) {
+            $this->enviarCorreoCliente($factura);
+        }
+
         return $response;
+    }
+
+    // El proveedor no envia el correo al cliente por su cuenta (a
+    // diferencia de Factus, que si lo hace cuando factus_send_email esta
+    // activo) -- lo mandamos nosotros. Nunca debe tumbar la venta: un
+    // fallo de correo se registra y ya, la factura ya quedo validada en la
+    // DIAN.
+    private function enviarCorreoCliente(Factura $factura): void
+    {
+        $factura->loadMissing('cliente');
+        $cliente = $factura->cliente;
+
+        if (! $cliente || blank($cliente->email) || $cliente->nombre === 'CONSUMIDOR FINAL') {
+            return;
+        }
+
+        try {
+            Mail::to($cliente->email)->send(new Ubl21FacturaElectronicaMail($factura));
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo enviar el correo de factura electronica (proveedor alterno)', [
+                'factura_id' => $factura->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     // El proveedor no devuelve el numero de documento en un campo aparte

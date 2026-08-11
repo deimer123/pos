@@ -123,7 +123,7 @@ test('una factura validada por el proveedor alterno UBL 2.1 no menciona Factus n
         ->assertOk()
         ->assertSee('SETP990000003')
         ->assertSee('cufe-fake-999')
-        ->assertSee('VALIDADA')
+        ->assertSee('18760000001')
         ->assertDontSee('Pendiente')
         ->assertDontSee('PENDIENTE');
 

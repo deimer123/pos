@@ -1,11 +1,14 @@
 <?php
 
+use App\Mail\Ubl21FacturaElectronicaMail;
+use App\Models\Actor;
 use App\Models\ConfiguracionEmpresa;
 use App\Models\Factura;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\Ventas\FacturarVentaService;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 
 // Segundo proveedor de facturacion electronica (UBL 2.1): estos tests
 // cubren el dispatcher agregado en FacturarVentaService (elegir Factus vs
@@ -132,4 +135,83 @@ test('empresas sin factura_electronica_proveedor configurado siguen usando Factu
     $empresa = crearEmpresaUbl21Test(['factura_electronica_proveedor' => null]);
 
     expect(FacturarVentaService::proveedorFacturaElectronica($empresa->configuracion->fresh()))->toBe('factus');
+});
+
+// El proveedor alterno no envia el correo al cliente por su cuenta (a
+// diferencia de Factus) -- Ubl21InvoiceService::validate() lo suple. No
+// debe mandarse a CONSUMIDOR FINAL ni a clientes sin correo real.
+test('al validar con el proveedor alterno se envia el correo al cliente si tiene email real', function () {
+    Mail::fake();
+
+    $empresa = crearEmpresaUbl21Test();
+    crearProductoUbl21Test($empresa);
+
+    $cliente = Actor::create([
+        'empresa_id' => $empresa->id,
+        'id_clip_pro' => 200,
+        'tipo' => 1,
+        'tipo_documento_id' => 6,
+        'identificacion' => '555666777',
+        'nombre' => 'Cliente con correo',
+        'email' => 'cliente-real@example.com',
+    ]);
+
+    Http::fake([
+        'fake-ubl21.test/*' => Http::response([
+            'success' => true,
+            'is_valid' => true,
+            'message' => 'Documento #SETP2 generado y validado.',
+            'cufe' => 'cufe-fake-456',
+            'urlinvoicepdf' => 'https://fake-ubl21.test/pdf/2',
+        ], 200),
+    ]);
+
+    app(FacturarVentaService::class)->facturar([
+        [
+            'id_producto' => 5001,
+            'nombre' => 'Producto electronico test',
+            'precio' => 119000,
+            'cantidad' => 1,
+            'descuento' => 0,
+        ],
+    ], [
+        'empresa_id' => $empresa->id,
+        'user_id' => $empresa->id,
+        'tipo_factura' => 'electronica',
+        'cliente_id' => $cliente->id,
+    ]);
+
+    Mail::assertSent(Ubl21FacturaElectronicaMail::class, fn ($mail) => $mail->hasTo('cliente-real@example.com'));
+});
+
+test('al validar con el proveedor alterno NO se envia correo a CONSUMIDOR FINAL', function () {
+    Mail::fake();
+
+    $empresa = crearEmpresaUbl21Test();
+    crearProductoUbl21Test($empresa);
+
+    Http::fake([
+        'fake-ubl21.test/*' => Http::response([
+            'success' => true,
+            'is_valid' => true,
+            'message' => 'Documento #SETP3 generado y validado.',
+            'cufe' => 'cufe-fake-789',
+        ], 200),
+    ]);
+
+    app(FacturarVentaService::class)->facturar([
+        [
+            'id_producto' => 5001,
+            'nombre' => 'Producto electronico test',
+            'precio' => 119000,
+            'cantidad' => 1,
+            'descuento' => 0,
+        ],
+    ], [
+        'empresa_id' => $empresa->id,
+        'user_id' => $empresa->id,
+        'tipo_factura' => 'electronica',
+    ]);
+
+    Mail::assertNotSent(Ubl21FacturaElectronicaMail::class);
 });
