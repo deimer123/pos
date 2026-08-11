@@ -107,6 +107,7 @@ test('una factura validada por el proveedor alterno UBL 2.1 no menciona Factus n
         'ubl21_cufe' => 'cufe-fake-999',
         'ubl21_status' => 'validada',
         'ubl21_validated_at' => now(),
+        'ubl21_qr' => 'https://catalogo-vpfe-hab.dian.gov.co/document/searchqr?documentkey=fake-999',
     ]);
     $factura->detalles()->create([
         'producto_id' => 0,
@@ -127,4 +128,5 @@ test('una factura validada por el proveedor alterno UBL 2.1 no menciona Factus n
         ->assertDontSee('PENDIENTE');
 
     $response->assertDontSee('Factus');
+    $response->assertSee('data:image/png;base64,', false);
 });

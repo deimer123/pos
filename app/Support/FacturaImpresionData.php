@@ -5,6 +5,8 @@ namespace App\Support;
 use App\Models\Factura;
 use App\Models\Product;
 use Carbon\Carbon;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -48,9 +50,16 @@ class FacturaImpresionData
         $factusBill = data_get($factura->factus_response, 'data.bill', []);
         $numeroDocumentoElectronico = $factura->factus_number ?: data_get($factusBill, 'number') ?: $factura->ubl21_document_number;
         $cufeDocumentoElectronico = $factura->factus_cufe ?: data_get($factusBill, 'cufe') ?: $factura->ubl21_cufe;
-        $qrImagenDocumentoElectronico = data_get($factusBill, 'qr_image');
         $qrTextoDocumentoElectronico = data_get($factusBill, 'qr') ?: $factura->ubl21_qr;
         $urlDocumentoElectronico = data_get($factusBill, 'public_url') ?: $factura->ubl21_pdf_url;
+
+        // Factus entrega la imagen del QR ya generada; el proveedor alterno
+        // (UBL 2.1) solo entrega el texto/URL de verificacion DIAN (QRStr),
+        // asi que si no vino imagen la generamos aca a partir de ese texto
+        // -- el cajero necesita el QR escaneable en el ticket, no un link
+        // largo para transcribir a mano.
+        $qrImagenDocumentoElectronico = data_get($factusBill, 'qr_image')
+            ?: self::generarQrDataUri($qrTextoDocumentoElectronico);
         $validadoDocumentoElectronico = $factura->factus_validated_at ?: data_get($factusBill, 'validated') ?: $factura->ubl21_validated_at;
         $estadoDocumentoElectronico = $factura->factus_status ?: $factura->ubl21_status;
         $resolucionDianElectronica = $config?->numero_resolucion ?: $config?->ubl21_resolution_number;
@@ -116,5 +125,20 @@ class FacturaImpresionData
             'nombreCajero',
             'nombreVendedorAsignado',
         );
+    }
+
+    private static function generarQrDataUri(?string $contenido): ?string
+    {
+        if (blank($contenido)) {
+            return null;
+        }
+
+        try {
+            $qrCode = QrCode::create($contenido)->setSize(220)->setMargin(8);
+
+            return (new PngWriter())->write($qrCode)->getDataUri();
+        } catch (\Throwable) {
+            return null;
+        }
     }
 }
