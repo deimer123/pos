@@ -22,6 +22,14 @@ class Factura extends Model
         'factus_status',
         'factus_response',
         'factus_validated_at',
+        'ubl21_document_number',
+        'ubl21_cufe',
+        'ubl21_qr',
+        'ubl21_status',
+        'ubl21_response',
+        'ubl21_pdf_url',
+        'ubl21_xml_url',
+        'ubl21_validated_at',
         'tipo_pago',            // 'contado' | 'credito'
         'medio_pago',           // 'efectivo' | 'transferencia' | 'otro'
         'fecha',
@@ -60,6 +68,8 @@ class Factura extends Model
         'devuelta_total'    => 'bool',
         'factus_response'   => 'array',
         'factus_validated_at' => 'datetime',
+        'ubl21_response'    => 'array',
+        'ubl21_validated_at' => 'datetime',
     ];
 
     #-------------------------------------------------
@@ -220,6 +230,10 @@ public function registrarAbono(
     {
         if ($this->tipo_factura === 'electronica' && filled($this->factus_number)) {
             return (string) $this->factus_number;
+        }
+
+        if ($this->tipo_factura === 'electronica' && filled($this->ubl21_document_number)) {
+            return (string) $this->ubl21_document_number;
         }
 
         $numero = str_pad((string) $this->id, 6, '0', STR_PAD_LEFT);

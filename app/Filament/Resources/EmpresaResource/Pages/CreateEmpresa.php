@@ -22,7 +22,7 @@ class CreateEmpresa extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        unset($data['factus']);
+        unset($data['factus'], $data['ubl21']);
 
         $data['tipo_usuario'] = 'empresa';
         $data['empresa_id'] = null; // Las empresas no tienen empresa_id
@@ -60,6 +60,7 @@ class CreateEmpresa extends CreateRecord
         // Asignar rol de admin_empresa
         $record->assignRole('admin_empresa');
         EmpresaResource::saveFactusConfig($record, $this->form->getRawState()['factus'] ?? []);
+        EmpresaResource::saveUbl21Config($record, $this->form->getRawState()['ubl21'] ?? []);
         EmpresaResource::sincronizarComplementos($record, $this->complementosSeleccionados);
 
         Notification::make()

@@ -332,6 +332,85 @@ class EmpresaResource extends Resource
                             ->columnSpanFull(),
                     ])
                     ->columns(2),
+
+                Forms\Components\Section::make('Facturacion electronica (proveedor alterno UBL 2.1)')
+                    ->description('Segundo proveedor de facturacion electronica, administrado por el super admin. La empresa puede facturar con Factus o con este proveedor, segun lo que elijas abajo.')
+                    ->statePath('ubl21')
+                    ->schema([
+                        Forms\Components\Select::make('factura_electronica_proveedor')
+                            ->label('Proveedor activo de facturacion electronica')
+                            ->options([
+                                'factus' => 'Factus',
+                                'ubl21' => 'Proveedor alterno (UBL 2.1)',
+                            ])
+                            ->default('factus')
+                            ->live()
+                            ->helperText('Define cual proveedor usa esta empresa al facturar electronicamente. Solo tiene efecto si el proveedor elegido esta correctamente configurado.'),
+
+                        Forms\Components\Group::make([
+                            Forms\Components\TextInput::make('ubl21_base_url')
+                                ->label('URL API')
+                                ->required(fn (Forms\Get $get): bool => $get('factura_electronica_proveedor') === 'ubl21')
+                                ->maxLength(255),
+
+                            Forms\Components\TextInput::make('ubl21_api_token')
+                                ->label('Token de acceso')
+                                ->password()
+                                ->required(fn (Forms\Get $get, ?string $operation): bool => $get('factura_electronica_proveedor') === 'ubl21' && $operation === 'create')
+                                ->dehydrated(fn ($state) => filled($state))
+                                ->helperText('En edicion puedes dejarlo vacio para conservar el token guardado.'),
+
+                            Forms\Components\Select::make('ubl21_environment')
+                                ->label('Ambiente')
+                                ->options([
+                                    'habilitacion' => 'Habilitacion / Pruebas',
+                                    'produccion' => 'Produccion',
+                                ])
+                                ->default('habilitacion'),
+
+                            Forms\Components\TextInput::make('ubl21_nit')
+                                ->label('NIT registrado ante el proveedor')
+                                ->maxLength(20),
+
+                            Forms\Components\TextInput::make('ubl21_dv')
+                                ->label('DV')
+                                ->maxLength(2),
+
+                            Forms\Components\TextInput::make('ubl21_prefix')
+                                ->label('Prefijo')
+                                ->maxLength(10)
+                                ->required(fn (Forms\Get $get): bool => $get('factura_electronica_proveedor') === 'ubl21'),
+
+                            Forms\Components\TextInput::make('ubl21_resolution_number')
+                                ->label('Numero de resolucion DIAN')
+                                ->maxLength(50)
+                                ->required(fn (Forms\Get $get): bool => $get('factura_electronica_proveedor') === 'ubl21'),
+
+                            Forms\Components\TextInput::make('ubl21_numbering_from')
+                                ->label('Rango desde')
+                                ->numeric()
+                                ->required(fn (Forms\Get $get): bool => $get('factura_electronica_proveedor') === 'ubl21'),
+
+                            Forms\Components\TextInput::make('ubl21_numbering_to')
+                                ->label('Rango hasta')
+                                ->numeric()
+                                ->required(fn (Forms\Get $get): bool => $get('factura_electronica_proveedor') === 'ubl21'),
+
+                            Forms\Components\TextInput::make('ubl21_credit_note_prefix')
+                                ->label('Prefijo nota credito')
+                                ->maxLength(10)
+                                ->helperText('Si se deja vacio, se usa el mismo prefijo de la factura.'),
+
+                            Forms\Components\TextInput::make('ubl21_credit_note_resolution_number')
+                                ->label('Resolucion nota credito')
+                                ->maxLength(50)
+                                ->helperText('Si se deja vacio, se usa la misma resolucion de la factura.'),
+                        ])
+                            ->visible(fn (Forms\Get $get): bool => $get('factura_electronica_proveedor') === 'ubl21')
+                            ->columns(2)
+                            ->columnSpanFull(),
+                    ])
+                    ->columns(2),
             ]);
     }
 
@@ -801,6 +880,61 @@ class EmpresaResource extends Resource
             'numero_resolucion' => $config?->numero_resolucion,
             'fecha_inicio' => $config?->fecha_inicio?->toDateString(),
             'fecha_fin' => $config?->fecha_fin?->toDateString(),
+        ];
+    }
+
+    public static function saveUbl21Config(User $empresa, array $ubl21): void
+    {
+        $allowed = collect($ubl21)->only([
+            'factura_electronica_proveedor',
+            'ubl21_base_url',
+            'ubl21_api_token',
+            'ubl21_environment',
+            'ubl21_nit',
+            'ubl21_dv',
+            'ubl21_prefix',
+            'ubl21_resolution_number',
+            'ubl21_numbering_from',
+            'ubl21_numbering_to',
+            'ubl21_credit_note_prefix',
+            'ubl21_credit_note_resolution_number',
+        ])->filter(fn ($value, string $key) => $key !== 'ubl21_api_token' || filled($value))->all();
+
+        foreach (['ubl21_numbering_from', 'ubl21_numbering_to'] as $integerKey) {
+            if (array_key_exists($integerKey, $allowed) && blank($allowed[$integerKey])) {
+                $allowed[$integerKey] = null;
+            }
+        }
+
+        $empresa->configuracion()->updateOrCreate(
+            ['empresa_id' => $empresa->id],
+            array_merge([
+                'nombre_empresa' => $empresa->name,
+                'representante_legal' => $empresa->name,
+                'telefono' => $empresa->telefono,
+                'direccion' => $empresa->direccion,
+                'activo' => true,
+            ], $allowed),
+        );
+    }
+
+    public static function ubl21FormState(User $empresa): array
+    {
+        $config = $empresa->configuracion;
+
+        return [
+            'factura_electronica_proveedor' => $config?->factura_electronica_proveedor ?: 'factus',
+            'ubl21_base_url' => $config?->ubl21_base_url,
+            'ubl21_api_token' => null,
+            'ubl21_environment' => $config?->ubl21_environment ?? 'habilitacion',
+            'ubl21_nit' => $config?->ubl21_nit,
+            'ubl21_dv' => $config?->ubl21_dv,
+            'ubl21_prefix' => $config?->ubl21_prefix,
+            'ubl21_resolution_number' => $config?->ubl21_resolution_number,
+            'ubl21_numbering_from' => $config?->ubl21_numbering_from,
+            'ubl21_numbering_to' => $config?->ubl21_numbering_to,
+            'ubl21_credit_note_prefix' => $config?->ubl21_credit_note_prefix,
+            'ubl21_credit_note_resolution_number' => $config?->ubl21_credit_note_resolution_number,
         ];
     }
 

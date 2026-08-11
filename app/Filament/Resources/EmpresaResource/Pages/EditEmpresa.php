@@ -4,6 +4,7 @@ namespace App\Filament\Resources\EmpresaResource\Pages;
 
 use App\Filament\Resources\EmpresaResource;
 use App\Services\Factus\FactusClient;
+use App\Services\Ubl21\Ubl21Client;
 use Filament\Actions;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
@@ -141,6 +142,35 @@ class EditEmpresa extends EditRecord
                             ->send();
                     }
                 }),
+
+            Actions\Action::make('probarUbl21')
+                ->label('Probar conexion (proveedor alterno)')
+                ->icon('heroicon-o-signal')
+                ->action(function (): void {
+                    $this->save(false, false);
+                    $this->record->refresh();
+
+                    try {
+                        $config = $this->record->configuracion;
+
+                        if (! $config) {
+                            throw new \RuntimeException('Primero guarda la configuracion del proveedor alterno de esta empresa.');
+                        }
+
+                        Ubl21Client::forEmpresa($config)->consecutivoActual(1, $config->ubl21_prefix);
+
+                        Notification::make()
+                            ->title('Conexion correcta')
+                            ->success()
+                            ->send();
+                    } catch (\Throwable $exception) {
+                        Notification::make()
+                            ->title('No se pudo conectar con el proveedor alterno')
+                            ->body($exception->getMessage())
+                            ->danger()
+                            ->send();
+                    }
+                }),
         ];
     }
 
@@ -151,7 +181,7 @@ class EditEmpresa extends EditRecord
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        unset($data['factus']);
+        unset($data['factus'], $data['ubl21']);
 
         if (! empty($data['plan_meses']) && ! empty($data['plan_started_at']) && empty($data['plan_ends_at'])) {
             $data['plan_ends_at'] = EmpresaResource::calculatePlanEndDate(
@@ -191,6 +221,7 @@ class EditEmpresa extends EditRecord
                 $data['plan_meses'],
             );
         $data['factus'] = EmpresaResource::factusFormState($this->record);
+        $data['ubl21'] = EmpresaResource::ubl21FormState($this->record);
 
         return $data;
     }
@@ -198,6 +229,7 @@ class EditEmpresa extends EditRecord
     protected function afterSave(): void
     {
         EmpresaResource::saveFactusConfig($this->record, $this->form->getRawState()['factus'] ?? []);
+        EmpresaResource::saveUbl21Config($this->record, $this->form->getRawState()['ubl21'] ?? []);
         EmpresaResource::sincronizarComplementos($this->record, $this->complementosSeleccionados);
     }
 

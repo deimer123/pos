@@ -13,6 +13,7 @@ use App\Models\ProductoVariante;
 use App\Models\Receta;
 use App\Models\TallerOrden;
 use App\Services\Factus\FactusInvoiceService;
+use App\Services\Ubl21\Ubl21InvoiceService;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -241,7 +242,7 @@ class FacturarVentaService
                 $hotelAbonoMonto,
             );
 
-            $this->validarFacturaElectronicaConFactus($factura);
+            $this->validarFacturaElectronica($factura);
 
             DB::commit();
         } catch (\Throwable $e) {
@@ -318,22 +319,41 @@ class FacturarVentaService
 
     public function facturacionElectronicaDisponible(int $empresaId): bool
     {
-        return ConfiguracionEmpresa::query()
-            ->where('empresa_id', $empresaId)
-            ->where('factus_enabled', true)
-            ->whereNotNull('factus_numbering_range_id')
-            ->whereNotNull('nit')
-            ->where('nit', '!=', '')
-            ->whereNotNull('prefijo')
-            ->where('prefijo', '!=', '')
-            ->whereNotNull('rango_desde')
-            ->whereNotNull('rango_hasta')
-            ->whereNotNull('rango_actual')
-            ->whereNotNull('numero_resolucion')
-            ->where('numero_resolucion', '!=', '')
-            ->whereNotNull('fecha_inicio')
-            ->whereNotNull('fecha_fin')
-            ->exists();
+        $configuracion = ConfiguracionEmpresa::query()->where('empresa_id', $empresaId)->first();
+
+        if (! $configuracion) {
+            return false;
+        }
+
+        if (self::proveedorFacturaElectronica($configuracion) === 'ubl21') {
+            return filled($configuracion->ubl21_api_token)
+                && filled($configuracion->ubl21_base_url)
+                && filled($configuracion->ubl21_prefix)
+                && filled($configuracion->ubl21_resolution_number)
+                && filled($configuracion->ubl21_numbering_from)
+                && filled($configuracion->ubl21_numbering_to);
+        }
+
+        return $configuracion->factus_enabled
+            && filled($configuracion->factus_numbering_range_id)
+            && filled($configuracion->nit)
+            && filled($configuracion->prefijo)
+            && filled($configuracion->rango_desde)
+            && filled($configuracion->rango_hasta)
+            && filled($configuracion->rango_actual)
+            && filled($configuracion->numero_resolucion)
+            && filled($configuracion->fecha_inicio)
+            && filled($configuracion->fecha_fin);
+    }
+
+    /**
+     * Empresas creadas antes de que existiera el selector de proveedor no
+     * tienen 'factura_electronica_proveedor' seteado -- para esas, mantener
+     * el comportamiento historico (Factus) sin pedirles nada nuevo.
+     */
+    public static function proveedorFacturaElectronica(?ConfiguracionEmpresa $configuracion): string
+    {
+        return $configuracion?->factura_electronica_proveedor ?: 'factus';
     }
 
     /**
@@ -601,20 +621,44 @@ class FacturarVentaService
         );
     }
 
-    private function validarFacturaElectronicaConFactus(Factura $factura): void
+    private function validarFacturaElectronica(Factura $factura): void
     {
         if ($factura->tipo_factura !== 'electronica') {
             return;
         }
 
-        $factura->load(['cliente.ciudad', 'detalles']);
+        $factura->load(['cliente.ciudad', 'detalles', 'configuracionEmpresa']);
 
+        $proveedor = self::proveedorFacturaElectronica($factura->configuracionEmpresa);
+
+        if ($proveedor === 'ubl21') {
+            $this->validarFacturaElectronicaConUbl21($factura);
+
+            return;
+        }
+
+        $this->validarFacturaElectronicaConFactus($factura);
+    }
+
+    private function validarFacturaElectronicaConFactus(Factura $factura): void
+    {
         app(FactusInvoiceService::class)->validate($factura);
 
         $factura->refresh();
 
         if (blank($factura->factus_number) || blank($factura->factus_cufe) || $factura->factus_status !== 'validada') {
             throw new \RuntimeException('Factus no valido la factura electronica. No se guardo la venta.');
+        }
+    }
+
+    private function validarFacturaElectronicaConUbl21(Factura $factura): void
+    {
+        app(Ubl21InvoiceService::class)->validate($factura);
+
+        $factura->refresh();
+
+        if (blank($factura->ubl21_document_number) || blank($factura->ubl21_cufe) || $factura->ubl21_status !== 'validada') {
+            throw new \RuntimeException('El proveedor de facturacion electronica no valido la factura. No se guardo la venta.');
         }
     }
 

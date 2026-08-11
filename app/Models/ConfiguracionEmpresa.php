@@ -69,6 +69,18 @@ class ConfiguracionEmpresa extends Model
         'factus_credit_note_numbering_range_id',
         'factus_send_email',
         'factus_synced_at',
+        'factura_electronica_proveedor',
+        'ubl21_api_token',
+        'ubl21_base_url',
+        'ubl21_environment',
+        'ubl21_nit',
+        'ubl21_dv',
+        'ubl21_prefix',
+        'ubl21_resolution_number',
+        'ubl21_numbering_from',
+        'ubl21_numbering_to',
+        'ubl21_credit_note_prefix',
+        'ubl21_credit_note_resolution_number',
     ];
 
     protected $casts = [
@@ -86,6 +98,9 @@ class ConfiguracionEmpresa extends Model
         'factus_password' => 'encrypted',
         'factus_client_secret' => 'encrypted',
         'factus_synced_at' => 'datetime',
+        'ubl21_api_token' => 'encrypted',
+        'ubl21_numbering_from' => 'integer',
+        'ubl21_numbering_to' => 'integer',
         'usa_mesas' => 'boolean',
         'usa_cocina' => 'boolean',
         'usa_recetas' => 'boolean',

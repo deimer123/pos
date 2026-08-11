@@ -22,6 +22,14 @@ class Devolucion extends Model
         'factus_credit_note_status',
         'factus_credit_note_response',
         'factus_credit_note_validated_at',
+        'ubl21_credit_note_number',
+        'ubl21_credit_note_cufe',
+        'ubl21_credit_note_qr',
+        'ubl21_credit_note_status',
+        'ubl21_credit_note_response',
+        'ubl21_credit_note_pdf_url',
+        'ubl21_credit_note_xml_url',
+        'ubl21_credit_note_validated_at',
     ];
 
     protected $casts = [
@@ -29,6 +37,8 @@ class Devolucion extends Model
         'total' => 'decimal:2',
         'factus_credit_note_response' => 'array',
         'factus_credit_note_validated_at' => 'datetime',
+        'ubl21_credit_note_response' => 'array',
+        'ubl21_credit_note_validated_at' => 'datetime',
     ];
 
     public function detalles()

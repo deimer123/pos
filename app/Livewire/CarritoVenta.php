@@ -3725,12 +3725,24 @@ if ($producto && $producto->tipo_producto !== 'servicio' && (string) $producto->
         }
 
         if ($f2->tipo_factura === 'electronica') {
-            app(\App\Services\Factus\FactusCreditNoteService::class)->validate($dev);
+            $proveedor = \App\Services\Ventas\FacturarVentaService::proveedorFacturaElectronica($f2->configuracionEmpresa);
 
-            $dev->refresh();
+            if ($proveedor === 'ubl21') {
+                app(\App\Services\Ubl21\Ubl21CreditNoteService::class)->validate($dev);
 
-            if ($dev->factus_credit_note_status !== 'validada') {
-                throw new \RuntimeException('Factus no valido la nota credito electronica.');
+                $dev->refresh();
+
+                if ($dev->ubl21_credit_note_status !== 'validada') {
+                    throw new \RuntimeException('El proveedor de facturacion electronica no valido la nota credito.');
+                }
+            } else {
+                app(\App\Services\Factus\FactusCreditNoteService::class)->validate($dev);
+
+                $dev->refresh();
+
+                if ($dev->factus_credit_note_status !== 'validada') {
+                    throw new \RuntimeException('Factus no valido la nota credito electronica.');
+                }
             }
         }
 
