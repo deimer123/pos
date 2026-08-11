@@ -115,17 +115,17 @@
 
 @if($esElectronica)
   <div class="factus-box small">
-    <div><strong>Numero Factus:</strong> {{ $factusNumber ?: 'Pendiente' }}</div>
-    <div><strong>Estado:</strong> {{ strtoupper($factura->factus_status ?? 'pendiente') }}</div>
-    @if($config?->numero_resolucion)
-      <div><strong>Resolucion DIAN:</strong> {{ $config->numero_resolucion }}</div>
+    <div><strong>Numero documento:</strong> {{ $numeroDocumentoElectronico ?: 'Pendiente' }}</div>
+    <div><strong>Estado:</strong> {{ strtoupper($estadoDocumentoElectronico ?: 'pendiente') }}</div>
+    @if($resolucionDianElectronica)
+      <div><strong>Resolucion DIAN:</strong> {{ $resolucionDianElectronica }}</div>
     @endif
-    @if($config?->prefijo || $config?->rango_desde || $config?->rango_hasta)
+    @if($prefijoElectronico || $rangoDesdeElectronico || $rangoHastaElectronico)
       <div>
         <strong>Numeracion:</strong>
-        {{ $config?->prefijo ? 'Prefijo '.$config->prefijo : '' }}
-        @if($config?->rango_desde || $config?->rango_hasta)
-          Rango {{ $config->rango_desde ?? '-' }} al {{ $config->rango_hasta ?? '-' }}
+        {{ $prefijoElectronico ? 'Prefijo '.$prefijoElectronico : '' }}
+        @if($rangoDesdeElectronico || $rangoHastaElectronico)
+          Rango {{ $rangoDesdeElectronico ?? '-' }} al {{ $rangoHastaElectronico ?? '-' }}
         @endif
       </div>
     @endif
@@ -137,23 +137,23 @@
         {{ $config?->fecha_fin ? \Carbon\Carbon::parse($config->fecha_fin)->format('Y-m-d') : '-' }}
       </div>
     @endif
-    @if($factusValidated)
-      <div><strong>Validada:</strong> {{ is_string($factusValidated) ? $factusValidated : \Carbon\Carbon::parse($factusValidated)->format('Y-m-d H:i') }}</div>
+    @if($validadoDocumentoElectronico)
+      <div><strong>Validada:</strong> {{ is_string($validadoDocumentoElectronico) ? $validadoDocumentoElectronico : \Carbon\Carbon::parse($validadoDocumentoElectronico)->format('Y-m-d H:i') }}</div>
     @endif
-    @if($factusCufe)
+    @if($cufeDocumentoElectronico)
       <div><strong>CUFE:</strong></div>
-      <div class="break">{{ $factusCufe }}</div>
+      <div class="break">{{ $cufeDocumentoElectronico }}</div>
     @endif
-    @if($factusQrImage)
+    @if($qrImagenDocumentoElectronico)
       <div class="center" style="margin-top:6px;"><strong>QR DIAN</strong></div>
-      <img class="qr" src="{{ trim($factusQrImage) }}" alt="QR DIAN">
+      <img class="qr" src="{{ trim($qrImagenDocumentoElectronico) }}" alt="QR DIAN">
     @endif
-    @if($factusQr)
+    @if($qrTextoDocumentoElectronico)
       <div style="margin-top:5px;"><strong>Consulta DIAN:</strong></div>
-      <div class="break">{{ $factusQr }}</div>
-    @elseif($factusPublicUrl)
+      <div class="break">{{ $qrTextoDocumentoElectronico }}</div>
+    @elseif($urlDocumentoElectronico)
       <div style="margin-top:5px;"><strong>Documento:</strong></div>
-      <div class="break">{{ $factusPublicUrl }}</div>
+      <div class="break">{{ $urlDocumentoElectronico }}</div>
     @endif
   </div>
 @endif
@@ -175,7 +175,7 @@
 </div>
 
 @if($esElectronica)
-  <div class="advertencia">Factura electronica validada por Factus</div>
+  <div class="advertencia">Factura electronica validada</div>
 @else
   <div class="advertencia">Documento no fiscal - salida de mercancia</div>
 @endif

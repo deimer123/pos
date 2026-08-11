@@ -39,13 +39,24 @@ class FacturaImpresionData
         $esCredito = $tipoPago === 'credito';
         $vencCarbon = $esCredito && $factura->fecha_vencimiento ? Carbon::parse($factura->fecha_vencimiento) : null;
         $esElectronica = $factura->tipo_factura === 'electronica';
+
+        // El ticket no debe amarrarse a un proveedor de facturacion
+        // electronica en particular (Factus o el proveedor alterno UBL
+        // 2.1, ver App\Services\Ubl21): estas variables toman lo que haya
+        // quedado guardado en la factura, sin importar cual de los dos la
+        // valido -- ver App\Services\Ventas\FacturarVentaService::validarFacturaElectronica().
         $factusBill = data_get($factura->factus_response, 'data.bill', []);
-        $factusNumber = $factura->factus_number ?: data_get($factusBill, 'number');
-        $factusCufe = $factura->factus_cufe ?: data_get($factusBill, 'cufe');
-        $factusQr = data_get($factusBill, 'qr');
-        $factusQrImage = data_get($factusBill, 'qr_image');
-        $factusPublicUrl = data_get($factusBill, 'public_url');
-        $factusValidated = $factura->factus_validated_at ?: data_get($factusBill, 'validated');
+        $numeroDocumentoElectronico = $factura->factus_number ?: data_get($factusBill, 'number') ?: $factura->ubl21_document_number;
+        $cufeDocumentoElectronico = $factura->factus_cufe ?: data_get($factusBill, 'cufe') ?: $factura->ubl21_cufe;
+        $qrImagenDocumentoElectronico = data_get($factusBill, 'qr_image');
+        $qrTextoDocumentoElectronico = data_get($factusBill, 'qr') ?: $factura->ubl21_qr;
+        $urlDocumentoElectronico = data_get($factusBill, 'public_url') ?: $factura->ubl21_pdf_url;
+        $validadoDocumentoElectronico = $factura->factus_validated_at ?: data_get($factusBill, 'validated') ?: $factura->ubl21_validated_at;
+        $estadoDocumentoElectronico = $factura->factus_status ?: $factura->ubl21_status;
+        $resolucionDianElectronica = $config?->numero_resolucion ?: $config?->ubl21_resolution_number;
+        $prefijoElectronico = $config?->prefijo ?: $config?->ubl21_prefix;
+        $rangoDesdeElectronico = $config?->rango_desde ?: $config?->ubl21_numbering_from;
+        $rangoHastaElectronico = $config?->rango_hasta ?: $config?->ubl21_numbering_to;
         $fmtCant = function ($cantidad) {
             $value = (float) $cantidad;
 
@@ -87,12 +98,17 @@ class FacturaImpresionData
             'esCredito',
             'vencCarbon',
             'esElectronica',
-            'factusNumber',
-            'factusCufe',
-            'factusQr',
-            'factusQrImage',
-            'factusPublicUrl',
-            'factusValidated',
+            'numeroDocumentoElectronico',
+            'cufeDocumentoElectronico',
+            'qrTextoDocumentoElectronico',
+            'qrImagenDocumentoElectronico',
+            'urlDocumentoElectronico',
+            'validadoDocumentoElectronico',
+            'estadoDocumentoElectronico',
+            'resolucionDianElectronica',
+            'prefijoElectronico',
+            'rangoDesdeElectronico',
+            'rangoHastaElectronico',
             'fmtCant',
             'mostrarIvaSeparado',
             'subtotalBaseSalida',
