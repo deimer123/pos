@@ -81,6 +81,8 @@ class ConfiguracionEmpresa extends Model
         'ubl21_numbering_to',
         'ubl21_credit_note_prefix',
         'ubl21_credit_note_resolution_number',
+        'ubl21_mail_from_address',
+        'ubl21_mail_from_name',
     ];
 
     protected $casts = [

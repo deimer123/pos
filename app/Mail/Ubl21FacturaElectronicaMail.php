@@ -8,6 +8,7 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Http;
 
@@ -27,9 +28,18 @@ class Ubl21FacturaElectronicaMail extends Mailable
 
     public function envelope(): Envelope
     {
-        $empresa = $this->factura->configuracionEmpresa?->nombre_empresa ?: 'Facturación electrónica';
+        $configuracion = $this->factura->configuracionEmpresa;
+        $empresa = $configuracion?->nombre_empresa ?: 'Facturación electrónica';
+
+        // Cada empresa puede tener su propio remitente verificado (ej. en
+        // Brevo); si no lo configuro, cae al remitente global del .env
+        // (MAIL_FROM_ADDRESS/MAIL_FROM_NAME) via Envelope::from = null.
+        $from = filled($configuracion?->ubl21_mail_from_address)
+            ? new Address($configuracion->ubl21_mail_from_address, $configuracion->ubl21_mail_from_name ?: $empresa)
+            : null;
 
         return new Envelope(
+            from: $from,
             subject: "Factura electrónica {$this->factura->numero_visual} - {$empresa}",
         );
     }

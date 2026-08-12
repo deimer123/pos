@@ -405,6 +405,17 @@ class EmpresaResource extends Resource
                                 ->label('Resolucion nota credito')
                                 ->maxLength(50)
                                 ->helperText('Si se deja vacio, se usa la misma resolucion de la factura.'),
+
+                            Forms\Components\TextInput::make('ubl21_mail_from_address')
+                                ->label('Correo remitente de la factura')
+                                ->email()
+                                ->maxLength(255)
+                                ->helperText('Debe estar verificado como remitente en la cuenta de correo transaccional (ej. Brevo). Si se deja vacio, se usa el remitente global del sistema.'),
+
+                            Forms\Components\TextInput::make('ubl21_mail_from_name')
+                                ->label('Nombre remitente de la factura')
+                                ->maxLength(255)
+                                ->helperText('Nombre que vera el cliente como remitente del correo. Si se deja vacio, se usa el remitente global del sistema.'),
                         ])
                             ->visible(fn (Forms\Get $get): bool => $get('factura_electronica_proveedor') === 'ubl21')
                             ->columns(2)
@@ -898,6 +909,8 @@ class EmpresaResource extends Resource
             'ubl21_numbering_to',
             'ubl21_credit_note_prefix',
             'ubl21_credit_note_resolution_number',
+            'ubl21_mail_from_address',
+            'ubl21_mail_from_name',
         ])->filter(fn ($value, string $key) => $key !== 'ubl21_api_token' || filled($value))->all();
 
         foreach (['ubl21_numbering_from', 'ubl21_numbering_to'] as $integerKey) {
@@ -935,6 +948,8 @@ class EmpresaResource extends Resource
             'ubl21_numbering_to' => $config?->ubl21_numbering_to,
             'ubl21_credit_note_prefix' => $config?->ubl21_credit_note_prefix,
             'ubl21_credit_note_resolution_number' => $config?->ubl21_credit_note_resolution_number,
+            'ubl21_mail_from_address' => $config?->ubl21_mail_from_address,
+            'ubl21_mail_from_name' => $config?->ubl21_mail_from_name,
         ];
     }
 
