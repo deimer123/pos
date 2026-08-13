@@ -31,6 +31,11 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'anthropic' => [
+        'api_key' => env('ANTHROPIC_API_KEY'),
+        'model' => env('ANTHROPIC_MODEL', 'claude-haiku-4-5-20251001'),
+    ],
+
     'factus' => [
         'base_url' => env('FACTUS_BASE_URL', 'https://api-sandbox.factus.com.co'),
         'username' => env('FACTUS_USERNAME'),
