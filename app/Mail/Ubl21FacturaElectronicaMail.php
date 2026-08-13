@@ -3,7 +3,8 @@
 namespace App\Mail;
 
 use App\Models\Factura;
-use App\Services\Ubl21\Ubl21Client;
+use App\Support\FacturaImpresionData;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Address;
@@ -57,32 +58,23 @@ class Ubl21FacturaElectronicaMail extends Mailable
     }
 
     /**
+     * El PDF que entrega el proveedor alterno (urlinvoicepdf/regeneratepdf)
+     * viene con huecos que no controlamos (logo, telefono/correo de la
+     * empresa mal registrados en su onboarding, ciudad del cliente, rango y
+     * resolucion no se ven) -- en vez de depender de esa plantilla, se
+     * genera el PDF con la misma vista que ya usa el ticket impreso
+     * (facturas.imprimir-carta), que si tiene todos los datos correctos.
+     *
      * @return array<int, Attachment>
      */
     public function attachments(): array
     {
-        $configuracion = $this->factura->configuracionEmpresa;
-        $cufe = $this->factura->ubl21_cufe;
-        $documentNumber = $this->factura->ubl21_document_number;
-        $prefix = $configuracion?->ubl21_prefix;
-
-        if (! $configuracion || blank($cufe) || blank($documentNumber) || blank($prefix)) {
-            return [];
-        }
-
-        $number = str_starts_with($documentNumber, $prefix)
-            ? substr($documentNumber, strlen($prefix))
-            : $documentNumber;
-
         try {
-            $base64 = Ubl21Client::forEmpresa($configuracion)->pdfBase64($prefix, $number, $cufe);
-
-            if (blank($base64)) {
-                return [];
-            }
+            $data = ['factura' => $this->factura, ...FacturaImpresionData::calcular($this->factura)];
+            $pdf = Pdf::loadView('facturas.imprimir-carta', $data)->setPaper('letter');
 
             return [
-                Attachment::fromData(fn () => base64_decode($base64), "{$this->factura->numero_visual}.pdf")
+                Attachment::fromData(fn () => $pdf->output(), "{$this->factura->numero_visual}.pdf")
                     ->withMime('application/pdf'),
             ];
         } catch (\Throwable) {
