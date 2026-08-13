@@ -13,6 +13,7 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Storage;
+use ZipArchive;
 
 /**
  * El proveedor alterno de facturacion electronica (UBL 2.1) no envia el
@@ -66,17 +67,37 @@ class Ubl21FacturaElectronicaMail extends Mailable
      * genera el PDF con la misma vista que ya usa el ticket impreso
      * (facturas.imprimir-carta), que si tiene todos los datos correctos.
      *
-     * El XML se adjunta comprimido (.zip), igual que Factus -- el
-     * proveedor ya lo entrega asi (zipinvoicexml, base64) en la misma
-     * respuesta de la validacion, guardada en ubl21_response, sin
-     * necesidad de pedirlo aparte.
+     * Igual que Factus, se manda un solo .zip con el PDF y el XML firmado
+     * adentro (no dos adjuntos sueltos). El XML firmado (sin comprimir) ya
+     * viene en base64 en ubl21_response.invoicexml desde la validacion.
      *
      * @return array<int, Attachment>
      */
     public function attachments(): array
     {
-        $attachments = [];
+        $pdfBytes = $this->generarPdf();
 
+        $xmlBase64 = $this->factura->ubl21_response['invoicexml'] ?? null;
+        $xmlBytes = filled($xmlBase64) ? base64_decode($xmlBase64) : null;
+
+        if (! $pdfBytes && ! $xmlBytes) {
+            return [];
+        }
+
+        $zip = $this->comprimir($pdfBytes, $xmlBytes);
+
+        if (! $zip) {
+            return [];
+        }
+
+        return [
+            Attachment::fromData(fn () => $zip, "{$this->factura->numero_visual}.zip")
+                ->withMime('application/zip'),
+        ];
+    }
+
+    private function generarPdf(): ?string
+    {
         try {
             $data = ['factura' => $this->factura, ...FacturaImpresionData::calcular($this->factura)];
 
@@ -91,24 +112,39 @@ class Ubl21FacturaElectronicaMail extends Mailable
                 $data['logoUrl'] = 'data:'.$mime.';base64,'.base64_encode(Storage::disk('public')->get($logo));
             }
 
-            $pdf = Pdf::loadView('facturas.imprimir-carta', $data)->setPaper('letter');
-
-            $attachments[] = Attachment::fromData(fn () => $pdf->output(), "{$this->factura->numero_visual}.pdf")
-                ->withMime('application/pdf');
+            return Pdf::loadView('facturas.imprimir-carta', $data)->setPaper('letter')->output();
         } catch (\Throwable) {
-            //
+            return null;
         }
+    }
 
-        // El proveedor entrega el XML tambien ya comprimido (zipinvoicexml)
-        // -- se usa esa version en vez de invoicexml (sin comprimir) para
-        // que llegue igual que el correo propio de Factus (.zip).
-        $zipBase64 = $this->factura->ubl21_response['zipinvoicexml'] ?? null;
+    private function comprimir(?string $pdfBytes, ?string $xmlBytes): ?string
+    {
+        $numero = $this->factura->numero_visual;
+        $tmpPath = tempnam(sys_get_temp_dir(), 'ubl21-zip-');
 
-        if (filled($zipBase64)) {
-            $attachments[] = Attachment::fromData(fn () => base64_decode($zipBase64), "{$this->factura->numero_visual}.zip")
-                ->withMime('application/zip');
+        try {
+            $zip = new ZipArchive();
+
+            if ($zip->open($tmpPath, ZipArchive::OVERWRITE) !== true) {
+                return null;
+            }
+
+            if ($pdfBytes) {
+                $zip->addFromString("{$numero}.pdf", $pdfBytes);
+            }
+
+            if ($xmlBytes) {
+                $zip->addFromString("{$numero}.xml", $xmlBytes);
+            }
+
+            $zip->close();
+
+            return file_get_contents($tmpPath) ?: null;
+        } catch (\Throwable) {
+            return null;
+        } finally {
+            @unlink($tmpPath);
         }
-
-        return $attachments;
     }
 }
