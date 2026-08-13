@@ -2,10 +2,17 @@
 
 namespace App\Services\Asistente;
 
+use App\Models\Compra;
 use App\Models\ConfiguracionEmpresa;
 use App\Models\Factura;
 use App\Models\FacturaDetalle;
 use App\Models\Gasto;
+use App\Models\HotelHabitacion;
+use App\Models\HotelReserva;
+use App\Models\LiquidacionMecanico;
+use App\Models\Mecanico;
+use App\Models\ServicioTecnicoOrden;
+use App\Models\TallerOrden;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -208,6 +215,148 @@ class AsistenteDatosEmpresaService
             'desde' => $desde->toDateString(),
             'hasta' => $hasta->toDateString(),
             'total_gastos' => $total,
+        ];
+    }
+
+    /**
+     * Servicios vendidos (tipo_servicio no nulo en factura_detalles -- mismo
+     * marcador que usa App\Filament\Resources\ReporteServiciosResource),
+     * separados en propios vs de terceros.
+     */
+    public function resumenServicios(int $empresaId, string $periodo): array
+    {
+        [$desde, $hasta] = $this->rangoPeriodo($periodo);
+
+        $filas = FacturaDetalle::query()
+            ->whereNotNull('tipo_servicio')
+            ->whereHas('factura', fn ($q) => $q->where('empresa_id', $empresaId)
+                ->whereBetween('fecha', [$desde->startOfDay(), $hasta->endOfDay()]))
+            ->get(['subtotal', 'tipo_servicio', 'porcentaje_empresa']);
+
+        $propios = $filas->where('tipo_servicio', 'propio');
+        $terceros = $filas->where('tipo_servicio', 'tercero');
+        $gananciaEmpresa = $propios->sum(fn ($f) => (float) $f->subtotal * (float) $f->porcentaje_empresa / 100);
+
+        return [
+            'desde' => $desde->toDateString(),
+            'hasta' => $hasta->toDateString(),
+            'total_servicios' => (float) $filas->sum('subtotal'),
+            'total_servicios_propios' => (float) $propios->sum('subtotal'),
+            'total_servicios_terceros' => (float) $terceros->sum('subtotal'),
+            'ganancia_empresa_en_servicios_propios' => (float) $gananciaEmpresa,
+            'cantidad_servicios' => $filas->count(),
+        ];
+    }
+
+    /**
+     * Cuanto ha generado cada mecanico/tecnico/vendedor/mesero (segun rol,
+     * ver App\Models\Mecanico::ROL_*) en servicios/ventas asignadas en el
+     * periodo. Refleja lo mismo que App\Filament\Resources\ReporteMecanicosResource.
+     */
+    public function comisionesPorColaborador(int $empresaId, string $periodo, ?string $rol = null, int $limite = 15): array
+    {
+        [$desde, $hasta] = $this->rangoPeriodo($periodo);
+
+        $query = FacturaDetalle::query()
+            ->select(['mecanico_id', DB::raw('SUM(subtotal) as total_generado'), DB::raw('COUNT(*) as cantidad')])
+            ->whereNotNull('mecanico_id')
+            ->whereHas('factura', fn ($q) => $q->where('empresa_id', $empresaId)
+                ->whereBetween('fecha', [$desde->startOfDay(), $hasta->endOfDay()]))
+            ->whereHas('mecanico', function ($q) use ($empresaId, $rol) {
+                $q->where('empresa_id', $empresaId);
+                if ($rol) {
+                    $q->where('rol', $rol);
+                }
+            });
+
+        $filas = $query->groupBy('mecanico_id')
+            ->orderByDesc('total_generado')
+            ->limit($limite)
+            ->with('mecanico')
+            ->get();
+
+        return [
+            'desde' => $desde->toDateString(),
+            'hasta' => $hasta->toDateString(),
+            'colaboradores' => $filas->map(fn ($f) => [
+                'nombre' => optional($f->mecanico)->nombre ?? 'Sin nombre',
+                'rol' => optional($f->mecanico)->rol,
+                'total_generado' => (float) $f->total_generado,
+                'cantidad' => (int) $f->cantidad,
+            ])->all(),
+        ];
+    }
+
+    public function liquidacionesPendientes(int $empresaId, int $limite = 15): array
+    {
+        $liquidaciones = LiquidacionMecanico::query()
+            ->where('empresa_id', $empresaId)
+            ->where('estado', 'pendiente')
+            ->with('mecanico')
+            ->orderBy('fecha_hasta')
+            ->limit($limite)
+            ->get();
+
+        return [
+            'cantidad' => $liquidaciones->count(),
+            'total_pendiente' => (float) $liquidaciones->sum('monto_neto'),
+            'liquidaciones' => $liquidaciones->map(fn (LiquidacionMecanico $l) => [
+                'colaborador' => optional($l->mecanico)->nombre,
+                'desde' => $l->fecha_desde?->toDateString(),
+                'hasta' => $l->fecha_hasta?->toDateString(),
+                'monto_neto' => (float) $l->monto_neto,
+            ])->all(),
+        ];
+    }
+
+    public function resumenOrdenesTaller(int $empresaId): array
+    {
+        return [
+            'por_estado' => TallerOrden::where('empresa_id', $empresaId)
+                ->selectRaw('estado, COUNT(*) as cantidad')
+                ->groupBy('estado')
+                ->pluck('cantidad', 'estado')
+                ->all(),
+        ];
+    }
+
+    public function resumenOrdenesServicioTecnico(int $empresaId): array
+    {
+        return [
+            'por_estado' => ServicioTecnicoOrden::where('empresa_id', $empresaId)
+                ->selectRaw('estado, COUNT(*) as cantidad')
+                ->groupBy('estado')
+                ->pluck('cantidad', 'estado')
+                ->all(),
+        ];
+    }
+
+    public function resumenHotel(int $empresaId): array
+    {
+        return [
+            'reservas_por_estado' => HotelReserva::where('empresa_id', $empresaId)
+                ->selectRaw('estado, COUNT(*) as cantidad')
+                ->groupBy('estado')
+                ->pluck('cantidad', 'estado')
+                ->all(),
+            'habitaciones_activas' => HotelHabitacion::where('empresa_id', $empresaId)->where('activa', true)->count(),
+        ];
+    }
+
+    public function resumenCompras(int $empresaId, string $periodo): array
+    {
+        [$desde, $hasta] = $this->rangoPeriodo($periodo);
+
+        $query = Compra::where('empresa_id', $empresaId)
+            ->whereBetween('fecha', [$desde->toDateString(), $hasta->toDateString()])
+            ->where('estado', '!=', 'anulada');
+
+        return [
+            'desde' => $desde->toDateString(),
+            'hasta' => $hasta->toDateString(),
+            'total_comprado' => (float) (clone $query)->sum('total'),
+            'saldo_pendiente_a_proveedores' => (float) (clone $query)->sum('saldo'),
+            'cantidad_compras' => (clone $query)->count(),
         ];
     }
 

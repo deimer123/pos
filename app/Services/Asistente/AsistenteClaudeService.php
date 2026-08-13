@@ -144,6 +144,13 @@ class AsistenteClaudeService
                 'facturas_pendientes_pago' => $this->datos->facturasPendientesPago($empresaId, $input['limite'] ?? 20),
                 'mejores_clientes' => $this->datos->mejoresClientes($empresaId, $input['periodo'] ?? 'mes', $input['limite'] ?? 5),
                 'gastos_periodo' => $this->datos->gastosPeriodo($empresaId, $input['periodo'] ?? 'mes'),
+                'resumen_servicios' => $this->datos->resumenServicios($empresaId, $input['periodo'] ?? 'mes'),
+                'comisiones_por_colaborador' => $this->datos->comisionesPorColaborador($empresaId, $input['periodo'] ?? 'mes', $input['rol'] ?? null, $input['limite'] ?? 15),
+                'liquidaciones_pendientes' => $this->datos->liquidacionesPendientes($empresaId, $input['limite'] ?? 15),
+                'resumen_ordenes_taller' => $this->datos->resumenOrdenesTaller($empresaId),
+                'resumen_ordenes_servicio_tecnico' => $this->datos->resumenOrdenesServicioTecnico($empresaId),
+                'resumen_hotel' => $this->datos->resumenHotel($empresaId),
+                'resumen_compras' => $this->datos->resumenCompras($empresaId, $input['periodo'] ?? 'mes'),
                 default => ['error' => 'Herramienta desconocida.'],
             };
         } catch (\Throwable $e) {
@@ -158,7 +165,12 @@ class AsistenteClaudeService
         return <<<'PROMPT'
         Eres el asistente interno de un sistema de punto de venta (POS) colombiano.
         Le respondes SOLO al dueño/administrador de UNA empresa especifica sobre datos
-        de SU propio negocio: ventas, productos, inventario, clientes, cartera y gastos.
+        de SU propio negocio: ventas, productos, inventario, clientes, cartera, gastos,
+        servicios, comisiones de mecanicos/tecnicos/vendedores, ordenes de taller,
+        ordenes de servicio tecnico de celulares, hotel (reservas/habitaciones) y
+        compras a proveedores. No todas las empresas usan todos estos modulos -- si una
+        herramienta no aplica al tipo de negocio del usuario, dilo con naturalidad en
+        vez de forzar una respuesta.
 
         Reglas estrictas:
         - Solo puedes responder preguntas informativas sobre el negocio del usuario,
@@ -252,6 +264,63 @@ class AsistenteClaudeService
             [
                 'name' => 'gastos_periodo',
                 'description' => 'Total de gastos/salidas de caja registrados en un periodo.',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'periodo' => ['type' => 'string', 'enum' => $periodoEnum],
+                    ],
+                ],
+            ],
+            [
+                'name' => 'resumen_servicios',
+                'description' => 'Total vendido en servicios (propios y de terceros) en un periodo, y la ganancia de la empresa por los servicios propios.',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'periodo' => ['type' => 'string', 'enum' => $periodoEnum],
+                    ],
+                ],
+            ],
+            [
+                'name' => 'comisiones_por_colaborador',
+                'description' => 'Cuanto ha generado cada mecanico, tecnico, vendedor o mesero en un periodo (servicios/ventas asignadas a su nombre).',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'periodo' => ['type' => 'string', 'enum' => $periodoEnum],
+                        'rol' => ['type' => 'string', 'enum' => ['mecanico', 'tecnico', 'vendedor', 'mesero'], 'description' => 'Filtra por tipo de colaborador. Si no se da, incluye todos.'],
+                        'limite' => ['type' => 'integer', 'description' => 'Por defecto 15'],
+                    ],
+                ],
+            ],
+            [
+                'name' => 'liquidaciones_pendientes',
+                'description' => 'Liquidaciones de comisiones a mecanicos/tecnicos que todavia no se han pagado.',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'limite' => ['type' => 'integer', 'description' => 'Por defecto 15'],
+                    ],
+                ],
+            ],
+            [
+                'name' => 'resumen_ordenes_taller',
+                'description' => 'Cuantas ordenes de taller (mecanica) hay por cada estado (pendiente, en_proceso, listo, entregado, cancelado).',
+                'input_schema' => ['type' => 'object', 'properties' => (object) []],
+            ],
+            [
+                'name' => 'resumen_ordenes_servicio_tecnico',
+                'description' => 'Cuantas ordenes de servicio tecnico de celulares hay por cada estado (pendiente, en_proceso, listo, entregado, cancelado).',
+                'input_schema' => ['type' => 'object', 'properties' => (object) []],
+            ],
+            [
+                'name' => 'resumen_hotel',
+                'description' => 'Reservas de hotel por estado (reservada, checkin, checkout, cancelada) y cuantas habitaciones activas hay.',
+                'input_schema' => ['type' => 'object', 'properties' => (object) []],
+            ],
+            [
+                'name' => 'resumen_compras',
+                'description' => 'Total comprado a proveedores y saldo pendiente por pagar en un periodo.',
                 'input_schema' => [
                     'type' => 'object',
                     'properties' => [
