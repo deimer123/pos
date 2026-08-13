@@ -12,6 +12,7 @@ use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * El proveedor alterno de facturacion electronica (UBL 2.1) no envia el
@@ -71,6 +72,18 @@ class Ubl21FacturaElectronicaMail extends Mailable
     {
         try {
             $data = ['factura' => $this->factura, ...FacturaImpresionData::calcular($this->factura)];
+
+            // dompdf tiene enable_remote=false (config/dompdf.php) por
+            // seguridad -- no descarga imagenes por URL, asi que el logo
+            // (que FacturaImpresionData entrega como URL publica, pensado
+            // para el navegador) hay que pasarlo como data URI para que se
+            // vea en este PDF generado en servidor.
+            $logo = $data['config']?->logo;
+            if ($logo && Storage::disk('public')->exists($logo)) {
+                $mime = Storage::disk('public')->mimeType($logo) ?: 'image/png';
+                $data['logoUrl'] = 'data:'.$mime.';base64,'.base64_encode(Storage::disk('public')->get($logo));
+            }
+
             $pdf = Pdf::loadView('facturas.imprimir-carta', $data)->setPaper('letter');
 
             return [
