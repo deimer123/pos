@@ -66,10 +66,10 @@ class Ubl21FacturaElectronicaMail extends Mailable
      * genera el PDF con la misma vista que ya usa el ticket impreso
      * (facturas.imprimir-carta), que si tiene todos los datos correctos.
      *
-     * El XML si se adjunta tal cual lo entrega el proveedor (viene en
-     * base64 en la misma respuesta de la validacion, ya guardada en
-     * ubl21_response -- no hace falta pedirlo aparte) -- es el documento
-     * UBL 2.1 firmado, igual al que adjunta Factus en su propio correo.
+     * El XML se adjunta comprimido (.zip), igual que Factus -- el
+     * proveedor ya lo entrega asi (zipinvoicexml, base64) en la misma
+     * respuesta de la validacion, guardada en ubl21_response, sin
+     * necesidad de pedirlo aparte.
      *
      * @return array<int, Attachment>
      */
@@ -99,11 +99,14 @@ class Ubl21FacturaElectronicaMail extends Mailable
             //
         }
 
-        $xmlBase64 = $this->factura->ubl21_response['invoicexml'] ?? null;
+        // El proveedor entrega el XML tambien ya comprimido (zipinvoicexml)
+        // -- se usa esa version en vez de invoicexml (sin comprimir) para
+        // que llegue igual que el correo propio de Factus (.zip).
+        $zipBase64 = $this->factura->ubl21_response['zipinvoicexml'] ?? null;
 
-        if (filled($xmlBase64)) {
-            $attachments[] = Attachment::fromData(fn () => base64_decode($xmlBase64), "{$this->factura->numero_visual}.xml")
-                ->withMime('application/xml');
+        if (filled($zipBase64)) {
+            $attachments[] = Attachment::fromData(fn () => base64_decode($zipBase64), "{$this->factura->numero_visual}.zip")
+                ->withMime('application/zip');
         }
 
         return $attachments;
