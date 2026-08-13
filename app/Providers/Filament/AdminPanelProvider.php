@@ -119,12 +119,6 @@ class AdminPanelProvider extends PanelProvider
 )
         ->renderHook(
     'panels::body.end',
-    fn () => auth()->check() && auth()->user()->hasRole('admin_empresa')
-        ? view('livewire.asistente-chat-mount')
-        : ''
-)
-        ->renderHook(
-    'panels::body.end',
     fn () => '
         <script>
             (function () {
