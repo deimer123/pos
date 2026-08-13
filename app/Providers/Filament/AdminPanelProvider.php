@@ -119,9 +119,26 @@ class AdminPanelProvider extends PanelProvider
 )
         ->renderHook(
     'panels::body.end',
-    fn () => auth()->check() && auth()->user()->hasRole('admin_empresa')
-        ? view('livewire.asistente-chat-mount')
-        : ''
+    function () {
+        $chatError = null;
+        $chatHtml = '';
+
+        if (auth()->check() && auth()->user()->hasRole('admin_empresa')) {
+            try {
+                $chatHtml = view('livewire.asistente-chat-mount')->render();
+            } catch (\Throwable $e) {
+                $chatError = $e->getMessage();
+            }
+        }
+
+        $debug = '<div style="position:fixed;bottom:0;left:0;right:0;background:red;color:white;padding:8px;z-index:99999;font-size:13px;word-break:break-all;">DEBUG asistente: check='
+            .(auth()->check() ? 'si' : 'no')
+            .' rol_admin_empresa='.(auth()->check() && auth()->user()->hasRole('admin_empresa') ? 'si' : 'no')
+            .' error='.($chatError ?: 'ninguno')
+            .'</div>';
+
+        return $debug.$chatHtml;
+    }
 )
         ->renderHook(
     'panels::body.end',
