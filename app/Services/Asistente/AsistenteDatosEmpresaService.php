@@ -49,19 +49,52 @@ class AsistenteDatosEmpresaService
             ->where('empresa_id', $empresaId)
             ->whereBetween('fecha', [Carbon::parse($desde)->startOfDay(), Carbon::parse($hasta)->endOfDay()]);
 
-        $total = (float) (clone $query)->sum('total');
-        $totalContado = (float) (clone $query)->where('tipo_pago', 'contado')->sum('total');
-        $totalCredito = (float) (clone $query)->where('tipo_pago', 'credito')->sum('total');
-        $cantidad = (clone $query)->count();
+        $idsTodos = (clone $query)->pluck('id')->toArray();
+        $idsContado = Factura::whereIn('id', $idsTodos)->where('tipo_pago', 'contado')->pluck('id')->toArray();
+        $idsCredito = Factura::whereIn('id', $idsTodos)->where('tipo_pago', 'credito')->pluck('id')->toArray();
 
         return [
             'desde' => $desde,
             'hasta' => $hasta,
-            'total_vendido' => $total,
-            'total_contado' => $totalContado,
-            'total_credito' => $totalCredito,
-            'cantidad_facturas' => $cantidad,
+            'total_vendido' => $this->ventasNetas($idsTodos),
+            'total_contado' => $this->ventasNetas($idsContado),
+            'total_credito' => $this->ventasNetas($idsCredito),
+            'cantidad_facturas' => count($idsTodos),
         ];
+    }
+
+    /**
+     * Total neto de un conjunto de facturas, igual al que muestran las
+     * tarjetas "Ventas del dia/mes" del dashboard (App\Filament\Widgets\StatsOverview):
+     * el total bruto de las facturas SIN los servicios (no son venta de
+     * producto) ni el item pasarela "10001" (reembolso a terceros sin
+     * margen). Se replica aqui a proposito para que el asistente nunca
+     * diga una cifra distinta a la que ya ve el usuario en el dashboard.
+     */
+    private function ventasNetas(array $facturaIds): float
+    {
+        if (empty($facturaIds)) {
+            return 0.0;
+        }
+
+        $bruto = (float) Factura::whereIn('id', $facturaIds)->sum('total');
+
+        $servicios = (float) DB::table('factura_detalles as fd')
+            ->join('facturas as f', 'f.id', '=', 'fd.factura_id')
+            ->join('products as p', function ($join) {
+                $join->on('p.id_producto', '=', 'fd.producto_id')
+                    ->on('p.empresa_id', '=', 'f.empresa_id');
+            })
+            ->whereIn('fd.factura_id', $facturaIds)
+            ->where('p.tipo_producto', 'servicio')
+            ->sum('fd.subtotal');
+
+        $passthrough = (float) DB::table('factura_detalles as fd')
+            ->whereIn('fd.factura_id', $facturaIds)
+            ->where('fd.producto_id', '10001')
+            ->sum('fd.subtotal');
+
+        return $bruto - $servicios - $passthrough;
     }
 
     public function productoMasVendido(int $empresaId, string $periodo, int $limite = 5): array
