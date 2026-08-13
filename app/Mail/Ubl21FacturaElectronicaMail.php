@@ -3,14 +3,14 @@
 namespace App\Mail;
 
 use App\Models\Factura;
+use App\Services\Ubl21\Ubl21Client;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
-use Illuminate\Mail\Mailables\Address;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Http;
 
 /**
  * El proveedor alterno de facturacion electronica (UBL 2.1) no envia el
@@ -61,21 +61,28 @@ class Ubl21FacturaElectronicaMail extends Mailable
      */
     public function attachments(): array
     {
-        $urlPdf = $this->factura->ubl21_pdf_url;
+        $configuracion = $this->factura->configuracionEmpresa;
+        $cufe = $this->factura->ubl21_cufe;
+        $documentNumber = $this->factura->ubl21_document_number;
+        $prefix = $configuracion?->ubl21_prefix;
 
-        if (blank($urlPdf)) {
+        if (! $configuracion || blank($cufe) || blank($documentNumber) || blank($prefix)) {
             return [];
         }
 
-        try {
-            $response = Http::timeout(20)->get($urlPdf);
+        $number = str_starts_with($documentNumber, $prefix)
+            ? substr($documentNumber, strlen($prefix))
+            : $documentNumber;
 
-            if ($response->failed()) {
+        try {
+            $base64 = Ubl21Client::forEmpresa($configuracion)->pdfBase64($prefix, $number, $cufe);
+
+            if (blank($base64)) {
                 return [];
             }
 
             return [
-                Attachment::fromData(fn () => $response->body(), "{$this->factura->numero_visual}.pdf")
+                Attachment::fromData(fn () => base64_decode($base64), "{$this->factura->numero_visual}.pdf")
                     ->withMime('application/pdf'),
             ];
         } catch (\Throwable) {

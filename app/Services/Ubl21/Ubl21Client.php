@@ -84,6 +84,16 @@ class Ubl21Client
         return $this->post('/credit-note', $payload);
     }
 
+    // El proveedor no entrega una URL descargable para el PDF (urlinvoicepdf
+    // en la respuesta de emitirFactura es solo el nombre del archivo, sin
+    // dominio) -- hay que pedirlo aparte, autenticado, y llega en base64.
+    public function pdfBase64(string $prefix, string $number, string $cufe): ?string
+    {
+        $response = $this->post("/regeneratepdf/{$prefix}/{$number}/{$cufe}");
+
+        return $response['filebase64'] ?? null;
+    }
+
     public function consecutivoActual(int $tipoDocumentoId, ?string $prefijo = null): array
     {
         $path = "/invoice/current_number/{$tipoDocumentoId}";
