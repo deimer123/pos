@@ -48,6 +48,12 @@ class PlanResource extends Resource
                 ->required()
                 ->maxLength(100),
 
+            Forms\Components\Textarea::make('descripcion')
+                ->label('Descripción')
+                ->helperText('Se muestra al super_admin y en el correo de activación que recibe la empresa al crearla.')
+                ->maxLength(1000)
+                ->columnSpanFull(),
+
             Forms\Components\TextInput::make('meses')
                 ->label('Duración (meses)')
                 ->numeric()
