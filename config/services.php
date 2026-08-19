@@ -31,6 +31,10 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'brevo' => [
+        'key' => env('BREVO_API_KEY'),
+    ],
+
     'factus' => [
         'base_url' => env('FACTUS_BASE_URL', 'https://api-sandbox.factus.com.co'),
         'username' => env('FACTUS_USERNAME'),

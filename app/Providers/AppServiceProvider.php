@@ -3,11 +3,13 @@
 namespace App\Providers;
 
 use App\Http\Responses\LoginResponse as CustomLoginResponse;
+use App\Mail\Transport\BrevoApiTransport;
 use App\Models\ConfiguracionEmpresa;
 use App\Models\ProductoVariante;
 use App\Models\User;
 use App\Observers\ProductoVarianteObserver;
 use App\Observers\UserObserver;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Fortify\Contracts\LoginResponse;
@@ -29,6 +31,8 @@ class AppServiceProvider extends ServiceProvider
     {
         User::observe(UserObserver::class);
         ProductoVariante::observe(ProductoVarianteObserver::class);
+
+        Mail::extend('brevo', fn () => new BrevoApiTransport((string) config('services.brevo.key')));
 
         View::composer('layouts.pos', function ($view) {
             if (! auth()->check()) {
