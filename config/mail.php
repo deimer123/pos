@@ -79,6 +79,14 @@ return [
             'transport' => 'array',
         ],
 
+        // API HTTP de Brevo (puerto 443) en vez de SMTP (puerto 587) --
+        // ver App\Mail\Transport\BrevoApiTransport. Se activa con
+        // MAIL_MAILER=brevo + BREVO_API_KEY en el .env, para droplets donde
+        // el puerto SMTP saliente esta bloqueado por el proveedor.
+        'brevo' => [
+            'transport' => 'brevo',
+        ],
+
         'failover' => [
             'transport' => 'failover',
             'mailers' => [
