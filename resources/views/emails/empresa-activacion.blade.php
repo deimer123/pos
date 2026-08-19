@@ -5,6 +5,7 @@ Tu empresa ya fue creada y activada en {{ config('app.name') }}. Estos son los d
 
 @component('mail::panel')
 **Usuario (correo):** {{ $empresa->email }}
+
 **Contraseña:** {{ $password }}
 @endcomponent
 
