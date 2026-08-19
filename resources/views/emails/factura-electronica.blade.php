@@ -14,7 +14,7 @@
 <body>
   <div class="box">
     <div class="empresa">{{ $empresa?->nombre_empresa ?? 'Empresa' }}</div>
-    <p>Hola {{ $cliente?->nombre ?? 'cliente' }}, adjuntamos tu factura electrónica.</p>
+    <p>{{ $empresa?->nombre_empresa ?? 'Esta empresa' }} emitió esta factura electrónica a nombre de <strong>{{ $cliente?->nombre ?? 'cliente' }}</strong>.</p>
 
     <div>Factura: <strong>{{ $factura->numero_visual }}</strong></div>
     <div class="total">Total: ${{ number_format($factura->total, 0, ',', '.') }}</div>
