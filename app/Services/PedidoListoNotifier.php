@@ -19,15 +19,25 @@ class PedidoListoNotifier
 
         $orden->loadMissing('mesa', 'usuario');
 
-        $usuarios = User::where('empresa_id', $orden->empresa_id)
-            ->where(function ($q) use ($orden) {
-                $q->role('cajero');
+        // Los cajeros (empleados) tienen su propio 'empresa_id' apuntando al
+        // id del dueño. El dueño (admin_empresa) NO tiene 'empresa_id' en su
+        // propia fila -- el es la empresa, identificado por su propio id
+        // (igual que en User::getEmpleadosQueManeja). Por eso el mesero que
+        // tomo el pedido se busca por separado: puede ser un empleado
+        // (empresa_id = orden.empresa_id) o el propio dueño (id = orden.empresa_id).
+        $cajeros = User::where('empresa_id', $orden->empresa_id)->role('cajero')->pluck('id');
 
-                if ($orden->usuario_id) {
-                    $q->orWhere('id', $orden->usuario_id);
-                }
-            })
-            ->pluck('id');
+        $mesero = collect();
+        if ($orden->usuario_id) {
+            $mesero = User::where('id', $orden->usuario_id)
+                ->where(function ($q) use ($orden) {
+                    $q->where('empresa_id', $orden->empresa_id)
+                        ->orWhere('id', $orden->empresa_id);
+                })
+                ->pluck('id');
+        }
+
+        $usuarios = $cajeros->merge($mesero)->unique();
 
         if ($usuarios->isEmpty()) {
             return;
