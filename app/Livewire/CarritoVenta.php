@@ -34,6 +34,7 @@ class CarritoVenta extends Component
     public bool $usaDomicilios = false;
     public bool $esMesero = false;
     public bool $esMesaDomicilio = false;
+    public bool $imprimeComandaEnLugarDeCocina = false;
 
     // Turion (terminal offline): facturar solo se permite con conexion al
     // droplet -- sin ella la factura fiscal no se puede generar (ver
@@ -502,6 +503,7 @@ private function limpiarUtf8Array(array $datos): array
 
     $config = ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();
     $this->usaDomicilios = (bool)($config?->usa_domicilios ?? false);
+    $this->imprimeComandaEnLugarDeCocina = (bool)($config?->imprime_comanda_en_lugar_de_cocina ?? false);
     $user = auth()->user();
     $this->esMesero = $user->hasRole('mesero') && !$user->hasAnyRole(['cajero', 'admin_empresa']);
     $rol = ConfiguracionEmpresa::rolComisionActual($config);
@@ -5224,7 +5226,15 @@ public function uiCreditoActual(): array
         $this->ordenDomDireccion        = $domDireccion;
         $this->ordenDomCostoDomicilio   = $costoDomicilio;
         $this->ordenDomCostoDesechables = $costoEmpaque;
-        $this->dispatch('success', '📤 Comanda enviada a cocina');
+
+        if ($this->imprimeComandaEnLugarDeCocina) {
+            // Negocio sin pantalla de cocina: en vez de depender de /cocina,
+            // se imprime la comanda de una vez (mesa y domicilio por igual).
+            $this->dispatch('open-print', url: route('pos.comanda.imprimir', $orden->id));
+            $this->dispatch('success', '🖨️ Comanda enviada a imprimir');
+        } else {
+            $this->dispatch('success', '📤 Comanda enviada a cocina');
+        }
     }
 
     public function mesaPreFacturar(): void

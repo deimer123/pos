@@ -174,6 +174,14 @@ class ConfiguracionEmpresaResource extends Resource
                         ]),
 
                     Forms\Components\Grid::make(1)
+                        ->extraAttributes(['class' => 'producto-linea-2b'])
+                        ->schema([
+                            Forms\Components\Toggle::make('imprime_comanda_en_lugar_de_cocina')
+                                ->label('Imprimir comanda en vez de enviar a pantalla de cocina')
+                                ->helperText('Para negocios sin pantalla de cocina: al presionar "Enviar cocina" (en mesas y domicilios) se imprime la comanda con los productos y las observaciones en lugar de enviarla a la pantalla de /cocina. Facturar sigue funcionando igual.'),
+                        ]),
+
+                    Forms\Components\Grid::make(1)
                         ->extraAttributes(['class' => 'producto-linea-3'])
                         ->schema([
                             Forms\Components\TextInput::make('porcentaje_propina')

@@ -675,10 +675,10 @@
                         📴 Sin conexión: guarda y factura al volver
                     </span>
                 @endif
-                <button x-on:click="window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '', $wire.get('ordenDomDireccion') || $wire.get('clienteDireccion') || '', $wire.get('ordenDomTelefono') || $wire.get('clienteTelefono') || '', $wire.get('ordenDomNombre') || '', $wire.get('ordenDomObservaciones') || '', $wire.get('ordenDomCostoDomicilio') || 0, $wire.get('ordenDomCostoDesechables') || 0, $wire.get('ordenEstadoActual') || 'abierta', $wire.get('ordenTipoPedido') || 'mesa', $wire.get('usaDomicilios') || false, $wire.get('esMesero') || false, $wire.get('esMesaDomicilio') || false)"
+                <button x-on:click="window.posMesaEnviarCocinaModal($wire.get('clienteSeleccionadoNombre') || '', $wire.get('ordenDomDireccion') || $wire.get('clienteDireccion') || '', $wire.get('ordenDomTelefono') || $wire.get('clienteTelefono') || '', $wire.get('ordenDomNombre') || '', $wire.get('ordenDomObservaciones') || '', $wire.get('ordenDomCostoDomicilio') || 0, $wire.get('ordenDomCostoDesechables') || 0, $wire.get('ordenEstadoActual') || 'abierta', $wire.get('ordenTipoPedido') || 'mesa', $wire.get('usaDomicilios') || false, $wire.get('esMesero') || false, $wire.get('esMesaDomicilio') || false, $wire.get('imprimeComandaEnLugarDeCocina') || false)"
                     class="pos-mesa-total-btn"
                     style="background:#2563eb; color:white; border:none; border-radius:9999px; padding:0 14px; height:34px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">
-                    📤 Enviar cocina
+                    {{ $imprimeComandaEnLugarDeCocina ? '🖨️ Imprimir comanda' : '📤 Enviar cocina' }}
                 </button>
                 @if ((auth()->user()->hasRole('cajero') || auth()->user()->hasRole('admin_empresa')) && auth()->user()->puedeVerBotonPos('facturar'))
                 @if ($esTurion && ! $puedeFacturarTurion)
@@ -2720,7 +2720,9 @@
         Livewire.dispatch('abrir-facturar');
     };
 
-    window.posMesaEnviarCocinaModal = function (clienteNombreArg, clienteDireccionArg, clienteTelefonoArg, ordenDomNombreArg, ordenDomObsArg, ordenDomCostoDomArg, ordenDomCostoDesechArg, ordenEstadoArg, ordenTipoArg, usaDomiciliosArg, esMeseroArg, esMesaDomicilioArg) {
+    window.posMesaEnviarCocinaModal = function (clienteNombreArg, clienteDireccionArg, clienteTelefonoArg, ordenDomNombreArg, ordenDomObsArg, ordenDomCostoDomArg, ordenDomCostoDesechArg, ordenEstadoArg, ordenTipoArg, usaDomiciliosArg, esMeseroArg, esMesaDomicilioArg, imprimeComandaArg) {
+        const textoEnviar = imprimeComandaArg ? '🖨️ Imprimir comanda' : '📤 Enviar a cocina';
+
         if (!window.Swal) { Livewire.dispatch('mesa-enviar-cocina'); return; }
 
         // Mesa normal (no domicilio): enviar directo sin modal
@@ -2805,7 +2807,7 @@
                 </div>
             `,
             showCancelButton: true,
-            confirmButtonText: '📤 Enviar a cocina',
+            confirmButtonText: textoEnviar,
             cancelButtonText: 'Cancelar',
             confirmButtonColor: '#2563eb',
             didOpen: () => {

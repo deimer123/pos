@@ -513,6 +513,14 @@ Route::middleware(['auth', 'no.cocina.en.pos'])->group(function () {
         return view('tickets.cuenta-mesa', compact('mesa', 'orden', 'items', 'total', 'config'));
     })->name('pos.mesa.cuenta');
 
+    Route::get('/pos/comanda/{orden}/imprimir', function (\App\Models\OrdenMesa $orden) {
+        $empresaId = auth()->user()->getEmpresaActualId();
+        abort_if($orden->empresa_id !== $empresaId, 403);
+        $orden->load(['items.producto', 'mesa']);
+        $config = \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->first();
+        return view('tickets.comanda', ['orden' => $orden, 'mesa' => $orden->mesa, 'config' => $config]);
+    })->name('pos.comanda.imprimir');
+
 });
 
 Route::middleware(['auth'])->group(function () {
