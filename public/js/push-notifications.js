@@ -21,6 +21,16 @@
         return document.querySelector('meta[name="csrf-token"]')?.content || '';
     }
 
+    function esIOS() {
+        return /iPad|iPhone|iPod/.test(navigator.userAgent)
+            || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    }
+
+    function esStandalone() {
+        return window.matchMedia('(display-mode: standalone)').matches
+            || window.navigator.standalone === true;
+    }
+
     function reproducirSonidoAlerta() {
         try {
             const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -58,6 +68,10 @@
     }
 
     async function suscribir() {
+        if (esIOS() && !esStandalone()) {
+            return { ok: false, motivo: 'ios_no_instalado' };
+        }
+
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
             return { ok: false, motivo: 'no_soportado' };
         }

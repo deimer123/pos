@@ -36,6 +36,12 @@
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
     <link rel="manifest" href="{{ asset('manifest.json') }}">
+    {{-- iOS solo permite notificaciones push si la pagina fue agregada a la
+         pantalla de inicio (modo standalone) -- estos meta tags son los que
+         Safari usa para reconocerla como "instalable" correctamente. --}}
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Punto de Venta">
     @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/pos-catalogo-offline.js', 'resources/js/pos-offline-queue.js'])
     @livewireStyles
     <link rel="stylesheet" href="{{ asset('css/pos-pro.css') }}?v={{ filemtime(public_path('css/pos-pro.css')) }}">
@@ -62,7 +68,7 @@
                 </span>
                 @if($u->hasAnyRole(['mesero', 'cajero', 'admin_empresa']))
                 <button type="button" id="btn-activar-notificaciones"
-                    onclick="window.PosPushNotifications && window.PosPushNotifications.suscribir().then(function(r){ window.actualizarBotonNotificaciones && window.actualizarBotonNotificaciones(); if(!r.ok && r.motivo==='permiso_denegado'){ alert('Debes permitir las notificaciones en el navegador para recibir el aviso de pedido listo.'); } })"
+                    onclick="window.PosPushNotifications && window.PosPushNotifications.suscribir().then(function(r){ window.actualizarBotonNotificaciones && window.actualizarBotonNotificaciones(); if(r.ok) return; if(r.motivo==='permiso_denegado'){ alert('Debes permitir las notificaciones en el navegador para recibir el aviso de pedido listo.'); } else if(r.motivo==='ios_no_instalado'){ alert('En iPhone, Apple exige instalar esta pagina en la pantalla de inicio antes de poder activar notificaciones:\n\n1. Toca el boton Compartir (el cuadrado con la flecha hacia arriba) en Safari\n2. Elige \'Agregar a pantalla de inicio\'\n3. Abre el POS desde ese icono nuevo (no desde Safari)\n4. Ahi si toca \'Activar avisos\' de nuevo\n\nRequiere iPhone con iOS 16.4 o mas nuevo.'); } else if(r.motivo==='no_soportado'){ alert('Este navegador no soporta notificaciones push.'); } })"
                     style="background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.3); border-radius:20px; padding:3px 10px; font-size:12px; color:white; cursor:pointer; white-space:nowrap;">
                     🔕 Activar avisos
                 </button>
