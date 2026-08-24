@@ -27,21 +27,31 @@
             const ctx = new Ctx();
             const ahora = ctx.currentTime;
 
-            [0, 0.35].forEach((retraso) => {
+            // Timbre tipo "campana de cocina": 4 repique en par de tonos
+            // (agudo/grave alternado), mas fuerte y mas largo que un beep
+            // simple para que se note incluso con el volumen bajo.
+            const patron = [
+                { inicio: 0, frecuencia: 1046.5, duracion: 0.28 },
+                { inicio: 0.3, frecuencia: 784, duracion: 0.28 },
+                { inicio: 0.75, frecuencia: 1046.5, duracion: 0.28 },
+                { inicio: 1.05, frecuencia: 784, duracion: 0.4 },
+            ];
+
+            patron.forEach(({ inicio, frecuencia, duracion }) => {
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.value = 880;
-                gain.gain.setValueAtTime(0.0001, ahora + retraso);
-                gain.gain.exponentialRampToValueAtTime(0.5, ahora + retraso + 0.02);
-                gain.gain.exponentialRampToValueAtTime(0.0001, ahora + retraso + 0.3);
+                osc.type = 'triangle';
+                osc.frequency.value = frecuencia;
+                gain.gain.setValueAtTime(0.0001, ahora + inicio);
+                gain.gain.exponentialRampToValueAtTime(0.9, ahora + inicio + 0.03);
+                gain.gain.exponentialRampToValueAtTime(0.0001, ahora + inicio + duracion);
                 osc.connect(gain);
                 gain.connect(ctx.destination);
-                osc.start(ahora + retraso);
-                osc.stop(ahora + retraso + 0.32);
+                osc.start(ahora + inicio);
+                osc.stop(ahora + inicio + duracion + 0.02);
             });
 
-            setTimeout(() => ctx.close(), 1000);
+            setTimeout(() => ctx.close(), 2000);
         } catch (e) {
             // Ignorar: navegadores que bloquean audio sin interaccion previa.
         }
