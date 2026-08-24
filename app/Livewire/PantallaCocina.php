@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\OrdenMesa;
 use App\Models\OrdenMesaItem;
+use App\Services\PedidoListoNotifier;
 use Livewire\Component;
 
 class PantallaCocina extends Component
@@ -38,10 +39,29 @@ class PantallaCocina extends Component
 
     public function marcarListo(int $itemId): void
     {
-        OrdenMesaItem::where('id', $itemId)
+        $item = OrdenMesaItem::where('id', $itemId)
             ->where('empresa_id', $this->empresaId())
             ->whereIn('estado_cocina', ['enviado', 'preparando'])
-            ->update(['estado_cocina' => 'listo']);
+            ->first();
+
+        if (! $item) {
+            return;
+        }
+
+        $item->update(['estado_cocina' => 'listo']);
+
+        $orden = OrdenMesa::find($item->orden_mesa_id);
+
+        if (! $orden) {
+            return;
+        }
+
+        $itemsCocina = $orden->items()->whereIn('estado_cocina', ['enviado', 'preparando', 'listo'])->get();
+        $todosListos = $itemsCocina->isNotEmpty() && $itemsCocina->every(fn ($i) => $i->estado_cocina === 'listo');
+
+        if ($todosListos) {
+            app(PedidoListoNotifier::class)->notificarOrdenLista($orden);
+        }
     }
 
     public function marcarEntregada(int $ordenId): void

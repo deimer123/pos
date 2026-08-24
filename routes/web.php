@@ -14,6 +14,7 @@ use App\Http\Controllers\PosSyncController;
 use App\Http\Controllers\EmparejarTerminalController;
 use App\Http\Controllers\ActivarLicenciaController;
 use App\Http\Controllers\EmparejarTerminalLocalController;
+use App\Http\Controllers\PushSubscriptionController;
 
 
 
@@ -459,6 +460,9 @@ Route::middleware('auth')->post('/register-tab', function (\Illuminate\Http\Requ
     }
     return response()->json(['ok' => true]);
 });
+
+Route::middleware('auth')->post('/push/subscribe', [PushSubscriptionController::class, 'store']);
+Route::middleware('auth')->post('/push/unsubscribe', [PushSubscriptionController::class, 'destroy']);
 
 Route::middleware('auth')->get('/check-tab', function (\Illuminate\Http\Request $request) {
     $user = auth()->user();

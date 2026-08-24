@@ -60,6 +60,13 @@
                 <span title="{{ $nombreConRol }}" style="background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.3); border-radius:20px; padding:3px 12px; font-size:12px; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:260px;">
                     👤 {{ $nombreConRol }}
                 </span>
+                @if($u->hasAnyRole(['mesero', 'cajero', 'admin_empresa']))
+                <button type="button" id="btn-activar-notificaciones"
+                    onclick="window.PosPushNotifications && window.PosPushNotifications.suscribir().then(function(r){ window.actualizarBotonNotificaciones && window.actualizarBotonNotificaciones(); if(!r.ok && r.motivo==='permiso_denegado'){ alert('Debes permitir las notificaciones en el navegador para recibir el aviso de pedido listo.'); } })"
+                    style="background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.3); border-radius:20px; padding:3px 10px; font-size:12px; color:white; cursor:pointer; white-space:nowrap;">
+                    🔕 Activar avisos
+                </button>
+                @endif
                 @php
                     // ?modo=normal (boton "Punto de Venta" en /eleccion) fuerza el
                     // POS base sin ningun boton de taller/hotel, sin importar la
@@ -499,6 +506,32 @@
             }
         })();
     </script>
+
+    @auth
+    {{-- Notificaciones push de "pedido listo" para meseros/cajeros --}}
+    <script>window.vapidPublicKey = @json(config('services.webpush.public_key'));</script>
+    <script src="{{ asset('js/push-notifications.js') }}?v={{ filemtime(public_path('js/push-notifications.js')) }}"></script>
+    <script>
+        window.actualizarBotonNotificaciones = function () {
+            const btn = document.getElementById('btn-activar-notificaciones');
+            if (!btn || !window.PosPushNotifications) return;
+            window.PosPushNotifications.estaActivo().then((activo) => {
+                btn.textContent = activo ? '🔔 Avisos activados' : '🔕 Activar avisos';
+            });
+        };
+
+        window.addEventListener('load', () => {
+            setTimeout(() => window.actualizarBotonNotificaciones && window.actualizarBotonNotificaciones(), 500);
+
+            // Si el usuario ya habia dado permiso antes, renovar la suscripcion
+            // en silencio (sin pedir permiso de nuevo) para que quede activa
+            // en este dispositivo tambien.
+            if (window.Notification && Notification.permission === 'granted' && window.PosPushNotifications) {
+                window.PosPushNotifications.suscribir().then(() => window.actualizarBotonNotificaciones());
+            }
+        });
+    </script>
+    @endauth
 
     {{-- Indicador de ventas pendientes de sincronizar (guardadas mientras
          no habia conexion) --}}

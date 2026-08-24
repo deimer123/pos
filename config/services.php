@@ -45,4 +45,10 @@ return [
         'send_email' => env('FACTUS_SEND_EMAIL', false),
     ],
 
+    'webpush' => [
+        'subject' => env('VAPID_SUBJECT', 'mailto:soporte@sistemapo.com'),
+        'public_key' => env('VAPID_PUBLIC_KEY'),
+        'private_key' => env('VAPID_PRIVATE_KEY'),
+    ],
+
 ];
