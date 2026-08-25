@@ -221,6 +221,15 @@ public function confirmar(): void
 
                 // 🔥 5. GUARDAR
                 $producto->save();
+
+                // 🔥 6. PROPAGAR EL NUEVO COSTO A LAS RECETAS QUE USAN ESTE
+                // PRODUCTO COMO INGREDIENTE (y de ahi al producto final que
+                // vende cada receta), sin depender del boton manual
+                // "Actualizar costo del producto" en RecetaResource.
+                \App\Services\Recetas\RecetaCosteoService::actualizarRecetasQueUsanIngrediente(
+                    $producto->id,
+                    $this->empresa_id
+                );
             }
         }
 

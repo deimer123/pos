@@ -58,41 +58,23 @@ class RecetaResource extends Resource
     }
 
     /**
-     * Costo con IVA de un producto (ingrediente o producto vendido). Misma
-     * logica que CarritoVenta::costoConIvaProducto() -- prefiere la
-     * columna precomputada costo_iva y, si no hay, calcula
-     * precio_costo + IVA de iva_venta.
+     * Costo con IVA de un producto (ingrediente o producto vendido).
+     * Delega en RecetaCosteoService, que usa la misma formula para el
+     * recalculo automatico al confirmar una compra.
      */
     protected static function costoConIvaProducto(?Product $producto): float
     {
-        if (! $producto) {
-            return 0;
-        }
-
-        $costoIva = (float) ($producto->costo_iva ?? 0);
-        if ($costoIva > 0) {
-            return round($costoIva, 2);
-        }
-
-        $costo = (float) ($producto->precio_costo ?? 0);
-        $iva = (float) ($producto->iva_venta ?? 0);
-
-        return round($costo + ($costo * $iva / 100), 2);
+        return \App\Services\Recetas\RecetaCosteoService::costoConIvaProducto($producto);
     }
 
     /**
      * Cantidad de un ingrediente convertida a la unidad "grande" en la que
-     * normalmente se fija su costo (kg, litro) -- no existe una tabla de
-     * conversion en el sistema, asi que se asume que gramo/mililitro son
-     * siempre la fraccion /1000 de kilogramo/litro. Unidad y porcion se
-     * usan tal cual (el costo del producto ya esta fijado por unidad).
+     * normalmente se fija su costo (kg, litro). Delega en
+     * RecetaCosteoService (ver ahi la nota sobre la conversion /1000).
      */
     protected static function cantidadEnUnidadDeCosto(float $cantidad, string $unidad): float
     {
-        return match ($unidad) {
-            'gr', 'ml' => $cantidad / 1000,
-            default => $cantidad,
-        };
+        return \App\Services\Recetas\RecetaCosteoService::cantidadEnUnidadDeCosto($cantidad, $unidad);
     }
 
     public static function form(Form $form): Form
