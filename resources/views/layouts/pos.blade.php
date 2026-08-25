@@ -66,13 +66,6 @@
                 <span title="{{ $nombreConRol }}" style="background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.3); border-radius:20px; padding:3px 12px; font-size:12px; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:260px;">
                     👤 {{ $nombreConRol }}
                 </span>
-                @if($u->hasAnyRole(['mesero', 'cajero', 'admin_empresa']))
-                <button type="button" id="btn-activar-notificaciones"
-                    onclick="window.PosPushNotifications && window.PosPushNotifications.suscribir().then(function(r){ window.actualizarBotonNotificaciones && window.actualizarBotonNotificaciones(); if(r.ok) return; if(r.motivo==='permiso_denegado'){ alert('Debes permitir las notificaciones en el navegador para recibir el aviso de pedido listo.'); } else if(r.motivo==='ios_no_instalado'){ alert('En iPhone, Apple exige instalar esta pagina en la pantalla de inicio antes de poder activar notificaciones:\n\n1. Toca el boton Compartir (el cuadrado con la flecha hacia arriba) en Safari\n2. Elige \'Agregar a pantalla de inicio\'\n3. Abre el POS desde ese icono nuevo (no desde Safari)\n4. Ahi si toca \'Activar avisos\' de nuevo\n\nRequiere iPhone con iOS 16.4 o mas nuevo.'); } else if(r.motivo==='no_soportado'){ alert('Este navegador no soporta notificaciones push.'); } })"
-                    style="background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.3); border-radius:20px; padding:3px 10px; font-size:12px; color:white; cursor:pointer; white-space:nowrap;">
-                    🔕 Activar avisos
-                </button>
-                @endif
                 @php
                     // ?modo=normal (boton "Punto de Venta" en /eleccion) fuerza el
                     // POS base sin ningun boton de taller/hotel, sin importar la
@@ -84,8 +77,20 @@
                     $usaTallerLayout = ! $modoNormal && (bool) ($cfgEmpresa?->usa_taller ?? false) && $u->hasAnyRole(['taller', 'admin_empresa']);
                     $usaServicioTecnicoLayout = ! $modoNormal && (bool) ($cfgEmpresa?->usa_servicio_tecnico ?? false) && $u->hasAnyRole(['servicio_tecnico', 'admin_empresa']);
                     $usaMesasLayout  = (bool) ($cfgEmpresa?->usa_mesas ?? false);
+                    $usaCocinaLayout = (bool) ($cfgEmpresa?->usa_cocina ?? false);
                     $usaHotelLayout  = ! $modoNormal && (bool) ($cfgEmpresa?->usa_hotel ?? false);
                 @endphp
+                {{-- El aviso push es de "pedido listo" (PedidoListoNotifier), que solo
+                     se dispara desde la pantalla de cocina sobre pedidos de mesa/domicilio
+                     -- no tiene ningun efecto en un negocio tipo tienda/almacen sin mesas
+                     ni cocina, asi que el boton ni se muestra ahi. --}}
+                @if($usaMesasLayout && $usaCocinaLayout && $u->hasAnyRole(['mesero', 'cajero', 'admin_empresa']))
+                <button type="button" id="btn-activar-notificaciones"
+                    onclick="window.PosPushNotifications && window.PosPushNotifications.suscribir().then(function(r){ window.actualizarBotonNotificaciones && window.actualizarBotonNotificaciones(); if(r.ok) return; if(r.motivo==='permiso_denegado'){ alert('Debes permitir las notificaciones en el navegador para recibir el aviso de pedido listo.'); } else if(r.motivo==='ios_no_instalado'){ alert('En iPhone, Apple exige instalar esta pagina en la pantalla de inicio antes de poder activar notificaciones:\n\n1. Toca el boton Compartir (el cuadrado con la flecha hacia arriba) en Safari\n2. Elige \'Agregar a pantalla de inicio\'\n3. Abre el POS desde ese icono nuevo (no desde Safari)\n4. Ahi si toca \'Activar avisos\' de nuevo\n\nRequiere iPhone con iOS 16.4 o mas nuevo.'); } else if(r.motivo==='no_soportado'){ alert('Este navegador no soporta notificaciones push.'); } })"
+                    style="background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.3); border-radius:20px; padding:3px 10px; font-size:12px; color:white; cursor:pointer; white-space:nowrap;">
+                    🔕 Activar avisos
+                </button>
+                @endif
                 @if($usaTallerLayout)
                     @if($usaMesasLayout)
                         {{-- En modo mesas: el toggle está dentro de panel-mesas --}}
