@@ -65,27 +65,41 @@ class ProductBulkImport implements ToCollection, WithHeadingRow, WithMultipleShe
                 continue; // fila de ejemplo de la plantilla, se ignora sin avisar
             }
 
+            // El codigo se reserva aqui, apenas se sabe que la fila es un
+            // producto real (no vacia, no la fila de ejemplo) -- ANTES de
+            // cualquier validacion que pueda hacer continue. Asi el codigo
+            // de cada fila coincide siempre con su posicion entre los
+            // productos reales del excel, aunque esa fila en particular
+            // termine fallando por otro motivo (nombre repetido, falta
+            // precio, etc). Si el codigo solo se reservara al crear el
+            // producto (como antes), una fila que fallara dejaba su codigo
+            // sin usar y la fila siguiente se quedaba con ESE codigo en vez
+            // del que le tocaba -- un desfase grave para quien ya escribio
+            // los codigos a mano sobre los productos fisicos en el mismo
+            // orden del excel.
+            $codigoFila = $siguienteCodigo++;
+
             $precioCosto = $this->numero($row['precio_costo'] ?? null);
             $precioVentaExcel = $this->numero($row['precio_de_venta'] ?? null);
             $utilidadExcel = $this->numero($row['utilidad'] ?? null);
 
             if ($nombre === '') {
-                $this->errores[] = "Fila {$numeroFila}: falta el nombre del producto.";
+                $this->errores[] = "Fila {$numeroFila}: falta el nombre del producto. (código {$codigoFila} quedó sin usar)";
                 continue;
             }
 
             if ($precioCosto === null) {
-                $this->errores[] = "Fila {$numeroFila} ({$nombre}): falta el Precio Costo.";
+                $this->errores[] = "Fila {$numeroFila} ({$nombre}): falta el Precio Costo. (código {$codigoFila} quedó sin usar)";
                 continue;
             }
 
             if ($precioVentaExcel === null && $utilidadExcel === null) {
-                $this->errores[] = "Fila {$numeroFila} ({$nombre}): falta la Utilidad (o el Precio de Venta).";
+                $this->errores[] = "Fila {$numeroFila} ({$nombre}): falta la Utilidad (o el Precio de Venta). (código {$codigoFila} quedó sin usar)";
                 continue;
             }
 
             if (Product::where('empresa_id', $this->empresaId)->where('descripcion_larga', $nombre)->exists()) {
-                $this->errores[] = "Fila {$numeroFila}: ya existe un producto llamado \"{$nombre}\" en tu empresa.";
+                $this->errores[] = "Fila {$numeroFila}: ya existe un producto llamado \"{$nombre}\" en tu empresa. (código {$codigoFila} quedó sin usar)";
                 continue;
             }
 
@@ -119,7 +133,7 @@ class ProductBulkImport implements ToCollection, WithHeadingRow, WithMultipleShe
 
             $producto = Product::create([
                 'empresa_id' => $this->empresaId,
-                'id_producto' => $siguienteCodigo,
+                'id_producto' => $codigoFila,
                 'descripcion_larga' => $nombre,
                 'id_proveedor' => $idProveedor,
                 'id_familia1' => $idFamilia1,
@@ -146,7 +160,6 @@ class ProductBulkImport implements ToCollection, WithHeadingRow, WithMultipleShe
             ]);
 
             $this->creados++;
-            $siguienteCodigo++;
         }
     }
 
