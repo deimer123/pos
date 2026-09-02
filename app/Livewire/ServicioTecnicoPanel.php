@@ -350,6 +350,24 @@ class ServicioTecnicoPanel extends Component
     // trabajo ya se editaba directo en la tarjeta (ver guardarNotaTrabajo()
     // mas abajo, que ya existia).
 
+    // Livewire ya sube el archivo a almacenamiento temporal en cuanto se
+    // selecciona (wire:model), y solo AL TERMINAR llama a este hook con la
+    // propiedad ya lista -- antes se disparaba subirFoto()/subirVideo() con
+    // onchange="@this.call(...)" en el input, que corria en paralelo a esa
+    // subida y no esperaba a que terminara, asi que la miniatura de una foto
+    // solo aparecia cuando ya se habia seleccionado la siguiente (carga
+    // "atrasada" un paso). updated{Prop}() se dispara automaticamente
+    // despues de que la subida real termino, sin esa carrera.
+    public function updatedFotoTemp(): void
+    {
+        $this->subirFoto();
+    }
+
+    public function updatedVideoTemp(): void
+    {
+        $this->subirVideo();
+    }
+
     public function subirFoto(): void
     {
         if (! $this->ordenId) return;

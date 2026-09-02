@@ -179,6 +179,21 @@ class ServicioTecnicoOrdenPos extends Component
 
     // ─── Fotos ───────────────────────────────────────────────────────────────
 
+    // Se disparan automaticamente cuando Livewire termina de subir el
+    // archivo a almacenamiento temporal (wire:model) -- antes se llamaba a
+    // subirFoto()/subirVideo() con onchange="@this.call(...)" en el input,
+    // que corria en paralelo a esa subida y no esperaba a que terminara, asi
+    // que la miniatura de una foto solo aparecia al seleccionar la siguiente.
+    public function updatedFotoTemp(): void
+    {
+        $this->subirFoto();
+    }
+
+    public function updatedVideoTemp(): void
+    {
+        $this->subirVideo();
+    }
+
     public function subirFoto(): void
     {
         $this->validate(['fotoTemp' => 'image|max:5120']);

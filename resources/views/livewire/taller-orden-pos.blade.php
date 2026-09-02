@@ -178,7 +178,7 @@
                     <label style="width:70px;height:70px;background:#e0fce7;border:2px dashed #86efac;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-direction:column;gap:2px;">
                         <span style="font-size:20px;">📷</span>
                         <span style="font-size:9px;color:#16a34a;font-weight:600;">Agregar</span>
-                        <input type="file" wire:model="fotoTemp" accept="image/*" style="display:none;" onchange="@this.call('subirFoto')">
+                        <input type="file" wire:model="fotoTemp" accept="image/*" style="display:none;">
                     </label>
                 </div>
             </div>
