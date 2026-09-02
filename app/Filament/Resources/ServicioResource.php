@@ -100,13 +100,21 @@ class ServicioResource extends Resource
                                     return function ($attribute, $value, $fail) use ($get) {
                                         $idProducto = $get('id_producto');
                                         $empresaId = (int) auth()->user()->getEmpresaActualId();
+                                        $mecanicoId = $get('mecanico_id');
+
+                                        // El mismo servicio (ej. "Cambio de pantalla") lo puede
+                                        // ejecutar mas de un mecanico/tecnico, cada uno con su
+                                        // propia fila (precio y % propios) -- solo se bloquea si
+                                        // ya existe ESE nombre para el MISMO responsable.
                                         $query = Product::where('descripcion_larga', $value)
-                                            ->where('empresa_id', $empresaId);
+                                            ->where('empresa_id', $empresaId)
+                                            ->where('tipo_producto', 'servicio')
+                                            ->when($mecanicoId, fn ($q) => $q->where('mecanico_id', $mecanicoId), fn ($q) => $q->whereNull('mecanico_id'));
                                         if ($idProducto) {
                                             $query->where('id_producto', '<>', $idProducto);
                                         }
                                         if ($query->exists()) {
-                                            $fail('Ese nombre ya está registrado en tu empresa, por favor escoge otro.');
+                                            $fail('Ese nombre ya está registrado para este mecánico/técnico en tu empresa, por favor escoge otro.');
                                         }
                                     };
                                 }),
