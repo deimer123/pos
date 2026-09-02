@@ -372,6 +372,31 @@
                             </div>
                             @endforeach
                             @endif
+
+                            {{-- Evidencia de solo lectura: el boton "Editar" (que abre el
+                                 modal con la galeria completa) se oculta para ordenes
+                                 cobradas (ver "Acciones" mas abajo), asi que sin esto no
+                                 habia forma de ver las fotos/video de una orden ya cobrada. --}}
+                            @if(!empty($orden->fotos))
+                            <label style="font-size:9px; font-weight:700; color:#0f766e; text-transform:uppercase; display:block; margin:6px 0 3px;">📸 Evidencia fotográfica</label>
+                            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:4px;">
+                                @foreach($orden->fotos as $foto)
+                                <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($foto) }}" alt="Foto"
+                                    style="width:56px; height:56px; object-fit:cover; border-radius:6px; border:2px solid #d1fae5; cursor:pointer;"
+                                    onclick="window.open('{{ \Illuminate\Support\Facades\Storage::disk('public')->url($foto) }}','_blank')">
+                                @endforeach
+                            </div>
+                            @endif
+
+                            @if(!empty($orden->videos))
+                            <label style="font-size:9px; font-weight:700; color:#0f766e; text-transform:uppercase; display:block; margin:6px 0 3px;">🎥 Video</label>
+                            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                @foreach($orden->videos as $video)
+                                <video src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($video) }}" controls preload="metadata"
+                                    style="width:110px; height:70px; object-fit:cover; border-radius:6px; border:2px solid #d1fae5; background:black;"></video>
+                                @endforeach
+                            </div>
+                            @endif
                         </div>
                     </div>
 
