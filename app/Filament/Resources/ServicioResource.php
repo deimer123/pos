@@ -50,8 +50,17 @@ class ServicioResource extends Resource
         return (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_servicios');
     }
 
+    protected static function usaServicioTecnico(): bool
+    {
+        $empresaId = auth()->user()->getEmpresaActualId();
+
+        return (bool) \App\Models\ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('usa_servicio_tecnico');
+    }
+
     public static function form(Form $form): Form
     {
+        $esServicioTecnico = static::usaServicioTecnico();
+
         return $form->schema([
             Hidden::make('empresa_id')
                 ->default(fn () => auth()->user()->getEmpresaActualId())
@@ -110,7 +119,9 @@ class ServicioResource extends Resource
                                 ->label('Tipo de servicio')
                                 ->native(false)
                                 ->options([
-                                    'propio'  => '🔧 Propio (lo hace la empresa / sus mecánicos)',
+                                    'propio'  => $esServicioTecnico
+                                        ? '🔧 Propio (lo hace la empresa / sus técnicos)'
+                                        : '🔧 Propio (lo hace la empresa / sus mecánicos)',
                                     'tercero' => '🤝 De tercero (no es ganancia de la empresa)',
                                 ])
                                 ->required()
@@ -140,10 +151,10 @@ class ServicioResource extends Resource
                                 ->helperText('Puede variar de un servicio a otro.'),
 
                             Select::make('mecanico_id')
-                                ->label('Mecánico')
+                                ->label($esServicioTecnico ? 'Técnico' : 'Mecánico')
                                 ->native(false)
                                 ->options(fn () => Mecanico::where('empresa_id', auth()->user()->getEmpresaActualId())
-                                    ->where('rol', Mecanico::ROL_MECANICO)
+                                    ->where('rol', $esServicioTecnico ? Mecanico::ROL_TECNICO : Mecanico::ROL_MECANICO)
                                     ->where('activo', true)
                                     ->pluck('nombre', 'id'))
                                 ->searchable()
@@ -195,7 +206,7 @@ class ServicioResource extends Resource
                     ->color(fn ($state) => $state === 'propio' ? 'success' : 'warning'),
 
                 Tables\Columns\TextColumn::make('mecanico.nombre')
-                    ->label('Mecánico / Tercero')
+                    ->label(static::usaServicioTecnico() ? 'Técnico / Tercero' : 'Mecánico / Tercero')
                     ->formatStateUsing(fn ($state, $record) => $record->tipo_servicio === 'tercero' ? ($record->tercero_nombre ?: '-') : ($state ?: '-')),
 
                 Tables\Columns\TextColumn::make('porcentaje_empresa')
