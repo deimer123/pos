@@ -174,6 +174,16 @@ class TallerOrdenPos extends Component
 
     // ─── Fotos ───────────────────────────────────────────────────────────────
 
+    // Se dispara automaticamente cuando Livewire termina de subir el
+    // archivo a almacenamiento temporal (wire:model) -- antes se llamaba a
+    // subirFoto() con onchange="@this.call(...)" en el input, que corria en
+    // paralelo a esa subida y no esperaba a que terminara, asi que la
+    // miniatura de una foto solo aparecia al seleccionar la siguiente.
+    public function updatedFotoTemp(): void
+    {
+        $this->subirFoto();
+    }
+
     public function subirFoto(): void
     {
         $this->validate(['fotoTemp' => 'image|max:5120']);
