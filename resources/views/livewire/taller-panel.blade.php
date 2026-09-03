@@ -368,6 +368,17 @@
                             </div>
                             @endforeach
                             @endif
+
+                            @if(!empty($orden->fotos))
+                            <label style="font-size:9px; font-weight:700; color:#0f766e; text-transform:uppercase; display:block; margin:6px 0 3px;">📸 Evidencia fotográfica</label>
+                            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                @foreach($orden->fotos as $foto)
+                                <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($foto) }}" alt="Foto"
+                                    style="width:56px; height:56px; object-fit:cover; border-radius:6px; border:2px solid #d1fae5; cursor:pointer;"
+                                    onclick="window.open('{{ \Illuminate\Support\Facades\Storage::disk('public')->url($foto) }}','_blank')">
+                                @endforeach
+                            </div>
+                            @endif
                         </div>
                     </div>
 
