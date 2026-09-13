@@ -247,9 +247,10 @@
         .manual-inner p { color: var(--ink-soft); margin: 0; max-width: 46ch; }
 
         /* ---------- Contacto (ticket) ---------- */
+        .tickets { display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; }
         .ticket {
             background: var(--card); border: 1px solid var(--line); border-radius: 4px;
-            max-width: 420px; margin: 0 auto; box-shadow: var(--shadow); position: relative;
+            max-width: 420px; width: 100%; margin: 0; box-shadow: var(--shadow); position: relative;
         }
         .ticket::before {
             content: ''; position: absolute; top: -8px; left: 0; right: 0; height: 8px;
@@ -261,6 +262,7 @@
         .ticket-head { text-align: center; padding: 26px 24px 16px; border-bottom: 1px dashed var(--line); }
         .ticket-head .mono { font-size: .72rem; letter-spacing: .1em; color: var(--ink-faint); text-transform: uppercase; }
         .ticket-head h3 { font-size: 1.3rem; margin-top: 6px; }
+        .ticket-head .role { font-size: .82rem; color: var(--ink-soft); margin-top: 2px; }
         .ticket-rows { padding: 20px 24px; display: grid; gap: 18px; }
         .ticket-row { display: flex; align-items: flex-start; gap: 14px; text-decoration: none; color: var(--ink); }
         .ticket-row .ico { color: var(--accent); flex-shrink: 0; margin-top: 2px; }
@@ -538,29 +540,51 @@
                 <h2>Hablemos de tu negocio</h2>
                 <p>Escríbeme directo y te cuento cómo funciona el sistema en un negocio como el tuyo.</p>
             </div>
-            <div class="ticket">
-                <div class="ticket-head">
-                    <div class="mono">Sistema POS · Contacto</div>
-                    <h3>Deimer Villamizar</h3>
-                </div>
-                <div class="ticket-rows">
-                    <a href="https://wa.me/573142627819" target="_blank" rel="noopener" class="ticket-row link">
-                        <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21l1.65-4.95A9 9 0 1112 21a8.96 8.96 0 01-4.95-1.5L3 21z"/></svg></span>
-                        <span><span class="label">WhatsApp</span><br><span class="value">+57 314 262 7819</span></span>
-                    </a>
-                    <a href="mailto:deimervillamizar@gmail.com" class="ticket-row link">
-                        <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M22 6l-10 7L2 6"/></svg></span>
-                        <span><span class="label">Correo</span><br><span class="value">deimervillamizar@gmail.com</span></span>
-                    </a>
-                    <div class="ticket-row">
-                        <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
-                        <span><span class="label">Ubicación</span><br><span class="value">Saravena, Arauca</span></span>
+            <div class="tickets">
+                <div class="ticket">
+                    <div class="ticket-head">
+                        <div class="mono">Sistema POS · Contacto</div>
+                        <h3>Deimer Villamizar</h3>
+                        <div class="role">Ingeniero de Sistemas</div>
+                    </div>
+                    <div class="ticket-rows">
+                        <a href="https://wa.me/573142627819" target="_blank" rel="noopener" class="ticket-row link">
+                            <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21l1.65-4.95A9 9 0 1112 21a8.96 8.96 0 01-4.95-1.5L3 21z"/></svg></span>
+                            <span><span class="label">WhatsApp</span><br><span class="value">+57 314 262 7819</span></span>
+                        </a>
+                        <div class="ticket-row">
+                            <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+                            <span><span class="label">Ubicación</span><br><span class="value">Saravena, Arauca</span></span>
+                        </div>
+                    </div>
+                    <div class="ticket-foot">
+                        <div class="ticket-total">
+                            <span>GRACIAS POR ESCRIBIR</span>
+                            <span>*** ***</span>
+                        </div>
                     </div>
                 </div>
-                <div class="ticket-foot">
-                    <div class="ticket-total">
-                        <span>GRACIAS POR ESCRIBIR</span>
-                        <span>*** ***</span>
+                <div class="ticket">
+                    <div class="ticket-head">
+                        <div class="mono">Sistema POS · Contacto</div>
+                        <h3>Carlos Rojas</h3>
+                        <div class="role">Ingeniero de Sistemas</div>
+                    </div>
+                    <div class="ticket-rows">
+                        <a href="https://wa.me/573116940065" target="_blank" rel="noopener" class="ticket-row link">
+                            <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21l1.65-4.95A9 9 0 1112 21a8.96 8.96 0 01-4.95-1.5L3 21z"/></svg></span>
+                            <span><span class="label">WhatsApp</span><br><span class="value">+57 311 694 0065</span></span>
+                        </a>
+                        <div class="ticket-row">
+                            <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+                            <span><span class="label">Ubicación</span><br><span class="value">Saravena, Arauca</span></span>
+                        </div>
+                    </div>
+                    <div class="ticket-foot">
+                        <div class="ticket-total">
+                            <span>GRACIAS POR ESCRIBIR</span>
+                            <span>*** ***</span>
+                        </div>
                     </div>
                 </div>
             </div>
