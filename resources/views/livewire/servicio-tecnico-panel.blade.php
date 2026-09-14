@@ -392,8 +392,15 @@
                             <label style="font-size:9px; font-weight:700; color:#0f766e; text-transform:uppercase; display:block; margin:6px 0 3px;">🎥 Video</label>
                             <div style="display:flex; gap:6px; flex-wrap:wrap;">
                                 @foreach($orden->videos as $video)
-                                <video src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($video) }}" controls preload="metadata"
-                                    style="width:110px; height:70px; object-fit:cover; border-radius:6px; border:2px solid #d1fae5; background:black;"></video>
+                                {{-- Sin "controls": a este ancho Chrome colapsa los
+                                     controles nativos en un menu "..." que puede salir
+                                     recortado/fuera de pantalla. Igual que las fotos,
+                                     un clic abre el video en pestana nueva. --}}
+                                <div style="position:relative; width:110px; height:70px; cursor:pointer;" onclick="window.open('{{ \Illuminate\Support\Facades\Storage::disk('public')->url($video) }}','_blank')">
+                                    <video src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($video) }}" preload="metadata" muted
+                                        style="width:100%; height:100%; object-fit:cover; border-radius:6px; border:2px solid #d1fae5; background:black;"></video>
+                                    <span style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:20px; color:white; text-shadow:0 0 4px rgba(0,0,0,.8); pointer-events:none;">▶</span>
+                                </div>
                                 @endforeach
                             </div>
                             @endif
