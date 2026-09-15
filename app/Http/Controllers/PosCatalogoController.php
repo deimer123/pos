@@ -47,7 +47,7 @@ class PosCatalogoController extends Controller
         $productos = Product::query()
             ->where('empresa_id', $empresaId)
             ->where('id_producto', '!=', '10001')
-            ->with(['alternateCodes', 'mecanico'])
+            ->with(['alternateCodes', 'mecanico', 'familia1'])
             ->get()
             ->map(function (Product $producto) use ($recetasActivas, $productosConCombo, $variantesPorProducto, $lotesPorProducto) {
                 $vendePor = $producto->vende_por ?? 'unidad';
@@ -116,6 +116,8 @@ class PosCatalogoController extends Controller
                 return [
                     'id_producto' => $producto->id_producto,
                     'descripcion_larga' => $producto->descripcion_larga,
+                    'id_familia1' => $producto->id_familia1,
+                    'familia_nombre' => optional($producto->familia1)->nombre,
                     'precio_venta1' => (float) $producto->precio_venta1,
                     'existencias' => (float) $producto->existencias,
                     'foto_url' => $fotoUrl,
@@ -151,8 +153,19 @@ class PosCatalogoController extends Controller
             ? null
             : (float) (ConfiguracionEmpresa::where('empresa_id', $empresaId)->value('descuento_maximo_permitido') ?? 100.0);
 
+        // Departamentos (familias) para las pestañas de filtro del POS, en el
+        // mismo espiritu que las del catalogo publico: solo las que de
+        // verdad tienen algun producto en este listado.
+        $familias = $productos
+            ->filter(fn (array $p) => $p['id_familia1'] !== null)
+            ->unique('id_familia1')
+            ->map(fn (array $p) => ['id' => $p['id_familia1'], 'nombre' => $p['familia_nombre'] ?? 'Otros'])
+            ->sortBy('nombre')
+            ->values();
+
         return response()->json([
             'productos' => $productos,
+            'familias' => $familias,
             'descuento_maximo_permitido' => $descuentoMaximoPermitido,
             'sincronizado_en' => now()->toIso8601String(),
             'empresa_id' => $empresaId,
