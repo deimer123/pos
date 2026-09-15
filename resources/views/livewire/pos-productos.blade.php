@@ -45,6 +45,10 @@
                     </button>
                 @endforeach
             </div>
+
+            {{-- Departamentos (familias): se llenan por JS a partir del
+                 catalogo sincronizado, igual que en el catalogo publico. --}}
+            <div id="pos-filtros-familia" style="display:none; gap:6px; margin-top:2px; overflow-x:auto; padding-bottom:8px;"></div>
         </div>
 
         <div style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 1rem;">
@@ -152,8 +156,10 @@
                 const botonesFiltro = document.querySelectorAll('#pos-filtros-tipo [data-filtro-tipo]');
                 const botonActualizar = document.getElementById('pos-actualizar-catalogo');
                 const infoSync = document.getElementById('pos-catalogo-sync-info');
+                const contenedorFamilias = document.getElementById('pos-filtros-familia');
 
                 let filtroTipoActual = '';
+                let familiaActivaId = null;
                 let debounceTimer = null;
 
                 function wireComponent() {
@@ -392,7 +398,7 @@
                 }
 
                 function renderizar() {
-                    const resultados = Catalogo.buscarLocal(inputBusqueda.value, filtroTipoActual);
+                    const resultados = Catalogo.buscarLocal(inputBusqueda.value, filtroTipoActual, familiaActivaId);
                     Catalogo.renderizarProductos(resultados, window.posEmpresaContexto, contenedorGrid);
                 }
 
@@ -400,6 +406,65 @@
                     const total = Catalogo.getCatalogo().length;
                     infoSync.textContent = total > 0 ? total + ' productos cargados localmente' : 'Sincronizando catalogo...';
                 }
+
+                // Pestañas de departamento (familia), igual que en el
+                // catalogo publico -- se arman en JS porque la lista de
+                // productos del POS es 100% local (ver arriba), asi que las
+                // familias tambien salen del catalogo ya sincronizado.
+                function pintarBotonesFamilia() {
+                    contenedorFamilias.querySelectorAll('[data-filtro-familia]').forEach((boton) => {
+                        const activo = boton.getAttribute('data-filtro-familia') === String(familiaActivaId ?? '');
+                        boton.style.background = activo ? '#4f46e5' : '#f3f4f6';
+                        boton.style.color = activo ? 'white' : '#374151';
+                    });
+                }
+
+                function renderizarFamilias() {
+                    const familias = Catalogo.getFamilias();
+
+                    if (!familias || familias.length === 0) {
+                        contenedorFamilias.style.display = 'none';
+                        contenedorFamilias.innerHTML = '';
+                        return;
+                    }
+
+                    // Si el departamento activo ya no existe en el catalogo
+                    // sincronizado (ej. se borro o cambio de empresa), se
+                    // vuelve a "Todos" para no quedar filtrando por nada.
+                    if (familiaActivaId !== null && !familias.some((f) => String(f.id) === String(familiaActivaId))) {
+                        familiaActivaId = null;
+                    }
+
+                    contenedorFamilias.style.display = 'flex';
+
+                    const botonTodo = document.createElement('button');
+                    botonTodo.type = 'button';
+                    botonTodo.setAttribute('data-filtro-familia', '');
+                    botonTodo.textContent = 'Todo';
+                    botonTodo.style.cssText = 'flex-shrink:0; border:none; border-radius:999px; padding:5px 14px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap;';
+
+                    contenedorFamilias.replaceChildren(botonTodo);
+
+                    familias.forEach((familia) => {
+                        const boton = document.createElement('button');
+                        boton.type = 'button';
+                        boton.setAttribute('data-filtro-familia', String(familia.id));
+                        boton.textContent = familia.nombre;
+                        boton.style.cssText = 'flex-shrink:0; border:none; border-radius:999px; padding:5px 14px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap;';
+                        contenedorFamilias.appendChild(boton);
+                    });
+
+                    pintarBotonesFamilia();
+                }
+
+                contenedorFamilias.addEventListener('click', (event) => {
+                    const boton = event.target.closest('[data-filtro-familia]');
+                    if (!boton) return;
+
+                    familiaActivaId = boton.getAttribute('data-filtro-familia') || null;
+                    pintarBotonesFamilia();
+                    renderizar();
+                });
 
                 Catalogo.inicializarEventosGrid(contenedorGrid, agregarAlCarrito);
 
@@ -623,6 +688,7 @@
 
                 window.addEventListener('pos-catalogo-sincronizado', () => {
                     actualizarInfoSync();
+                    renderizarFamilias();
                     renderizar();
                 });
 
@@ -632,6 +698,7 @@
 
                 Catalogo.cargarCatalogoLocal().then(() => {
                     actualizarInfoSync();
+                    renderizarFamilias();
                     renderizar();
                 });
             });

@@ -8,9 +8,11 @@ import { abrirDB, STORE_PRODUCTOS } from './pos-offline-db.js';
 
 const SYNC_AT_KEY = 'pos_catalogo_sincronizado_en';
 const EMPRESA_KEY = 'pos_catalogo_empresa_id';
+const FAMILIAS_KEY = 'pos_catalogo_familias';
 const SYNC_STALE_MS = 30 * 60 * 1000; // 30 min
 
 let catalogoEnMemoria = [];
+let familiasEnMemoria = [];
 
 async function leerTodoDeIndexedDB() {
     const db = await abrirDB();
@@ -63,7 +65,9 @@ async function sincronizarCatalogo() {
 
         await reemplazarEnIndexedDB(productos);
         catalogoEnMemoria = productos;
+        familiasEnMemoria = data.familias || [];
         localStorage.setItem(SYNC_AT_KEY, String(Date.now()));
+        localStorage.setItem(FAMILIAS_KEY, JSON.stringify(familiasEnMemoria));
 
         // Marca de que empresa es este catalogo guardado localmente (ver
         // catalogoLocalEsDeEmpresaActual en cargarCatalogoLocal).
@@ -122,8 +126,10 @@ async function cargarCatalogoLocal() {
         // la sincronizacion real de esta empresa antes de mostrar nada.
         await reemplazarEnIndexedDB([]);
         catalogoEnMemoria = [];
+        familiasEnMemoria = [];
         localStorage.removeItem(SYNC_AT_KEY);
         localStorage.removeItem(EMPRESA_KEY);
+        localStorage.removeItem(FAMILIAS_KEY);
         await sincronizarCatalogo();
         return catalogoEnMemoria;
     }
@@ -132,6 +138,12 @@ async function cargarCatalogoLocal() {
         catalogoEnMemoria = await leerTodoDeIndexedDB();
     } catch (e) {
         catalogoEnMemoria = [];
+    }
+
+    try {
+        familiasEnMemoria = JSON.parse(localStorage.getItem(FAMILIAS_KEY) || '[]');
+    } catch (e) {
+        familiasEnMemoria = [];
     }
 
     const sincronizadoEn = Number(localStorage.getItem(SYNC_AT_KEY) || 0);
@@ -183,6 +195,11 @@ function coincideFiltroTipo(producto, filtroTipo) {
     return producto.tipo_producto === filtroTipo;
 }
 
+function coincideFamilia(producto, familiaId) {
+    if (!familiaId) return true;
+    return String(producto.id_familia1) === String(familiaId);
+}
+
 /**
  * Un producto con variantes (talla/color) se muestra en la grilla como UNA
  * sola tarjeta agrupada (no una tarjeta por variante): el cajero le da clic
@@ -219,10 +236,12 @@ function totalVariantes(producto) {
  * Busqueda local: mismo orden y limite que usaba el servidor (primero con
  * stock, luego por existencias desc, maximo 40).
  */
-function buscarLocal(query, filtroTipo) {
+function buscarLocal(query, filtroTipo, familiaId) {
     const palabras = quitarAcentos(query).split(/\s+/).filter(Boolean);
 
-    const base = catalogoEnMemoria.filter((p) => coincideFiltroTipo(p, filtroTipo) && coincideProducto(p, palabras));
+    const base = catalogoEnMemoria.filter((p) => (
+        coincideFiltroTipo(p, filtroTipo) && coincideFamilia(p, familiaId) && coincideProducto(p, palabras)
+    ));
 
     return base.map(totalVariantes)
         .sort((a, b) => {
@@ -281,6 +300,10 @@ function buscarCoincidenciaExacta(codigo) {
 
 function getCatalogo() {
     return catalogoEnMemoria;
+}
+
+function getFamilias() {
+    return familiasEnMemoria;
 }
 
 /**
@@ -547,6 +570,7 @@ window.PosCatalogoOffline = {
     buscarLocal,
     buscarCoincidenciaExacta,
     getCatalogo,
+    getFamilias,
     renderizarProductos,
     inicializarEventosGrid,
     descuentoMaximoPermitidoLocal,
