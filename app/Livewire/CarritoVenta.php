@@ -1073,6 +1073,23 @@ public function guardarEdicionCliente()
         ? (string) Str::uuid()
         : ($variante ? $producto->id_producto.'-v'.$variante->id : ($lote ? $producto->id_producto.'-l'.$lote->id : (string) $producto->id_producto));
 
+    // En modo mesa, al reabrir la mesa el carrito se recarga con la key =
+    // id del OrdenMesaItem (ver cargarCarritoDesdeOrdenMesa), no el id_producto.
+    // Si el usuario vuelve a hacer clic en un producto que ya esta en esa
+    // lista, hay que reusar esa key existente en vez de crear una linea
+    // duplicada: de lo contrario establecerCantidadItem() encuentra el mismo
+    // item pendiente por product_id y le sobrescribe la cantidad real a 1.
+    if ($this->mesaId && !$esNoAcumulable && !$variante && !$lote && !isset($this->carrito[$key])) {
+        foreach ($this->carrito as $existingKey => $existingItem) {
+            if ((int) ($existingItem['id_producto'] ?? 0) === (int) $producto->id_producto
+                && empty($existingItem['producto_variante_id'] ?? null)
+                && empty($existingItem['producto_lote_id'] ?? null)) {
+                $key = (string) $existingKey;
+                break;
+            }
+        }
+    }
+
     if (!$esNoAcumulable && isset($this->carrito[$key])) {
         $this->carrito[$key]['cantidad'] += 1;
     } else {
@@ -1284,6 +1301,22 @@ public function updatedCarrito($value, $key)
             // âœ… RECALCULAR SUBTOTAL CON EL PRECIO CORRECTO
             $this->carrito[$productId]['cantidad'] = $cantidad;
             $this->carrito[$productId]['total'] = round($nuevoPrecio * $cantidad, 2);
+
+            // En modo mesa: persistir la nueva cantidad en el OrdenMesaItem y
+            // recalcular el total de la orden. Sin esto, el total que ve el
+            // Lobby (leido de orden_mesas.total) queda desactualizado porque
+            // este metodo solo tocaba el estado del carrito en memoria.
+            if ($this->mesaId) {
+                $empresaId = $this->getEmpresaId();
+                $producto = \App\Models\Product::where('id_producto', $this->carrito[$productId]['id_producto'])
+                    ->where('empresa_id', $empresaId)
+                    ->first();
+
+                if ($producto) {
+                    app(\App\Services\Mesas\AgregarItemMesaService::class)
+                        ->establecerCantidadItem($producto, $cantidad, $this->mesaId, $empresaId, auth()->id());
+                }
+            }
 
             if ($this->tallerOrdenId) {
                 $this->sincronizarCarritoConOrdenTaller();
