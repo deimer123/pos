@@ -528,6 +528,12 @@ textarea {
         box-sizing: border-box;
     }
 
+    /* Evita que un item con ancho fijo (p.ej. #nombre) fuerce las
+       columnas del grid a ser mas anchas que la pantalla. */
+    .inputs > * {
+        min-width: 0;
+    }
+
     /* Código: etiqueta e input angostos, no a todo el ancho */
     .inputs > label:nth-child(1) { grid-column: 1 / -1; grid-row: 1; }
     .inputs > input#codigo {
@@ -537,9 +543,15 @@ textarea {
         max-width: 50%;
     }
 
-    /* Producto: a todo el ancho */
+    /* Producto: a todo el ancho (el #nombre base trae width:500px fijo,
+       hay que pisarlo explicitamente aqui) */
     .inputs > label:nth-child(3) { grid-column: 1 / -1; grid-row: 3; }
-    .inputs > input#nombre { grid-column: 1 / -1; grid-row: 4; }
+    .inputs > input#nombre {
+        grid-column: 1 / -1;
+        grid-row: 4;
+        width: 100%;
+        box-sizing: border-box;
+    }
 
     /* Stock y Can Nueva: seguidos, en la misma fila */
     .inputs > label:nth-child(5) { grid-column: 1; grid-row: 5; }
