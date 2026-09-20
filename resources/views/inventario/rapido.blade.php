@@ -512,16 +512,39 @@ textarea {
     }
 
     .inputs {
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
-        gap: 6px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px 10px;
     }
 
-    .inputs input,
-    #nombre {
+    .inputs input {
         width: 100%;
         box-sizing: border-box;
+    }
+
+    /* Código: etiqueta e input angostos, no a todo el ancho */
+    .inputs > label:nth-child(1) { grid-column: 1 / -1; grid-row: 1; }
+    .inputs > input#codigo {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        width: 140px;
+        max-width: 50%;
+    }
+
+    /* Producto: a todo el ancho */
+    .inputs > label:nth-child(3) { grid-column: 1 / -1; grid-row: 3; }
+    .inputs > input#nombre { grid-column: 1 / -1; grid-row: 4; }
+
+    /* Stock y Can Nueva: seguidos, en la misma fila */
+    .inputs > label:nth-child(5) { grid-column: 1; grid-row: 5; }
+    .inputs > label:nth-child(7) { grid-column: 2; grid-row: 5; }
+    .inputs > input#stock { grid-column: 1; grid-row: 6; }
+    .inputs > input#cantidad { grid-column: 2; grid-row: 6; }
+
+    /* Tabla de productos con encabezado fijo dentro de su propio scroll */
+    .tabla-inventario-scroll {
+        max-height: 42vh;
+        overflow-y: auto;
     }
 
     .modal-box,
