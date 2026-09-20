@@ -603,7 +603,7 @@ textarea {
 
     <div class="inputs">
         <label>C&oacute;digo</label>
-        <input type="text" id="codigo">
+        <input type="text" id="codigo" enterkeyhint="next">
 
         <label>Producto</label>
         <input type="text" id="nombre">
@@ -612,7 +612,7 @@ textarea {
         <input type="text" id="stock">
 
         <label>Can Nueva</label>
-        <input type="number" id="cantidad">
+        <input type="number" inputmode="decimal" id="cantidad" enterkeyhint="done">
     </div>
 
     
@@ -1163,14 +1163,24 @@ function agregarProductoActual() {
 }
 
 codigo.addEventListener('keydown', function (e) {
-    if (e.key === 'Tab' || e.key === 'Enter') {
+    if (e.key === 'Tab') {
         e.preventDefault();
         buscarProductoPorCodigo();
     }
 });
 
-cantidad.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') {
+// En Android el teclado virtual reporta keyCode 229 en "keydown" (por el
+// IME), asi que "Enter" nunca coincide ahi. En "keyup" el navegador ya
+// entrego la tecla real, por eso el Enter se maneja en ese evento.
+codigo.addEventListener('keyup', function (e) {
+    if (e.key === 'Enter' || e.keyCode === 13) {
+        e.preventDefault();
+        buscarProductoPorCodigo();
+    }
+});
+
+cantidad.addEventListener('keyup', function (e) {
+    if (e.key === 'Enter' || e.keyCode === 13) {
         e.preventDefault();
         agregarProductoActual();
     }
