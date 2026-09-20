@@ -2,6 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inventario De Productos</title>
 
 <style>
@@ -480,6 +481,68 @@ textarea {
     width: 50px;
     text-align: center;
     background: #f9f9f9;
+}
+
+/* RESPONSIVE MOBIL */
+@media (max-width: 768px) {
+
+    body {
+        padding: 8px;
+        overflow: auto;
+    }
+
+    html {
+        overflow: auto;
+    }
+
+    .main {
+        height: auto;
+        min-height: calc(100vh - 16px);
+        overflow: visible;
+        padding: 12px;
+    }
+
+    .header {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .botones {
+        flex-wrap: wrap;
+    }
+
+    .inputs {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+    }
+
+    .inputs input,
+    #nombre {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .modal-box,
+    #modal-confirmacion .modal-box,
+    #modal-box,
+    .modal-box-pro {
+        width: 92vw;
+        max-width: 92vw;
+        box-sizing: border-box;
+    }
+
+    #modal-borradores > div {
+        width: 92vw;
+        margin: 40px auto;
+        box-sizing: border-box;
+    }
+
+    #tabla-contenedor,
+    #modal-borradores table {
+        overflow-x: auto;
+    }
 }
 
 </style>
