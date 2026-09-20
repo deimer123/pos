@@ -329,6 +329,12 @@ body {
     font-size: 13px;
 }
 
+/* Boton "Agregar producto": solo visible en movil (ver media query),
+   en escritorio se sigue usando Enter en el campo Can Nueva. */
+.btn-agregar-movil {
+    display: none;
+}
+
 .captura-inventario {
     position: sticky;
     top: 0;
@@ -541,6 +547,25 @@ textarea {
     .inputs > input#stock { grid-column: 1; grid-row: 6; }
     .inputs > input#cantidad { grid-column: 2; grid-row: 6; }
 
+    /* Boton para agregar el producto: en varios Android el teclado
+       numerico de Can Nueva no dispara un Enter real, asi que en movil
+       se agrega un boton para confirmar. */
+    .btn-agregar-movil {
+        display: block;
+        grid-column: 1 / -1;
+        grid-row: 7;
+        width: 100%;
+        margin-top: 4px;
+        padding: 12px;
+        border: none;
+        border-radius: 8px;
+        background: #10b981;
+        color: white;
+        font-weight: bold;
+        font-size: 15px;
+        cursor: pointer;
+    }
+
     /* Tabla de productos con encabezado fijo dentro de su propio scroll */
     .tabla-inventario-scroll {
         max-height: 42vh;
@@ -613,6 +638,8 @@ textarea {
 
         <label>Can Nueva</label>
         <input type="number" inputmode="decimal" id="cantidad" enterkeyhint="done">
+
+        <button type="button" id="btn-agregar-movil" class="btn-agregar-movil" onclick="agregarProductoActual()">Agregar producto</button>
     </div>
 
     
