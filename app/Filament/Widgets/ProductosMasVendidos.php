@@ -57,6 +57,8 @@ class ProductosMasVendidos extends BaseWidget
 
                     ->orderByDesc('total_vendidos')
 
+                    ->limit(10)
+
             )
 
             ->columns([
