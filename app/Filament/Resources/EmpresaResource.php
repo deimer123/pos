@@ -83,6 +83,24 @@ class EmpresaResource extends Resource
                             ->live(),
                     ]),
 
+                // Solo el super_admin decide si una empresa maneja sucursales.
+                // Al activarla (EditEmpresa/CreateEmpresa) el servicio
+                // ActivarSucursales crea la sucursal "Principal" y le asigna
+                // lo que la empresa ya tenia; por eso este campo no se guarda
+                // directo, lo procesa el servicio.
+                Forms\Components\Section::make('Sucursales')
+                    ->description('Permite que esta empresa maneje varias sucursales, cada una con sus propias ventas, cajas e inventario; el catálogo, los clientes y los proveedores se comparten. Disponible en edición Online y para negocios sin mesas, lotes, variantes, taller, hotel ni servicio técnico.')
+                    ->visible(fn (Get $get): bool => (bool) auth()->user()?->esSuperAdmin() && $get('tipo_edicion') === 'online')
+                    ->schema([
+                        Forms\Components\Toggle::make('usa_sucursales')
+                            ->label('Permitir sucursales')
+                            ->default(false)
+                            ->disabled(fn (?User $record): bool => $record !== null && $record->usa_sucursales && $record->sucursales()->count() > 1)
+                            ->helperText(fn (?User $record): string => ($record !== null && $record->usa_sucursales && $record->sucursales()->count() > 1)
+                                ? 'Ya tiene más de una sucursal: no se puede apagar.'
+                                : 'Al activarla se crea la sucursal "Principal" con todo lo que la empresa ya tiene.'),
+                    ]),
+
                 Forms\Components\Section::make('Acceso del Administrador')
                     ->schema([
                         Forms\Components\TextInput::make('password')
