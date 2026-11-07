@@ -39,6 +39,7 @@ class User extends Authenticatable implements FilamentUser
         'paquete_usuarios_id',
         'valor_plan_total',
         'tipo_edicion',
+        'usa_sucursales',
         'max_vendedores',
         'max_cajeros',
         'max_digitadores',
@@ -62,6 +63,7 @@ class User extends Authenticatable implements FilamentUser
     protected $casts = [
         'email_verified_at' => 'datetime',
         'activo' => 'boolean',
+        'usa_sucursales' => 'boolean',
         'botones_ocultos_pos' => 'array',
         'recursos_ocultos_admin' => 'array',
         'plan_started_at' => 'date',
@@ -124,6 +126,29 @@ class User extends Authenticatable implements FilamentUser
     public function empleados(): HasMany
     {
         return $this->hasMany(User::class, 'empresa_id')->where('tipo_usuario', 'empleado');
+    }
+
+    // Sucursales de la empresa (solo tiene si el super_admin le activo
+    // usa_sucursales). Se consulta desde la fila de la empresa.
+    public function sucursales(): HasMany
+    {
+        return $this->hasMany(Sucursal::class, 'empresa_id');
+    }
+
+    // Sucursales a las que este usuario (empleado o admin de sucursal) fue
+    // asignado.
+    public function sucursalesAsignadas(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Sucursal::class, 'sucursal_user', 'user_id', 'sucursal_id')
+            ->withTimestamps();
+    }
+
+    // true solo si la empresa a la que pertenece este usuario tiene el
+    // interruptor de sucursales encendido. Apagado = comportamiento de
+    // siempre.
+    public function empresaUsaSucursales(): bool
+    {
+        return (bool) $this->empresaPrincipal()->usa_sucursales;
     }
 
     public function plan(): BelongsTo
