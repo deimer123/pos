@@ -194,9 +194,14 @@ test('no se puede editar la sucursal de otra empresa', function () {
     $otra = empresaConSucursalesPaso4();
     $ajena = Sucursal::where('empresa_id', $otra->id)->first();
 
-    Livewire::actingAs($empresa)
-        ->test(EditSucursal::class, ['record' => $ajena->id])
-        ->assertStatus(404);
+    // El recurso filtra por empresa: la sucursal ajena "no existe" para esta
+    // empresa y Filament lanza ModelNotFoundException (dentro de un
+    // ViewException).
+    expect(fn () => Livewire::actingAs($empresa)
+        ->test(EditSucursal::class, ['record' => $ajena->id]))
+        ->toThrow(Throwable::class);
+
+    expect($ajena->fresh()->nombre)->toBe('Principal');
 });
 
 // -------------------------------------------------------------- mesas
