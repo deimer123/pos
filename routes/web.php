@@ -397,6 +397,11 @@ Route::get('/ticket-cierre-caja/{id}', function($id) {
 })->middleware('auth');
 
 Route::middleware(['auth'])->group(function () {
+    Route::post('/grupo/entrar/{sucursal}', [\App\Http\Controllers\GrupoSesionController::class, 'entrar'])->name('grupo.entrar');
+    Route::post('/grupo/volver', [\App\Http\Controllers\GrupoSesionController::class, 'volver'])->name('grupo.volver');
+});
+
+Route::middleware(['auth'])->group(function () {
 Route::get('/producto/{codigo}', [InventarioController::class, 'buscar']);
 Route::post('/inventario/guardar', [InventarioController::class, 'guardar']);
 Route::get('/inventario/buscar-lista', [InventarioController::class, 'buscarLista']);
