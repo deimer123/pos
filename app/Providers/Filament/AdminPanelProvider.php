@@ -89,6 +89,10 @@ class AdminPanelProvider extends PanelProvider
             fn () => view('filament.topbar-brand')
         )
         ->renderHook(
+            PanelsRenderHook::USER_MENU_BEFORE,
+            fn () => auth()->check() ? view('filament.sucursal-selector') : ''
+        )
+        ->renderHook(
             PanelsRenderHook::AUTH_LOGIN_FORM_AFTER,
             fn () => view('filament.turion-olvidar-emparejamiento')
         )

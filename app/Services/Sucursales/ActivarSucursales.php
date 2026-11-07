@@ -25,11 +25,10 @@ class ActivarSucursales
     // servicio tecnico descuentan existencias por su cuenta; hotel falta por
     // revisar.
     //
-    // Mesas y cocina NO estan aqui a proposito: no tocan el stock (venden por
-    // el flujo normal). OJO para el paso de crear sucursales: sus tablas
-    // (mesas, ordenes_mesas, orden_mesa_items) todavia no tienen sucursal_id,
-    // asi que antes de permitir una SEGUNDA sucursal en una empresa con mesas
-    // hay que agregarselo, o las mesas de una sucursal se verian en las demas.
+    // Mesas y cocina NO estan aqui a proposito: no tocan el stock. Sus tablas
+    // ya tienen sucursal_id (se asigna a la Principal al activar), pero la
+    // pantalla de mesas aun no filtra por sucursal, asi que SucursalResource
+    // no deja crear una SEGUNDA sucursal si la empresa usa mesas o cocina.
     public const MODULOS_INCOMPATIBLES = [
         'usa_recetas' => 'recetas',
         'usa_variantes' => 'variantes',
@@ -53,6 +52,10 @@ class ActivarSucursales
         'ajustes_inventario',
         'stock_movimientos',
         'kardex',
+        // Mesas y cocina (migracion 2026_11_07_000001).
+        'mesas',
+        'ordenes_mesas',
+        'orden_mesa_items',
     ];
 
     // null = se puede activar. Si no, el motivo en texto para mostrarselo al

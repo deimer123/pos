@@ -43,6 +43,9 @@ test('sucursal_id es nullable e indexada en la tabla operativa', function (strin
     'ajustes_inventario',
     'stock_movimientos',
     'kardex',
+    'mesas',
+    'ordenes_mesas',
+    'orden_mesa_items',
 ]);
 
 test('una empresa nueva tiene el interruptor de sucursales apagado', function () {
