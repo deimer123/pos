@@ -199,7 +199,7 @@ test('no se puede editar la sucursal de otra empresa', function () {
     // ViewException).
     expect(fn () => Livewire::actingAs($empresa)
         ->test(EditSucursal::class, ['record' => $ajena->id]))
-        ->toThrow(Throwable::class, "No query results for model");
+        ->toThrow(Exception::class, "No query results for model");
 
     expect($ajena->fresh()->nombre)->toBe('Principal');
 });
