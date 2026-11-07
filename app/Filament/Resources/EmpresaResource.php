@@ -83,6 +83,19 @@ class EmpresaResource extends Resource
                             ->live(),
                     ]),
 
+                Forms\Components\Section::make('Sucursal de otra empresa')
+                    ->description('Una sucursal es una empresa normal (con su propia configuración, productos, empleados y plan) ligada a la empresa del mismo dueño.')
+                    ->visible(fn (Get $get) => $get('tipo_edicion') === 'online')
+                    ->schema([
+                        Forms\Components\Select::make('empresa_matriz_id')
+                            ->label('Es sucursal de')
+                            ->placeholder('Ninguna (empresa independiente)')
+                            ->options(fn (?User $record) => app(\App\Services\Grupo\GrupoEmpresas::class)->opcionesMatriz($record))
+                            ->searchable()
+                            ->native(false)
+                            ->helperText('Déjalo vacío para una empresa independiente. Solo aparecen empresas Online que no son sucursales.'),
+                    ]),
+
                 Forms\Components\Section::make('Acceso del Administrador')
                     ->schema([
                         Forms\Components\TextInput::make('password')
@@ -465,6 +478,11 @@ class EmpresaResource extends Resource
                     ->falseIcon('heroicon-o-x-circle')
                     ->trueColor('success')
                     ->falseColor('danger'),
+
+                Tables\Columns\TextColumn::make('matriz.name')
+                    ->label('Sucursal de')
+                    ->placeholder('—')
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('tipo_edicion')
                     ->label('Edición')

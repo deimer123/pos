@@ -3,6 +3,8 @@ namespace App\Filament\Resources\EmpresaResource\Pages;
 
 use App\Filament\Resources\EmpresaResource;
 use App\Mail\EmpresaActivacionMail;
+use App\Models\User;
+use App\Services\Grupo\GrupoEmpresas;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Log;
@@ -34,6 +36,29 @@ class CreateEmpresa extends CreateRecord
         $this->passwordTextoPlano = $this->form->getRawState()['password'] ?? null;
 
         unset($data['factus'], $data['ubl21']);
+
+        // Sucursal de otra empresa: solo aplica en edicion Online (el campo
+        // va oculto en las demas) y se valida antes de guardar.
+        $edicion = $data['tipo_edicion'] ?? 'online';
+        $data['empresa_matriz_id'] = $edicion === 'online' && filled($data['empresa_matriz_id'] ?? null)
+            ? (int) $data['empresa_matriz_id']
+            : null;
+
+        $motivo = app(GrupoEmpresas::class)->motivoGuardado(
+            new User(['tipo_usuario' => 'empresa']),
+            $edicion,
+            $data['empresa_matriz_id'],
+        );
+
+        if ($motivo) {
+            Notification::make()
+                ->title('No se puede crear como sucursal')
+                ->body($motivo)
+                ->danger()
+                ->send();
+
+            $this->halt();
+        }
 
         $data['tipo_usuario'] = 'empresa';
         $data['empresa_id'] = null; // Las empresas no tienen empresa_id
