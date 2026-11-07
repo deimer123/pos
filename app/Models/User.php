@@ -29,6 +29,7 @@ class User extends Authenticatable implements FilamentUser
         'password',
         'tipo_usuario',
         'empresa_id',
+        'empresa_matriz_id',
         'activo',
         'botones_ocultos_pos',
         'recursos_ocultos_admin',
@@ -119,6 +120,23 @@ class User extends Authenticatable implements FilamentUser
     public function empresa(): BelongsTo
     {
         return $this->belongsTo(User::class, 'empresa_id');
+    }
+
+    // Grupo de empresas: una sucursal es una empresa ligada a la del dueño
+    // (matriz). empresa_matriz_id NULL = empresa independiente.
+    public function matriz(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'empresa_matriz_id');
+    }
+
+    public function sucursales(): HasMany
+    {
+        return $this->hasMany(User::class, 'empresa_matriz_id');
+    }
+
+    public function esSucursal(): bool
+    {
+        return $this->tipo_usuario === 'empresa' && $this->empresa_matriz_id !== null;
     }
 
     public function empleados(): HasMany
