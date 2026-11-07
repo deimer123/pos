@@ -186,7 +186,25 @@ test('no se activa en empresas con modulos incompatibles y no cambia nada', func
     expect(Sucursal::where('empresa_id', $empresa->id)->count())->toBe(0)
         ->and($empresa->fresh()->usa_sucursales)->toBeFalse()
         ->and(DB::table('kardex')->where('empresa_id', $empresa->id)->whereNull('sucursal_id')->count())->toBe(2);
-})->with(['usa_lotes', 'usa_variantes', 'usa_mesas', 'usa_taller', 'usa_hotel', 'usa_servicio_tecnico']);
+})->with(['usa_lotes', 'usa_variantes', 'usa_recetas', 'usa_taller', 'usa_hotel', 'usa_servicio_tecnico']);
+
+test('mesas y cocina no impiden activar sucursales (no tocan el stock)', function () {
+    $empresa = empresaOnlineSucursalesTest();
+    ConfiguracionEmpresa::create([
+        'empresa_id' => $empresa->id,
+        'nombre_empresa' => 'Restaurante de prueba',
+        'representante_legal' => 'Rep Legal',
+        'tipo_negocio' => 'tienda',
+    ]);
+    DB::table('configuracion_empresas')->where('empresa_id', $empresa->id)->update(['usa_mesas' => true, 'usa_cocina' => true]);
+    kardexSucursalesTest($empresa->id, 2);
+
+    app(ActivarSucursales::class)->activar($empresa);
+
+    expect($empresa->fresh()->usa_sucursales)->toBeTrue()
+        ->and(Sucursal::where('empresa_id', $empresa->id)->count())->toBe(1)
+        ->and(DB::table('kardex')->where('empresa_id', $empresa->id)->whereNull('sucursal_id')->count())->toBe(0);
+});
 
 // ----------------------------------------------------------------- comando
 

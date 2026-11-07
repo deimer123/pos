@@ -20,11 +20,17 @@ use RuntimeException;
 // lo que haya quedado en NULL.
 class ActivarSucursales
 {
-    // Modulos que mueven su propio stock o flujo y todavia no son compatibles
-    // con sucursales en esta primera version.
+    // Modulos que mueven su propio stock y todavia no son compatibles con
+    // sucursales en esta primera version: recetas, variantes, lotes, taller y
+    // servicio tecnico descuentan existencias por su cuenta; hotel falta por
+    // revisar.
+    //
+    // Mesas y cocina NO estan aqui a proposito: no tocan el stock (venden por
+    // el flujo normal). OJO para el paso de crear sucursales: sus tablas
+    // (mesas, ordenes_mesas, orden_mesa_items) todavia no tienen sucursal_id,
+    // asi que antes de permitir una SEGUNDA sucursal en una empresa con mesas
+    // hay que agregarselo, o las mesas de una sucursal se verian en las demas.
     public const MODULOS_INCOMPATIBLES = [
-        'usa_mesas' => 'mesas',
-        'usa_cocina' => 'cocina',
         'usa_recetas' => 'recetas',
         'usa_variantes' => 'variantes',
         'usa_lotes' => 'lotes',

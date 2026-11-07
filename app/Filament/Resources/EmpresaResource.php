@@ -89,7 +89,7 @@ class EmpresaResource extends Resource
                 // lo que la empresa ya tenia; por eso este campo no se guarda
                 // directo, lo procesa el servicio.
                 Forms\Components\Section::make('Sucursales')
-                    ->description('Permite que esta empresa maneje varias sucursales, cada una con sus propias ventas, cajas e inventario; el catálogo, los clientes y los proveedores se comparten. Disponible en edición Online y para negocios sin mesas, lotes, variantes, taller, hotel ni servicio técnico.')
+                    ->description('Permite que esta empresa maneje varias sucursales, cada una con sus propias ventas, cajas e inventario; el catálogo, los clientes y los proveedores se comparten. Disponible en edición Online y para negocios sin recetas, lotes, variantes, taller, hotel ni servicio técnico.')
                     ->visible(fn (Get $get): bool => (bool) auth()->user()?->esSuperAdmin() && $get('tipo_edicion') === 'online')
                     ->schema([
                         Forms\Components\Toggle::make('usa_sucursales')
