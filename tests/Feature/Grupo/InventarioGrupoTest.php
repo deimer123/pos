@@ -69,7 +69,8 @@ test('empareja por nombre y muestra las existencias de cada empresa', function (
     $pan = collect($filas)->firstWhere('nombre', 'Pan x12');
     $solo = collect($filas)->firstWhere('nombre', 'Solo en la matriz');
 
-    expect(count($filas))->toBe(2)
+    // Cada empresa nueva trae un PRODUCTO DE PRUEBA (UserObserver): se ignora.
+    expect(collect($filas)->pluck('nombre')->all())->toContain('Pan x12', 'Solo en la matriz')
         ->and((int) $pan->{'existencias_' . $matriz->id})->toBe(40)
         ->and((int) $pan->{'existencias_' . $norte->id})->toBe(15)
         ->and((int) $solo->{'existencias_' . $matriz->id})->toBe(9)
@@ -87,7 +88,9 @@ test('un codigo igual con nombre distinto no se mezcla', function () {
 
     $pagina = Livewire::actingAs($matriz)->test(InventarioGrupo::class);
 
-    expect(count($pagina->instance()->filas($pagina->instance()->empresasDelGrupo())->items()))->toBe(2);
+    $nombres = collect($pagina->instance()->filas($pagina->instance()->empresasDelGrupo())->items())->pluck('nombre');
+
+    expect($nombres)->toContain('Pan x12', 'Gaseosa 400ml');
 });
 
 test('no muestra productos de empresas fuera del grupo', function () {
