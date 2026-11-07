@@ -396,8 +396,6 @@ Route::get('/ticket-cierre-caja/{id}', function($id) {
     ]);
 })->middleware('auth');
 
-Route::middleware(['auth'])->post('/sucursal/cambiar', [\App\Http\Controllers\SucursalActualController::class, 'cambiar'])->name('sucursal.cambiar');
-
 Route::middleware(['auth'])->group(function () {
 Route::get('/producto/{codigo}', [InventarioController::class, 'buscar']);
 Route::post('/inventario/guardar', [InventarioController::class, 'guardar']);

@@ -4,7 +4,6 @@ namespace App\Filament\Resources\EmpresaResource\Pages;
 
 use App\Filament\Resources\EmpresaResource;
 use App\Services\Factus\FactusClient;
-use App\Services\Sucursales\ActivarSucursales;
 use App\Services\Ubl21\Ubl21Client;
 use Filament\Actions;
 use Filament\Notifications\Notification;
@@ -16,11 +15,6 @@ class EditEmpresa extends EditRecord
 
     // Ver CreateEmpresa::$complementosSeleccionados -- mismo motivo.
     protected array $complementosSeleccionados = [];
-
-    // true cuando en este guardado el super_admin enciende "Permitir
-    // sucursales": la activacion la hace ActivarSucursales en afterSave()
-    // (transaccion + verificacion de conteos), no se guarda como un campo.
-    protected bool $activarSucursales = false;
 
     protected function getHeaderActions(): array
     {
@@ -189,55 +183,6 @@ class EditEmpresa extends EditRecord
     {
         unset($data['factus'], $data['ubl21']);
 
-        $this->activarSucursales = false;
-
-        // Una empresa con sucursales solo existe en edicion Online.
-        if ($this->record->usa_sucursales && ($data['tipo_edicion'] ?? 'online') !== 'online') {
-            Notification::make()
-                ->title('No se puede cambiar la edición')
-                ->body('Esta empresa usa sucursales, que solo existen en la edición Online.')
-                ->danger()
-                ->send();
-
-            $this->halt();
-        }
-
-        // Con mas de una sucursal no se puede apagar (el campo ya viene
-        // deshabilitado; esto cubre una peticion manipulada).
-        if ($this->record->usa_sucursales
-            && array_key_exists('usa_sucursales', $data)
-            && ! $data['usa_sucursales']
-            && $this->record->sucursales()->count() > 1) {
-            Notification::make()
-                ->title('No se pueden apagar las sucursales')
-                ->body('La empresa ya tiene más de una sucursal.')
-                ->danger()
-                ->send();
-
-            $this->halt();
-        }
-
-        if (! $this->record->usa_sucursales && ! empty($data['usa_sucursales'])) {
-            $motivo = app(ActivarSucursales::class)
-                ->motivoNoPuedeActivar($this->record, $data['tipo_edicion'] ?? null);
-
-            if ($motivo) {
-                Notification::make()
-                    ->title('No se pueden activar las sucursales')
-                    ->body($motivo)
-                    ->danger()
-                    ->send();
-
-                $this->halt();
-            }
-
-            $this->activarSucursales = true;
-        }
-
-        if ($this->activarSucursales) {
-            unset($data['usa_sucursales']);
-        }
-
         if (! empty($data['plan_meses']) && ! empty($data['plan_started_at']) && empty($data['plan_ends_at'])) {
             $data['plan_ends_at'] = EmpresaResource::calculatePlanEndDate(
                 $data['plan_started_at'],
@@ -286,26 +231,6 @@ class EditEmpresa extends EditRecord
         EmpresaResource::saveFactusConfig($this->record, $this->form->getRawState()['factus'] ?? []);
         EmpresaResource::saveUbl21Config($this->record, $this->form->getRawState()['ubl21'] ?? []);
         EmpresaResource::sincronizarComplementos($this->record, $this->complementosSeleccionados);
-
-        if ($this->activarSucursales) {
-            $this->activarSucursales = false;
-
-            try {
-                app(ActivarSucursales::class)->activar($this->record->refresh());
-
-                Notification::make()
-                    ->title('Sucursales activadas')
-                    ->body('Se creó la sucursal Principal con los datos que la empresa ya tenía.')
-                    ->success()
-                    ->send();
-            } catch (\Throwable $exception) {
-                Notification::make()
-                    ->title('No se pudieron activar las sucursales')
-                    ->body($exception->getMessage())
-                    ->danger()
-                    ->send();
-            }
-        }
     }
 
     private function extractRanges(array $response): array

@@ -3,7 +3,6 @@ namespace App\Filament\Resources\EmpresaResource\Pages;
 
 use App\Filament\Resources\EmpresaResource;
 use App\Mail\EmpresaActivacionMail;
-use App\Services\Sucursales\ActivarSucursales;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Log;
@@ -25,11 +24,6 @@ class CreateEmpresa extends CreateRecord
     // se guarda aparte tomandola del estado crudo del formulario.
     protected ?string $passwordTextoPlano = null;
 
-    // El interruptor "Permitir sucursales" no se guarda como un campo: la
-    // activacion la hace ActivarSucursales en afterCreate(), ya con la
-    // empresa creada.
-    protected bool $activarSucursales = false;
-
     protected function getRedirectUrl(): string
     {
         return $this->getResource()::getUrl('index');
@@ -40,9 +34,6 @@ class CreateEmpresa extends CreateRecord
         $this->passwordTextoPlano = $this->form->getRawState()['password'] ?? null;
 
         unset($data['factus'], $data['ubl21']);
-
-        $this->activarSucursales = ($data['tipo_edicion'] ?? 'online') === 'online' && ! empty($data['usa_sucursales']);
-        unset($data['usa_sucursales']);
 
         $data['tipo_usuario'] = 'empresa';
         $data['empresa_id'] = null; // Las empresas no tienen empresa_id
@@ -82,25 +73,6 @@ class CreateEmpresa extends CreateRecord
         EmpresaResource::saveFactusConfig($record, $this->form->getRawState()['factus'] ?? []);
         EmpresaResource::saveUbl21Config($record, $this->form->getRawState()['ubl21'] ?? []);
         EmpresaResource::sincronizarComplementos($record, $this->complementosSeleccionados);
-
-        if ($this->activarSucursales) {
-            $this->activarSucursales = false;
-
-            try {
-                app(ActivarSucursales::class)->activar($record->refresh());
-            } catch (\Throwable $exception) {
-                Log::error('No se pudieron activar las sucursales al crear la empresa', [
-                    'empresa_id' => $record->id,
-                    'error' => $exception->getMessage(),
-                ]);
-
-                Notification::make()
-                    ->title('Empresa creada, pero no se pudieron activar las sucursales')
-                    ->body($exception->getMessage())
-                    ->warning()
-                    ->send();
-            }
-        }
 
         $this->enviarCorreoActivacion($record);
 
