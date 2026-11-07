@@ -76,7 +76,9 @@ test('una sucursal pertenece a su empresa y admite usuarios asignados', function
         ->and($empleado->sucursalesAsignadas)->toHaveCount(1)
         ->and($empleado->sucursalesAsignadas->first()->is($sucursal))->toBeTrue()
         ->and($sucursal->es_principal)->toBeTrue()
-        ->and($sucursal->activo)->toBeTrue();
+        // fresh(): el default (activo=true) lo pone la base de datos, y el
+        // modelo recien creado no lo trae hasta que se vuelve a leer.
+        ->and($sucursal->fresh()->activo)->toBeTrue();
 });
 
 test('el nombre de la sucursal no se repite dentro de la misma empresa', function () {
