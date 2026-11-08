@@ -2,14 +2,16 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Actor;
 use App\Models\Familia;
 use App\Models\Product;
 use App\Models\Subfamilia;
 use App\Models\User;
 use App\Services\Grupo\GrupoEmpresas;
 use Illuminate\Console\Command;
+use Illuminate\Support\Str;
 
-// Productos de relleno para PROBAR sucursales (inventario del grupo y, mas
+// Productos, clientes y proveedores de relleno para PROBAR sucursales (inventario del grupo y, mas
 // adelante, traslados) en una base de desarrollo. Se niega a correr en
 // produccion. No borra ni cambia nada existente: solo agrega lo que falte
 // (por nombre) y deja el stock de lo que ya exista como esta.
@@ -17,7 +19,7 @@ class GrupoDemo extends Command
 {
     protected $signature = 'grupo:demo {matriz? : Correo o id de la empresa dueña (por defecto, la primera que tenga sucursales)}';
 
-    protected $description = 'Crea productos de relleno en una empresa dueña y sus sucursales, para probar sucursales (solo desarrollo)';
+    protected $description = 'Crea productos, clientes y proveedores de relleno en una empresa dueña y sus sucursales, para probar sucursales (solo desarrollo)';
 
     // nombre => [precio_costo, precio_venta, stock matriz, stock por sucursal (en orden)]
     // null = ese producto no existe en esa empresa.
@@ -67,14 +69,16 @@ class GrupoDemo extends Command
         $this->info("Empresa dueña: {$matriz->name} (id {$matriz->id})");
 
         $creados = $this->sembrar($matriz, 2);
+        $actores = $this->sembrarActores($matriz);
 
         foreach ($sucursales as $i => $sucursal) {
             $this->info("Sucursal: {$sucursal->name} (id {$sucursal->id})");
             $creados += $this->sembrar($sucursal, 3, $i);
+            $actores += $this->sembrarActores($sucursal);
         }
 
         $this->newLine();
-        $this->info("Listo: {$creados} productos nuevos. Lo que ya existía no se tocó.");
+        $this->info("Listo: {$creados} productos y {$actores} clientes/proveedores nuevos. Lo que ya existía no se tocó.");
 
         return self::SUCCESS;
     }
@@ -93,6 +97,74 @@ class GrupoDemo extends Command
             ->whereIn('id', User::whereNotNull('empresa_matriz_id')->select('empresa_matriz_id'))
             ->orderBy('id')
             ->first();
+    }
+
+    // [nombre, identificacion, telefono]
+    private const CLIENTES = [
+        ['Ana María Rodríguez', '1090123456', '3101112233'],
+        ['Carlos Pérez', '1090234567', '3102223344'],
+        ['Tienda La Esquina', '900123456', '3103334455'],
+        ['Restaurante El Sabor', '900234567', '3104445566'],
+        ['Luisa Fernanda Gómez', '1090345678', '3105556677'],
+    ];
+
+    private const PROVEEDORES = [
+        ['Distribuidora de Harinas del Oriente', '900345678', '3201112233'],
+        ['Lácteos La Sabana', '900456789', '3202223344'],
+        ['Bebidas y Gaseosas del Llano', '900567890', '3203334455'],
+    ];
+
+    // Los mismos clientes/proveedores en cada empresa del grupo, mas un cliente
+    // exclusivo por empresa para comprobar que no se mezclan.
+    private function sembrarActores(User $empresa): int
+    {
+        $creados = 0;
+
+        $clientes = self::CLIENTES;
+        $clientes[] = ['Cliente exclusivo de ' . $empresa->name, '1099' . str_pad((string) $empresa->id, 6, '0', STR_PAD_LEFT), '3109990000'];
+
+        foreach ($clientes as [$nombre, $identificacion, $telefono]) {
+            $creados += $this->actor($empresa, 'cliente', 1, $nombre, $identificacion, $telefono);
+        }
+
+        foreach (self::PROVEEDORES as [$nombre, $identificacion, $telefono]) {
+            $creados += $this->actor($empresa, 'proveedor', 3, $nombre, $identificacion, $telefono);
+        }
+
+        return $creados;
+    }
+
+    private function actor(User $empresa, string $clasificacion, int $tipo, string $nombre, string $identificacion, string $telefono): int
+    {
+        $existente = Actor::where('empresa_id', $empresa->id)
+            ->where('identificacion', $identificacion)
+            ->where('clasificacion', $clasificacion)
+            ->exists();
+
+        if ($existente) {
+            return 0;
+        }
+
+        Actor::create([
+            'id_clip_pro' => (Actor::max('id_clip_pro') ?? 0) + 1,
+            'empresa_id' => $empresa->id,
+            'tipo_documento_id' => 6,
+            'identificacion' => $identificacion,
+            'nombre' => $nombre,
+            'razon_social' => $nombre,
+            'direccion' => 'Calle 1 # 2-3',
+            'telefono' => $telefono,
+            'email' => Str::slug($nombre) . '@demo.test',
+            'departamento_id' => 1,
+            'ciudad_id' => 1,
+            'tipo_persona' => 'natural',
+            'regimen_tributario' => 'simplificado',
+            'responsable_iva' => 0,
+            'clasificacion' => $clasificacion,
+            'tipo' => $tipo,
+        ]);
+
+        return 1;
     }
 
     // $columna: 2 = stock de la matriz; 3 = lista de sucursales, tomando $indice.

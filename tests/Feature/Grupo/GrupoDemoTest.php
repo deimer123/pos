@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Actor;
 use App\Models\Product;
 use App\Models\User;
 use Spatie\Permission\Models\Role;
@@ -68,4 +69,29 @@ test('grupo:demo avisa si no hay sucursales', function () {
     User::factory()->create(['tipo_usuario' => 'empresa', 'tipo_edicion' => 'online']);
 
     $this->artisan('grupo:demo')->assertFailed();
+});
+
+test('grupo:demo crea clientes y proveedores en cada empresa, sin mezclarlos', function () {
+    [$matriz, $norte] = duenoConSucursalesDemoTest();
+
+    $this->artisan('grupo:demo')->assertSuccessful();
+
+    $cuenta = fn (User $e, string $clase) => Actor::where('empresa_id', $e->id)->where('clasificacion', $clase)->where('email', 'like', '%@demo.test')->count();
+
+    expect($cuenta($matriz, 'cliente'))->toBe(6)
+        ->and($cuenta($matriz, 'proveedor'))->toBe(3)
+        ->and($cuenta($norte, 'cliente'))->toBe(6)
+        ->and($cuenta($norte, 'proveedor'))->toBe(3)
+        ->and(Actor::where('empresa_id', $norte->id)->where('nombre', 'like', 'Cliente exclusivo de ' . $matriz->name)->exists())->toBeFalse();
+});
+
+test('grupo:demo no duplica clientes ni proveedores al repetirse', function () {
+    duenoConSucursalesDemoTest();
+
+    $this->artisan('grupo:demo')->assertSuccessful();
+    $total = Actor::count();
+
+    $this->artisan('grupo:demo')->assertSuccessful();
+
+    expect(Actor::count())->toBe($total);
 });
