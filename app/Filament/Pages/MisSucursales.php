@@ -36,15 +36,6 @@ class MisSucursales extends Page
 
     protected function getViewData(): array
     {
-        $servicio = app(CambioDeEmpresa::class);
-        $usuario = auth()->user();
-
-        return [
-            'sucursales' => $usuario->sucursales()->with('plan')->orderBy('name')->get()
-                ->map(fn ($sucursal) => [
-                    'modelo' => $sucursal,
-                    'motivo' => $servicio->motivoNoPuedeEntrar($usuario, $sucursal),
-                ]),
-        ];
+        return ['sucursales' => app(CambioDeEmpresa::class)->filasParaDueno(auth()->user())];
     }
 }

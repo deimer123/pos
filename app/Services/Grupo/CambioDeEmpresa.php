@@ -47,6 +47,16 @@ class CambioDeEmpresa
         return null;
     }
 
+    // Sucursales del dueno con el motivo por el que no se puede entrar (o null).
+    public function filasParaDueno(User $actual)
+    {
+        return $actual->sucursales()->with('plan')->orderBy('name')->get()
+            ->map(fn (User $sucursal) => [
+                'modelo' => $sucursal,
+                'motivo' => $this->motivoNoPuedeEntrar($actual, $sucursal),
+            ]);
+    }
+
     public function entrar(Request $request, User $actual, User $sucursal): ?string
     {
         if ($motivo = $this->motivoNoPuedeEntrar($actual, $sucursal)) {

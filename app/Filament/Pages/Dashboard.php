@@ -17,6 +17,7 @@ class Dashboard extends BaseDashboard
         }
 
         return [
+            \App\Filament\Widgets\MisSucursalesWidget::class, // solo si la empresa tiene sucursales (canView)
             \App\Filament\Widgets\StatsOverview::class,            
             \App\Filament\Widgets\ProductosMasVendidos::class,
             \App\Filament\Widgets\VentasPorVendedor::class,

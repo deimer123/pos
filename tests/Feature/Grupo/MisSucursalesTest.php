@@ -192,3 +192,31 @@ test('la pantalla lista las sucursales del dueño y no las de otros', function (
         ->assertSee('Panaderia Norte')
         ->assertDontSee($ajena->email);
 });
+
+// -------------------------------------------------- acceso desde el escritorio
+
+test('el escritorio del dueño con sucursales muestra el acceso a Mis sucursales', function () {
+    [$matriz] = duenoConSucursalPaso4();
+
+    $this->actingAs($matriz);
+    $widgets = (new \App\Filament\Pages\Dashboard)->getVisibleWidgets();
+
+    expect($widgets)->toContain(\App\Filament\Widgets\MisSucursalesWidget::class);
+
+    Livewire::test(\App\Filament\Widgets\MisSucursalesWidget::class)
+        ->assertSee('Mis sucursales')
+        ->assertSee('Panaderia Norte')
+        ->assertSee('Entrar');
+});
+
+test('el escritorio de una empresa sin sucursales no muestra nada de sucursales', function () {
+    $independiente = empresaAdminPaso4();
+    [, $norte] = duenoConSucursalPaso4();
+
+    foreach ([$independiente, $norte] as $usuario) {
+        $this->actingAs($usuario);
+
+        expect((new \App\Filament\Pages\Dashboard)->getVisibleWidgets())
+            ->not->toContain(\App\Filament\Widgets\MisSucursalesWidget::class);
+    }
+});

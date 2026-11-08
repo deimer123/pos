@@ -137,3 +137,16 @@ test('abrir la consulta no cambia ni un producto', function () {
 
     expect(DB::table('products')->orderBy('id')->get()->toJson())->toBe($antes);
 });
+
+test('el modal usa el formato de los demas modales del POS', function () {
+    $matriz = empresaPosGrupoTest();
+    $norte = empresaPosGrupoTest(['empresa_matriz_id' => $matriz->id]);
+    configPosGrupoTest($norte, true);
+
+    Livewire::actingAs(cajeroPosGrupoTest($norte))
+        ->test(ConsultaGrupoPos::class)
+        ->call('abrir')
+        ->assertSeeHtml('class="pos-pro"')
+        ->assertSeeHtml('linear-gradient(180deg,#2563eb 0%,#4f46e5 100%)')
+        ->assertSee('Cerrar');
+});
