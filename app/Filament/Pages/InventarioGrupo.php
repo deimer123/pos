@@ -2,8 +2,7 @@
 
 namespace App\Filament\Pages;
 
-use App\Models\Product;
-use App\Models\User;
+use App\Services\Grupo\ConsultaInventarioGrupo;
 use App\Services\Grupo\GrupoEmpresas;
 use Filament\Pages\Page;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -49,39 +48,12 @@ class InventarioGrupo extends Page
     // [id => nombre] de las empresas del grupo, la propia primero.
     public function empresasDelGrupo(): array
     {
-        $propia = auth()->user()->getEmpresaActualId();
-        $ids = app(GrupoEmpresas::class)->idsDelGrupo(auth()->user()->empresaPrincipal());
-        $nombres = User::whereIn('id', $ids)->pluck('name', 'id')->all();
-
-        $ordenados = [$propia => $nombres[$propia] ?? 'Mi empresa'];
-
-        foreach ($ids as $id) {
-            if ($id !== $propia) {
-                $ordenados[$id] = $nombres[$id] ?? "Empresa {$id}";
-            }
-        }
-
-        return $ordenados;
+        return app(ConsultaInventarioGrupo::class)->empresas(auth()->user());
     }
 
     public function filas(array $empresas): LengthAwarePaginator
     {
-        $ids = array_map('intval', array_keys($empresas));
-
-        $query = Product::query()
-            ->whereIn('empresa_id', $ids)
-            ->when(trim($this->buscar) !== '', fn ($q) => $q->where('descripcion_larga', 'like', '%' . trim($this->buscar) . '%'))
-            ->selectRaw('MIN(descripcion_larga) as nombre');
-
-        foreach ($ids as $id) {
-            $query->selectRaw("SUM(CASE WHEN empresa_id = {$id} THEN existencias END) as existencias_{$id}");
-            $query->selectRaw("MAX(CASE WHEN empresa_id = {$id} THEN precio_venta1 END) as precio_{$id}");
-        }
-
-        return $query
-            ->groupByRaw('TRIM(descripcion_larga)')
-            ->orderByRaw('TRIM(descripcion_larga)')
-            ->paginate(25);
+        return app(ConsultaInventarioGrupo::class)->query($empresas, $this->buscar)->paginate(25);
     }
 
     protected function getViewData(): array
@@ -92,6 +64,7 @@ class InventarioGrupo extends Page
             'empresas' => $empresas,
             'propia' => auth()->user()->getEmpresaActualId(),
             'filas' => $this->filas($empresas),
+            'verStock' => true,
         ];
     }
 }

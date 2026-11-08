@@ -21,6 +21,14 @@
                     style="flex-shrink:0; width:36px; height:36px; border-radius:9999px; border:1px solid #d1d5db; background:white; cursor:pointer; font-size:15px;">
                     🏷️
                 </button>
+                @if (!empty($enGrupo))
+                    {{-- Consulta de solo lectura de las otras sucursales (modal en el componente consulta-grupo-pos) --}}
+                    <button type="button" id="pos-consulta-grupo" title="Ver cantidad y precio en otras sucursales (solo consulta)"
+                        onclick="window.dispatchEvent(new CustomEvent('abrir-consulta-grupo'))"
+                        style="flex-shrink:0; width:36px; height:36px; border-radius:9999px; border:1px solid #d1d5db; background:white; cursor:pointer; font-size:15px;">
+                        🏬
+                    </button>
+                @endif
                 <button type="button" id="pos-actualizar-catalogo" title="Actualizar catalogo"
                     style="flex-shrink:0; width:36px; height:36px; border-radius:9999px; border:1px solid #d1d5db; background:white; cursor:pointer; font-size:15px;">
                     🔄
@@ -55,6 +63,10 @@
             <div id="pos-productos-grid" class="pos-products-grid grid gap-3" style="grid-template-columns: 1fr;"></div>
         </div>
     </div>
+
+    @if (!empty($enGrupo))
+        @livewire('consulta-grupo-pos', [], key('consulta-grupo-pos'))
+    @endif
 
     <div x-data="{ imagenUrl: null }" @ver-imagen.window="imagenUrl = $event.detail.url">
         <div x-show="imagenUrl" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50" x-transition>

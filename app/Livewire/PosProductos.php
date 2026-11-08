@@ -73,6 +73,7 @@ class PosProductos extends Component
     {
         return view('livewire.pos-productos', [
             'empresaContexto' => $this->empresaContexto,
+            'enGrupo' => auth()->check() && app(\App\Services\Grupo\ConsultaInventarioGrupo::class)->disponible(auth()->user()),
         ]);
     }
 
