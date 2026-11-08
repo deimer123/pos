@@ -22,9 +22,9 @@ test('grupo:demo crea productos en la matriz y en cada sucursal', function () {
 
     $pan = fn (User $e) => Product::where('empresa_id', $e->id)->where('descripcion_larga', 'Pan x12')->first();
 
-    expect($pan($matriz)->existencias)->toBe(120)
-        ->and($pan($norte)->existencias)->toBe(40)
-        ->and($pan($sur)->existencias)->toBe(25)
+    expect((float) $pan($matriz)->existencias)->toBe(120.0)
+        ->and((float) $pan($norte)->existencias)->toBe(40.0)
+        ->and((float) $pan($sur)->existencias)->toBe(25.0)
         ->and(Product::where('empresa_id', $matriz->id)->where('descripcion_larga', 'Producto solo matriz')->exists())->toBeTrue()
         ->and(Product::where('empresa_id', $norte->id)->where('descripcion_larga', 'Producto solo matriz')->exists())->toBeFalse();
 });
@@ -40,7 +40,7 @@ test('grupo:demo es idempotente y no cambia el stock de lo que ya existe', funct
     $this->artisan('grupo:demo')->assertSuccessful();
 
     expect(Product::count())->toBe($total)
-        ->and(Product::where('empresa_id', $matriz->id)->where('descripcion_larga', 'Pan x12')->value('existencias'))->toBe(7);
+        ->and((float) Product::where('empresa_id', $matriz->id)->where('descripcion_larga', 'Pan x12')->value('existencias'))->toBe(7.0);
 });
 
 test('grupo:demo no toca empresas fuera del grupo', function () {
