@@ -398,6 +398,7 @@ Route::get('/ticket-cierre-caja/{id}', function($id) {
 
 Route::middleware(['auth'])->group(function () {
     Route::post('/grupo/entrar/{sucursal}', [\App\Http\Controllers\GrupoSesionController::class, 'entrar'])->name('grupo.entrar');
+    Route::post('/grupo/entrar', [\App\Http\Controllers\GrupoSesionController::class, 'entrarSeleccion'])->name('grupo.entrar.seleccion');
     Route::post('/grupo/volver', [\App\Http\Controllers\GrupoSesionController::class, 'volver'])->name('grupo.volver');
 });
 

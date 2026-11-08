@@ -2,7 +2,7 @@
 <div style="overflow-x:auto;">
             <table style="width:100%;border-collapse:collapse;font-size:.9rem;">
                 <thead>
-                    <tr style="text-align:left;border-bottom:1px solid #e5e7eb;">
+                    <tr style="text-align:center;border-bottom:1px solid #e5e7eb;">
                         <th style="padding:.5rem;">Sucursal</th>
                         <th style="padding:.5rem;">Correo</th>
                         <th style="padding:.5rem;">Plan</th>

@@ -193,30 +193,78 @@ test('la pantalla lista las sucursales del dueño y no las de otros', function (
         ->assertDontSee($ajena->email);
 });
 
-// -------------------------------------------------- acceso desde el escritorio
+// ------------------------------------------- acceso desde la barra superior
 
-test('el escritorio del dueño con sucursales muestra el acceso a Mis sucursales', function () {
+test('el dueño con una sucursal ve un boton directo para ir a ella', function () {
     [$matriz] = duenoConSucursalPaso4();
 
     $this->actingAs($matriz);
-    $widgets = (new \App\Filament\Pages\Dashboard)->getVisibleWidgets();
+    $html = view('filament.grupo-ir-sucursal')->render();
 
-    expect($widgets)->toContain(\App\Filament\Widgets\MisSucursalesWidget::class);
-
-    Livewire::test(\App\Filament\Widgets\MisSucursalesWidget::class)
-        ->assertSee('Mis sucursales')
-        ->assertSee('Panaderia Norte')
-        ->assertSee('Entrar');
+    expect($html)->toContain('Ir a Panaderia Norte')->not->toContain('<select');
 });
 
-test('el escritorio de una empresa sin sucursales no muestra nada de sucursales', function () {
-    $independiente = empresaAdminPaso4();
-    [, $norte] = duenoConSucursalPaso4();
+test('con varias sucursales aparece un select para elegir a cual ir', function () {
+    [$matriz] = duenoConSucursalPaso4();
+    empresaAdminPaso4(['name' => 'Panaderia Sur', 'empresa_matriz_id' => $matriz->id]);
 
-    foreach ([$independiente, $norte] as $usuario) {
+    $this->actingAs($matriz);
+    $html = view('filament.grupo-ir-sucursal')->render();
+
+    expect($html)->toContain('<select')->toContain('Panaderia Norte')->toContain('Panaderia Sur');
+});
+
+test('las sucursales que no se pueden usar no aparecen en el acceso rapido', function () {
+    [$matriz, $norte] = duenoConSucursalPaso4();
+    $norte->forceFill(['activo' => false])->save();
+
+    $this->actingAs($matriz);
+
+    expect(trim(view('filament.grupo-ir-sucursal')->render()))->toBe('');
+});
+
+test('una empresa sin sucursales, una sucursal o un empleado no ven el acceso', function () {
+    $independiente = empresaAdminPaso4();
+    [$matriz, $norte] = duenoConSucursalPaso4();
+    $empleado = User::factory()->create(['tipo_usuario' => 'empleado', 'empresa_id' => $matriz->id]);
+
+    foreach ([$independiente, $norte, $empleado] as $usuario) {
         $this->actingAs($usuario);
 
-        expect((new \App\Filament\Pages\Dashboard)->getVisibleWidgets())
-            ->not->toContain(\App\Filament\Widgets\MisSucursalesWidget::class);
+        expect(trim(view('filament.grupo-ir-sucursal')->render()))->toBe('');
     }
+});
+
+test('el select entra a la sucursal elegida y valida que sea propia', function () {
+    [$matriz, $norte] = duenoConSucursalPaso4();
+    $sur = empresaAdminPaso4(['empresa_matriz_id' => $matriz->id]);
+    [, $ajena] = duenoConSucursalPaso4();
+
+    $this->actingAs($matriz)
+        ->post(route('grupo.entrar.seleccion'), ['sucursal' => $ajena->id])
+        ->assertSessionHas('grupo_error');
+    $this->assertAuthenticatedAs($matriz);
+
+    $this->actingAs($matriz)
+        ->post(route('grupo.entrar.seleccion'), ['sucursal' => $sur->id])
+        ->assertRedirect(route('eleccion'))
+        ->assertSessionHas(CambioDeEmpresa::SESSION_ORIGEN, $matriz->id);
+    $this->assertAuthenticatedAs($sur);
+});
+
+test('el aviso de volver muestra solo el boton, sin el texto Sucursal', function () {
+    [$matriz, $norte] = duenoConSucursalPaso4();
+
+    $this->actingAs($norte)->withSession([CambioDeEmpresa::SESSION_ORIGEN => $matriz->id]);
+    $html = view('filament.grupo-volver')->render();
+
+    expect($html)->toContain('Volver a mi empresa')->not->toContain('Sucursal:');
+});
+
+test('la tabla de Mis sucursales tiene los encabezados centrados', function () {
+    [$matriz] = duenoConSucursalPaso4();
+
+    Livewire::actingAs($matriz)
+        ->test(MisSucursales::class)
+        ->assertSeeHtml('text-align:center;border-bottom');
 });
