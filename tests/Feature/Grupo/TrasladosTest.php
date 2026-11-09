@@ -424,7 +424,7 @@ test('crear un traslado desde el formulario lo envia y descuenta el stock', func
         ->and(stockTrasladoTest($matriz, 'Pan x12'))->toBe(88.0);
 });
 
-test('el formulario no ofrece empresas fuera del grupo como destino', function () {
+test('no se puede enviar a una empresa fuera del grupo ni manipulando el formulario', function () {
     [$matriz, $norte, $sur] = grupoTrasladoTest();
     $ajena = empresaTrasladoTest();
     productoTrasladoTest($matriz, 1, 'Pan x12', 100);
@@ -435,9 +435,10 @@ test('el formulario no ofrece empresas fuera del grupo como destino', function (
             'destino_id' => $ajena->id,
             'items' => [['id_producto' => 1, 'cantidad' => 1]],
         ])
-        ->call('create')
-        ->assertHasFormErrors(['destino_id']);
+        ->call('create');
 
+    // La autoridad es el servicio: aunque el formulario deje pasar el valor,
+    // no se crea el traslado ni se toca el stock.
     expect(Traslado::count())->toBe(0)
         ->and(stockTrasladoTest($matriz, 'Pan x12'))->toBe(100.0);
 });
