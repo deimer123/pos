@@ -29,12 +29,15 @@ function guardarKardex($productoId, $tipo, $cantidad, $empresaId, $referencia = 
     case 'devolucion':
     case 'devolucion_venta': // 🔥 agregado
     case 'ajuste_entrada':
+    case 'traslado_entrada':    // traslado recibido de otra sucursal
+    case 'traslado_devolucion': // traslado rechazado/cancelado: vuelve al origen
         $entrada = $cantidad;
         $stockNuevo = $stockAnterior + $cantidad;
         break;
 
     case 'venta':
     case 'ajuste_salida':
+    case 'traslado_salida': // traslado enviado a otra sucursal
     case 'devolucion_compra': // 🔥 AQUÍ VA
     case 'anulacion_compra':
     $salida = $cantidad;
