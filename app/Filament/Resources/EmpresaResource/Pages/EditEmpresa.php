@@ -4,6 +4,7 @@ namespace App\Filament\Resources\EmpresaResource\Pages;
 
 use App\Filament\Resources\EmpresaResource;
 use App\Services\Factus\FactusClient;
+use App\Services\Grupo\GrupoEmpresas;
 use App\Services\Ubl21\Ubl21Client;
 use Filament\Actions;
 use Filament\Notifications\Notification;
@@ -182,6 +183,34 @@ class EditEmpresa extends EditRecord
     protected function mutateFormDataBeforeSave(array $data): array
     {
         unset($data['factus'], $data['ubl21']);
+
+        // Grupo de empresas: el campo va oculto fuera de la edicion Online,
+        // asi que si no llega se conserva la matriz actual y se valida contra
+        // la edicion que se esta guardando.
+        $edicion = $data['tipo_edicion'] ?? $this->record->tipo_edicion;
+        $matrizId = array_key_exists('empresa_matriz_id', $data)
+            ? (filled($data['empresa_matriz_id']) ? (int) $data['empresa_matriz_id'] : null)
+            : $this->record->empresa_matriz_id;
+
+        if ($edicion !== 'online' && $matrizId !== null && $this->record->empresa_matriz_id === null) {
+            $matrizId = null; // se ligo y se cambio de edicion en el mismo formulario: no se liga
+        }
+
+        $motivo = app(GrupoEmpresas::class)->motivoGuardado($this->record, $edicion, $matrizId);
+
+        if ($motivo) {
+            Notification::make()
+                ->title('No se puede guardar')
+                ->body($motivo)
+                ->danger()
+                ->send();
+
+            $this->halt();
+        }
+
+        if (array_key_exists('empresa_matriz_id', $data)) {
+            $data['empresa_matriz_id'] = $matrizId;
+        }
 
         if (! empty($data['plan_meses']) && ! empty($data['plan_started_at']) && empty($data['plan_ends_at'])) {
             $data['plan_ends_at'] = EmpresaResource::calculatePlanEndDate(
