@@ -191,3 +191,18 @@ test('la lista muestra de quien es sucursal cada empresa', function () {
         ->assertCanSeeTableRecords([$matriz, $sucursal])
         ->assertTableColumnStateSet('matriz.name', 'Panaderia Dueña', record: $sucursal);
 });
+
+test('una empresa dueña con sucursales no se puede eliminar, una sucursal si', function () {
+    $matriz = empresaConRolGrupoTest();
+    $sucursal = empresaConRolGrupoTest(['empresa_matriz_id' => $matriz->id]);
+
+    expect(fn () => EmpresaResource::deleteEmpresaData($matriz))
+        ->toThrow(RuntimeException::class, 'tiene sucursales');
+
+    expect(User::find($matriz->id))->not->toBeNull();
+
+    EmpresaResource::deleteEmpresaData($sucursal);
+
+    expect(User::find($sucursal->id))->toBeNull()
+        ->and(User::find($matriz->id))->not->toBeNull();
+});

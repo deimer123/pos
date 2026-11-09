@@ -642,6 +642,9 @@ class EmpresaResource extends Resource
                     ->requiresConfirmation()
                     ->modalHeading('Eliminar empresa y toda su informacion')
                     ->modalDescription('Esta accion eliminara la empresa, empleados, productos, ventas, compras, inventario, caja y movimientos relacionados. No se puede deshacer.')
+                    // Una empresa dueña con sucursales no se elimina: dejaria a sus
+                    // sucursales apuntando a una empresa que ya no existe.
+                    ->visible(fn (User $record) => ! $record->sucursales()->exists())
                     ->action(fn (User $record) => static::deleteEmpresaData($record))
                     ->successNotificationTitle('Empresa eliminada correctamente'),
             ])
@@ -681,6 +684,10 @@ class EmpresaResource extends Resource
 
     public static function deleteEmpresaData(User $record): void
     {
+        if ($record->sucursales()->exists()) {
+            throw new \RuntimeException('Esta empresa tiene sucursales. Elimina o desliga primero sus sucursales.');
+        }
+
         DB::transaction(function () use ($record): void {
             $empresaId = $record->id;
             $userIds = User::query()
